@@ -51,10 +51,12 @@ Rectangle {
         Repeater {
             model: 10
             Rectangle {
-                readonly property real spread: (10 - index) * root.height / 240
+                id: haloLayer
+                required property int index
+                readonly property real spread: (10 - haloLayer.index) * root.height / 240
                 anchors.fill: parent
-                anchors.margins: -spread
-                radius: root.height * 0.045 + spread
+                anchors.margins: -haloLayer.spread
+                radius: root.height * 0.045 + haloLayer.spread
                 color: "#11000000"
             }
         }
