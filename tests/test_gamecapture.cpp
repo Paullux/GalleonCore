@@ -36,6 +36,10 @@ private Q_SLOTS:
         QVERIFY(!GameCapture::isGamePath("C:/Windows/explorer.exe"));
         QVERIFY(!GameCapture::isGamePath("D:/steamapps/common/game/crashhandler.exe"));
         QVERIFY(!GameCapture::isGamePath("D:/steamapps/common/Steamworks Shared/redist.exe"));
+        QVERIFY(GameCapture::isGamePath("D:/Epic Games/MyGame/game.exe"));
+        QVERIFY(GameCapture::isGamePath("D:/GOG Games/MyGame/game.exe"));
+        QVERIFY(GameCapture::isGamePath("D:/Games/Heroic/MyGame/game.exe"));
+        QVERIFY(!GameCapture::isGamePath("D:/Epic Games/MyGame/launcher.exe"));
         QVERIFY(GameCapture::isGamePath("D:/Epic/MyGame/game.exe", {"Game.exe"}));
         QVERIFY(!GameCapture::isGamePath("D:/Epic/MyGame/game.exe"));
     }

@@ -71,6 +71,9 @@ HomeWidgets::HomeWidgets(QObject *parent, QString file, bool draftMode) : QObjec
         const double load = fields.value(1).trimmed().toDouble(&ok);
         if (ok && std::isfinite(load) && load >= 0 && load <= 100) m_gpuLoad = load;
     });
+    connect(&m_gameArtwork, &GameArtworkResolver::artworkReady, this, [this] {
+        if (!m_draftMode) refresh();
+    });
     connect(&m_timer, &QTimer::timeout, this, &HomeWidgets::refresh);
     m_timer.start(2000);
     refresh();
@@ -282,6 +285,59 @@ bool HomeWidgets::setFpsSource(const QString &source, const QString &process) {
     }
     m_fpsConfig = {{"source", path}, {"process", process.trimmed()}};
     return save();
+}
+bool HomeWidgets::steamGridDbConfigured() const {
+    const QByteArray key = read(m_file + QStringLiteral(".steamgriddb-key")).trimmed();
+    return !key.isEmpty() && key.size() <= 256;
+}
+bool HomeWidgets::setSteamGridDbApiKey(const QString &apiKey) {
+    const QString key = apiKey.trimmed();
+    static const QRegularExpression format(QStringLiteral("^[A-Za-z0-9._-]{12,256}$"));
+    if (!key.isEmpty() && !format.match(key).hasMatch()) {
+        m_error = tr("Enter a valid SteamGridDB API key (12–256 letters, digits, dot, dash or underscore).");
+        Q_EMIT changed(); return false;
+    }
+    const QString path = m_file + QStringLiteral(".steamgriddb-key");
+    if (key.isEmpty()) {
+        if (QFile::exists(path) && !QFile::remove(path)) {
+            m_error = tr("Could not remove SteamGridDB API key.");
+            Q_EMIT changed(); return false;
+        }
+    } else {
+        if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
+            m_error = tr("Could not create SteamGridDB key directory.");
+            Q_EMIT changed(); return false;
+        }
+        QSaveFile secret(path);
+        if (!secret.open(QIODevice::WriteOnly)) {
+            m_error = tr("Could not save SteamGridDB API key.");
+            Q_EMIT changed(); return false;
+        }
+        secret.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        if (secret.write(key.toUtf8()) != key.toUtf8().size() || !secret.commit()) {
+            m_error = tr("Could not save SteamGridDB API key.");
+            Q_EMIT changed(); return false;
+        }
+        QFile::setPermissions(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+    }
+    m_error.clear();
+    Q_EMIT changed();
+    return true;
+}
+bool HomeWidgets::clearSteamGridDbArtworks() {
+    const QDir cache(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+                     + QStringLiteral("/galleoncore/game-artwork"));
+    const auto images = cache.entryList({QStringLiteral("*.png")}, QDir::Files | QDir::NoSymLinks);
+    for (const auto &name : images) {
+        if (name.size() != 68 || !name.endsWith(QStringLiteral(".png"))) continue;
+        if (!QFile::remove(cache.filePath(name))) {
+            m_error = tr("Could not clear the SteamGridDB artwork cache.");
+            Q_EMIT changed(); return false;
+        }
+    }
+    m_error.clear();
+    Q_EMIT changed();
+    return true;
 }
 bool HomeWidgets::setGameOptions(bool automatic, bool localSensors) {
     load(); m_gameConfig["automatic"] = automatic; m_gameConfig["localSensors"] = localSensors;
@@ -546,6 +602,15 @@ void HomeWidgets::refresh() {
 #endif
     }
     m_gameState = m_gameMode.update(sample, m_gameConfig, sensors);
+    if (!m_draftMode && m_gameState.value("active").toBool()
+        && m_gameState.value("image").toString().isEmpty()) {
+        const auto title = m_gameState.value("title").toString();
+        const int appid = m_gameState.value("appid").toInt();
+        const QByteArray key = read(m_file + QStringLiteral(".steamgriddb-key")).trimmed().left(256);
+        const auto image = m_gameArtwork.artwork(title, appid, QString::fromUtf8(key));
+        if (!image.isEmpty()) m_gameState["image"] = image;
+        m_gameState["artworkStatus"] = m_gameArtwork.status();
+    }
     if (m_gameState.value("active").toBool() && (m_gpuLoad || m_gpuTemperature)) m_gameState["gpuProvider"] = m_gpuProvider;
 #ifdef Q_OS_WIN
     // Bosun observes the daemon's actual capture, never launches a second ETW session.

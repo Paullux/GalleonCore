@@ -11,6 +11,7 @@ public:
                        const QVariantMap &sensors = {});
     static QVariantMap readAmdGpuSensors(const QString &root = QStringLiteral("/sys/class/hwmon"));
     static QVariantMap parseSensors(const QByteArray &json);
+    [[nodiscard]] static QString titleFromInstallPath(QString path);
 private:
     QString m_process;
     QVariantMap m_identity;

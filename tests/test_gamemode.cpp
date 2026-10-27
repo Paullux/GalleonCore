@@ -13,6 +13,15 @@ using namespace galleond;
 class TestGameMode : public QObject {
     Q_OBJECT
 private Q_SLOTS:
+    void gamePathsProvideConservativeTitles() {
+        QCOMPARE(GameMode::titleFromInstallPath("D:/Epic Games/Cyberpunk_2077/bin/game.exe"),
+                 QStringLiteral("Cyberpunk 2077"));
+        QCOMPARE(GameMode::titleFromInstallPath("/home/test/Games/Heroic/The-Witcher-3/bin/game.exe"),
+                 QStringLiteral("The Witcher 3"));
+        QCOMPARE(GameMode::titleFromInstallPath("/home/test/.var/app/com.usebottles.bottles/data/bottles/bottles/Old_Game/drive_c/game.exe"),
+                 QStringLiteral("Old Game"));
+        QVERIFY(GameMode::titleFromInstallPath("C:/Windows/System32/svchost.exe").isEmpty());
+    }
     void captureControlsModeAndMissingSensorsAreExplicit() {
         GameMode mode;
         FpsSample sample{144.0, {}}; sample.process = "galleon-fixture.exe"; sample.token = "frame1";
