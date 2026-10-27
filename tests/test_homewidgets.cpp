@@ -4,6 +4,8 @@
 #include <ScreenRenderer.h>
 #include <QFile>
 #include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QJsonObject>
 #include <QGuiApplication>
 #include <QTemporaryDir>
@@ -14,6 +16,25 @@ using galleond::HomeWidgets;
 class TestHomeWidgets : public QObject {
     Q_OBJECT
 private Q_SLOTS:
+    void steamGridDbResponseValidationIsConservative() {
+        const QJsonObject matches{{"success", true},
+            {"data", QJsonArray{
+                QJsonObject{{"id", 7}, {"name", "Different Game"}},
+                QJsonObject{{"id", 12}, {"name", "Cyberpunk 2077"}}
+            }}};
+        QCOMPARE(galleond::GameArtworkResolver::exactGameId(matches, QStringLiteral("Cyberpunk-2077")), 12);
+        QCOMPARE(galleond::GameArtworkResolver::exactGameId(matches, QStringLiteral("Completely unrelated")), 0);
+        const QJsonObject artwork{{"success", true},
+            {"data", QJsonArray{
+                QJsonObject{{"width", 600}, {"height", 900}, {"url", "https://cdn.steamgriddb.com/portrait.png"}},
+                QJsonObject{{"width", 920}, {"height", 430}, {"url", "http://bad.example/art.png"}},
+                QJsonObject{{"width", 920}, {"height", 430}, {"url", "https://cdn.steamgriddb.com/hero.png"}}
+            }}};
+        QCOMPARE(galleond::GameArtworkResolver::firstWideImage(artwork).toString(),
+                 QStringLiteral("https://cdn.steamgriddb.com/hero.png"));
+        QVERIFY(!galleond::GameArtworkResolver::firstWideImage(QJsonObject{{"success", false}}).isValid());
+    }
+
     void steamGridDbKeyIsNotWrittenToSharedWidgetConfiguration() {
         const QTemporaryDir dir;
         const QString config = dir.filePath("widgets.json");
