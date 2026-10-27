@@ -2,6 +2,21 @@
 
 Notes de conception du projet (en français). Le README public est en anglais.
 
+## Mise à jour technique — 27 octobre 2026
+
+La [PR #61](https://github.com/Paullux/GalleonCore/pull/61), issue des recherches d'[Aaryush1 dans l'issue #56](https://github.com/Paullux/GalleonCore/issues/56), documente **un flux de couleurs non persistantes par touche** sur le clavier Galleon 100 SD (**firmware de la partie clavier 2.3.88, Windows 11, une seule unité testée**). Cela remplace l'ancienne incertitude sur l'existence de ce flux, **mais GalleonCore ne fournit toujours pas de pilote RGB clavier natif**. Cette partie clavier est distincte du firmware du module Stream Deck, notamment le problème Windows observé en version **3.06.005**.
+
+- Documentation de référence : [séquence, index LED, limites et journaux sans frappes](protocol/README.md#live-per-key-lighting-windows-2026-10-25). Distinguer observations matérielles, hypothèses et configurations non essayées.
+- Session Bragi sur l'interface vendor HID, propriété d'exploitation 3 = **2** (host-controlled), ressource `0x0022` liée au tampon 0, trame **exactement 440 octets** (`12 00` + 146 triplets RGB), puis *unbind* et retour en mode **1** (self-operated).
+- **Sécurité obligatoire avant tout pilote** : ne jamais écrire les modes **3 ou 5** (bootloader), ni les fichiers de profils persistants ; vérifier strictement les trames et la liste blanche des commandes. Un arrêt brutal peut laisser les touches dans le dernier état : gérer sortie, veille, reconnexions et **watchdog séparé** qui restitue le contrôle.
+- **Coexistence** : abandonner les écritures dès qu'un autre contrôleur (Web Hub, etc.) prend la main. Évaluer conflits OpenRGB, Éclairage dynamique Windows, autres sessions et tests d'endurance prolongés avant toute intégration native C++.
+- **Périmètre non vérifié** : autres firmwares/unités, écriture sous Linux/hidraw, cartographie complète de la bande lumineuse, coexistence avec tous les logiciels.
+- Le contributeur teste d'abord son prototype C# dans la durée ; aucune conversion C++ n'est promise. L'**issue #56 reste ouverte jusqu'à un pilote complet et stable intégré et validé**.
+
+La trajectoire fonctionnelle **v0.2.3** est tenue dans [la feuille principale](../ROADMAP.md#état-au-27-octobre-2026--v022-publiée-prochaine-v023) : fallback Gaming embarqué, SteamGridDB avec cache utilisateur, configuration MangoHud par lanceur (natif/Flatpak), diagnostic de firmware Stream Deck sous Windows, notifications système de mises à jour. Des PR séparées et leurs tests conditionnent une éventuelle publication.
+
+Les passages historiques ci-dessous décrivent les hypothèses et choix **à leurs dates respectives**, certains ayant été dépassés par les mesures d'octobre.
+
 ## 1. Matériel
 
 - Clavier mécanique full-size : le pavé numérique est remplacé par un module Stream Deck Elgato (12 touches LCD, écran, 2 molettes).
@@ -26,10 +41,10 @@ Notes de conception du projet (en français). Le README public est en anglais.
 - **opendeck-galleon** (Rust, plugin OpenDeck) : https://github.com/shanelord01/opendeck-galleon
 - Issues ouvertes : OpenDeck #255 et #272, StreamController #562.
 
-### RVB : non supporté ⚠️
+### RVB : flux expérimental documenté, pilote GalleonCore non disponible ⚠️
 - Protocole Corsair **« V2 » / Bragi**, sur l'interface USB 1 du clavier principal.
 - Les requêtes en lecture sont sans danger.
-- Une **écriture de couleur avec un mauvais format de buffer a gelé la frappe** jusqu'au débranchement (constat de galleon-deck).
+- Une **écriture de couleur avec un mauvais format de buffer a gelé la frappe** jusqu'au débranchement (constat de galleon-deck). La séquence fonctionnelle validée ultérieurement sur Windows est documentée dans la section du 27 octobre ; ne pas généraliser ce résultat à Linux ni à d'autres firmwares.
 - Aucune trace de support du Galleon dans OpenRGB à ce jour.
 
 ## 3. Contrôleur RVB pour OpenRGB
@@ -68,7 +83,7 @@ Plutôt que d'attendre une version d'OpenRGB qui intègre le contrôleur, le pil
 
 - À prouver d'abord, sans clavier : un plugin minimal qui enregistre un faux contrôleur de 12 LED.
 - Les contrôleurs « virtuels » n'ont pas été conçus pour du matériel réel : aucun exemple connu. **Plan B : patcher OpenRGB.**
-- Le code Corsair V2 d'OpenRGB n'est pas exposé aux plugins : le format d'envoi est à reprendre dans le plugin (GPL-2.0-or-later), toujours en lecture seule tant que le format n'est pas compris.
+- Le code Corsair V2 d'OpenRGB n'est pas exposé aux plugins : une implémentation native devra respecter le protocole désormais documenté et ne devra pas écrire sur le clavier avant validation indépendante de ses garde-fous (GPL-2.0-or-later pour la reprise éventuelle du code OpenRGB).
 - La proposition au cœur d'OpenRGB reste l'objectif à terme.
 - Qui écrit sur le clavier (plugin ou `galleond`) reste à trancher.
 
