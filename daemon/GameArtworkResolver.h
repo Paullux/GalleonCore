@@ -24,7 +24,7 @@ public:
 Q_SIGNALS:
     void artworkReady();
 private:
-    void apiGet(const QUrl &url, const QString &key, std::function<void(QJsonObject)> done);
+    void apiGet(const QUrl &url, const QString &key, std::function<void(QJsonObject, int)> done);
     void search(const QString &id, const QString &title, const QString &apiKey);
     void fetchGrid(const QString &id, int gameId, const QString &apiKey);
     void download(const QString &id, const QUrl &url);
