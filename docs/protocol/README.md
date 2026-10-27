@@ -84,7 +84,7 @@ Keyboard part `2b0c`, the 108 lamps grouped by Y position:
 
 IDs 0–93 fit a full-size layout without a numpad (the Stream Deck module takes its place). The row counts are an inference from positions, not from key names: the interface gives no key labels. What lamps 94–107 are (ambient bar, indicators, ...) is **not known**, and their Y = 0 may be a placeholder rather than a measurement.
 
-Stream Deck part `2b18`: two lamps at X = 386.0 mm and 418.3 mm, Y = 19.0 mm, z = 0.994 mm, 20 ms latency. Confirmed by eye (OpenRGB, "Dynamic Light" device, whole zone set to one colour, 2026-10-18): they are the LEDs around the two dials. Which lamp is the left dial and which the right has not been tested yet; by position, ID 0 (X = 386 mm) should be the left one.
+Stream Deck part `2b18`: two lamps at X = 386.0 mm and 418.3 mm, Y = 19.0 mm, z = 0.994 mm, 20 ms latency. Confirmed by eye (OpenRGB, "Dynamic Light" device, whole zone set to one colour, 2026-10-18): they are the LEDs around the two dials. By position, ID 0 (X = 386 mm) should be the left one, but through Windows Dynamic Lighting it is the other way round: with `Windows.Devices.Lights.LampArray` on this part, index 1 lights the left dial and index 0 the right one (confirmed by eye, 2026-10-26, firmware 2.3.88). Whether Windows' indices are the HID lamp IDs here was not checked. Windows gives a packaged app control of the dials about 5 s after it starts, and only when it is the background lighting controller in Settings.
 
 Quirk: the keyboard part answers with an ID byte other than the one asked for. Attributes report (asked for 1): ID byte `04` on one run. Lamp responses (asked for 3): ID byte `02` for all 108. The Stream Deck part always answers with the right ID (224, 226). A guess, not verified: the keyboard echoes the last report ID used on the interface. Either way, the parser must check the ID byte.
 
@@ -162,7 +162,7 @@ Pitfall that cost three runs: on hidraw, the first byte of `write()` is the repo
 `04..45` (all 66 values), `47..65` (31 values), `69..6f`, `73..77`, `7a`, `7c`, `81..87`, `8b..91`.
 That is HID keyboard usage numbers (04 = A, 1e = 1, 29 = Esc, ...), with 0x46 left out. So the keyboard's own lighting engine addresses **125 keys by usage number**, not 108 lamps by index as the LampArray interface does; how the two numberings relate is not known. The four colour bytes read as `ff, blue, green, red`: red was `ff 00 00 ff`, green `ff 00 ff 00`, magenta-ish `ff 4f 00 ff` (observation from three captures, not a documented layout). Block writes of this record are persistent profile writes: never replay them.
 
-What this does not show: the live, non-persistent per-key lighting stream (software mode). The Web Hub does not use it for a fixed colour or for effects. iCUE does not detect this keyboard (new Corsair devices are managed by the Web Hub), so there is no known application whose traffic would show such a stream; the freeze warning above still applies to any attempt to write one.
+What this does not show: the live, non-persistent per-key lighting stream (software mode). The Web Hub does not use it for a fixed colour or for effects. iCUE does not detect this keyboard (new Corsair devices are managed by the Web Hub), so there is no known application whose traffic would show such a stream; the freeze warning above still applies to any attempt to write one. A working stream was later written by hand on Windows: see [Live per-key lighting](#live-per-key-lighting-windows-2026-10-25).
 
 ## Web Hub capture and Linux hand-over
 
@@ -194,17 +194,125 @@ Source: the public JavaScript of `corsair.com/web-hub` (main bundle `assets/BDiH
 | 12 | ping (also used for pairing) | none; the Web Hub pings every ~30 s |
 | 1b | host software session | start: `01`, 4 random bytes, `00`, answer byte 9 = session ID; stop: `02`, 4 zero bytes, session ID |
 
-So the device exposes a small file system: a file is opened into a numbered buffer, then described (size), read or written, then unbound. The profile written by the Web Hub is such a file (file IDs of the form 0x6dNN seen in the captures). `0d 00 22` from galleon-deck would be "open file 0x22 into buffer 0"; what file 0x22 is on this keyboard is not known.
+So the device exposes a small file system: a file is opened into a numbered buffer, then described (size), read or written, then unbound. The profile written by the Web Hub is such a file (file IDs of the form 0x6dNN seen in the captures). `0d 00 22` from galleon-deck is "open file 0x22 into buffer 0"; file 0x22 holds the live key colours in host-controlled mode (see below).
 
 **Operating mode** (property 3, which OpenRGB names "render mode"): the client's names are 1 = SELF_OPERATED, 2 = HOST_CONTROLLED, **3 = BOOTLOADER**, 4 = SLEEP, **5 = MCU_BOOTLOADER**, 6 = LIMITED_HOST_CONTROLLER, 7 = ESPORTS. Only 1 and 2 may ever be written by our tools; 3 and 5 would put the device in a bootloader. `bragi-probe` writes only 1 and 2.
 
 **Files read on Linux (2026-10-18, `tools/linux/bragi-read-file.c`, read-only: open, describe, read, unbind)**, keyboard firmware 2.3.88, hardware mode, no session:
 
 - File 0x000f: opens, size 8, content `13 00 02 00 60 6d 65 6d`, identical to what the Web Hub read in the capture. This validates the tool and the frame layout.
-- File **0x0022** (the file galleon-deck's `0d 00 22` opens and OpenRGB calls LIGHT_CTRL2): it **exists**, opens with status 0, size 8, content **all zeros** while idle. What it controls is not known.
+- File **0x0022** (the file galleon-deck's `0d 00 22` opens and OpenRGB calls LIGHT_CTRL2): it **exists**, opens with status 0, size 8, content **all zeros** while idle. In host-controlled mode, writing to a buffer bound to it sets the live key colours (see [Live per-key lighting](#live-per-key-lighting-windows-2026-10-25)).
 - Reply layout seen: byte 4 = status, data from byte 5; the describe reply carries the size as 16 bits at byte 7 (0x23 for file 0x26, 0x89 for the profile, 8 here).
 
 Not found in the client: any name or function for a live per-key colour stream. The client has lighting "layers" and "effects" stored as profile data.
+
+## Live per-key lighting (Windows, 2026-10-25)
+
+> **Safety, read before writing a frame.**
+> - **The keyboard stays in host-controlled mode after a crash.** If the writing process dies, the keys keep the last frame until something unbinds buffer 0 and sets property 3 back to 1. Plan for that: release on exit, on suspend and on session end, and run a separate watchdog that releases when the writer dies.
+> - **Give way to the Web Hub and any other controller.** Two writers make the keys flicker, and the keyboard reports no error to either of them. Stop sending as soon as another host shows up.
+> - **Write only property 3 = 1 or 2.** Values 3 and 5 put the device in a bootloader. Never create, write or delete files other than the live frame in buffer 0.
+> - Earlier attempts with other frame layouts froze the whole keyboard until it was unplugged (see [galleon-deck](webhub-lighting-analysis.md)). Use exactly the layout below.
+
+Measured by an outside contributor on one Galleon 100 SD, firmware 2.3.88, Windows 11, through the vendor interface (usage page 0xFF42, usage 1, 128-byte reports). The tool is a small C# library that sends only allowlisted commands, modeled on `bragi-probe`. Source and run notes: [Aaryush1/GalleonCore `lab/`](https://github.com/Aaryush1/GalleonCore/tree/key-lighting/lab). Discussion: [#56](https://github.com/Paullux/GalleonCore/issues/56).
+
+### Verified on the hardware
+
+The owner watched every visual result on the keyboard. The counts come from the tool's command log.
+
+**Sequence** (header as above, with the session ID):
+
+1. Start a session (`1b`, `01`, 4 random bytes, `00`).
+2. Set property 3 to 2 (host-controlled).
+3. Open file 0x0022 into buffer 0 (`0d 00 22 00`).
+4. Write one frame into buffer 0: `06` with the total length (4 bytes LE) and the first data, then `07` continuations. The frame is `12 00` followed by 146 RGB triplets, one per LED index (440 bytes in all).
+5. To give the keys back: unbind buffer 0 (`05 01 00`), then set property 3 to 1. The keys return to the onboard profile.
+
+**LED indices.**
+
+- Index 0x3A lit F1. During a typing test that lit each pressed key by its USB HID usage, the key that lit was the key pressed.
+- Index 0x81 (129) is the Copilot key, which matches the Web Hub key table.
+- Indices from 0x82 drive the light strip along the top edge. The first few light single LEDs from the left end. Later indices light larger sections.
+- Eighteen indices that are absent from the Web Hub lighting record (`00..03`, `66..68`, `70..72`, `78`, `79`, `7b`, `7d..80`, `88`) lit nothing.
+
+**Release.**
+
+- After the host process was killed mid-stream, the keys kept the last frame and typing still worked. A new session that unbound buffer 0 and set mode 1 gave the keys back, with no replug. A watchdog process doing this released the keys 0.33 to 0.38 s after a deliberate crash.
+- A USB replug returns the keyboard to mode 1.
+- Releasing on Windows suspend works. The keyboard wakes into its onboard profile.
+
+**Another host connecting.** When the Web Hub connects, it sets mode 1. Frame writes keep being answered with status 0. Answers to the Web Hub's own polling (about every 2.5 s) arrive on the same input. If both write, the keys flicker between the two. The contributor's tool treats any answer it did not ask for, or a mode other than 2, as another host, and stops sending until 60 s of quiet. With that rule the Web Hub showed the onboard colours with no flicker.
+
+**Rate and typing.**
+
+- 20 frames per second for 10 minutes: 0 failed writes, 0 timeouts. The owner typed fast during the run and saw no lag and no missed keys.
+- One frame (four reports, each waiting for its answer) takes about 28 ms.
+
+### Worked example: one frame, F1 green
+
+Report length 129 bytes on Windows (report ID 0, then 128 bytes). Bytes below are the 128 after the report ID, as in the log that follows. Session ID 1. The frame is `12 00` and 146 RGB triplets (440 bytes), all black except LED 0x3A (F1) green. It goes out as one `06` and three `07` reports:
+
+| Report | Header | Payload | Frame bytes carried | LEDs |
+|---|---|---|---|---|
+| 1 | `00 01 01 06` | `00` (buffer 0), `b8 01 00 00` (length 440, LE32), then frame bytes | 0–118 (119 bytes): `12 00` + 39 triplets | 0x00–0x26 |
+| 2 | `00 01 01 07` | `00` (buffer 0), then frame bytes | 119–241 (123 bytes) | 0x27–0x4F |
+| 3 | `00 01 01 07` | `00`, then frame bytes | 242–364 (123 bytes) | 0x50–0x78 |
+| 4 | `00 01 01 07` | `00`, then frame bytes | 365–439 (75 bytes) | 0x79–0x91 |
+
+F1's green byte is frame byte 2 + 3 × 0x3A + 1 = 177. That falls in report 2 at byte 63 (4 header bytes, 1 buffer byte, then frame byte 119 onward). Every report is zero-padded to the full length. Each answer echoes the command at byte 3 with status 0 at byte 4.
+
+### Command log
+
+From the run that confirmed F1 (2026-10-25). Command reports and answers only: no input reports, keystrokes or device paths were logged on this interface. The 4 random bytes of the session start are replaced with `rr`. Trailing zero padding is cut, as in the tool's log. Lines starting with `#` are the tool's own notes.
+
+```text
+17:15:32.537 TX 00 01 00 1b 01 rr rr rr rr
+17:15:32.543 RX 00 00 00 1b 00 rr rr rr rr 01
+17:15:32.544 # session start: status 0, session id 1
+17:15:32.545 TX 00 01 01 02 03 00 00 00
+17:15:32.551 RX 00 00 01 02 00 01 00 00
+17:15:32.552 # operating mode (prop 3): status 0, value 1
+17:15:32.554 TX 00 01 01 01 03 00 02 00
+17:15:32.559 RX 00 00 01 01 00 00 00 00
+17:15:32.559 # set mode 2: status 0
+17:15:32.560 TX 00 01 01 0d 00 22 00 00
+17:15:32.567 RX 00 00 01 0d 00 00 00 00
+17:15:32.567 # open 0x22: status 0
+17:15:32.567 # writing one frame: only LED 0x3A (F1) green, 440 bytes
+17:15:32.569 TX 00 01 01 06 00 b8 01 00 00 12
+17:15:32.575 RX 00 00 01 06 00 00 00 00
+17:15:32.576 TX 00 01 01 07 00 [58 zero bytes] ff
+17:15:32.583 RX 00 00 01 07 00 00 00 00
+17:15:32.583 TX 00 01 01 07 00 00 00 00
+17:15:32.591 RX 00 00 01 07 00 00 00 00
+17:15:32.591 TX 00 01 01 07 00 00 00 00
+17:15:32.599 RX 00 00 01 07 00 00 00 00
+17:15:32.599 # FRAME SENT. Holding 10 s: what do the keys show?
+17:15:33.612 TX 00 01 01 12 00 00 00 00
+17:15:33.619 RX 00 00 01 12 00 00 00 00
+             (9 more ping/answer pairs, one per second)
+17:15:42.740 TX 00 01 01 05 01 00 00 00
+17:15:42.747 RX 00 00 01 05 00 00 00 00
+17:15:42.747 TX 00 01 01 01 03 00 01 00
+17:15:42.963 RX 00 00 01 01 00 00 00 00
+17:15:42.963 # set mode 1: status 0
+17:15:42.963 TX 00 01 01 02 03 00 00 00
+17:15:42.971 RX 00 00 01 02 00 01 00 00
+17:15:42.971 # release: mode now 1 (status 0)
+17:15:42.971 # RELEASED: keyboard back in self-operated mode.
+```
+
+The keyboard pings are the tool's own keep-alive while it holds the frame. The release is the unbind of buffer 0 (`05 01 00`), then mode 1, then a read of property 3 to confirm.
+
+### Not verified (assumptions and open questions)
+
+- **LED index = HID usage for every key.** Seen for F1, the Copilot key and the keys pressed in the typing test, not checked key by key across the board.
+- **The strip map past the first few indices** is not finished: which index lights which section, and whether sections overlap.
+- **The 20 fps cap** follows OpenRGB's limit for other Bragi keyboards. Faster rates were not tried, so the real limit is unknown.
+- **Status 0 after the Web Hub takes over** is read here as "accepted and ignored". Nothing confirms what the keyboard does with those frames.
+- **What file 0x0022 is.** It reads as 8 zero bytes while idle and accepts a 440-byte frame in host-controlled mode. Its real size and meaning are unknown.
+- **Other firmware, other units, Linux.** Only firmware 2.3.88 on one keyboard under Windows was tested. The stream has not been tried over hidraw.
+- **Other controllers.** Only the Web Hub was tested as the other host. iCUE does not list this keyboard, and Windows Dynamic Lighting on the keyboard's own LampArray was not tested alongside the stream.
 
 ## Stream Deck module facts (interface 0 of `1b1c:2b18`), checked 2026-10-18
 
