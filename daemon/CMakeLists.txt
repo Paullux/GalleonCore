@@ -7,6 +7,7 @@ add_library(galleond_core STATIC
     RecordingController.h RecordingController.cpp
     GameCapture.h GameCapture.cpp
     GameMode.h GameMode.cpp
+    GameArtworkResolver.h GameArtworkResolver.cpp
     FpsReader.h FpsReader.cpp
     HomeWidgets.h HomeWidgets.cpp
     LauncherCache.h LauncherCache.cpp

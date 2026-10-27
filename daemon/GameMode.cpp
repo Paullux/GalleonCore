@@ -88,7 +88,8 @@ QVariantMap identity(const QString &process) {
             break;
         }
     }
-    QVariantMap result{{"title", process}, {"image", QString()}};
+    const QString folderTitle = GameMode::titleFromInstallPath(path);
+    QVariantMap result{{"title", folderTitle.isEmpty() ? process : folderTitle}, {"image", QString()}};
     if (appid > 0) {
         result["appid"] = appid;
         for (const auto &game : SteamLibrary::installedGames(root)) {
@@ -127,6 +128,23 @@ void sensorNodes(const QJsonObject &node, QVariantMap &result, int depth, int &c
     }
     for (const auto &child : node.value(QStringLiteral("Children")).toArray()) sensorNodes(child.toObject(), result, depth + 1, count);
 }
+}
+QString GameMode::titleFromInstallPath(QString path) {
+    path.replace('\\', '/');
+    const QString lower = path.toLower();
+    // Do not infer names from arbitrary desktop or Wine helper executables.
+    for (const auto &marker : {"/steamapps/common/", "/epic games/", "/gog games/",
+                               "/games/heroic/", "/games/lutris/", "/bottles/bottles/"}) {
+        const auto match = lower.indexOf(QLatin1String(marker));
+        if (match < 0) continue;
+        QString folder = path.mid(match + int(QByteArray(marker).size())).section('/', 0, 0).trimmed();
+        if (folder.isEmpty() || folder.size() > 120
+            || folder.compare(QStringLiteral("drive_c"), Qt::CaseInsensitive) == 0) return {};
+        folder.replace('_', ' ');
+        folder.replace('-', ' ');
+        return folder.simplified();
+    }
+    return {};
 }
 QVariantMap GameMode::readAmdGpuSensors(const QString &root) {
     const QDir hwmon(root);

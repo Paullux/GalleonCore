@@ -3,6 +3,7 @@
 #pragma once
 #include <QObject>
 #include "GameMode.h"
+#include "GameArtworkResolver.h"
 #include "GameCapture.h"
 #include <QTimer>
 #include <QVariantList>
@@ -21,6 +22,7 @@ class HomeWidgets : public QObject {
     Q_PROPERTY(QVariantMap fpsConfig READ fpsConfig NOTIFY changed)
     Q_PROPERTY(QVariantMap gameState READ gameState NOTIFY changed)
     Q_PROPERTY(QVariantMap gameConfig READ gameConfig NOTIFY changed)
+    Q_PROPERTY(bool steamGridDbConfigured READ steamGridDbConfigured NOTIFY changed)
     Q_PROPERTY(QVariantMap captureStatus READ captureStatus NOTIFY changed)
     Q_PROPERTY(bool windowsCapture READ windowsCapture CONSTANT)
     Q_PROPERTY(bool pending READ pending NOTIFY changed)
@@ -44,6 +46,8 @@ public:
     [[nodiscard]] QVariantMap fpsConfig() const { return m_fpsConfig; }
     [[nodiscard]] QVariantMap gameState() const { return m_gameState; }
     [[nodiscard]] QVariantMap gameConfig() const { return m_gameConfig; }
+    [[nodiscard]] bool steamGridDbConfigured() const;
+    Q_INVOKABLE bool setSteamGridDbApiKey(const QString &apiKey);
     [[nodiscard]] QVariantMap captureStatus() const { return m_captureStatus; }
     [[nodiscard]] static bool windowsCapture() {
 #ifdef Q_OS_WIN
@@ -84,6 +88,7 @@ private:
     std::optional<double> m_gpuTemperature;
     std::optional<double> m_gpuLoad;
     GameMode m_gameMode;
+    GameArtworkResolver m_gameArtwork;
     GameCapture m_capture;
     CaptureTarget m_captureTarget;
     quint32 m_captureStoppedPid = 0;

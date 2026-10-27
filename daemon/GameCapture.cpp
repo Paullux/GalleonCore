@@ -228,7 +228,13 @@ bool GameCapture::isGamePath(QString path, const QStringList &profiles) {
     if (profiles.contains(name, Qt::CaseInsensitive)) return true;
     for (const auto &part : {"launcher", "crash", "helper", "setup", "unins", "anticheat", "reporter", "redist"})
         if (name.contains(QLatin1String(part))) return false;
-    return path.contains(QStringLiteral("/steamapps/common/")) && !path.contains(QStringLiteral("/steamworks shared/"));
+    if (path.contains(QStringLiteral("/steamworks shared/"))) return false;
+    if (path.contains(QStringLiteral("/steamapps/common/"))) return true;
+    // Known non-Steam installation roots; unknown executables need a profile.
+    for (const auto &marker : {"/epic games/", "/gog games/", "/games/heroic/",
+                               "/games/lutris/", "/bottles/bottles/"})
+        if (path.contains(QLatin1String(marker))) return true;
+    return false;
 }
 CaptureTarget GameCapture::detectGame(const QStringList &profiles, quint32 currentPid) {
 #ifdef Q_OS_WIN
