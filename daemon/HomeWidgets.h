@@ -48,6 +48,7 @@ public:
     [[nodiscard]] QVariantMap gameConfig() const { return m_gameConfig; }
     [[nodiscard]] bool steamGridDbConfigured() const;
     Q_INVOKABLE bool setSteamGridDbApiKey(const QString &apiKey);
+    Q_INVOKABLE bool clearSteamGridDbArtworks();
     [[nodiscard]] QVariantMap captureStatus() const { return m_captureStatus; }
     [[nodiscard]] static bool windowsCapture() {
 #ifdef Q_OS_WIN

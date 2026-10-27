@@ -76,6 +76,13 @@ QUrl GameArtworkResolver::firstWideImage(const QJsonObject &response) {
 QString GameArtworkResolver::artwork(const QString &title, int steamAppId, const QString &apiKey) {
     if (title.trimmed().isEmpty() && steamAppId <= 0) return {};
     const QString id = identifier(title, steamAppId);
+    // A replacement personal key should immediately retry earlier 401/403 errors.
+    const QString fingerprint = QString::fromLatin1(
+        QCryptographicHash::hash(apiKey.toUtf8(), QCryptographicHash::Sha256).toHex());
+    if (m_keyFingerprint != fingerprint) {
+        m_keyFingerprint = fingerprint;
+        m_retryAt.clear();
+    }
     const QString path = cachePath(id);
     const QFileInfo file(path);
     if (file.isFile() && file.size() > 0 && file.size() <= 32LL * 1024 * 1024) {

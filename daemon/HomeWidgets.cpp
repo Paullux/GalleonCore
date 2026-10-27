@@ -324,6 +324,21 @@ bool HomeWidgets::setSteamGridDbApiKey(const QString &apiKey) {
     Q_EMIT changed();
     return true;
 }
+bool HomeWidgets::clearSteamGridDbArtworks() {
+    const QDir cache(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+                     + QStringLiteral("/galleoncore/game-artwork"));
+    const auto images = cache.entryList({QStringLiteral("*.png")}, QDir::Files | QDir::NoSymLinks);
+    for (const auto &name : images) {
+        if (name.size() != 68 || !name.endsWith(QStringLiteral(".png"))) continue;
+        if (!QFile::remove(cache.filePath(name))) {
+            m_error = tr("Could not clear the SteamGridDB artwork cache.");
+            Q_EMIT changed(); return false;
+        }
+    }
+    m_error.clear();
+    Q_EMIT changed();
+    return true;
+}
 bool HomeWidgets::setGameOptions(bool automatic, bool localSensors) {
     load(); m_gameConfig["automatic"] = automatic; m_gameConfig["localSensors"] = localSensors;
     return save();

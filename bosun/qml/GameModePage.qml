@@ -365,10 +365,22 @@ Flickable {
                 }
             }
         }
+        Row {
+            spacing: 12
+            Pill {
+                objectName: "refreshSteamGridDbArtworks"
+                text: qsTr("Clear cached artwork")
+                onClicked: {
+                    if (page.widgets.clearSteamGridDbArtworks())
+                        steamGridDbResult.text = qsTr("Artworks removed from the cache; images can be fetched again during the next active game.")
+                    else steamGridDbResult.text = page.widgets.error
+                }
+            }
+        }
         Text { id: steamGridDbResult; width: parent.width; wrapMode: Text.Wrap; color: "#80e5d1" }
         Text {
             width: parent.width; wrapMode: Text.Wrap; color: "#aebac6"
-            text: qsTr("The secret key is stored in a separate user-only configuration file, not in widgets.json. A refused key, rate limit, ambiguous game name or network error never prevents the bundled Gaming background from appearing. Restart a game to retry immediately after changing the key.")
+            text: qsTr("The secret key is stored in a separate user-only configuration file, not in widgets.json. A refused key, rate limit, ambiguous game name or network error never prevents the bundled Gaming background from appearing. A newly saved key can immediately retry failed requests. Use Clear cached artwork to refresh downloaded images.")
         }
         Text { text: qsTr("Game artwork override (optional)"); color: "white"; font.pixelSize: 18; font.bold: true }
         Text {

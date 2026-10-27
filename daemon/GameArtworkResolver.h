@@ -32,7 +32,7 @@ private:
     [[nodiscard]] static QString cachePath(const QString &id);
     QNetworkAccessManager m_network;
     QHash<QString, qint64> m_retryAt;
-    QString m_status, m_pending;
+    QString m_status, m_pending, m_keyFingerprint;
     bool m_busy = false;
 };
 }
