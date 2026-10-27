@@ -11,6 +11,7 @@ Rectangle {
     property string placeholder: ""
     property int maximumLength: 60
     property bool bold: false
+    property bool password: false
     property alias input: input
     signal edited(string text)
     width: 240
@@ -27,6 +28,7 @@ Rectangle {
         color: "white"
         font.pixelSize: 15
         font.bold: field.bold
+        echoMode: field.password ? TextInput.Password : TextInput.Normal
         clip: true
         selectByMouse: true
         maximumLength: field.maximumLength

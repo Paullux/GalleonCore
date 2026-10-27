@@ -120,6 +120,11 @@ Flickable {
             text: page.widgets.gameState.active ? qsTr("Capture active: ") + page.widgets.gameState.title + " (" + page.widgets.gameState.process + ")"
                 : qsTr("Waiting for a live FPS capture. Returns home after 10 seconds without fresh data.")
         }
+        Text {
+            width: parent.width; wrapMode: Text.Wrap; color: "#aebac6"
+            visible: !!page.widgets.gameState.artworkStatus
+            text: page.widgets.gameState.artworkStatus || ""
+        }
         Rectangle {
             width: Math.min(720, page.width)
             height: width * 384 / 720
@@ -310,6 +315,60 @@ Flickable {
             }
             SetupDivider {}
             SetupText { text: qsTr("Besoin d’aide ? Le guide MODE_JEU_LINUX.fr.md détaille l’installation Flatpak, les autres activations Steam et les limites OpenGL / Vulkan / DXVK / VKD3D-Proton. Gamescope nécessite une configuration MangoApp distincte.") }
+        }
+        SetupDivider {}
+        Text { text: qsTr("SteamGridDB · horizontal game artwork (optional)"); color: "white"; font.pixelSize: 18; font.bold: true }
+        Text {
+            width: parent.width; wrapMode: Text.Wrap; color: "#aebac6"
+            text: qsTr("Galleon first uses your manual artwork and local Steam images. Add your own SteamGridDB API key to download missing horizontal artwork; results are cached locally and work offline afterward. No key is bundled with Galleon.")
+        }
+        Row {
+            spacing: 12
+            Pill {
+                text: qsTr("Get a personal API key")
+                onClicked: Qt.openUrlExternally("https://www.steamgriddb.com/profile/preferences/api")
+            }
+            Text {
+                color: page.widgets.steamGridDbConfigured ? "#9be7a0" : "#ffb74d"
+                height: 32; verticalAlignment: Text.AlignVCenter
+                text: page.widgets.steamGridDbConfigured ? qsTr("Key configured locally") : qsTr("No API key")
+            }
+        }
+        Row {
+            spacing: 12
+            Field {
+                id: steamGridDbKey
+                objectName: "steamGridDbApiKey"
+                width: Math.min(460, page.width * 0.58)
+                maximumLength: 256
+                password: true
+                placeholder: qsTr("Your private SteamGridDB API key")
+            }
+            Pill {
+                objectName: "saveSteamGridDbApiKey"
+                text: qsTr("Save key")
+                onClicked: {
+                    if (page.widgets.setSteamGridDbApiKey(steamGridDbKey.input.text)) {
+                        steamGridDbKey.input.text = ""
+                        steamGridDbResult.text = qsTr("Key saved locally; new artwork is downloaded when a game is detected.")
+                    } else steamGridDbResult.text = page.widgets.error
+                }
+            }
+            Pill {
+                objectName: "removeSteamGridDbApiKey"
+                text: qsTr("Remove key")
+                onClicked: {
+                    if (page.widgets.setSteamGridDbApiKey("")) {
+                        steamGridDbKey.input.text = ""
+                        steamGridDbResult.text = qsTr("Key removed; cached images remain offline.")
+                    } else steamGridDbResult.text = page.widgets.error
+                }
+            }
+        }
+        Text { id: steamGridDbResult; width: parent.width; wrapMode: Text.Wrap; color: "#80e5d1" }
+        Text {
+            width: parent.width; wrapMode: Text.Wrap; color: "#aebac6"
+            text: qsTr("The secret key is stored in a separate user-only configuration file, not in widgets.json. A refused key, rate limit, ambiguous game name or network error never prevents the bundled Gaming background from appearing. Restart a game to retry immediately after changing the key.")
         }
         Text { text: qsTr("Game artwork override (optional)"); color: "white"; font.pixelSize: 18; font.bold: true }
         Text {

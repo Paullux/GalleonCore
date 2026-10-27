@@ -14,6 +14,31 @@ using galleond::HomeWidgets;
 class TestHomeWidgets : public QObject {
     Q_OBJECT
 private Q_SLOTS:
+    void steamGridDbKeyIsNotWrittenToSharedWidgetConfiguration() {
+        const QTemporaryDir dir;
+        const QString config = dir.filePath("widgets.json");
+        const QString secret = QStringLiteral("example-steamgriddb-key-12345");
+        HomeWidgets editor(nullptr, config, true);
+        QVERIFY(!editor.steamGridDbConfigured());
+        QVERIFY(!editor.setSteamGridDbApiKey(QStringLiteral("invalid key with spaces")));
+        QVERIFY(editor.setSteamGridDbApiKey(secret));
+        QVERIFY(editor.steamGridDbConfigured());
+        QVERIFY(QFile::exists(config + QStringLiteral(".steamgriddb-key")));
+#ifndef Q_OS_WIN
+        const auto permissions = QFile::permissions(config + QStringLiteral(".steamgriddb-key"));
+        QVERIFY(!(permissions & QFileDevice::ReadGroup));
+        QVERIFY(!(permissions & QFileDevice::ReadOther));
+#endif
+        QVERIFY(editor.setGameOptions(true, false));
+        QVERIFY(editor.apply());
+        QFile file(config);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QVERIFY(!file.readAll().contains(secret.toUtf8()));
+        HomeWidgets reader(nullptr, config);
+        QVERIFY(reader.steamGridDbConfigured());
+        QVERIFY(reader.setSteamGridDbApiKey({}));
+        QVERIFY(!reader.steamGridDbConfigured());
+    }
     void fpsFolderPreparationUsesUserDataAndKeepsDraftUntilApply() {
         const QTemporaryDir dir;
 #ifndef Q_OS_WIN
