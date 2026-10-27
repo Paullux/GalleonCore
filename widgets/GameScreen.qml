@@ -53,10 +53,12 @@ Rectangle {
             Rectangle {
                 id: haloLayer
                 required property int index
-                readonly property real spread: (10 - haloLayer.index) * root.height / 240
+                // Pixel values tuned for the Galleon's fixed 720 × 384 display.
+                // Avoid outer QML context access from a Repeater delegate.
+                readonly property real spread: (10 - haloLayer.index) * 1.6
                 anchors.fill: parent
                 anchors.margins: -haloLayer.spread
-                radius: root.height * 0.045 + haloLayer.spread
+                radius: 17.28 + haloLayer.spread
                 color: "#11000000"
             }
         }
