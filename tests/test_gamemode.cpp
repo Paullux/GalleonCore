@@ -8,6 +8,7 @@
 #include <QImage>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QUrl>
 using namespace galleond;
 class TestGameMode : public QObject {
     Q_OBJECT
@@ -39,6 +40,26 @@ private Q_SLOTS:
                                                                         {"fps", "60"}}},
                                            {"live", false}}, QSize(720, 384));
         QVERIFY(!frame.isNull());
+    }
+    void fpsShadowImprovesContrastOnBrightArtwork() {
+        const QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString imagePath = dir.filePath(QStringLiteral("bright.png"));
+        QImage artwork(720, 384, QImage::Format_RGB32);
+        artwork.fill(Qt::white);
+        QVERIFY(artwork.save(imagePath));
+        const QVariantMap game{{"active", true}, {"title", "Bright game"},
+                               {"image", QUrl::fromLocalFile(imagePath).toString()},
+                               {"fps", "150"}};
+        ScreenRenderer renderer(QStringLiteral(GALLEON_SOURCE_WIDGETS "/WallpaperClock.qml"));
+        const QImage frame = renderer.render({{"gameState", game}, {"live", false}}, QSize(720, 384));
+        QVERIFY(!frame.isNull());
+        // Both points are below the same full-screen overlay and outside the FPS
+        // glyphs; only the point inside the new halo should be much darker.
+        const QColor shaded = frame.pixelColor(185, 220);
+        const QColor clear = frame.pixelColor(245, 220);
+        QVERIFY2(shaded.red() + 25 < clear.red(), "FPS halo should darken bright artwork");
+        QVERIFY2(shaded.green() + 25 < clear.green(), "FPS halo should improve contrast");
     }
     void localArtworkAndSettingsAreAppliedAtomically() {
         const QTemporaryDir dir;

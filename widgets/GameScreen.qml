@@ -43,7 +43,28 @@ Rectangle {
         color: "white"; font.bold: true; font.pixelSize: root.height * 0.10
         elide: Text.ElideRight
     }
+    // A soft, four-sided halo behind the FPS readout keeps the small text
+    // readable on bright or busy game art. Stepped translucent rectangles
+    // work with the Qt Quick software renderer (no shader effects required).
+    Item {
+        anchors.fill: fpsCounter
+        Repeater {
+            model: 10
+            Rectangle {
+                id: haloLayer
+                required property int index
+                // Pixel values tuned for the Galleon's fixed 720 × 384 display.
+                // Avoid outer QML context access from a Repeater delegate.
+                readonly property real spread: (10 - haloLayer.index) * 1.6
+                anchors.fill: parent
+                anchors.margins: -haloLayer.spread
+                radius: 17.28 + haloLayer.spread
+                color: "#11000000"
+            }
+        }
+    }
     Column {
+        id: fpsCounter
         x: root.width * 0.04; y: root.height * 0.53
         width: root.width * 0.27
         Text { text: "FPS"; color: "#80e5d1"; font.pixelSize: root.height * 0.065 }
