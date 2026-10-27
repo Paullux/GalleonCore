@@ -98,17 +98,20 @@ QString GameArtworkResolver::artwork(const QString &title, int steamAppId, const
     m_status = QStringLiteral("Looking for SteamGridDB artwork");
     if (steamAppId > 0) {
         apiGet(apiUrl(QStringLiteral("games/steam/") + QString::number(steamAppId)), apiKey,
-            [this, id, title, apiKey](const QJsonObject &response) {
+            [this, id, title, apiKey](const QJsonObject &response, int httpStatus) {
                 const int game = gameId(response);
                 if (game > 0) fetchGrid(id, game, apiKey);
-                else search(id, title, apiKey);
+                // A missing Steam mapping can be searched by title, but do not
+                // retry denied, rate-limited or offline API requests.
+                else if (httpStatus == 200 || httpStatus == 404) search(id, title, apiKey);
+                else finish(id, false);
             });
     } else {
         search(id, title, apiKey);
     }
     return {};
 }
-void GameArtworkResolver::apiGet(const QUrl &url, const QString &key, std::function<void(QJsonObject)> done) {
+void GameArtworkResolver::apiGet(const QUrl &url, const QString &key, std::function<void(QJsonObject, int)> done) {
     QNetworkRequest request(url);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
     request.setTransferTimeout(10000);
@@ -132,7 +135,7 @@ void GameArtworkResolver::apiGet(const QUrl &url, const QString &key, std::funct
         else
             m_status = QStringLiteral("SteamGridDB offline or unavailable");
         reply->deleteLater();
-        done(result);
+        done(result, status);
     });
 }
 void GameArtworkResolver::search(const QString &id, const QString &title, const QString &apiKey) {
@@ -141,7 +144,7 @@ void GameArtworkResolver::search(const QString &id, const QString &title, const 
     if (name.size() < 3 || name.size() > 120) { finish(id, false); return; }
     const QString encoded = QString::fromLatin1(QUrl::toPercentEncoding(name));
     apiGet(apiUrl(QStringLiteral("search/autocomplete/") + encoded), apiKey,
-        [this, id, name, apiKey](const QJsonObject &response) {
+        [this, id, name, apiKey](const QJsonObject &response, int) {
             const int game = exactGameId(response, name);
             if (game > 0) fetchGrid(id, game, apiKey);
             else finish(id, false);
@@ -150,7 +153,7 @@ void GameArtworkResolver::search(const QString &id, const QString &title, const 
 void GameArtworkResolver::fetchGrid(const QString &id, int gameId, const QString &apiKey) {
     apiGet(apiUrl(QStringLiteral("grids/game/") + QString::number(gameId)
                   + QStringLiteral("?dimensions=920x430,460x215&types=static")), apiKey,
-        [this, id](const QJsonObject &response) {
+        [this, id](const QJsonObject &response, int) {
             const QUrl url = firstWideImage(response);
             if (url.isValid()) download(id, url);
             else finish(id, false);
