@@ -115,6 +115,10 @@ void GameArtworkResolver::apiGet(const QUrl &url, const QString &key, std::funct
     request.setRawHeader("Accept", "application/json");
     request.setRawHeader("Authorization", QByteArray("Bearer ") + key.toUtf8());
     auto *reply = m_network.get(request);
+    connect(reply, &QIODevice::readyRead, reply, [reply] {
+        // Bound Qt\'s receive buffer while data arrives, not only after the request ends.
+        if (reply->bytesAvailable() > 256 * 1024) reply->abort();
+    });
     connect(reply, &QNetworkReply::finished, this, [this, reply, done = std::move(done)]() mutable {
         const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         const QByteArray payload = reply->read(256 * 1024 + 1);
@@ -158,6 +162,9 @@ void GameArtworkResolver::download(const QString &id, const QUrl &url) {
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::SameOriginRedirectPolicy);
     request.setTransferTimeout(12000);
     auto *reply = m_network.get(request);
+    connect(reply, &QIODevice::readyRead, reply, [reply] {
+        if (reply->bytesAvailable() > 6 * 1024 * 1024) reply->abort();
+    });
     connect(reply, &QNetworkReply::finished, this, [this, reply, id] {
         const int http = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         const QByteArray bytes = reply->read(6 * 1024 * 1024 + 1);
