@@ -5,6 +5,32 @@
   "use strict";
   var key = "galleoncore-external-v1";
   var root = document.documentElement;
+  // Self-hosted, cookie-free Matomo loads only with the visitor's consent.
+  var matomoLoaded = false;
+  function applyAnalytics(enabled) {
+    if (!enabled) {
+      if (matomoLoaded) window._paq.push(["forgetConsentGiven"]);
+      return;
+    }
+    if (matomoLoaded) {
+      window._paq.push(["setConsentGiven"]);
+      window._paq.push(["trackPageView"]);
+      return;
+    }
+    matomoLoaded = true;
+    var queue = window._paq = window._paq || [];
+    queue.push(["requireConsent"]);
+    queue.push(["disableCookies"]);
+    queue.push(["setTrackerUrl", "https://stats.social-hub.fr/matomo.php"]);
+    queue.push(["setSiteId", "5"]);
+    queue.push(["setConsentGiven"]);
+    queue.push(["trackPageView"]);
+    queue.push(["enableLinkTracking"]);
+    var script = document.createElement("script");
+    script.async = true;
+    script.src = "https://stats.social-hub.fr/matomo.js";
+    document.head.appendChild(script);
+  }
   var choice = null;
   try { choice = localStorage.getItem(key); } catch (error) {}
 
@@ -32,6 +58,7 @@
 
   function applyExternal(enabled) {
     root.dataset.externalAllowed = enabled ? "yes" : "no";
+    applyAnalytics(enabled);
     document.querySelectorAll("link[data-external-href]").forEach(function (link) {
       if (enabled) {
         link.disabled = false;
@@ -53,7 +80,7 @@
   var banner = document.createElement("aside");
   banner.className = "privacy-banner";
   banner.setAttribute("aria-label", "Privacy choices / Choix de confidentialité");
-  banner.innerHTML = '<p><span lang="en">This site stores your language and privacy choice on this device. Optional fonts, status badges and live GitHub download counts contact Google, GitHub, Shields.io and AUR only if you allow them. You can change your choice at any time. <a href="privacy.html">Privacy details</a>.</span><span lang="fr">Ce site mémorise ta langue et ton choix de confidentialité sur cet appareil. Les polices, badges et compteurs GitHub en direct facultatifs contactent Google, GitHub, Shields.io et AUR seulement si tu les autorises. Tu peux modifier ton choix à tout moment. <a href="privacy.html">Détails sur la confidentialité</a>.</span></p><div class="privacy-actions"><button type="button" data-choice="no"><span lang="en">Reject optional content</span><span lang="fr">Refuser le contenu facultatif</span></button><button type="button" data-choice="yes"><span lang="en">Allow optional content</span><span lang="fr">Autoriser le contenu facultatif</span></button></div>';
+  banner.innerHTML = '<p><span lang="en">This site stores your language and privacy choice on this device. Optional fonts, status badges, live download counts and cookie-free Matomo visitor statistics contact external services only if you allow them. You can change your choice at any time. <a href="privacy.html">Privacy details</a>.</span><span lang="fr">Ce site mémorise ta langue et ton choix de confidentialité sur cet appareil. Les polices, badges, compteurs en direct et statistiques de fréquentation Matomo (sans cookies) sont activés uniquement avec ton accord. Tu peux modifier ton choix à tout moment. <a href="privacy.html">Détails sur la confidentialité</a>.</span></p><div class="privacy-actions"><button type="button" data-choice="no"><span lang="en">Reject optional content</span><span lang="fr">Refuser le contenu facultatif</span></button><button type="button" data-choice="yes"><span lang="en">Allow optional content</span><span lang="fr">Autoriser le contenu facultatif</span></button></div>';
   document.body.append(banner);
   banner.hidden = choice === "yes" || choice === "no";
   applyExternal(choice === "yes");

@@ -67,6 +67,13 @@ if(WIN32)
     target_sources(galleond PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/bosun-icon.rc)
 endif()
 
+# Bundle the Gaming background in the daemon on Windows and Linux.
+qt_add_resources(galleond_core "gaming_fallback"
+    PREFIX "/galleon"
+    BASE "${CMAKE_SOURCE_DIR}/public/wallpaper_gaming"
+    FILES "${CMAKE_SOURCE_DIR}/public/wallpaper_gaming/galleoncore_gaming_fallback.png"
+)
+
 qt_add_resources(galleond_core "home_widgets"
     PREFIX "/homewidgets"
     BASE "${CMAKE_SOURCE_DIR}/widgets"

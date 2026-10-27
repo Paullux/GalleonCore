@@ -26,6 +26,20 @@ private Q_SLOTS:
         QVERIFY(temperatures.value("gpu").toString().contains("62"));
         QVERIFY(!mode.update({}, {}).value("active").toBool());
     }
+    void bundledGamingFallbackExists() {
+        const QString resource = QStringLiteral(":/galleon/galleoncore_gaming_fallback.png");
+        QVERIFY2(QFile::exists(resource), "Gaming fallback must be bundled for Windows and Linux");
+        const QImage image(resource);
+        QVERIFY(!image.isNull());
+        QVERIFY(image.width() >= 200);
+        QVERIFY(image.height() >= 100);
+        ScreenRenderer renderer(QStringLiteral(GALLEON_SOURCE_WIDGETS "/WallpaperClock.qml"));
+        const auto frame = renderer.render({{"gameState", QVariantMap{{"active", true},
+                                                                        {"title", "Fallback test"},
+                                                                        {"fps", "60"}}},
+                                           {"live", false}}, QSize(720, 384));
+        QVERIFY(!frame.isNull());
+    }
     void localArtworkAndSettingsAreAppliedAtomically() {
         const QTemporaryDir dir;
         const auto image = dir.filePath("art.png");

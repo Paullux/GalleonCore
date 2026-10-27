@@ -8,9 +8,20 @@ Rectangle {
     implicitHeight: 384
     color: "#101a25"
     clip: true
+    // Bundled Gaming background: no user image or network is needed.
+    Image {
+        anchors.fill: parent
+        source: "qrc:/galleon/galleoncore_gaming_fallback.png"
+        asynchronous: false
+        fillMode: Image.PreserveAspectCrop
+        sourceSize.width: 1440
+        sourceSize.height: 768
+    }
+    // Profile artwork or a detected local cover is shown when it can be decoded.
     Image {
         anchors.fill: parent
         source: root.stateData.image || ""
+        visible: status === Image.Ready
         asynchronous: false
         fillMode: Image.PreserveAspectCrop
         sourceSize.width: 1440
