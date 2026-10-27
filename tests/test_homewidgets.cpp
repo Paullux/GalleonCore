@@ -6,7 +6,6 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
-#include <QJsonObject>
 #include <QGuiApplication>
 #include <QTemporaryDir>
 #include <QTest>
