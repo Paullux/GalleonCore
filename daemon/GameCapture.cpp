@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "GameCapture.h"
+#include <algorithm>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -231,10 +232,11 @@ bool GameCapture::isGamePath(QString path, const QStringList &profiles) {
     if (path.contains(QStringLiteral("/steamworks shared/"))) return false;
     if (path.contains(QStringLiteral("/steamapps/common/"))) return true;
     // Known non-Steam installation roots; unknown executables need a profile.
-    for (const auto &marker : {"/epic games/", "/gog games/", "/games/heroic/",
-                               "/games/lutris/", "/bottles/bottles/"})
-        if (path.contains(QLatin1String(marker))) return true;
-    return false;
+    const auto markers = {"/epic games/", "/gog games/", "/games/heroic/",
+                          "/games/lutris/", "/bottles/bottles/"};
+    return std::ranges::any_of(markers, [&path](const char *marker) {
+        return path.contains(QLatin1String(marker));
+    });
 }
 CaptureTarget GameCapture::detectGame(const QStringList &profiles, quint32 currentPid) {
 #ifdef Q_OS_WIN
