@@ -31,7 +31,7 @@ bool trustedArtworkUrl(const QUrl &url) {
         || host.endsWith(QStringLiteral(".steamgriddb.com"));
 }
 QUrl apiUrl(const QString &path) {
-    return QUrl(QStringLiteral("https://www.steamgriddb.com/api/v2/") + path);
+    return {QStringLiteral("https://www.steamgriddb.com/api/v2/") + path};
 }
 QString identifier(const QString &title, int appid) {
     const QString key = appid > 0 ? QStringLiteral("steam:%1").arg(appid)
@@ -86,7 +86,7 @@ QString GameArtworkResolver::artwork(const QString &title, int steamAppId, const
     const QString path = cachePath(id);
     const QFileInfo file(path);
     if (file.isFile() && file.size() > 0 && file.size() <= 32LL * 1024 * 1024) {
-        QImageReader reader(path);
+        const QImageReader reader(path);
         const QSize size = reader.size();
         if (size.width() > 0 && size.height() > 0 && qint64(size.width()) * size.height() <= 32000000)
             return QUrl::fromLocalFile(path).toString();
@@ -120,13 +120,13 @@ void GameArtworkResolver::apiGet(const QUrl &url, const QString &key, std::funct
     auto *reply = m_network.get(request);
     connect(reply, &QIODevice::readyRead, reply, [reply] {
         // Bound Qt\'s receive buffer while data arrives, not only after the request ends.
-        if (reply->bytesAvailable() > 256 * 1024) reply->abort();
+        if (reply->bytesAvailable() > 256LL * 1024) reply->abort();
     });
     connect(reply, &QNetworkReply::finished, this, [this, reply, done = std::move(done)]() mutable {
         const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        const QByteArray payload = reply->read(256 * 1024 + 1);
+        const QByteArray payload = reply->read(256LL * 1024 + 1);
         QJsonObject result;
-        if (reply->error() == QNetworkReply::NoError && status == 200 && payload.size() <= 256 * 1024)
+        if (reply->error() == QNetworkReply::NoError && status == 200 && payload.size() <= 256LL * 1024)
             result = QJsonDocument::fromJson(payload).object();
         else if (status == 401 || status == 403)
             m_status = QStringLiteral("SteamGridDB rejected the API key or access");
@@ -166,13 +166,13 @@ void GameArtworkResolver::download(const QString &id, const QUrl &url) {
     request.setTransferTimeout(12000);
     auto *reply = m_network.get(request);
     connect(reply, &QIODevice::readyRead, reply, [reply] {
-        if (reply->bytesAvailable() > 6 * 1024 * 1024) reply->abort();
+        if (reply->bytesAvailable() > 6LL * 1024 * 1024) reply->abort();
     });
     connect(reply, &QNetworkReply::finished, this, [this, reply, id] {
         const int http = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        const QByteArray bytes = reply->read(6 * 1024 * 1024 + 1);
+        const QByteArray bytes = reply->read(6LL * 1024 * 1024 + 1);
         reply->deleteLater();
-        if (reply->error() != QNetworkReply::NoError || http != 200 || bytes.size() > 6 * 1024 * 1024) {
+        if (reply->error() != QNetworkReply::NoError || http != 200 || bytes.size() > 6LL * 1024 * 1024) {
             finish(id, false); return;
         }
         QBuffer buffer;
@@ -200,7 +200,7 @@ void GameArtworkResolver::download(const QString &id, const QUrl &url) {
 }
 void GameArtworkResolver::finish(const QString &id, bool succeeded) {
     if (!succeeded) {
-        m_retryAt[id] = QDateTime::currentMSecsSinceEpoch() + 10 * 60 * 1000;
+        m_retryAt[id] = QDateTime::currentMSecsSinceEpoch() + 10LL * 60 * 1000;
         if (m_status == QStringLiteral("Looking for SteamGridDB artwork"))
             m_status = QStringLiteral("No matching horizontal artwork; using local fallback");
     } else {
