@@ -47,6 +47,12 @@ private Q_SLOTS:
         QVERIFY(GameCapture::isGamePath("D:/Epic/MyGame/game.exe", {"Game.exe"}));
         QVERIFY(!GameCapture::isGamePath("D:/Epic/MyGame/game.exe"));
     }
+    void gameBarDisplayNameChangeKeepsCaptureIdentity() {
+        const CaptureTarget original{12, QStringLiteral("Ghostrunner.exe"), QStringLiteral("Ghostrunner")};
+        const CaptureTarget retitled{12, QStringLiteral("Ghostrunner.exe"), QStringLiteral("Ghostrunner: Complete")};
+        QVERIFY(original == retitled);
+        QVERIFY(!(original == CaptureTarget{13, QStringLiteral("Ghostrunner.exe"), QStringLiteral("Ghostrunner")}));
+    }
     void gameBarReportMustBeFreshAndIdentifiedAsGame() {
         const qint64 now = QDateTime::currentMSecsSinceEpoch();
         const auto report = [&](bool isGame, const QString &title, qint64 at) {
