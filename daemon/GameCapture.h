@@ -5,10 +5,12 @@
 #include <QObject>
 #include <QProcess>
 #include <QVariantMap>
+#include <optional>
 namespace galleond {
 struct CaptureTarget {
     quint32 pid = 0;
     QString name;
+    QString displayName; // Optional, independently reported Game Bar title.
     bool operator==(const CaptureTarget &) const = default;
 };
 // Owns only its child capture. Never stops another PresentMon session or game.
@@ -24,7 +26,11 @@ public:
     [[nodiscard]] QVariantMap status() const;
     static QString findPresentMon(const QString &overridePath = {}, const QStringList &roots = {});
     static bool isGamePath(QString path, const QStringList &profiles = {});
-    static CaptureTarget detectGame(const QStringList &profiles, quint32 currentPid = 0);
+    // Experimental Game Bar widget transport: a fresh, validated report may
+    // identify the foreground game before the existing path heuristic is used.
+    static std::optional<QString> gameBarDisplayName(const QByteArray &report, qint64 nowMs);
+    static CaptureTarget detectGame(const QStringList &profiles, quint32 currentPid = 0,
+                                    const QByteArray &gameBarReport = {});
 private:
     void consume();
     void stop();
