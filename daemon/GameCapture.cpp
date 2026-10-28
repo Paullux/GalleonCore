@@ -251,10 +251,11 @@ std::optional<QString> GameCapture::gameBarDisplayName(const QByteArray &report,
     if (object.value(QStringLiteral("isGame")) != QJsonValue(true)) return std::nullopt;
     const auto at = object.value(QStringLiteral("at")).toVariant().toLongLong();
     if (at <= 0 || at > nowMs || nowMs - at > 5000) return std::nullopt;
-    const auto title = object.value(QStringLiteral("displayName")).toString().trimmed();
-    if (title.isEmpty() || title.size() > 120) return std::nullopt;
-    for (const auto ch : title) if (ch.unicode() < 32 || ch.unicode() == 127) return std::nullopt;
-    return title;
+    const auto rawTitle = object.value(QStringLiteral("displayName")).toString();
+    if (rawTitle.size() > 120) return std::nullopt;
+    for (const auto ch : rawTitle) if (ch.unicode() < 32 || ch.unicode() == 127) return std::nullopt;
+    const auto title = rawTitle.trimmed();
+    return title.isEmpty() ? std::nullopt : std::optional<QString>(title);
 }
 CaptureTarget GameCapture::detectGame(const QStringList &profiles, quint32 currentPid,
                                       const QByteArray &gameBarReport) {
