@@ -19,6 +19,8 @@
 
 🌐 [Website](https://galleoncore.xyz/)
 
+To follow the project's development status, see [ROADMAP.md](ROADMAP.md).
+
 **The open platform for the Corsair Galleon 100 SD on Linux.**
 
 The Galleon 100 SD is a full-size mechanical keyboard whose numpad is replaced by an Elgato Stream Deck module: 12 LCD keys, a screen and two dials. Corsair and Elgato only support the Stream Deck part on Windows and macOS. GalleonCore aims to make every part of the keyboard usable on Linux, and to integrate it with the desktop.
