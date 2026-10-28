@@ -113,6 +113,9 @@ public:
     // The screen says the name and place of the wallpaper are shown: from now on a turn of
     // the dial chooses (before, it is ignored, so that a turn is never made blind).
     void wallpaperLabelShown();
+    void setGameArtworkMode(bool active);
+    void setGameArtworkPending(bool pending);
+    void cancelGameArtworkChoice();
 
     // Lights the left dial ring with the current theme's colour (off without
     // a theme) and the right one white. Also done by every theme change; call it again
@@ -214,6 +217,8 @@ private:
     bool m_themePending = false;
 
     int m_pressedDial = -1; // the dial whose press is being performed
+    bool m_gameArtworkPending = false;
+    bool m_gameArtworkMode = false;
     int m_wallpaperDial = -1; // the dial that chooses the wallpaper, -1 = none
     QTimer m_wallpaperTimeout; // ticks each second of the validation countdown
     int m_wallpaperLeft = 0;   // seconds of the countdown left

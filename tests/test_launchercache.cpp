@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "LauncherCache.h"
+#include <QJsonArray>
 #include <QTest>
 #include <QSignalSpy>
 #include <QTimer>
@@ -10,6 +11,17 @@ class TestLauncherCache : public QObject
 {
     Q_OBJECT
 private Q_SLOTS:
+    void installedCatalogueSurvivesTheIsolatedChildBoundary() {
+        LauncherCache cache(QStringLiteral(GALLEON_TEST_LAUNCHER), 1000);
+        const auto reference = QStringLiteral("galleon:installed-games");
+        QVERIFY(cache.lookup(reference).isEmpty());
+        QTRY_VERIFY_WITH_TIMEOUT(cache.contains(reference), 5000);
+        const auto games = cache.lookup(reference).value("games").toArray();
+        QCOMPARE(games.size(), 2);
+        QCOMPARE(games[0].toObject().value("title").toString(), QStringLiteral("My GOG Game"));
+        QCOMPARE(games[1].toObject().value("executable").toString(), QStringLiteral("G:/DVD/Game/game.exe"));
+        QVERIFY(cache.lookup(reference).contains("games"));
+    }
     void slowShellWorkDoesNotBlockTheEventLoopAndHasADeadline()
     {
         LauncherCache cache(QStringLiteral(GALLEON_TEST_LAUNCHER), 1000);

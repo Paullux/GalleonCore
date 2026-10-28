@@ -37,6 +37,9 @@ void connectPagesToScreen(PagesController &pages, ScreenController &screen)
     QObject::connect(p, &PagesController::screenConfigChanged, s, [p, s] { s->setScreenConfig(p->screenConfig()); });
     QObject::connect(p, &PagesController::wallpaperCountdown, s, [s](int left) { s->setCountdown(left); });
     QObject::connect(s, &ScreenController::choosingLabelShown, p, [p] { p->wallpaperLabelShown(); });
+    QObject::connect(s, &ScreenController::gameArtworkModeChanged, p, &PagesController::setGameArtworkMode);
+    QObject::connect(s, &ScreenController::gameArtworkPendingChanged, p, &PagesController::setGameArtworkPending);
+    QObject::connect(s, &ScreenController::gameArtworkChoiceCancelled, p, &PagesController::cancelGameArtworkChoice);
     showState();
     s->setScreenConfig(p->screenConfig());
 }

@@ -25,6 +25,7 @@
 
 #include <QCommandLineParser>
 #include <QJsonObject>
+#include "GameInstallations.h"
 #include <QJsonDocument>
 #include <cstdio>
 #ifdef Q_OS_WIN
@@ -508,7 +509,9 @@ int main(int argc, char *argv[])
     if (parser.isSet(launcherInfo)) {
         const QString reference = parser.value(launcherInfo);
         QJsonObject result;
-        if (reference.startsWith(QStringLiteral("steam:"))) {
+        if (reference == QStringLiteral("galleon:installed-games")) {
+            result = galleond::GameInstallations::scanMetadata();
+        } else if (reference.startsWith(QStringLiteral("steam:"))) {
             bool valid = false;
             const int id = reference.mid(6).toInt(&valid);
             if (valid && id > 0)

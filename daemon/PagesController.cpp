@@ -131,6 +131,7 @@ PagesController::PagesController(galleon::StreamDeck *deck, MediaController *med
 
     m_wallpaperTimeout.setInterval(1000);
     connect(&m_wallpaperTimeout, &QTimer::timeout, this, [this] {
+        if (m_gameArtworkPending) return; // Never validate an image before it can be previewed.
         // The countdown: the dial stays in the choice, magenta, until it is over.
         if (m_wallpaperLeft > 1) {
             --m_wallpaperLeft;
@@ -668,9 +669,27 @@ void PagesController::stepTheme(int steps)
     selectTheme((((m_theme < 0 ? -1 : m_theme) + steps) % count + count) % count);
 }
 
+void PagesController::setGameArtworkMode(bool active)
+{
+    m_gameArtworkMode = active;
+    if (!active) m_gameArtworkPending = false;
+    if (active && wallpaperMode()) restartWallpaperCountdown();
+}
+void PagesController::setGameArtworkPending(bool pending)
+{
+    if (pending == m_gameArtworkPending) return;
+    m_gameArtworkPending = pending;
+    if (!pending && wallpaperMode()) restartWallpaperCountdown();
+}
+void PagesController::cancelGameArtworkChoice()
+{
+    m_gameArtworkPending = false;
+    setWallpaperMode(-1);
+}
+
 void PagesController::restartWallpaperCountdown()
 {
-    m_wallpaperLeft = std::max(1, m_config.screen.wallpaperValidateSeconds);
+    m_wallpaperLeft = m_gameArtworkMode ? 4 : std::max(1, m_config.screen.wallpaperValidateSeconds);
     qInfo() << "galleond: validation in" << m_wallpaperLeft << "s (started again)";
     m_wallpaperTimeout.start();
     Q_EMIT wallpaperCountdown(m_wallpaperLeft);
@@ -758,7 +777,7 @@ void PagesController::setWallpaperMode(int dial)
 {
     // A press toggles: the dial that is in the mode leaves it, any other enters it.
     const int wanted = dial >= 0 && dial != m_wallpaperDial ? dial : -1;
-    if (wanted == m_wallpaperDial)
+    if (wanted == m_wallpaperDial || (wanted < 0 && m_gameArtworkPending))
         return;
     if (wanted >= 0)
         setThemeMode(-1); // one choice at a time: the screen shows one of them

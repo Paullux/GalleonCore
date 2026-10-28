@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Window
 Flickable {
     id: page
     objectName: "gameModePage"
@@ -276,7 +277,7 @@ Flickable {
                 SetupText { text: qsTr("1. Ouvrez les paramètres du jeu et activez MangoHud / Afficher les FPS dans les réglages Linux (l’emplacement dépend de la version).") }
                 SetupText { text: qsTr("2. Avec la préparation commune, aucune commande ni variable par jeu n’est nécessaire. Enregistrez les réglages et relancez le jeu. Ne mettez rien dans Arguments du jeu pour MangoHud.") }
                 SetupText { text: qsTr("Si vous devez définir les options par jeu : Paramètres du jeu → Avancé → Variables d’environnement. Nom : MANGOHUD_CONFIG. Valeur (sans guillemets supplémentaires) :") }
-                SetupCode { text: "autostart_log=1,log_interval=500,output_folder=" + page.widgets.recommendedFpsFolder }
+                SetupCode { text: "autostart_log=1,log_interval=500,output_folder=" + page.widgets.recommendedFpsFolder + ",background_alpha=0,alpha=0" }
                 SetupText { text: qsTr("Heroic Flatpak : installez aussi l’extension MangoHud adaptée et autorisez le fichier de configuration et le dossier des mesures. La case seule ne donne pas ces accès ; voir le guide Linux.") }
             }
             SetupDivider {}
@@ -287,7 +288,7 @@ Flickable {
                 SetupText { text: qsTr("1. Clic droit sur le jeu → Configurer → Options système → activez Compteur de FPS (MangoHud). Affichez les options avancées si nécessaire.") }
                 SetupText { text: qsTr("2. Avec la préparation commune, aucune commande ni variable par jeu n’est nécessaire. Enregistrez puis relancez le jeu. Ne mettez pas %command% dans Lutris.") }
                 SetupText { text: qsTr("Ancienne version sans cette case : ajoutez seulement mangohud dans Préfixe de commande. Pour des options par jeu : Options système → Variables d’environnement, nom MANGOHUD_CONFIG, valeur :") }
-                SetupCode { text: "autostart_log=1,log_interval=500,output_folder=" + page.widgets.recommendedFpsFolder }
+                SetupCode { text: "autostart_log=1,log_interval=500,output_folder=" + page.widgets.recommendedFpsFolder + ",background_alpha=0,alpha=0" }
             }
             SetupDivider {}
             Column {
@@ -315,6 +316,119 @@ Flickable {
             }
             SetupDivider {}
             SetupText { text: qsTr("Besoin d’aide ? Le guide MODE_JEU_LINUX.fr.md détaille l’installation Flatpak, les autres activations Steam et les limites OpenGL / Vulkan / DXVK / VKD3D-Proton. Gamescope nécessite une configuration MangoApp distincte.") }
+        }
+        SetupDivider {}
+        Column {
+            id: artworkGuide
+            objectName: "gamingArtworkGuide"
+            width: parent.width
+            spacing: 10
+            property int phase: 0
+            readonly property bool playing: visible && (!Window.window || (Window.window.visible && Window.window.visibility !== Window.Minimized))
+            readonly property int imageIndex: phase < 2 ? 0 : phase < 4 ? 1 : 2
+            readonly property int secondsLeft: phase >= 6 && phase <= 9 ? 10 - phase : 0
+            readonly property real dialAngle: phase < 2 ? 0 : phase < 4 ? 90 : 180
+            readonly property string instruction: phase < 2 ? qsTr("Appuyez sur la molette de droite")
+                : phase < 4 ? qsTr("Tournez la molette de droite pour changer d’image")
+                : phase < 6 ? qsTr("Tournez encore pour afficher une troisième image")
+                : phase < 10 ? qsTr("Attendez 4 secondes sans toucher à la molette")
+                : qsTr("Image sauvée")
+            onPlayingChanged: if (!playing) phase = 0
+            Timer {
+                objectName: "gamingArtworkGuideTimer"
+                interval: 1000
+                repeat: true
+                running: artworkGuide.playing
+                onTriggered: artworkGuide.phase = (artworkGuide.phase + 1) % 13
+            }
+            SetupTitle { text: qsTr("Choisir l’illustration en jeu"); width: parent.width; wrapMode: Text.Wrap }
+            SetupText { text: qsTr("Démonstration · molette de droite du clavier") }
+            Text {
+                objectName: "gamingArtworkInstruction"
+                width: parent.width
+                text: artworkGuide.instruction
+                wrapMode: Text.Wrap
+                color: artworkGuide.phase >= 10 ? "#9be7a0" : "white"
+                font.pixelSize: 16
+                font.bold: true
+            }
+            Item {
+                width: Math.min(480, parent.width)
+                height: width * 0.54
+                Item {
+                    width: 480; height: 260
+                    scale: parent.width / 480
+                    transformOrigin: Item.TopLeft
+                    Rectangle { x: 45; y: 4; width: 390; height: 250; radius: 18; color: "#242b35"; border.color: "#586473" }
+                    Rectangle { x: 97; y: 23; width: 58; height: 58; radius: 29; color: "#475364"; border.color: "#91a1b4" }
+                    Rectangle {
+                        x: 310; y: 10; width: 84; height: 84; radius: 42
+                        color: "transparent"; border.width: 4; border.color: "#df8ff4"
+                        visible: artworkGuide.phase < 10
+                    }
+                    Rectangle {
+                        x: 323; y: artworkGuide.phase === 1 ? 27 : 23
+                        width: 58; height: 58; radius: 29
+                        color: "#475364"; border.color: "#e5edf7"
+                        rotation: artworkGuide.dialAngle
+                        Behavior on rotation { NumberAnimation { duration: artworkGuide.phase === 0 ? 0 : 700; easing.type: Easing.InOutCubic } }
+                        Rectangle { x: 27; y: 5; width: 4; height: 14; radius: 2; color: "#ffffff" }
+                    }
+                    Rectangle {
+                        x: 63; y: 105; width: 354; height: 130; radius: 8
+                        color: ["#205b87", "#683a85", "#a65a29"][artworkGuide.imageIndex]
+                        clip: true
+                        Canvas {
+                            id: guideArt
+                            anchors.fill: parent
+                            property int imageIndex: artworkGuide.imageIndex
+                            onImageIndexChanged: requestPaint()
+                            onPaint: {
+                                const ctx = getContext("2d")
+                                ctx.clearRect(0, 0, width, height)
+                                ctx.fillStyle = "#e8d5aa"
+                                ctx.beginPath()
+                                ctx.arc(imageIndex === 2 ? 100 : 285, 32, imageIndex === 2 ? 26 : 15, 0, Math.PI * 2)
+                                ctx.fill()
+                                ctx.fillStyle = ["#133c60", "#35204b", "#734225"][imageIndex]
+                                ctx.beginPath()
+                                if (imageIndex === 0) {
+                                    ctx.moveTo(0, 130); ctx.lineTo(90, 32); ctx.lineTo(180, 108); ctx.lineTo(250, 55); ctx.lineTo(354, 130)
+                                } else if (imageIndex === 1) {
+                                    ctx.moveTo(0, 130)
+                                    for (let i = 0; i < 8; ++i) {
+                                        const top = 35 + (i % 3) * 18
+                                        ctx.lineTo(i * 48, top); ctx.lineTo(i * 48 + 30, top); ctx.lineTo(i * 48 + 30, 130)
+                                    }
+                                } else {
+                                    ctx.moveTo(0, 95); ctx.bezierCurveTo(100, 35, 210, 150, 354, 65); ctx.lineTo(354, 130)
+                                }
+                                ctx.closePath(); ctx.fill()
+                            }
+                        }
+                        Text { x: 12; y: 8; text: qsTr("Illustration %1").arg(artworkGuide.imageIndex + 1); color: "white"; font.pixelSize: 16 }
+                        Row {
+                            x: 12; y: 76; spacing: 28
+                            Text { text: "FPS  90"; color: "white"; font.pixelSize: 18; font.bold: true }
+                            Text { text: "CPU  28 %"; color: "white"; font.pixelSize: 16 }
+                            Text { text: "GPU  48 %"; color: "white"; font.pixelSize: 16 }
+                        }
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 260; height: 46; radius: 8; color: "#e6242b35"
+                            visible: artworkGuide.phase >= 6
+                            Text {
+                                anchors.centerIn: parent
+                                text: artworkGuide.secondsLeft > 0 ? qsTr("Enregistrement dans %1 s").arg(artworkGuide.secondsLeft) : qsTr("Image sauvée")
+                                color: artworkGuide.secondsLeft > 0 ? "white" : "#9be7a0"
+                                font.pixelSize: 18; font.bold: true
+                            }
+                        }
+                    }
+                }
+            }
+            SetupText { text: qsTr("En jeu : appuyez sur la molette de droite, puis tournez pour parcourir les images SteamGridDB. Attendez 4 secondes sans la toucher pour enregistrer votre choix, ou appuyez de nouveau pour valider.") }
+            SetupText { text: qsTr("L’image choisie remplace la précédente dans vos images personnalisées et sera réutilisée au prochain lancement du jeu. Une clé SteamGridDB configurée est nécessaire pour rechercher d’autres images.") }
         }
         SetupDivider {}
         Text { text: qsTr("SteamGridDB · horizontal game artwork (optional)"); color: "white"; font.pixelSize: 18; font.bold: true }

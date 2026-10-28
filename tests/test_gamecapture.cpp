@@ -33,6 +33,7 @@ private Q_SLOTS:
     }
     void gamesAreSelectedWithoutTargetingDesktopOrLaunchers() {
         QVERIFY(GameCapture::isGamePath("D:\\SteamLibrary\\steamapps\\common\\Counter-Strike Global Offensive\\game\\bin\\win64\\cs2.exe"));
+        QVERIFY(GameCapture::isGamePath("G:/SteamLibrary/steamapps/common/ForzaHorizon5/ForzaHorizon5.exe"));
         QVERIFY(!GameCapture::isGamePath("C:/Windows/explorer.exe"));
         QVERIFY(!GameCapture::isGamePath("D:/steamapps/common/game/crashhandler.exe"));
         QVERIFY(!GameCapture::isGamePath("D:/steamapps/common/Steamworks Shared/redist.exe"));

@@ -261,3 +261,78 @@ References: [NVML](https://docs.nvidia.com/deploy/nvml-api/),
 The capture button follows both the running helper flag and the confirmed `capturing` state received from the daemon. A capturing snapshot still offers Stop when the optional process flag is missing or false. Starting capture displays a disabled progress label; the UI never assumes success from a click. Windows regression tests also verify the stop request for that snapshot. The owner later confirmed that Stop already appeared correctly while a game was running; the confusing idle label now reads “Prêt — lancez un jeu”.
 
 When PresentMon is installed and waiting for a game, the button displays “Prêt — lancez un jeu” and is disabled because capture starts automatically. Start remains available for retries or resuming a stopped capture; Stop remains green during capture. The owner confirmed that the running capture already displayed Stop correctly; the reported confusion concerned the idle label.
+
+### Non-Steam identity and artwork follow-up
+
+The local installation catalogue reads Epic `.item` manifests from ProgramData,
+EA game registry entries (`EA Games` / `Electronic Arts`, `Install Dir`), GOG
+registry entries (`GOG.com/Games`, `path`) and supported GOG/EA uninstall records.
+Both registry views and user/machine hives are inspected. The recorded installation
+path is used on any local drive; no game-specific folder or drive letter is needed.
+The capture detector and the artwork resolver share this catalogue. Launcher and
+helper exclusions still apply. Existing Steam and manual-profile detection remain.
+On Windows, the catalogue also reads each local Steam account's binary
+`userdata/<id>/config/shortcuts.vdf` to associate non-store games with their
+explicit executable and display name. The reader is bounded in size, depth and
+field count, rejects truncated/unknown formats, and never executes launch options
+or follows URI targets. A shortcut pointing to a separate launcher rather than
+the game executable still needs installation metadata or a manual profile.
+
+On Linux, Heroic/Legendary installed metadata and supported Heroic library entries
+provide game titles independently of installation directory names. Native and
+Flatpak configuration locations are checked. Lutris game YAML and Bottles
+`External_Programs` entries also supply executable/title associations. Only simple
+scalar YAML mappings are supported: anchors, tags, multiline strings, substitutions
+and executable configuration logic are never evaluated. Bottles shortcuts found
+only in Windows `.lnk` files and unsupported library/configuration formats still
+need a manual profile. A native game wrapper with a different executable name can
+also require a profile. Metadata scans run in a separate process with a deadline and bounded output, and are cached for thirty seconds; the previous catalogue is retained during refresh.
+missing/stale metadata does not imply universal game discovery.
+
+MangoHud CSV process names may omit `.exe`. Names are compared with and without
+this suffix; Wine's first command-line argument is checked when `/proc/PID/exe`
+points to the loader. Later arguments never identify a launcher as its child game.
+Wine Z: paths map to the Unix root; other drives use the running process's
+WINEPREFIX/dosdevices mapping. If no path can be resolved, a unique known title
+or explicit executable name can identify the game. Recognized Unreal build
+suffixes such as `-Win64-Shipping` are removed for this fallback. Generic or
+ambiguous names still require a path or manual profile. Folder titles such as
+`RedDeadRedemption2` become `Red Dead Redemption 2` for artwork search, which still
+requires a matching normalized SteamGridDB title.
+An isolated final sequel number from I to XX or 1 to 20 is also matched in the
+other notation. Exact title spelling remains preferred, and a successful empty
+search may retry once with the alternate notation. Years and letters inside words
+are unchanged, as are persistent cache/selection identifiers.
+
+These follow-up changes require fresh hardware testing on both operating systems.
+The original PR #65 tests did not validate all launchers. Registry schema references:
+[Game Relocator](https://github.com/Gabarsolon/game-relocator) and
+[Playnite GOG reader](https://github.com/JosefNemec/PlayniteExtensions/blob/master/source/Libraries/GogLibrary/GogLibrary.cs).
+See also [Epic manifest storage](https://dev.epicgames.com/documentation/en-us/unreal-engine/multiple-launcher-unreal-engine-installs),
+[Lutris configuration](https://github.com/lutris/lutris/blob/master/docs/installers.rst),
+and [Bottles programs](https://github.com/bottlesdevs/Bottles/blob/main/bottles/backend/managers/manager.py).
+
+### Gaming artwork on the right dial
+
+During Gaming, the right dial's existing wallpaper action selects game artwork.
+Press to enter, turn to preview the next/previous horizontal SteamGridDB image,
+and press again or leave the dial idle for four seconds to validate. The magenta
+ring and on-screen countdown reuse the normal wallpaper interaction. Gaming and
+its FPS remain visible. A pending download pauses automatic validation until a
+preview is ready; a press during loading does not save an unseen image. A game
+ending or changing during selection cancels the preview without saving it.
+
+The first available horizontal image is the initial suggestion. Up to forty
+validated image URLs in API order are retained per result. Exact normalized game
+names take priority; a longer result beginning with the complete base title can
+supply an edition's artwork when no exact match exists. This is a fallback, not
+proof that the edition matches the installed game. Offline browsing works for
+already cached previews; unavailable downloads preserve the current image.
+
+Validation atomically writes one file per game into the existing personal
+wallpaper folder (`wallpaper/mine/gaming-<game-key>.png` in user data). A new choice
+replaces that game's file. The saved selection takes priority on future launches,
+including offline, and does not change the normal wallpaper. The game key uses
+Steam AppID when known, otherwise the normalized title. Removing the API key or
+clearing download caches does not remove the personal selection. It can be
+removed through the personal wallpaper library. All images remain outside Git.
