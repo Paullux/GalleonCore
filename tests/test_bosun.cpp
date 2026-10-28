@@ -109,6 +109,43 @@ class TestBosun : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void gamingArtworkGuideLoopsAndStopsWhenHidden() {
+        const QTemporaryDir dir;
+        galleond::HomeWidgets widgets(nullptr, dir.filePath("widgets.json"), true);
+        QVERIFY(widgets.setGameOptions(false, false));
+        QQmlEngine engine;
+        QQmlComponent component(&engine, QUrl(QStringLiteral("qrc:/bosun/qml/GameModePage.qml")));
+        const std::unique_ptr<QObject> page(component.createWithInitialProperties({{"widgets", QVariant::fromValue(&widgets)}}));
+        QVERIFY2(page, qPrintable(component.errorString()));
+        QQuickWindow window;
+        auto *item = qobject_cast<QQuickItem *>(page.get());
+        QVERIFY(item);
+        item->setParentItem(window.contentItem());
+        item->setSize(QSizeF(900, 700));
+        window.resize(900, 700);
+        window.show();
+        auto *guide = page->findChild<QObject *>("gamingArtworkGuide");
+        auto *timer = page->findChild<QObject *>("gamingArtworkGuideTimer");
+        QVERIFY(guide);
+        QVERIFY(timer);
+        QTRY_VERIFY(timer->property("running").toBool());
+        QCOMPARE(guide->property("instruction").toString(), QStringLiteral("Appuyez sur la molette de droite"));
+        for (int phase = 1; phase <= 13; ++phase) {
+            QVERIFY(QMetaObject::invokeMethod(timer, "triggered"));
+            QCOMPARE(guide->property("phase").toInt(), phase % 13);
+            if (phase == 2) QCOMPARE(guide->property("imageIndex").toInt(), 1);
+            if (phase == 4) QCOMPARE(guide->property("imageIndex").toInt(), 2);
+            if (phase >= 6 && phase <= 9) QCOMPARE(guide->property("secondsLeft").toInt(), 10 - phase);
+            if (phase == 10) QCOMPARE(guide->property("instruction").toString(), QStringLiteral("Image sauvée"));
+        }
+        QVERIFY(page->setProperty("visible", false));
+        QVERIFY(!timer->property("running").toBool());
+        QCOMPARE(guide->property("phase").toInt(), 0);
+        QVERIFY(page->setProperty("visible", true));
+        QTRY_VERIFY(timer->property("running").toBool());
+        window.hide();
+        QTRY_VERIFY(!timer->property("running").toBool());
+    }
     void widgetApplyButtonPublishesTheDraft() {
         const QTemporaryDir dir;
         const auto file = dir.filePath("widgets.json");
