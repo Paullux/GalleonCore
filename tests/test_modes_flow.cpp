@@ -15,6 +15,11 @@
 
 #include <QDir>
 #include <QElapsedTimer>
+#include <HomeWidgets.h>
+#include <QCryptographicHash>
+#include <QStandardPaths>
+#include <QScopeGuard>
+#include <QUuid>
 #include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -192,6 +197,93 @@ class TestModesFlow : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void gamingDialPreviewsAndAutoValidatesOneImageWithoutChangingNormalWallpaper() {
+        const QTemporaryDir data;
+        const auto oldData = qgetenv("XDG_DATA_HOME");
+        const bool oldTestMode = QStandardPaths::isTestModeEnabled();
+        QStandardPaths::setTestModeEnabled(true);
+        qputenv("XDG_DATA_HOME", data.path().toUtf8());
+        const auto restore = qScopeGuard([&] {
+            QStandardPaths::setTestModeEnabled(oldTestMode);
+            if (oldData.isNull()) qunsetenv("XDG_DATA_HOME"); else qputenv("XDG_DATA_HOME", oldData);
+        });
+        const QString title = QStringLiteral("Picker ") + QUuid::createUuid().toString();
+        const QString id = GameArtworkResolver::gameKey(title, 0);
+        const QString cache = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + "/galleoncore/game-artwork/";
+        QVERIFY(QDir().mkpath(cache));
+        const QString secondUrl = QStringLiteral("https://cdn.steamgriddb.com/second.png");
+        const QString first = cache + id + ".png";
+        const QString second = cache + id + '-' + QString::fromLatin1(QCryptographicHash::hash(secondUrl.toUtf8(), QCryptographicHash::Sha256).toHex()) + ".png";
+        const QString list = first + ".json";
+        const auto cleanup = qScopeGuard([&] {
+            QFile::remove(first); QFile::remove(second); QFile::remove(list);
+            QFile::remove(QUrl(GameArtworkResolver::selectedArtwork(title, 0)).toLocalFile());
+        });
+        QImage art(920, 430, QImage::Format_RGB32);
+        art.fill(Qt::red); QVERIFY(art.save(first));
+        art.fill(Qt::blue); QVERIFY(art.save(second));
+        QFile inventory(list); QVERIFY(inventory.open(QIODevice::WriteOnly));
+        inventory.write(QJsonDocument(QJsonArray{"https://cdn.steamgriddb.com/first.png", secondUrl}).toJson()); inventory.close();
+        Fixture f;
+        auto *home = qobject_cast<HomeWidgets *>(f.screen->homeWidgets());
+        QVERIFY(home);
+        const QString log = f.dir.filePath("galleon-picker.csv");
+        QFile csv(log); QVERIFY(csv.open(QIODevice::WriteOnly));
+        csv.write("fps,elapsed\n91,1000\n"); csv.close();
+        QVERIFY(home->setGameProfile("galleon-picker", title, {}));
+        QVERIFY(home->setCaptureOptions(false, {}));
+        QVERIFY(home->setGameOptions(true, false));
+        QVERIFY(home->setFpsSource(log, {}));
+        QTRY_VERIFY_WITH_TIMEOUT(f.screen->gameActive(), 4000);
+        const QString normal = f.screen->wallpaper();
+        QSignalSpy countdown(f.pages.get(), &PagesController::wallpaperCountdown);
+        f.click(1);
+        QVERIFY(home->choosingGameArtwork());
+        QCOMPARE(countdown.last()[0].toInt(), 4); // independent of normal wallpaper's 60-second test setting
+        QCOMPARE(QUrl(home->gameState().value("image").toString()).toLocalFile(), first);
+        f.turn(1, 1);
+        QCOMPARE(QUrl(home->gameState().value("image").toString()).toLocalFile(), second);
+        QVERIFY(GameArtworkResolver::selectedArtwork(title, 0).isEmpty()); // preview isn't persisted
+        QTRY_VERIFY_WITH_TIMEOUT(!f.pages->wallpaperMode(), 6000);
+        QVERIFY(!home->choosingGameArtwork());
+        const QString selected = GameArtworkResolver::selectedArtwork(title, 0);
+        QVERIFY(!selected.isEmpty());
+        QCOMPARE(QImage(QUrl(selected).toLocalFile()).pixelColor(100, 100), QColor(Qt::blue));
+        QCOMPARE(f.screen->wallpaper(), normal);
+        // A new explicit choice replaces the same saved game image.
+        QVERIFY(csv.open(QIODevice::WriteOnly)); csv.write("fps,elapsed\n91,2000\n"); csv.close();
+        f.click(1);
+        bool normalFlashed = false;
+        const auto observation = QObject::connect(home, &HomeWidgets::changed, f.screen.get(), [&] {
+            const QColor pixel = f.lastScreen().pixelColor(20, 150);
+            normalFlashed = normalFlashed || pixel.green() > pixel.red();
+        });
+        f.click(1);
+        QObject::disconnect(observation);
+        QVERIFY(!normalFlashed); // saving must not briefly render the normal wallpaper
+        QCOMPARE(QImage(QUrl(GameArtworkResolver::selectedArtwork(title, 0)).toLocalFile()).pixelColor(100, 100), QColor(Qt::red));
+        QCOMPARE(f.screen->wallpaper(), normal);
+        QVERIFY(csv.open(QIODevice::WriteOnly)); csv.write("fps,elapsed\n91,3000\n"); csv.close();
+        f.click(1);
+        f.turn(1, 1);
+        QCOMPARE(QUrl(home->gameState().value("image").toString()).toLocalFile(), second);
+        QVERIFY(home->setGameOptions(false, false));
+        QTRY_VERIFY_WITH_TIMEOUT(!f.pages->wallpaperMode(), 4000);
+        QCOMPARE(QImage(QUrl(GameArtworkResolver::selectedArtwork(title, 0)).toLocalFile()).pixelColor(100, 100), QColor(Qt::red));
+        QCOMPARE(f.screen->wallpaper(), normal);
+    }
+    void artworkCountdownWaitsUntilThePreviewIsReady() {
+        Fixture f;
+        f.click(1);
+        f.pages->setGameArtworkMode(true);
+        f.pages->setGameArtworkPending(true);
+        QTest::qWait(4300);
+        QVERIFY(f.pages->wallpaperMode());
+        f.pages->setGameArtworkPending(false);
+        f.click(1);
+        QVERIFY(!f.pages->wallpaperMode());
+    }
+
     void withoutMediaTheKeypadIsShownAndOneClickShowsTheBandAndTheDialChangesTheTheme()
     {
         Fixture f; // no media

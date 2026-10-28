@@ -101,9 +101,14 @@ ScreenController::ScreenController(galleon::StreamDeck *deck,
     });
     m_lastGameActive = gameActive();
     connect(&m_homeWidgets, &HomeWidgets::changed, this, [this] {
+        Q_EMIT gameArtworkPendingChanged(m_homeWidgets.gameArtworkPending());
         const bool active = gameActive();
         if (active != m_lastGameActive) { m_lastGameActive = active; Q_EMIT gameActiveChanged(active); }
         if (!m_wallpaper.isEmpty() || m_gameShown || m_homeWidgets.gameState().value("active").toBool()) draw();
+    });
+    connect(&m_homeWidgets, &HomeWidgets::gameArtworkChoiceCancelled, this, [this] {
+        Q_EMIT gameArtworkPendingChanged(false);
+        Q_EMIT gameArtworkChoiceCancelled();
     });
     m_minuteTimer.setSingleShot(true);
     connect(&m_minuteTimer, &QTimer::timeout, this, &ScreenController::tick);
@@ -240,10 +245,11 @@ void ScreenController::setSuspended(bool suspended)
         draw();
 }
 
-QString ScreenController::choosingLabel() const
+QString ScreenController::choosingLabel()
 {
     if (!m_choosingWallpaper)
         return {};
+    if (m_gameArtworkChoosing) return m_homeWidgets.gameArtworkLabel();
     // "portrait-01  10/24": the file's name and its place among all the wallpapers.
     const QList<WallpaperEntry> &entries = m_catalog.entries();
     for (qsizetype i = 0; i < entries.size(); ++i) {
@@ -259,7 +265,7 @@ void ScreenController::setCountdown(int secondsLeft)
     if (secondsLeft == m_countdown)
         return;
     m_countdown = secondsLeft;
-    if (!m_wallpaper.isEmpty() && m_choosingWallpaper)
+    if ((!m_wallpaper.isEmpty() || m_gameArtworkChoosing) && m_choosingWallpaper)
         draw();
 }
 
@@ -274,9 +280,20 @@ void ScreenController::setBottomBar(std::uint32_t rgb, bool choosingWallpaper)
 {
     if (rgb == m_barRgb && choosingWallpaper == m_choosingWallpaper)
         return;
-    if (m_choosingWallpaper && !choosingWallpaper) {
+    if (m_choosingWallpaper && !choosingWallpaper && m_gameArtworkChoosing) {
+        m_gameArtworkChoosing = false;
+        m_choosingWallpaper = false; // finish emits changed synchronously: keep Gaming visible during the commit.
+        m_barRgb = rgb;
+        Q_EMIT gameArtworkModeChanged(false);
+        m_homeWidgets.finishGameArtworkChoice();
+        Q_EMIT gameArtworkPendingChanged(false);
+    } else if (m_choosingWallpaper && !choosingWallpaper) {
         persistWallpaper();
         startHold(); // the choice is made: keep it on the screen for a while, then back to the track
+    } else if (choosingWallpaper && gameActive()) {
+        m_gameArtworkChoosing = true;
+        Q_EMIT gameArtworkModeChanged(true);
+        m_homeWidgets.beginGameArtworkChoice();
     } else if (choosingWallpaper) {
         m_holdTimer.stop();
         m_holding = false;
@@ -284,12 +301,13 @@ void ScreenController::setBottomBar(std::uint32_t rgb, bool choosingWallpaper)
     }
     m_barRgb = rgb;
     m_choosingWallpaper = choosingWallpaper;
-    if (!m_wallpaper.isEmpty())
+    if (!m_wallpaper.isEmpty() || gameActive())
         draw();
 }
 
 void ScreenController::stepWallpaper(int steps)
 {
+    if (m_gameArtworkChoosing) { m_homeWidgets.stepGameArtwork(steps); draw(); return; }
     const QList<WallpaperEntry> &entries = m_catalog.entries();
     const auto count = static_cast<int>(entries.size());
     if (count == 0 || steps == 0)
@@ -341,7 +359,7 @@ void ScreenController::persistWallpaper()
         settings().setValue(settingWallpaper(), m_wallpaper);
 }
 
-QVariantMap ScreenController::themeProperties() const
+QVariantMap ScreenController::themeProperties()
 {
     return {{QStringLiteral("wallpaperLabel"), choosingLabel()},
             {QStringLiteral("countdown"), m_countdown},
@@ -465,7 +483,7 @@ bool ScreenController::drawNowPlaying()
 bool ScreenController::draw()
 {
     const WallpaperEntry *entry = m_catalog.find(m_wallpaper);
-    const bool game = m_homeWidgets.gameState().value(QStringLiteral("active")).toBool() && !m_choosingWallpaper && !m_themeChoosing;
+    const bool game = m_homeWidgets.gameState().value(QStringLiteral("active")).toBool() && (!m_choosingWallpaper || m_gameArtworkChoosing) && !m_themeChoosing;
     if ((!entry && !game && !m_gameShown) || !deckAvailable() || m_suspended)
         return false;
     m_gameShown = game;

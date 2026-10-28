@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "GameArtworkResolver.h"
+#include "GameMode.h"
+#include "WallpaperCatalog.h"
 #include <QBuffer>
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -49,6 +51,98 @@ QString GameArtworkResolver::cachePath(const QString &id) {
     return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
         + QStringLiteral("/galleoncore/game-artwork/") + id + QStringLiteral(".png");
 }
+QString GameArtworkResolver::gameKey(const QString &title, int steamAppId) { return identifier(title, steamAppId); }
+QString GameArtworkResolver::selectedArtwork(const QString &title, int steamAppId) {
+    const QString path = WallpaperCatalog::userRoot() + QStringLiteral("/mine/gaming-") + identifier(title, steamAppId) + QStringLiteral(".png");
+    if (!WallpaperCatalog::isAcceptable(path)) return {};
+    auto url = QUrl::fromLocalFile(path);
+    url.setQuery(QStringLiteral("v=") + QString::number(QFileInfo(path).lastModified().toMSecsSinceEpoch()));
+    return url.toString();
+}
+bool GameArtworkResolver::saveSelection(const QString &title, int steamAppId, const QString &localImage) {
+    const QUrl url(localImage);
+    if (!url.isLocalFile() || !WallpaperCatalog::isAcceptable(url.toLocalFile())) return false;
+    QFile input(url.toLocalFile());
+    if (!input.open(QIODevice::ReadOnly)) return false;
+    const QByteArray data = input.read(32LL * 1024 * 1024 + 1);
+    if (data.size() > 32LL * 1024 * 1024) return false;
+    const QString folder = WallpaperCatalog::userRoot() + QStringLiteral("/mine");
+    if (!QDir().mkpath(folder)) return false;
+    QSaveFile output(folder + QStringLiteral("/gaming-") + identifier(title, steamAppId) + QStringLiteral(".png"));
+    return output.open(QIODevice::WriteOnly) && output.write(data) == data.size() && output.commit();
+}
+void GameArtworkResolver::clearCacheState() {
+    ++m_generation;
+    m_busy = false;
+    m_choices.clear(); m_retryAt.clear(); m_status.clear();
+    for (auto *reply : m_network.findChildren<QNetworkReply *>()) reply->abort();
+}
+void GameArtworkResolver::loadChoices(const QString &id) {
+    if (m_choices.contains(id)) return;
+    if (m_choices.size() >= 64) m_choices.clear();
+    QFile file(cachePath(id) + QStringLiteral(".json"));
+    QList<QUrl> urls;
+    if (file.open(QIODevice::ReadOnly)) {
+        const auto bytes = file.read(65537);
+        if (bytes.size() <= 65536) {
+            for (const auto &entry : QJsonDocument::fromJson(bytes).array()) {
+                const QUrl url(entry.toString());
+                if (trustedArtworkUrl(url) && url.toString().size() <= 2048 && !urls.contains(url)) urls.append(url);
+                if (urls.size() == 40) break;
+            }
+        }
+    }
+    m_choices.insert(id, urls);
+}
+void GameArtworkResolver::rememberChoices(const QString &id, const QList<QUrl> &urls) {
+    if (m_choices.size() >= 64 && !m_choices.contains(id)) m_choices.clear();
+    m_choices[id] = urls;
+    QJsonArray array;
+    for (const auto &url : urls) array.append(url.toString());
+    const QString path = cachePath(id) + QStringLiteral(".json");
+    if (!QDir().mkpath(QFileInfo(path).absolutePath())) return;
+    QSaveFile file(path);
+    const auto bytes = QJsonDocument(array).toJson(QJsonDocument::Compact);
+    if (file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size()) file.commit();
+}
+int GameArtworkResolver::choiceCount(const QString &title, int steamAppId) {
+    const QString id = identifier(title, steamAppId);
+    loadChoices(id);
+    return int(m_choices.value(id).size());
+}
+QString GameArtworkResolver::preview(const QString &title, int steamAppId, const QString &apiKey, int index) {
+    const QString id = identifier(title, steamAppId);
+    loadChoices(id);
+    const auto choices = m_choices.value(id);
+    if (choices.isEmpty()) { requestChoices(title, steamAppId, apiKey); return {}; }
+    const auto at = ((qint64(index) % choices.size()) + choices.size()) % choices.size();
+    const QUrl &url = choices[int(at)];
+    const QString key = id + '-' + QString::fromLatin1(QCryptographicHash::hash(url.toEncoded(), QCryptographicHash::Sha256).toHex());
+    const QString path = cachePath(key);
+    if (WallpaperCatalog::isAcceptable(path)) return QUrl::fromLocalFile(path).toString();
+    if (at == 0 && WallpaperCatalog::isAcceptable(cachePath(id))) return QUrl::fromLocalFile(cachePath(id)).toString();
+    if (!apiKey.isEmpty() && !m_busy && m_retryAt.value(key) <= QDateTime::currentMSecsSinceEpoch()) {
+        m_busy = true; m_pending = key;
+        m_status = QStringLiteral("Loading SteamGridDB artwork");
+        download(key, url);
+    }
+    return {};
+}
+int GameArtworkResolver::searchGameId(const QJsonObject &response, const QString &title) {
+    if (const int exact = exactGameId(response, title); exact > 0) return exact;
+    const auto sought = canonical(title);
+    if (sought.size() < 8 || !response.value(QStringLiteral("success")).toBool()) return 0;
+    // A longer edition title may contain the complete base title (e.g. War Chest).
+    // Preserve API ranking; never use an unrelated autocomplete result.
+    for (const auto &entry : response.value(QStringLiteral("data")).toArray()) {
+        const auto game = entry.toObject();
+        if (canonical(game.value(QStringLiteral("name")).toString()).startsWith(sought)) {
+            const int id = game.value(QStringLiteral("id")).toInt();
+            if (id > 0) return id;
+        }
+    }
+    return 0;
+}
 int GameArtworkResolver::exactGameId(const QJsonObject &response, const QString &title) {
     if (!response.value(QStringLiteral("success")).toBool()) return 0;
     const QString sought = canonical(title);
@@ -60,8 +154,10 @@ int GameArtworkResolver::exactGameId(const QJsonObject &response, const QString 
     }
     return 0; // Never silently use an unrelated autocomplete result.
 }
-QUrl GameArtworkResolver::firstWideImage(const QJsonObject &response) {
+QList<QUrl> GameArtworkResolver::wideImages(const QJsonObject &response) {
     if (!response.value(QStringLiteral("success")).toBool()) return {};
+    QList<QUrl> urls;
+    qsizetype urlBytes = 0;
     for (const auto &value : response.value(QStringLiteral("data")).toArray()) {
         const auto image = value.toObject();
         const int width = image.value(QStringLiteral("width")).toInt();
@@ -69,20 +165,22 @@ QUrl GameArtworkResolver::firstWideImage(const QJsonObject &response) {
         if (width < 400 || height < 180 || qint64(width) * height > 32000000
             || double(width) / height < 1.4) continue;
         const QUrl url(image.value(QStringLiteral("url")).toString());
-        if (trustedArtworkUrl(url)) return url;
+        const auto encodedSize = url.toEncoded().size();
+        if (trustedArtworkUrl(url) && encodedSize <= 2048 && !urls.contains(url) && urlBytes + encodedSize < 60000) {
+            urls.append(url); urlBytes += encodedSize;
+        }
+        if (urls.size() == 40) break;
     }
-    return {};
+    return urls;
+}
+QUrl GameArtworkResolver::firstWideImage(const QJsonObject &response) {
+    return wideImages(response).value(0);
 }
 QString GameArtworkResolver::artwork(const QString &title, int steamAppId, const QString &apiKey) {
     if (title.trimmed().isEmpty() && steamAppId <= 0) return {};
+    auto selected = selectedArtwork(title, steamAppId);
+    if (!selected.isEmpty()) return selected;
     const QString id = identifier(title, steamAppId);
-    // A replacement personal key should immediately retry earlier 401/403 errors.
-    const QString fingerprint = QString::fromLatin1(
-        QCryptographicHash::hash(apiKey.toUtf8(), QCryptographicHash::Sha256).toHex());
-    if (m_keyFingerprint != fingerprint) {
-        m_keyFingerprint = fingerprint;
-        m_retryAt.clear();
-    }
     const QString path = cachePath(id);
     const QFileInfo file(path);
     if (file.isFile() && file.size() > 0 && file.size() <= 32LL * 1024 * 1024) {
@@ -91,8 +189,20 @@ QString GameArtworkResolver::artwork(const QString &title, int steamAppId, const
         if (size.width() > 0 && size.height() > 0 && qint64(size.width()) * size.height() <= 32000000)
             return QUrl::fromLocalFile(path).toString();
     }
+    requestChoices(title, steamAppId, apiKey);
+    return {};
+}
+void GameArtworkResolver::requestChoices(const QString &title, int steamAppId, const QString &apiKey) {
+    const QString id = identifier(title, steamAppId);
+    // A replacement personal key should immediately retry earlier 401/403 errors.
+    const QString fingerprint = QString::fromLatin1(
+        QCryptographicHash::hash(apiKey.toUtf8(), QCryptographicHash::Sha256).toHex());
+    if (m_keyFingerprint != fingerprint) {
+        m_keyFingerprint = fingerprint;
+        m_retryAt.clear();
+    }
     // In-flight requests and failures never interfere with game detection.
-    if (apiKey.isEmpty() || m_busy || m_retryAt.value(id) > QDateTime::currentMSecsSinceEpoch()) return {};
+    if (apiKey.isEmpty() || m_busy || m_retryAt.value(id) > QDateTime::currentMSecsSinceEpoch()) return;
     m_busy = true;
     m_pending = id;
     m_status = QStringLiteral("Looking for SteamGridDB artwork");
@@ -109,7 +219,6 @@ QString GameArtworkResolver::artwork(const QString &title, int steamAppId, const
     } else {
         search(id, title, apiKey);
     }
-    return {};
 }
 void GameArtworkResolver::apiGet(const QUrl &url, const QString &key, std::function<void(QJsonObject, int)> done) {
     QNetworkRequest request(url);
@@ -122,7 +231,9 @@ void GameArtworkResolver::apiGet(const QUrl &url, const QString &key, std::funct
         // Bound Qt\'s receive buffer while data arrives, not only after the request ends.
         if (reply->bytesAvailable() > 256LL * 1024) reply->abort();
     });
-    connect(reply, &QNetworkReply::finished, this, [this, reply, done = std::move(done)]() mutable {
+    const auto generation = m_generation;
+    connect(reply, &QNetworkReply::finished, this, [this, reply, generation, done = std::move(done)]() mutable {
+        if (generation != m_generation) { reply->deleteLater(); return; }
         const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         const QByteArray payload = reply->read(256LL * 1024 + 1);
         QJsonObject result;
@@ -139,13 +250,12 @@ void GameArtworkResolver::apiGet(const QUrl &url, const QString &key, std::funct
     });
 }
 void GameArtworkResolver::search(const QString &id, const QString &title, const QString &apiKey) {
-    QString name = title.trimmed();
-    if (name.endsWith(QStringLiteral(".exe"), Qt::CaseInsensitive)) name.chop(4);
+    const QString name = GameMode::readableTitle(title);
     if (name.size() < 3 || name.size() > 120) { finish(id, false); return; }
     const QString encoded = QString::fromLatin1(QUrl::toPercentEncoding(name));
     apiGet(apiUrl(QStringLiteral("search/autocomplete/") + encoded), apiKey,
         [this, id, name, apiKey](const QJsonObject &response, int) {
-            const int game = exactGameId(response, name);
+            const int game = searchGameId(response, name);
             if (game > 0) fetchGrid(id, game, apiKey);
             else finish(id, false);
         });
@@ -154,8 +264,11 @@ void GameArtworkResolver::fetchGrid(const QString &id, int gameId, const QString
     apiGet(apiUrl(QStringLiteral("grids/game/") + QString::number(gameId)
                   + QStringLiteral("?dimensions=920x430,460x215&types=static")), apiKey,
         [this, id](const QJsonObject &response, int) {
-            const QUrl url = firstWideImage(response);
-            if (url.isValid()) download(id, url);
+            const auto urls = wideImages(response);
+            if (!urls.isEmpty()) {
+                rememberChoices(id, urls);
+                download(id, urls.first());
+            }
             else finish(id, false);
         });
 }
@@ -168,7 +281,9 @@ void GameArtworkResolver::download(const QString &id, const QUrl &url) {
     connect(reply, &QIODevice::readyRead, reply, [reply] {
         if (reply->bytesAvailable() > 6LL * 1024 * 1024) reply->abort();
     });
-    connect(reply, &QNetworkReply::finished, this, [this, reply, id] {
+    const auto generation = m_generation;
+    connect(reply, &QNetworkReply::finished, this, [this, reply, id, generation] {
+        if (generation != m_generation) { reply->deleteLater(); return; }
         const int http = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         const QByteArray bytes = reply->read(6LL * 1024 * 1024 + 1);
         reply->deleteLater();
@@ -200,6 +315,7 @@ void GameArtworkResolver::download(const QString &id, const QUrl &url) {
 }
 void GameArtworkResolver::finish(const QString &id, bool succeeded) {
     if (!succeeded) {
+        if (m_retryAt.size() >= 64 && !m_retryAt.contains(id)) m_retryAt.clear();
         m_retryAt[id] = QDateTime::currentMSecsSinceEpoch() + 10LL * 60 * 1000;
         if (m_status == QStringLiteral("Looking for SteamGridDB artwork"))
             m_status = QStringLiteral("No matching horizontal artwork; using local fallback");

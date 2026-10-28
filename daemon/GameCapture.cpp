@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "GameCapture.h"
+#include "GameInstallations.h"
 #include <algorithm>
 #include <QCoreApplication>
 #include <QDir>
@@ -97,7 +98,7 @@ void GameCapture::tick(bool enabled, const CaptureTarget &target, const QString 
         } else if (program.isEmpty()) {
             m_state = QStringLiteral("missing"); m_message = tr("Install the official PresentMon MSI with its console component, then restart the daemon.");
         } else {
-            m_state = QStringLiteral("waiting"); m_message = tr("Ready. Start a Steam game; capture starts automatically.");
+            m_state = QStringLiteral("waiting"); m_message = tr("Ready. Start a supported game; capture starts automatically.");
         }
         return;
     }
@@ -232,6 +233,7 @@ bool GameCapture::isGamePath(QString path, const QStringList &profiles) {
     if (path.contains(QStringLiteral("/steamworks shared/"))) return false;
     if (path.contains(QStringLiteral("/steamapps/common/"))) return true;
     // Known non-Steam installation roots; unknown executables need a profile.
+    if (!GameInstallations::titleForPath(path, GameInstallations::discover()).isEmpty()) return true;
     const auto markers = {"/epic games/", "/gog games/", "/games/heroic/",
                           "/games/lutris/", "/bottles/bottles/"};
     return std::ranges::any_of(markers, [&path](const char *marker) {

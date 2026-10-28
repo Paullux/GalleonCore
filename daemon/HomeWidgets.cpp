@@ -155,7 +155,8 @@ QString HomeWidgets::recommendedFpsFolder() const { // NOLINT(readability-conver
     return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QStringLiteral("/galleoncore/fps");
 }
 QString HomeWidgets::steamLaunchOptions() const {
-    QString config = QStringLiteral("autostart_log=1,log_interval=500,output_folder=") + recommendedFpsFolder();
+    QString config = QStringLiteral("autostart_log=1,log_interval=500,output_folder=") + recommendedFpsFolder()
+        + QStringLiteral(",background_alpha=0,alpha=0");
     config.replace(QLatin1Char('\''), QStringLiteral("'\\''"));
     return QStringLiteral("MANGOHUD_CONFIG='") + config + QStringLiteral("' mangohud %command%");
 }
@@ -286,6 +287,38 @@ bool HomeWidgets::setFpsSource(const QString &source, const QString &process) {
     m_fpsConfig = {{"source", path}, {"process", process.trimmed()}};
     return save();
 }
+void HomeWidgets::beginGameArtworkChoice() {
+    if (m_draftMode || !m_gameState.value("active").toBool()) return;
+    m_artworkChoosing = true;
+    m_artworkTitle = m_gameState.value("title").toString();
+    m_artworkProcess = m_gameState.value("process").toString();
+    m_artworkAppId = m_gameState.value("appid").toInt();
+    m_artworkIndex = 0;
+    m_artworkPreview.clear();
+    refresh();
+}
+void HomeWidgets::stepGameArtwork(int steps) {
+    if (!m_artworkChoosing || steps == 0) return;
+    const int count = m_gameArtwork.choiceCount(m_artworkTitle, m_artworkAppId);
+    if (count == 0) return;
+    m_artworkIndex = int(((qint64(m_artworkIndex) + steps) % count + count) % count);
+    m_artworkPreview.clear();
+    refresh();
+}
+QString HomeWidgets::gameArtworkLabel() {
+    if (!m_artworkChoosing) return {};
+    if (gameArtworkPending()) return tr("Loading artwork…");
+    const int count = m_gameArtwork.choiceCount(m_artworkTitle, m_artworkAppId);
+    return count > 0 ? tr("Artwork %1/%2").arg(m_artworkIndex + 1).arg(count) : tr("No artwork available");
+}
+void HomeWidgets::finishGameArtworkChoice() {
+    if (!m_artworkChoosing) return;
+    m_artworkChoosing = false;
+    if (!m_artworkPreview.isEmpty() && !GameArtworkResolver::saveSelection(m_artworkTitle, m_artworkAppId, m_artworkPreview))
+        m_error = tr("Could not save the selected game artwork.");
+    m_artworkPreview.clear();
+    refresh();
+}
 bool HomeWidgets::steamGridDbConfigured() const {
     const QByteArray key = read(m_file + QStringLiteral(".steamgriddb-key")).trimmed();
     return !key.isEmpty() && key.size() <= 256;
@@ -327,9 +360,11 @@ bool HomeWidgets::setSteamGridDbApiKey(const QString &apiKey) {
 bool HomeWidgets::clearSteamGridDbArtworks() {
     const QDir cache(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
                      + QStringLiteral("/galleoncore/game-artwork"));
-    const auto images = cache.entryList({QStringLiteral("*.png")}, QDir::Files | QDir::NoSymLinks);
+    m_gameArtwork.clearCacheState();
+    const auto images = cache.entryList(QDir::Files | QDir::NoSymLinks);
+    const QRegularExpression owned(QStringLiteral("^[a-f0-9]{64}(-[a-f0-9]{64})?\\.png(\\.json)?$"));
     for (const auto &name : images) {
-        if (name.size() != 68 || !name.endsWith(QStringLiteral(".png"))) continue;
+        if (!owned.match(name).hasMatch()) continue;
         if (!QFile::remove(cache.filePath(name))) {
             m_error = tr("Could not clear the SteamGridDB artwork cache.");
             Q_EMIT changed(); return false;
@@ -602,12 +637,25 @@ void HomeWidgets::refresh() {
 #endif
     }
     m_gameState = m_gameMode.update(sample, m_gameConfig, sensors);
-    if (!m_draftMode && m_gameState.value("active").toBool()
-        && m_gameState.value("image").toString().isEmpty()) {
+    if (m_artworkChoosing && (!m_gameState.value("active").toBool()
+        || m_gameState.value("process").toString() != m_artworkProcess
+        || GameArtworkResolver::gameKey(m_gameState.value("title").toString(), m_gameState.value("appid").toInt())
+            != GameArtworkResolver::gameKey(m_artworkTitle, m_artworkAppId))) {
+        m_artworkChoosing = false;
+        m_artworkPreview.clear();
+        Q_EMIT gameArtworkChoiceCancelled();
+    }
+    if (!m_draftMode && m_gameState.value("active").toBool()) {
         const auto title = m_gameState.value("title").toString();
         const int appid = m_gameState.value("appid").toInt();
         const QByteArray key = read(m_file + QStringLiteral(".steamgriddb-key")).trimmed().left(256);
-        const auto image = m_gameArtwork.artwork(title, appid, QString::fromUtf8(key));
+        QString image = GameArtworkResolver::selectedArtwork(title, appid);
+        if (image.isEmpty() && m_gameState.value("image").toString().isEmpty())
+            image = m_gameArtwork.artwork(title, appid, QString::fromUtf8(key));
+        if (m_artworkChoosing) {
+            const auto preview = m_gameArtwork.preview(title, appid, QString::fromUtf8(key), m_artworkIndex);
+            if (!preview.isEmpty()) { m_artworkPreview = preview; image = preview; }
+        }
         if (!image.isEmpty()) m_gameState["image"] = image;
         m_gameState["artworkStatus"] = m_gameArtwork.status();
     }

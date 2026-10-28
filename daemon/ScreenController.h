@@ -107,18 +107,22 @@ Q_SIGNALS:
     // The screen with the name and place of the wallpaper being chosen was sent to the module.
     void choosingLabelShown();
     void gameActiveChanged(bool active);
+    void gameArtworkModeChanged(bool active);
+    void gameArtworkPendingChanged(bool pending);
+    void gameArtworkChoiceCancelled();
     void wallpaperChanged();
     void deckAvailableChanged();
 
 private:
     std::function<bool()> m_showGaming;
-    [[nodiscard]] QVariantMap themeProperties() const;
+    [[nodiscard]] QVariantMap themeProperties();
     void tick();
     bool draw();
     bool sendScreen(const QImage &frame);
     int m_failedSends = 0;
     std::uint32_t m_barRgb = 0xffffff;
     bool m_suspended = false;
+    bool m_gameArtworkChoosing = false;
     bool m_gameShown = false;
     bool m_lastGameActive = false;
     bool m_choosingWallpaper = false;
@@ -161,7 +165,7 @@ private:
     QTimer m_holdTimer;   // the wallpaper is kept for a moment, then the track returns
     bool m_holding = false;
     void startHold();
-    [[nodiscard]] QString choosingLabel() const;
+    [[nodiscard]] QString choosingLabel();
     int m_countdown = 0; // seconds left of the validation, shown over the wallpaper; 0 = none
     QTimer m_previewTimer; // groups the wallpaper steps of a turning dial into few pictures
     void showStepped();

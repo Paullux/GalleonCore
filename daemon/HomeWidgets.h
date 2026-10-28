@@ -46,6 +46,12 @@ public:
     [[nodiscard]] QVariantMap fpsConfig() const { return m_fpsConfig; }
     [[nodiscard]] QVariantMap gameState() const { return m_gameState; }
     [[nodiscard]] QVariantMap gameConfig() const { return m_gameConfig; }
+    void beginGameArtworkChoice();
+    void stepGameArtwork(int steps);
+    void finishGameArtworkChoice();
+    [[nodiscard]] bool choosingGameArtwork() const { return m_artworkChoosing; }
+    [[nodiscard]] bool gameArtworkPending() const { return m_artworkChoosing && m_artworkPreview.isEmpty() && m_gameArtwork.busy(); }
+    [[nodiscard]] QString gameArtworkLabel();
     [[nodiscard]] bool steamGridDbConfigured() const;
     Q_INVOKABLE bool setSteamGridDbApiKey(const QString &apiKey);
     Q_INVOKABLE bool clearSteamGridDbArtworks();
@@ -72,6 +78,7 @@ public:
     Q_INVOKABLE bool apply();
 Q_SIGNALS:
     void changed();
+    void gameArtworkChoiceCancelled();
 private:
     void refresh();
     void load();
@@ -90,6 +97,9 @@ private:
     std::optional<double> m_gpuLoad;
     GameMode m_gameMode;
     GameArtworkResolver m_gameArtwork;
+    bool m_artworkChoosing = false;
+    QString m_artworkTitle, m_artworkProcess, m_artworkPreview;
+    int m_artworkAppId = 0, m_artworkIndex = 0;
     GameCapture m_capture;
     CaptureTarget m_captureTarget;
     quint32 m_captureStoppedPid = 0;

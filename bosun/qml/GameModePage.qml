@@ -276,7 +276,7 @@ Flickable {
                 SetupText { text: qsTr("1. Ouvrez les paramètres du jeu et activez MangoHud / Afficher les FPS dans les réglages Linux (l’emplacement dépend de la version).") }
                 SetupText { text: qsTr("2. Avec la préparation commune, aucune commande ni variable par jeu n’est nécessaire. Enregistrez les réglages et relancez le jeu. Ne mettez rien dans Arguments du jeu pour MangoHud.") }
                 SetupText { text: qsTr("Si vous devez définir les options par jeu : Paramètres du jeu → Avancé → Variables d’environnement. Nom : MANGOHUD_CONFIG. Valeur (sans guillemets supplémentaires) :") }
-                SetupCode { text: "autostart_log=1,log_interval=500,output_folder=" + page.widgets.recommendedFpsFolder }
+                SetupCode { text: "autostart_log=1,log_interval=500,output_folder=" + page.widgets.recommendedFpsFolder + ",background_alpha=0,alpha=0" }
                 SetupText { text: qsTr("Heroic Flatpak : installez aussi l’extension MangoHud adaptée et autorisez le fichier de configuration et le dossier des mesures. La case seule ne donne pas ces accès ; voir le guide Linux.") }
             }
             SetupDivider {}
@@ -287,7 +287,7 @@ Flickable {
                 SetupText { text: qsTr("1. Clic droit sur le jeu → Configurer → Options système → activez Compteur de FPS (MangoHud). Affichez les options avancées si nécessaire.") }
                 SetupText { text: qsTr("2. Avec la préparation commune, aucune commande ni variable par jeu n’est nécessaire. Enregistrez puis relancez le jeu. Ne mettez pas %command% dans Lutris.") }
                 SetupText { text: qsTr("Ancienne version sans cette case : ajoutez seulement mangohud dans Préfixe de commande. Pour des options par jeu : Options système → Variables d’environnement, nom MANGOHUD_CONFIG, valeur :") }
-                SetupCode { text: "autostart_log=1,log_interval=500,output_folder=" + page.widgets.recommendedFpsFolder }
+                SetupCode { text: "autostart_log=1,log_interval=500,output_folder=" + page.widgets.recommendedFpsFolder + ",background_alpha=0,alpha=0" }
             }
             SetupDivider {}
             Column {

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "GameMode.h"
+#include "GameInstallations.h"
 #include "SteamLibrary.h"
 #include <QDir>
 #include <QFile>
@@ -11,6 +12,8 @@
 #include <QJsonObject>
 #include <QLocale>
 #include <QUrl>
+#include <QRegularExpression>
+#include <QStandardPaths>
 #include <cmath>
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -35,7 +38,9 @@ QString executableName(QString name) {
     return name.section('/', -1).toLower();
 }
 QVariantMap identity(const QString &process) {
+#ifdef Q_OS_WIN
     const auto base = executableName(process);
+#endif
     QString path;
     int appid = 0;
 #ifdef Q_OS_WIN
@@ -61,9 +66,27 @@ QVariantMap identity(const QString &process) {
         bool numeric = false; pid.toUInt(&numeric); if (!numeric) continue;
         const auto prefix = QStringLiteral("/proc/") + pid;
         const auto executable = QFileInfo(prefix + QStringLiteral("/exe")).symLinkTarget();
-        if (executableName(executable) != base) continue;
-        path = executable;
-        for (const auto &variable : smallFile(prefix + QStringLiteral("/environ")).split('\0')) {
+        const auto commandLine = smallFile(prefix + QStringLiteral("/cmdline"));
+        const auto cwd = QFileInfo(prefix + QStringLiteral("/cwd")).symLinkTarget();
+        path = GameMode::capturedExecutable(process, executable, commandLine, cwd);
+        QByteArray environment;
+        if (path.isEmpty()) {
+            const QString first = QString::fromUtf8(commandLine.split('\0').value(0)).replace('\\', '/');
+            if (first.size() < 3 || first[1] != ':') continue;
+            // Check the process name before reading its Wine environment.
+            if (GameMode::capturedExecutable(process, executable, commandLine, cwd, QStringLiteral("/")).isEmpty()) continue;
+            environment = smallFile(prefix + QStringLiteral("/environ"));
+            QString winePrefix;
+            for (const auto &variable : environment.split('\0'))
+                if (variable.startsWith("WINEPREFIX=")) winePrefix = QString::fromUtf8(variable.mid(11));
+            if (winePrefix.isEmpty()) winePrefix = QDir::homePath() + QStringLiteral("/.wine");
+            const QString drive = QString(first[0].toLower()) + ':';
+            const QString driveRoot = QFileInfo(winePrefix + QStringLiteral("/dosdevices/") + drive).symLinkTarget();
+            path = GameMode::capturedExecutable(process, executable, commandLine, cwd, driveRoot);
+        }
+        if (path.isEmpty()) continue;
+        if (environment.isEmpty()) environment = smallFile(prefix + QStringLiteral("/environ"));
+        for (const auto &variable : environment.split('\0')) {
             if (!variable.startsWith("SteamAppId=")) continue;
             bool ok = false; const int id = variable.mid(11).toInt(&ok);
             if (ok && id > 0) appid = id;
@@ -89,7 +112,11 @@ QVariantMap identity(const QString &process) {
         }
     }
     const QString folderTitle = GameMode::titleFromInstallPath(path);
-    QVariantMap result{{"title", folderTitle.isEmpty() ? process : folderTitle}, {"image", QString()}};
+    QVariantMap result{{"title", folderTitle.isEmpty() ? GameMode::readableTitle(process) : folderTitle}, {"image", QString()}};
+    const auto installations = GameInstallations::discover();
+    const auto installedTitle = path.isEmpty() ? GameInstallations::titleForProcess(process, installations)
+                                              : GameInstallations::titleForPath(path, installations);
+    if (!installedTitle.isEmpty()) result["title"] = installedTitle;
     if (appid > 0) {
         result["appid"] = appid;
         for (const auto &game : SteamLibrary::installedGames(root)) {
@@ -129,6 +156,39 @@ void sensorNodes(const QJsonObject &node, QVariantMap &result, int depth, int &c
     for (const auto &child : node.value(QStringLiteral("Children")).toArray()) sensorNodes(child.toObject(), result, depth + 1, count);
 }
 }
+QString GameMode::readableTitle(QString title) {
+    if (title.endsWith(QStringLiteral(".exe"), Qt::CaseInsensitive)) title.chop(4);
+    title.replace('_', ' ');
+    title.replace('-', ' ');
+    title.replace(QRegularExpression(QStringLiteral("([a-z])([A-Z])")), QStringLiteral("\\1 \\2"));
+    title.replace(QRegularExpression(QStringLiteral("([A-Za-z])([0-9])")), QStringLiteral("\\1 \\2"));
+    return title.simplified();
+}
+QString GameMode::capturedExecutable(const QString &process, const QString &executable,
+                                    const QByteArray &commandLine, const QString &cwd, const QString &wineDriveRoot) {
+    const auto matches = [&process](const QString &candidate) {
+        auto name = executableName(candidate);
+        auto expected = executableName(process);
+        if (name.endsWith(QStringLiteral(".exe"))) name.chop(4);
+        if (expected.endsWith(QStringLiteral(".exe"))) expected.chop(4);
+        return !name.isEmpty() && name == expected;
+    };
+    if (matches(executable)) return executable;
+    if (commandLine.size() > 65536) return {};
+    // argv[0] only: a launcher mentioning a game in its arguments is not that game.
+    QString first = QString::fromUtf8(commandLine.split('\0').value(0));
+    if (!matches(first)) return {};
+    first.replace('\\', '/');
+    if (QDir::isAbsolutePath(first)) return QDir::cleanPath(first);
+    if (first.size() > 3 && first[1] == ':' && first[2] == '/') {
+        // Wine's default Z: maps the Unix root; other letters use the actual
+        // dosdevices symlink from that process's WINEPREFIX, never a guessed path.
+        const QString root = first[0].toLower() == 'z' && wineDriveRoot.isEmpty()
+            ? QStringLiteral("/") : wineDriveRoot;
+        return root.isEmpty() ? QString() : QDir(root).absoluteFilePath(first.mid(3));
+    }
+    return cwd.isEmpty() ? QString() : QDir(cwd).absoluteFilePath(first);
+}
 QString GameMode::titleFromInstallPath(QString path) {
     path.replace('\\', '/');
     const QString lower = path.toLower();
@@ -137,12 +197,10 @@ QString GameMode::titleFromInstallPath(QString path) {
                                "/games/heroic/", "/games/lutris/", "/bottles/bottles/"}) {
         const auto match = lower.indexOf(QLatin1String(marker));
         if (match < 0) continue;
-        QString folder = path.mid(match + int(QByteArray(marker).size())).section('/', 0, 0).trimmed();
+        const QString folder = path.mid(match + int(QByteArray(marker).size())).section('/', 0, 0).trimmed();
         if (folder.isEmpty() || folder.size() > 120
             || folder.compare(QStringLiteral("drive_c"), Qt::CaseInsensitive) == 0) return {};
-        folder.replace('_', ' ');
-        folder.replace('-', ' ');
-        return folder.simplified();
+        return readableTitle(folder);
     }
     return {};
 }
@@ -175,7 +233,11 @@ QVariantMap GameMode::update(const FpsSample &sample, const QVariantMap &config,
         m_process.clear(); m_identity.clear();
         return {{"active", false}};
     }
-    if (m_process != sample.process) { m_process = sample.process; m_identity = identity(sample.process); }
+    if (m_process != sample.process || m_catalogueRevision != GameInstallations::revision()) {
+        m_process = sample.process;
+        m_identity = identity(sample.process);
+        m_catalogueRevision = GameInstallations::revision();
+    }
     auto result = m_identity;
     result["active"] = true;
     result["process"] = sample.process;

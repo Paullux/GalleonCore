@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <GameMode.h>
+#include <GameInstallations.h>
 #include <HomeWidgets.h>
 #include <ScreenRenderer.h>
 #include <QFile>
@@ -13,6 +14,74 @@ using namespace galleond;
 class TestGameMode : public QObject {
     Q_OBJECT
 private Q_SLOTS:
+    void wineCaptureMatchesExeSuffixAndOnlyItsOwnCommand() {
+        const QString game = QStringLiteral("/games/Heroic/Ghostrunner/Ghostrunner.exe");
+        QCOMPARE(GameMode::capturedExecutable("Ghostrunner", game, {}, {}), game);
+        QCOMPARE(GameMode::capturedExecutable("Ghostrunner", "/usr/bin/wine", game.toUtf8(), "/tmp"), game);
+        QCOMPARE(GameMode::capturedExecutable("Ghostrunner", "/usr/bin/wine", "Ghostrunner.exe", "/games/Heroic/Ghostrunner"), game);
+        QVERIFY(GameMode::capturedExecutable("Ghostrunner", "/usr/bin/launcher", QByteArray("launcher\0Ghostrunner.exe", 24), "/tmp").isEmpty());
+        QVERIFY(GameMode::capturedExecutable("Ghostrunner", "/usr/bin/wine", "OtherGame.exe", "/tmp").isEmpty());
+#ifndef Q_OS_WIN
+        const QString shipping = QStringLiteral("/home/test/Games/Heroic/Ghostrunner/Ghostrunner/Binaries/Win64/Ghostrunner-Win64-Shipping.exe");
+        QCOMPARE(GameMode::capturedExecutable("Ghostrunner-Win64-Shipping", "/usr/bin/wine64-preloader",
+            "Z:\\home\\test\\Games\\Heroic\\Ghostrunner\\Ghostrunner\\Binaries\\Win64\\Ghostrunner-Win64-Shipping.exe", {}), shipping);
+        QCOMPARE(GameMode::capturedExecutable("Ghostrunner-Win64-Shipping", "/usr/bin/wine64-preloader",
+            "C:/Games/Ghostrunner/Binaries/Win64/Ghostrunner-Win64-Shipping.exe", {}, "/custom/prefix/drive_c"),
+            QStringLiteral("/custom/prefix/drive_c/Games/Ghostrunner/Binaries/Win64/Ghostrunner-Win64-Shipping.exe"));
+        QVERIFY(GameMode::capturedExecutable("Ghostrunner-Win64-Shipping", "/usr/bin/wine64-preloader",
+            "C:/Games/Ghostrunner/Binaries/Win64/Ghostrunner-Win64-Shipping.exe", {}).isEmpty());
+        const auto installed = GameInstallations::registryRecord("/home/test/Games/Heroic/Ghostrunner", "Ghostrunner");
+        QCOMPARE(GameInstallations::titleForPath(shipping, {installed}), QStringLiteral("Ghostrunner"));
+#endif
+    }
+    void launcherMetadataWorksOnAnyDriveWithoutFolderHeuristics() {
+        const auto epic = GameInstallations::epicManifest(R"({"AppName":"opaque","DisplayName":"Red Dead Redemption 2","InstallLocation":"K:/Custom/opaque","LaunchExecutable":"RDR2.exe"})");
+        QCOMPARE(GameInstallations::titleForPath("k:/custom/opaque/x64/RDR2.exe", {epic}), QStringLiteral("Red Dead Redemption 2"));
+        QVERIFY(GameInstallations::titleForPath("K:/Custom/opaque-other/RDR2.exe", {epic}).isEmpty());
+        const auto gog = GameInstallations::registryRecord("G:/Unusual/123/", "GOG Title");
+        QCOMPARE(GameInstallations::titleForPath("G:/Unusual/123/game.exe", {gog}), QStringLiteral("GOG Title"));
+        const auto ea = GameInstallations::registryRecord("K:/Anywhere/Sims", "The Sims 4");
+        QCOMPARE(GameInstallations::titleForPath("K:/Anywhere/Sims/Game/Bin/TS4_x64.exe", {ea}), QStringLiteral("The Sims 4"));
+        QVERIFY(GameInstallations::registryRecord("K:/", "Bad root").directory.isEmpty());
+        QVERIFY(GameInstallations::registryRecord("relative/game", "Bad path").directory.isEmpty());
+        QVERIFY(GameInstallations::epicManifest(R"({"DisplayName":"Incomplete","InstallLocation":"K:/Game","LaunchExecutable":"game.exe","bIsIncompleteInstall":true})").directory.isEmpty());
+    }
+    void installedMetadataOverridesOpaqueFolderNamesWithoutPrefixCollisions() {
+        const QByteArray installed = R"({"opaque-id":{"install_path":"/games/opaque","title":"Red Dead Redemption 2"}})";
+        const auto games = GameInstallations::legendaryManifest(installed);
+        QCOMPARE(GameInstallations::titleForPath("/games/opaque/x64/RDR2.exe", games), QStringLiteral("Red Dead Redemption 2"));
+        QVERIFY(GameInstallations::titleForPath("/games/opaque-other/RDR2.exe", games).isEmpty());
+        QVERIFY(GameInstallations::legendaryManifest(QByteArray(1024 * 1024 + 1, ' ')).isEmpty());
+    }
+    void uniqueProcessNamesResolveBuildChildrenButNeverGenericOrAmbiguousNames() {
+        auto ghost = GameInstallations::registryRecord("/games/opaque", "Ghostrunner");
+        QCOMPARE(GameInstallations::titleForProcess("Ghostrunner-Win64-Shipping.exe", {ghost}), QStringLiteral("Ghostrunner"));
+        ghost.executable = QStringLiteral("/games/opaque/custom.exe");
+        QCOMPARE(GameInstallations::titleForProcess("custom", {ghost}), QStringLiteral("Ghostrunner"));
+        auto other = GameInstallations::registryRecord("/games/other", "Other Game");
+        other.executable = QStringLiteral("/games/other/custom.exe");
+        QVERIFY(GameInstallations::titleForProcess("custom.exe", {ghost, other}).isEmpty());
+        other.executable = QStringLiteral("/games/other/game.exe");
+        QVERIFY(GameInstallations::titleForProcess("game.exe", {other}).isEmpty());
+        QVERIFY(GameInstallations::titleForProcess("Ghostrunner2.exe", {ghost}).isEmpty());
+    }
+    void heroicSideloadsKeepTheirTitleWithoutTreatingTheWholeBinFolderAsAGame() {
+        const auto games = GameInstallations::heroicLibrary(R"({"games":[{"title":"My Native Game","is_installed":true,"install":{"executable":"/custom/bin/game"}},{"title":"Not installed","is_installed":false,"install":{"executable":"/custom/bin/other"}}]})");
+        QCOMPARE(GameInstallations::titleForPath("/custom/bin/game", games), QStringLiteral("My Native Game"));
+        QVERIFY(GameInstallations::titleForPath("/custom/bin/other", games).isEmpty());
+    }
+    void linuxLauncherConfigsMatchOnlyTheirProgramWithoutExecutingYaml() {
+        const auto lutris = GameInstallations::lutrisConfig("game:\n  exe: /custom/game/bin/run\nname: A Game\n", "fallback");
+        QCOMPARE(GameInstallations::titleForPath("/custom/game/bin/run", {lutris}), QStringLiteral("A Game"));
+        QVERIFY(GameInstallations::titleForPath("/custom/game/bin/helper", {lutris}).isEmpty());
+        const auto bottle = GameInstallations::bottlesConfig("External_Programs:\n  id:\n    name: Bottle Game\n    path: C:/Games/Test/game.exe\n", "/custom/bottle");
+        QCOMPARE(GameInstallations::titleForPath("/custom/bottle/drive_c/Games/Test/game.exe", bottle), QStringLiteral("Bottle Game"));
+        QVERIFY(GameInstallations::lutrisConfig("game:\n  exe: !execute evil\n", "ignored").directory.isEmpty());
+    }
+    void joinedFolderTitlesAreReadableForArtworkSearch() {
+        QCOMPARE(GameMode::readableTitle("RedDeadRedemption2"), QStringLiteral("Red Dead Redemption 2"));
+        QCOMPARE(GameMode::readableTitle("Ghostrunner.exe"), QStringLiteral("Ghostrunner"));
+    }
     void gamePathsProvideConservativeTitles() {
         QCOMPARE(GameMode::titleFromInstallPath("D:/Epic Games/Cyberpunk_2077/bin/game.exe"),
                  QStringLiteral("Cyberpunk 2077"));
