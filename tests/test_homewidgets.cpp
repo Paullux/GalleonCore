@@ -40,6 +40,49 @@ private Q_SLOTS:
         both["data"] = entries;
         QCOMPARE(GameArtworkResolver::exactGameId(both, "Red Dead Redemption 2"), 5);
     }
+    void artworkSearchHandlesLocalizedArticlesAndShortTitles() {
+        using galleond::GameArtworkResolver;
+        QCOMPARE(GameArtworkResolver::searchTitles(QStringLiteral("Les Sims™ 4")),
+                 QStringList({QStringLiteral("Les Sims™ 4"), QStringLiteral("Sims™ 4"),
+                              QStringLiteral("Les Sims™ IV"), QStringLiteral("Sims™ IV")}));
+        QCOMPARE(GameArtworkResolver::searchTitles("Le Hobbit"),
+                 QStringList({"Le Hobbit", "Hobbit"}));
+        QCOMPARE(GameArtworkResolver::searchTitles("La Terre du Milieu"),
+                 QStringList({"La Terre du Milieu", "Terre du Milieu"}));
+        QCOMPARE(GameArtworkResolver::searchTitles("Les Sims™ 4 Deluxe"),
+                 QStringList({QStringLiteral("Les Sims™ 4 Deluxe"), QStringLiteral("Sims™ 4 Deluxe")}));
+        QCOMPARE(GameArtworkResolver::searchTitles("Lesion"), QStringList({"Lesion"}));
+        QCOMPARE(GameArtworkResolver::searchTitles("Le"), QStringList());
+        // This spelling is preserved as the cache key and visible game title.
+        QCOMPARE(GameArtworkResolver::searchTitles("0 A.D."), QStringList({"0 A.D."}));
+        const QJsonObject sims{{"success", true}, {"data", QJsonArray{
+            QJsonObject{{"id", 42}, {"name", "The Sims 4"}}}}};
+        QCOMPARE(GameArtworkResolver::searchGameId(sims, QStringLiteral("Sims™ 4")), 42);
+        QCOMPARE(GameArtworkResolver::searchGameId(sims, QStringLiteral("Les Sims™ 4")), 0);
+        const QJsonObject shortTitles{{"success", true}, {"data", QJsonArray{
+            QJsonObject{{"id", 5248416}, {"name", "0 A.D. Empires Ascendant"}},
+            QJsonObject{{"id", 99}, {"name", "Beowulf: The Game"}},
+            QJsonObject{{"id", 10}, {"name", "Doomsday"}}}}};
+        QCOMPARE(GameArtworkResolver::searchGameId(shortTitles, "0 A.D."), 5248416);
+        QCOMPARE(GameArtworkResolver::searchGameId(shortTitles, "Beowulf"), 99);
+        QCOMPARE(GameArtworkResolver::searchGameId(shortTitles, "Doom"), 0);
+        QCOMPARE(GameArtworkResolver::searchGameId(shortTitles, "Beowul"), 0);
+        // Exact matches beat longer editions even if the API lists them first.
+        auto withExact = shortTitles;
+        auto entries = withExact.value("data").toArray();
+        entries.append(QJsonObject{{"id", 100}, {"name", "Beowulf"}});
+        withExact["data"] = entries;
+        QCOMPARE(GameArtworkResolver::searchGameId(withExact, "Beowulf"), 100);
+        // No arbitrary substring matches.
+        QCOMPARE(GameArtworkResolver::searchGameId(shortTitles, "ADO"), 0);
+        const QJsonObject witcher{{"success", true}, {"data", QJsonArray{
+            QJsonObject{{"id", 20}, {"name", "The Witcher 3: Complete Edition"}}}}};
+        QCOMPARE(GameArtworkResolver::searchGameId(witcher, "The Witcher 3"), 20);
+        QCOMPARE(GameArtworkResolver::searchGameId(witcher, "Witcher 3"), 20);
+        const QJsonObject nearMatch{{"success", true}, {"data", QJsonArray{
+            QJsonObject{{"id", 21}, {"name", "Beowulfs"}}}}};
+        QCOMPARE(GameArtworkResolver::searchGameId(nearMatch, "Beowulf"), 0);
+    }
     void selectedArtworkReplacesOneLocalImageAndSurvivesWithoutAnApiKey() {
         const QTemporaryDir dir;
         const auto oldData = qgetenv("XDG_DATA_HOME");
