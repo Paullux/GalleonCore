@@ -11,7 +11,8 @@ struct CaptureTarget {
     quint32 pid = 0;
     QString name;
     QString displayName{}; // Optional, independently reported Game Bar title.
-    bool operator==(const CaptureTarget &) const = default;
+    // A title update must not restart an active PresentMon capture.
+    bool operator==(const CaptureTarget &other) const { return pid == other.pid && name == other.name; }
 };
 // Owns only its child capture. Never stops another PresentMon session or game.
 class GameCapture : public QObject {
