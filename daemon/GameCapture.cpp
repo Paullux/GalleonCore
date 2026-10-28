@@ -7,6 +7,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QSaveFile>
 #include <QSettings>
 #include <QRegularExpression>
@@ -240,10 +242,45 @@ bool GameCapture::isGamePath(QString path, const QStringList &profiles) {
         return path.contains(QLatin1String(marker));
     });
 }
-CaptureTarget GameCapture::detectGame(const QStringList &profiles, quint32 currentPid) {
+std::optional<QString> GameCapture::gameBarDisplayName(const QByteArray &report, qint64 nowMs) {
+    if (report.isEmpty() || report.size() > 2048) return std::nullopt;
+    QJsonParseError error;
+    const auto document = QJsonDocument::fromJson(report, &error);
+    if (error.error != QJsonParseError::NoError || !document.isObject()) return std::nullopt;
+    const auto object = document.object();
+    if (object.value(QStringLiteral("isGame")) != QJsonValue(true)) return std::nullopt;
+    const auto at = object.value(QStringLiteral("at")).toVariant().toLongLong();
+    if (at <= 0 || at > nowMs || nowMs - at > 5000) return std::nullopt;
+    const auto title = object.value(QStringLiteral("displayName")).toString().trimmed();
+    if (title.isEmpty() || title.size() > 120) return std::nullopt;
+    for (const auto ch : title) if (ch.unicode() < 32 || ch.unicode() == 127) return std::nullopt;
+    return title;
+}
+CaptureTarget GameCapture::detectGame(const QStringList &profiles, quint32 currentPid,
+                                      const QByteArray &gameBarReport) {
 #ifdef Q_OS_WIN
     DWORD foreground = 0;
     GetWindowThreadProcessId(GetForegroundWindow(), &foreground);
+    // Only a fresh Game Bar game report can bypass installation-path heuristics.
+    // The PID and executable are always resolved locally, never read from the report.
+    const auto gameBarTitle = gameBarDisplayName(gameBarReport, QDateTime::currentMSecsSinceEpoch());
+    if (gameBarTitle && foreground) {
+        HANDLE handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, foreground);
+        if (handle) {
+            wchar_t buffer[32768]; DWORD length = 32768;
+            const bool ok = QueryFullProcessImageNameW(handle, 0, buffer, &length);
+            CloseHandle(handle);
+            if (ok) {
+                const auto executable = QFileInfo(QString::fromWCharArray(buffer, int(length))).fileName();
+                static const QStringList excluded{QStringLiteral("explorer.exe"), QStringLiteral("dwm.exe"),
+                    QStringLiteral("gamebar.exe"), QStringLiteral("galleond.exe"),
+                    QStringLiteral("galleon-bosun.exe")};
+                if (executable.endsWith(QStringLiteral(".exe"), Qt::CaseInsensitive)
+                    && !excluded.contains(executable, Qt::CaseInsensitive))
+                    return {quint32(foreground), executable, *gameBarTitle};
+            }
+        }
+    }
     CaptureTarget current, first;
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snapshot == INVALID_HANDLE_VALUE) return {};
