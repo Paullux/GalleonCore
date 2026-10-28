@@ -224,6 +224,38 @@ private Q_SLOTS:
         QCOMPARE(saved.gameConfig().value("profiles").toMap().value("cs2").toMap().value("title").toString(), QStringLiteral("Counter-Strike 2"));
         QVERIFY(!page->findChild<QObject *>("applyWidgets"));
     }
+    void gameArtworkApplyNearImageSavesTheSameDraftAsTopApply() {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("widgets.json");
+        const QString picture = dir.filePath("neurohell.png");
+        QImage image(720, 384, QImage::Format_RGB32);
+        image.fill(Qt::darkRed);
+        QVERIFY(image.save(picture));
+        galleond::HomeWidgets widgets(nullptr, file, true);
+        QQmlEngine engine;
+        QQmlComponent component(&engine, QUrl(QStringLiteral("qrc:/bosun/qml/GameModePage.qml")));
+        const std::unique_ptr<QObject> page(component.createWithInitialProperties({{"widgets", QVariant::fromValue(&widgets)}}));
+        QVERIFY2(page, qPrintable(component.errorString()));
+        const auto setField = [&](const char *name, const QString &value) {
+            auto *field = page->findChild<QObject *>(name);
+            return field && field->setProperty("value", value);
+        };
+        QVERIFY(setField("gameProfileProcess", "neurohell.exe"));
+        QVERIFY(setField("gameProfileTitle", "NeuroHell"));
+        QVERIFY(setField("gameProfileImage", picture));
+        QVERIFY(!QFile::exists(file));
+        auto *top = page->findChild<QObject *>("applyGameMode");
+        auto *nearArtwork = page->findChild<QObject *>("applyGameArtwork");
+        QVERIFY(top);
+        QVERIFY(nearArtwork);
+        QVERIFY(QMetaObject::invokeMethod(nearArtwork, "clicked"));
+        QVERIFY(!widgets.pending());
+        QVERIFY(QFile::exists(file));
+        const galleond::HomeWidgets saved(nullptr, file);
+        const auto profile = saved.gameConfig().value("profiles").toMap().value("neurohell.exe").toMap();
+        QCOMPARE(profile.value("title").toString(), QStringLiteral("NeuroHell"));
+        QCOMPARE(profile.value("image").toString(), picture);
+    }
     void browseComesFirstAndImportsOnlyWhenAFileIsChosen()
     {
         const QTemporaryDir dir;

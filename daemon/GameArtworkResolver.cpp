@@ -148,14 +148,17 @@ QString GameArtworkResolver::preview(const QString &title, int steamAppId, const
     }
     return {};
 }
-int GameArtworkResolver::searchGameId(const QJsonObject &response, const QString &title) {
-    if (const int exact = exactGameId(response, title); exact > 0) return exact;
-    if (!response.value(QStringLiteral("success")).toBool()) return 0;
+QList<int> GameArtworkResolver::searchGameIds(const QJsonObject &response, const QString &title) {
+    if (!response.value(QStringLiteral("success")).toBool()) return {};
     const QString sought = canonical(title);
-    if (sought.size() < 3) return 0;
-    // Match complete normalized words while allowing punctuation within a title,
-    // e.g. "Medal Of Honor Allied Assault" -> "Medal of Honor: Allied Assault War Chest".
-    // The boundary after the prefix matters: "Doom" must not match "Doomsday".
+    if (sought.size() < 3) return {};
+
+    // Keep exact matches first, then accept "The", author possessives, or a
+    // longer edition title. Never accept an arbitrary substring/autocomplete hit.
+    QList<int> exact, english, authored, editions;
+    const int first = exactGameId(response, title);
+    if (first > 0) exact.append(first);
+    const QString original = title.trimmed();
     const auto longerEdition = [&sought](const QString &candidate) {
         QString prefix;
         qsizetype pos = 0;
@@ -165,19 +168,37 @@ int GameArtworkResolver::searchGameId(const QJsonObject &response, const QString
         }
         return prefix == sought && pos < candidate.size() && !candidate.at(pos).isLetterOrNumber();
     };
-    // Preserve API ranking and optionally omit the English "The" for localized titles.
-    for (const auto &entry : response.value(QStringLiteral("data")).toArray()) {
-        const auto game = entry.toObject();
+    const auto namedAfterAuthor = [&original](const QString &candidate) {
+        if (!candidate.endsWith(original, Qt::CaseInsensitive) || candidate.size() <= original.size()) return false;
+        const QString before = candidate.left(candidate.size() - original.size());
+        return before.size() <= 64 && (before.endsWith(QStringLiteral("'s "), Qt::CaseInsensitive)
+            || before.endsWith(QStringLiteral("’s "), Qt::CaseInsensitive));
+    };
+    // The API response is bounded by apiGet. Only examine a limited number of
+    // candidates, and limit subsequent image requests to eight game IDs.
+    const auto entries = response.value(QStringLiteral("data")).toArray();
+    for (int i = 0; i < qMin(int(entries.size()), 40); ++i) {
+        const auto game = entries[i].toObject();
         const int id = game.value(QStringLiteral("id")).toInt();
-        if (id <= 0) continue;
+        if (id <= 0 || id == first) continue;
         const QString candidate = game.value(QStringLiteral("name")).toString().trimmed();
-        if (longerEdition(candidate)) return id;
-        if (candidate.startsWith(QStringLiteral("The "), Qt::CaseInsensitive)) {
-            const QString withoutThe = candidate.mid(4);
-            if (canonical(withoutThe) == sought || longerEdition(withoutThe)) return id;
+        const bool hasThe = candidate.startsWith(QStringLiteral("The "), Qt::CaseInsensitive);
+        const QString withoutThe = hasThe ? candidate.mid(4) : candidate;
+        if (hasThe && canonical(withoutThe) == sought) english.append(id);
+        else if (namedAfterAuthor(candidate)) authored.append(id);
+        else if (longerEdition(candidate) || (hasThe && longerEdition(withoutThe))) editions.append(id);
+    }
+    QList<int> result;
+    for (const auto &group : {exact, english, authored, editions}) {
+        for (const int id : group) {
+            if (!result.contains(id)) result.append(id);
+            if (result.size() >= 8) return result;
         }
     }
-    return 0;
+    return result;
+}
+int GameArtworkResolver::searchGameId(const QJsonObject &response, const QString &title) {
+    return searchGameIds(response, title).value(0);
 }
 int GameArtworkResolver::exactGameId(const QJsonObject &response, const QString &title) {
     if (!response.value(QStringLiteral("success")).toBool()) return 0;
@@ -318,13 +339,20 @@ void GameArtworkResolver::search(const QString &id, const QString &title, const 
     const QString encoded = QString::fromLatin1(QUrl::toPercentEncoding(name));
     apiGet(apiUrl(QStringLiteral("search/autocomplete/") + encoded), apiKey,
         [this, id, title, apiKey, attempt, name](const QJsonObject &response, int status) {
-            // Validate against the variant actually sent, not the original title.
-            const int game = searchGameId(response, name);
-            if (game > 0) fetchGrid(id, game, apiKey,
-                [this, id, title, apiKey, attempt] { search(id, title, apiKey, attempt + 1); });
-            else if (status == 200 && response.value(QStringLiteral("success")).toBool()
-                && attempt + 1 < searchTitles(title).size()) search(id, title, apiKey, attempt + 1);
+            // Search every plausibly matching game, not only the first.
+            const auto games = searchGameIds(response, name);
+            if (!games.isEmpty()) searchCandidates(id, title, apiKey, attempt, games);
+            else if (status == 200 && response.value(QStringLiteral("success")).toBool())
+                search(id, title, apiKey, attempt + 1);
             else finish(id, false);
+        });
+}
+void GameArtworkResolver::searchCandidates(const QString &id, const QString &title, const QString &apiKey,
+                                           int attempt, const QList<int> &games, int index) {
+    if (index >= games.size()) { search(id, title, apiKey, attempt + 1); return; }
+    fetchGrid(id, games[index], apiKey,
+        [this, id, title, apiKey, attempt, games, index] {
+            searchCandidates(id, title, apiKey, attempt, games, index + 1);
         });
 }
 void GameArtworkResolver::fetchGrid(const QString &id, int gameId, const QString &apiKey,
