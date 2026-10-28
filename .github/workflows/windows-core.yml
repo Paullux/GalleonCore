@@ -6,7 +6,8 @@ on:
   workflow_call:
   workflow_dispatch:
   push:
-    branches: [main]
+    # Temporary opt-in on this branch only; do not change main's triggers.
+    branches: [main, experiment/windows-gamebar-first-fallback]
     paths-ignore: ["site/**"]
   pull_request:
     paths-ignore: ["site/**"]
