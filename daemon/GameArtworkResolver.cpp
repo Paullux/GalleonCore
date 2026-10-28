@@ -155,7 +155,10 @@ QList<int> GameArtworkResolver::searchGameIds(const QJsonObject &response, const
 
     // Keep exact matches first, then accept "The", author possessives, or a
     // longer edition title. Never accept an arbitrary substring/autocomplete hit.
-    QList<int> exact, english, authored, editions;
+    QList<int> exact;
+    QList<int> english;
+    QList<int> authored;
+    QList<int> editions;
     const int first = exactGameId(response, title);
     if (first > 0) exact.append(first);
     const QString original = title.trimmed();

@@ -231,7 +231,8 @@ private Q_SLOTS:
         QImage image(720, 384, QImage::Format_RGB32);
         image.fill(Qt::darkRed);
         QVERIFY(image.save(picture));
-        galleond::HomeWidgets widgets(nullptr, file, true);
+        // QML invokes the non-const setGameProfile()/apply() methods through QObject.
+        galleond::HomeWidgets widgets(nullptr, file, true); // NOLINT(misc-const-correctness)
         QQmlEngine engine;
         QQmlComponent component(&engine, QUrl(QStringLiteral("qrc:/bosun/qml/GameModePage.qml")));
         const std::unique_ptr<QObject> page(component.createWithInitialProperties({{"widgets", QVariant::fromValue(&widgets)}}));
