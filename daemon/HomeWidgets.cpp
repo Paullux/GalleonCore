@@ -572,8 +572,14 @@ void HomeWidgets::refresh() {
 #ifdef Q_OS_WIN
     const bool managed = m_gameConfig.value("managedCapture", true).toBool();
     if (!m_draftMode) {
-        if (capture && managed) m_captureTarget = GameCapture::detectGame(m_gameConfig.value("profiles").toMap().keys(), m_captureTarget.pid);
-        else m_captureTarget = {};
+        if (capture && managed) {
+            // Optional widget companion report; bounded read, stale reports ignored.
+            // With no companion installed the existing Windows detector is unchanged.
+            QFile gameBarReport(m_file + QStringLiteral(".gamebar-target.json"));
+            const auto bytes = gameBarReport.open(QIODevice::ReadOnly) ? gameBarReport.read(2049) : QByteArray();
+            m_captureTarget = GameCapture::detectGame(m_gameConfig.value("profiles").toMap().keys(),
+                                                      m_captureTarget.pid, bytes);
+        } else m_captureTarget = {};
         if (!m_captureTarget.pid) m_captureStoppedPid = 0;
         QFile request(m_file + QStringLiteral(".capture-request.json"));
         const auto bytes = request.open(QIODevice::ReadOnly) ? request.read(4096) : QByteArray();
@@ -637,6 +643,15 @@ void HomeWidgets::refresh() {
 #endif
     }
     m_gameState = m_gameMode.update(sample, m_gameConfig, sensors);
+#ifdef Q_OS_WIN
+    // The real executable remains the PresentMon process filter; the optional
+    // Game Bar name is only used for visible titles / artwork lookup.
+    if (m_gameState.value("active").toBool() && !m_captureTarget.displayName.isEmpty()
+        && m_gameState.value("process").toString().compare(m_captureTarget.name, Qt::CaseInsensitive) == 0) {
+        m_gameState["title"] = m_captureTarget.displayName;
+        m_gameState["identitySource"] = QStringLiteral("gamebar-experimental");
+    }
+#endif
     if (m_artworkChoosing && (!m_gameState.value("active").toBool()
         || m_gameState.value("process").toString() != m_artworkProcess
         || GameArtworkResolver::gameKey(m_gameState.value("title").toString(), m_gameState.value("appid").toInt())
