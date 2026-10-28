@@ -66,7 +66,9 @@ private Q_SLOTS:
         QVERIFY(!GameCapture::gameBarDisplayName(report(true, "Old Game", now - 6000), now));
         QVERIFY(!GameCapture::gameBarDisplayName(report(true, "Future Game", now + 100), now));
         QVERIFY(!GameCapture::gameBarDisplayName(report(true, "  ", now), now));
-        QVERIFY(!GameCapture::gameBarDisplayName(report(true, "Game\\nInjected", now), now));
+        QVERIFY(!GameCapture::gameBarDisplayName(report(true, "Game\nInjected", now), now));
+        QVERIFY(!GameCapture::gameBarDisplayName(report(true, "\nGame", now), now));
+        QVERIFY(!GameCapture::gameBarDisplayName(report(true, "Game\r", now), now));
         QVERIFY(!GameCapture::gameBarDisplayName(report(true, QString(121, QLatin1Char('x')), now), now));
         QVERIFY(!GameCapture::gameBarDisplayName(QByteArray("{invalid"), now));
         QVERIFY(!GameCapture::gameBarDisplayName(QByteArray(2049, 'A'), now));
