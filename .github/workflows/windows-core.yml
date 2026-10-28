@@ -122,6 +122,9 @@ jobs:
           Copy-Item docs/WINDOWS.md staging/WINDOWS.md
           Copy-Item docs/GAMING_RECORDING.md staging/GAMING_RECORDING.md
           Copy-Item docs/HOME_WIDGETS.md staging/HOME_WIDGETS.md
+          Copy-Item docs/GAMEBAR_EXPERIMENT.md staging/GAMEBAR_EXPERIMENT.md
+          New-Item -ItemType Directory -Force staging/tools/gamebar | Out-Null
+          Copy-Item tools/gamebar/simulate-target.ps1 staging/tools/gamebar/
       - name: Build NSIS Setup
         shell: pwsh
         run: |
