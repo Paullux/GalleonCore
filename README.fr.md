@@ -19,6 +19,8 @@
 
 🌐 [Site web](https://galleoncore.xyz/)
 
+Pour suivre l'état d'avancement du projet, consultez [ROADMAP.md](ROADMAP.md).
+
 **La plateforme ouverte pour le Corsair Galleon 100 SD sous Linux.**
 
 Le Galleon 100 SD est un clavier mécanique full-size dont le pavé numérique est remplacé par un module Elgato Stream Deck : 12 touches LCD, un écran et deux molettes. Corsair et Elgato ne supportent la partie Stream Deck que sous Windows et macOS. GalleonCore vise à rendre chaque partie du clavier utilisable sous Linux, et à l'intégrer au bureau.
