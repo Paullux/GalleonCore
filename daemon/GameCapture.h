@@ -10,6 +10,8 @@ namespace galleond {
 struct CaptureTarget {
     quint32 pid = 0;
     QString name;
+    // Explicit initialization avoids GCC -Wmissing-field-initializers for two-field callers.
+    // NOLINTNEXTLINE(readability-redundant-member-init)
     QString displayName{}; // Optional, independently reported Game Bar title.
     // A title update must not restart an active PresentMon capture.
     bool operator==(const CaptureTarget &other) const { return pid == other.pid && name == other.name; }

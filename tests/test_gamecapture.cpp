@@ -61,7 +61,7 @@ private Q_SLOTS:
         };
         const auto good = GameCapture::gameBarDisplayName(report(true, "Red Dead Redemption 2", now), now);
         QVERIFY(good);
-        QCOMPARE(*good, QStringLiteral("Red Dead Redemption 2"));
+        QCOMPARE(good.value_or(QString{}), QStringLiteral("Red Dead Redemption 2"));
         QVERIFY(!GameCapture::gameBarDisplayName(report(false, "Explorer", now), now));
         QVERIFY(!GameCapture::gameBarDisplayName(report(true, "Old Game", now - 6000), now));
         QVERIFY(!GameCapture::gameBarDisplayName(report(true, "Future Game", now + 100), now));

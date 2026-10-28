@@ -305,6 +305,7 @@ CaptureTarget GameCapture::detectGame(const QStringList &profiles, quint32 curre
 #else
     Q_UNUSED(profiles)
     Q_UNUSED(currentPid)
+    Q_UNUSED(gameBarReport)
     return {};
 #endif
 }
