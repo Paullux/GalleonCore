@@ -151,22 +151,31 @@ QString GameArtworkResolver::preview(const QString &title, int steamAppId, const
 int GameArtworkResolver::searchGameId(const QJsonObject &response, const QString &title) {
     if (const int exact = exactGameId(response, title); exact > 0) return exact;
     if (!response.value(QStringLiteral("success")).toBool()) return 0;
-    const QString sought = title.trimmed();
-    if (canonical(sought).size() < 3) return 0;
-    // Accept an optional English "The" in a SteamGridDB result.
-    // For longer editions, match a whole title followed by punctuation/space:
-    // "0 A.D." -> "0 A.D. Empires Ascendant", never "Doom" -> "Doomsday".
-    // Preserve API ranking, but do not use unrelated autocomplete results.
+    const QString sought = canonical(title);
+    if (sought.size() < 3) return 0;
+    // Match complete normalized words while allowing punctuation within a title,
+    // e.g. "Medal Of Honor Allied Assault" -> "Medal of Honor: Allied Assault War Chest".
+    // The boundary after the prefix matters: "Doom" must not match "Doomsday".
+    const auto longerEdition = [&sought](const QString &candidate) {
+        QString prefix;
+        qsizetype pos = 0;
+        while (pos < candidate.size() && prefix.size() < sought.size()) {
+            const QChar c = candidate.at(pos++);
+            if (c.isLetterOrNumber()) prefix += c.toLower();
+        }
+        return prefix == sought && pos < candidate.size() && !candidate.at(pos).isLetterOrNumber();
+    };
+    // Preserve API ranking and optionally omit the English "The" for localized titles.
     for (const auto &entry : response.value(QStringLiteral("data")).toArray()) {
         const auto game = entry.toObject();
         const int id = game.value(QStringLiteral("id")).toInt();
         if (id <= 0) continue;
         const QString candidate = game.value(QStringLiteral("name")).toString().trimmed();
-        const QString withoutThe = candidate.startsWith(QStringLiteral("The "), Qt::CaseInsensitive)
-            ? candidate.mid(4) : candidate;
-        if (withoutThe != candidate && canonical(withoutThe) == canonical(sought)) return id;
-        if (!withoutThe.startsWith(sought, Qt::CaseInsensitive) || withoutThe.size() <= sought.size()) continue;
-        if (!withoutThe.at(sought.size()).isLetterOrNumber()) return id;
+        if (longerEdition(candidate)) return id;
+        if (candidate.startsWith(QStringLiteral("The "), Qt::CaseInsensitive)) {
+            const QString withoutThe = candidate.mid(4);
+            if (canonical(withoutThe) == sought || longerEdition(withoutThe)) return id;
+        }
     }
     return 0;
 }
@@ -305,7 +314,7 @@ void GameArtworkResolver::apiGet(const QUrl &url, const QString &key, std::funct
 void GameArtworkResolver::search(const QString &id, const QString &title, const QString &apiKey, int attempt) {
     const auto names = searchTitles(title);
     if (attempt < 0 || attempt >= names.size()) { finish(id, false); return; }
-    const QString name = names[attempt];
+    const QString &name = names[attempt];
     const QString encoded = QString::fromLatin1(QUrl::toPercentEncoding(name));
     apiGet(apiUrl(QStringLiteral("search/autocomplete/") + encoded), apiKey,
         [this, id, title, apiKey, attempt, name](const QJsonObject &response, int status) {

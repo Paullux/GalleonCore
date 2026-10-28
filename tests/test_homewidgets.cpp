@@ -75,6 +75,13 @@ private Q_SLOTS:
         QCOMPARE(GameArtworkResolver::searchGameId(withExact, "Beowulf"), 100);
         // No arbitrary substring matches.
         QCOMPARE(GameArtworkResolver::searchGameId(shortTitles, "ADO"), 0);
+        const QJsonObject witcher{{"success", true}, {"data", QJsonArray{
+            QJsonObject{{"id", 20}, {"name", "The Witcher 3: Complete Edition"}}}}};
+        QCOMPARE(GameArtworkResolver::searchGameId(witcher, "The Witcher 3"), 20);
+        QCOMPARE(GameArtworkResolver::searchGameId(witcher, "Witcher 3"), 20);
+        const QJsonObject nearMatch{{"success", true}, {"data", QJsonArray{
+            QJsonObject{{"id", 21}, {"name", "Beowulfs"}}}}};
+        QCOMPARE(GameArtworkResolver::searchGameId(nearMatch, "Beowulf"), 0);
     }
     void selectedArtworkReplacesOneLocalImageAndSurvivesWithoutAnApiKey() {
         const QTemporaryDir dir;
