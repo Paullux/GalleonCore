@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "GameInstallations.h"
 #include "LauncherCache.h"
+#include "SteamLibrary.h"
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
@@ -13,12 +14,16 @@
 #include <QRegularExpression>
 #include <QSettings>
 #include <QStandardPaths>
+#include <optional>
 namespace galleond {
 namespace {
 int &catalogueRevision() { static int value = 0; return value; }
 constexpr qint64 MaxBytes = 1024LL * 1024;
 QString clean(QString path) {
     path.replace('\\', '/');
+    // Preserve the UNC prefix so absoluteLocal can reject remote metadata paths
+    // on Unix too; QDir::cleanPath would collapse it to a single slash there.
+    if (path.startsWith(QStringLiteral("//"))) return path;
     return QDir::cleanPath(path);
 }
 bool absoluteLocal(const QString &path) {
@@ -80,6 +85,57 @@ QString winePath(QString path, const QString &prefix) {
     }
     return path;
 }
+// Steam's shortcuts.vdf uses binary KeyValues. Only metadata is read; executable
+// arguments and URLs are never interpreted or launched.
+// Format: https://github.com/ValvePython/vdf/blob/master/vdf/__init__.py (binary_load)
+class ShortcutReader {
+public:
+    explicit ShortcutReader(const QByteArray &bytes) : m_bytes(bytes) {}
+    std::optional<VdfNode> parse() {
+        if (m_bytes.isEmpty() || m_bytes.size() > MaxBytes) return std::nullopt;
+        auto root = object(0);
+        return root && m_at == m_bytes.size() ? root : std::nullopt;
+    }
+private:
+    std::optional<QString> string() {
+        const auto end = m_bytes.indexOf('\0', m_at);
+        if (end < 0 || end - m_at > 4096) return std::nullopt;
+        const auto start = m_at;
+        m_at = end + 1;
+        return QString::fromUtf8(m_bytes.mid(start, end - start));
+    }
+    std::optional<VdfNode> object(int depth) {
+        if (depth > 8) return std::nullopt;
+        VdfNode node;
+        while (m_at < m_bytes.size()) {
+            const auto type = static_cast<unsigned char>(m_bytes[m_at++]);
+            if (type == 8) return node;
+            if (++m_fields > 32768) return std::nullopt;
+            const auto key = string();
+            if (!key || key->isEmpty()) return std::nullopt;
+            const auto lower = key->toLower();
+            if (node.values.contains(lower) || node.children.contains(lower)) return std::nullopt;
+            if (type == 0) {
+                const auto child = object(depth + 1);
+                if (!child) return std::nullopt;
+                node.children.insert(lower, *child);
+            } else if (type == 1) {
+                const auto value = string();
+                if (!value) return std::nullopt;
+                node.values.insert(lower, *value);
+            } else if (type == 2 || type == 3 || type == 4 || type == 6 || type == 7 || type == 10) {
+                const int length = type == 7 || type == 10 ? 8 : 4;
+                if (m_bytes.size() - m_at < length) return std::nullopt;
+                m_at += length;
+                node.values.insert(lower, {});
+            } else return std::nullopt;
+        }
+        return std::nullopt;
+    }
+    const QByteArray &m_bytes;
+    qsizetype m_at = 0;
+    int m_fields = 0;
+};
 
 }
 GameInstallation GameInstallations::registryRecord(const QString &directory, const QString &title) {
@@ -88,6 +144,26 @@ GameInstallation GameInstallations::registryRecord(const QString &directory, con
     if (!absoluteLocal(path) || path == QStringLiteral("/") || path.size() < 4
         || path.contains(QChar::Null) || title.contains(QChar::Null)) return {};
     return {path, title.trimmed(), {}};
+}
+QList<GameInstallation> GameInstallations::steamShortcuts(const QByteArray &bytes) {
+    const auto root = ShortcutReader(bytes).parse();
+    if (!root) return {};
+    const auto *shortcuts = root->child(QStringLiteral("shortcuts"));
+    if (!shortcuts || shortcuts->children.size() > 1024) return {};
+    QList<GameInstallation> games;
+    for (const auto &shortcut : shortcuts->children) {
+        QString executable = shortcut.value(QStringLiteral("exe")).trimmed();
+        if (executable.startsWith('"') && executable.endsWith('"') && executable.size() >= 2)
+            executable = executable.mid(1, executable.size() - 2);
+        executable = clean(executable);
+        if (!absoluteLocal(executable) || executable.contains('"') || executable.contains(QChar::Null)
+            || !executable.endsWith(QStringLiteral(".exe"), Qt::CaseInsensitive)) continue;
+        auto game = registryRecord(executable.section('/', 0, -2), shortcut.value(QStringLiteral("appname")));
+        if (game.directory.isEmpty()) continue;
+        game.executable = executable;
+        append(games, game);
+    }
+    return games;
 }
 GameInstallation GameInstallations::epicManifest(const QByteArray &json) {
     if (json.size() > MaxBytes) return {};
@@ -238,6 +314,15 @@ QJsonObject GameInstallations::scanMetadata() {
                       home + QStringLiteral("/.var/app/com.heroicgameslauncher.hgl/config/heroic/legendaryConfig/legendary/installed.json"),
                       roaming.isEmpty() ? QString() : roaming + QStringLiteral("/heroic/legendaryConfig/legendary/installed.json")};
 #ifdef Q_OS_WIN
+    const QString steamRoot = SteamLibrary::defaultRoot();
+    if (!steamRoot.isEmpty()) {
+        const QDir users(steamRoot + QStringLiteral("/userdata"));
+        const auto ids = users.entryList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::NoSymLinks);
+        for (int i = 0; i < qMin(32, int(ids.size())); ++i) {
+            if (!QRegularExpression(QStringLiteral("^[0-9]+$")).match(ids[i]).hasMatch()) continue;
+            for (const auto &game : steamShortcuts(read(users.filePath(ids[i] + QStringLiteral("/config/shortcuts.vdf"))))) append(games, game);
+        }
+    }
     // Epic documents ProgramData manifests; schema also used by Legendary/Playnite.
     // https://dev.epicgames.com/documentation/en-us/unreal-engine/multiple-launcher-unreal-engine-installs
     const QString programData = qEnvironmentVariable("ProgramData");

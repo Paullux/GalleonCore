@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QNetworkAccessManager>
 #include <QObject>
+#include <QStringList>
 #include <QUrl>
 #include <functional>
 
@@ -29,6 +30,7 @@ public:
     [[nodiscard]] QString status() const { return m_status; }
     // Pure parsers used by offline tests; no network dependency.
     [[nodiscard]] static int exactGameId(const QJsonObject &response, const QString &title);
+    [[nodiscard]] static QStringList searchTitles(const QString &title);
     [[nodiscard]] static QUrl firstWideImage(const QJsonObject &response);
 Q_SIGNALS:
     void artworkReady();
@@ -37,7 +39,7 @@ private:
     void rememberChoices(const QString &id, const QList<QUrl> &urls);
     void requestChoices(const QString &title, int steamAppId, const QString &apiKey);
     void apiGet(const QUrl &url, const QString &key, std::function<void(QJsonObject, int)> done);
-    void search(const QString &id, const QString &title, const QString &apiKey);
+    void search(const QString &id, const QString &title, const QString &apiKey, int attempt = 0);
     void fetchGrid(const QString &id, int gameId, const QString &apiKey);
     void download(const QString &id, const QUrl &url);
     void finish(const QString &id, bool succeeded);

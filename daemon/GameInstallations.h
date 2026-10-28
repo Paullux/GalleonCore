@@ -15,6 +15,7 @@ public:
     static GameInstallation epicManifest(const QByteArray &json);
     static QList<GameInstallation> heroicLibrary(const QByteArray &json);
     static QList<GameInstallation> legendaryManifest(const QByteArray &json);
+    static QList<GameInstallation> steamShortcuts(const QByteArray &bytes);
     static GameInstallation lutrisConfig(const QByteArray &yaml, const QString &fallbackTitle);
     static QList<GameInstallation> bottlesConfig(const QByteArray &yaml, const QString &bottleDirectory);
     static GameInstallation registryRecord(const QString &directory, const QString &title);

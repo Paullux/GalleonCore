@@ -17,6 +17,29 @@ using galleond::HomeWidgets;
 class TestHomeWidgets : public QObject {
     Q_OBJECT
 private Q_SLOTS:
+    void artworkMatchesRomanSequelsWithoutChangingSavedKeys() {
+        using galleond::GameArtworkResolver;
+        const QJsonObject games{{"success", true}, {"data", QJsonArray{
+            QJsonObject{{"id", 3}, {"name", "Red Dead Redemption"}},
+            QJsonObject{{"id", 4}, {"name", "Red Dead Redemption II"}}}}};
+        QCOMPARE(GameArtworkResolver::exactGameId(games, "Red Dead Redemption 2"), 4);
+        QCOMPARE(GameArtworkResolver::searchGameId(games, "Red Dead Redemption 3"), 0);
+        QCOMPARE(GameArtworkResolver::searchTitles("Red Dead Redemption 2"),
+                 QStringList({"Red Dead Redemption 2", "Red Dead Redemption II"}));
+        QCOMPARE(GameArtworkResolver::searchTitles("Grand Theft Auto III").last(), QStringLiteral("Grand Theft Auto 3"));
+        QCOMPARE(GameArtworkResolver::searchTitles("Game I").last(), QStringLiteral("Game 1"));
+        QCOMPARE(GameArtworkResolver::searchTitles("Game 1").last(), QStringLiteral("Game I"));
+        QCOMPARE(GameArtworkResolver::searchTitles("I Am Alive").size(), 1);
+        QCOMPARE(GameArtworkResolver::searchTitles("Cyberpunk 2077").size(), 1);
+        QCOMPARE(GameArtworkResolver::searchTitles("Civilization").size(), 1);
+        QCOMPARE(GameArtworkResolver::searchTitles("Game 02").size(), 1);
+        // Exact names retain priority when both spellings exist in the catalogue.
+        auto both = games;
+        auto entries = games.value("data").toArray();
+        entries.append(QJsonObject{{"id", 5}, {"name", "Red Dead Redemption 2"}});
+        both["data"] = entries;
+        QCOMPARE(GameArtworkResolver::exactGameId(both, "Red Dead Redemption 2"), 5);
+    }
     void selectedArtworkReplacesOneLocalImageAndSurvivesWithoutAnApiKey() {
         const QTemporaryDir dir;
         const auto oldData = qgetenv("XDG_DATA_HOME");

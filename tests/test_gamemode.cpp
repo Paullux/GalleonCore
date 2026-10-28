@@ -14,6 +14,32 @@ using namespace galleond;
 class TestGameMode : public QObject {
     Q_OBJECT
 private Q_SLOTS:
+    void steamNonStoreShortcutsIdentifyTheActualExecutable() {
+        const auto fixture = [](const QByteArray &executable) {
+            QByteArray bytes;
+            const auto field = [&bytes](char type, const QByteArray &key) { bytes.append(type); bytes.append(key); bytes.append('\0'); };
+            field(0, "shortcuts"); field(0, "0");
+            field(2, "appid"); bytes.append(QByteArray(4, '\0'));
+            field(1, "AppName"); bytes.append("Grand Theft Auto III"); bytes.append('\0');
+            field(1, "Exe"); bytes.append(executable); bytes.append('\0');
+            field(1, "LaunchOptions"); bytes.append("ignored --arguments"); bytes.append('\0');
+            field(0, "tags"); bytes.append(char(8));
+            bytes.append(QByteArray(3, char(8)));
+            return bytes;
+        };
+        const auto bytes = fixture(R"("G:\DVD Games\GTA III\gta3.exe")");
+        const auto games = GameInstallations::steamShortcuts(bytes);
+        QCOMPARE(games.size(), 1);
+        QCOMPARE(GameInstallations::titleForPath("g:/dvd games/gta iii/GTA3.EXE", games), QStringLiteral("Grand Theft Auto III"));
+        QVERIFY(GameInstallations::titleForPath("G:/DVD Games/GTA III/unrelated.exe", games).isEmpty());
+        for (qsizetype i = 0; i < bytes.size(); ++i)
+            QVERIFY(GameInstallations::steamShortcuts(bytes.left(i)).isEmpty());
+        QVERIFY(GameInstallations::steamShortcuts(bytes + "trailing").isEmpty());
+        QVERIFY(GameInstallations::steamShortcuts(fixture("steam://rungameid/123")).isEmpty());
+        QVERIFY(GameInstallations::steamShortcuts(fixture("\"G:/Game/game.exe\" --arguments")).isEmpty());
+        QVERIFY(GameInstallations::steamShortcuts(fixture("//server/game.exe")).isEmpty());
+        QVERIFY(GameInstallations::steamShortcuts(QByteArray(1024 * 1024 + 1, 'x')).isEmpty());
+    }
     void wineCaptureMatchesExeSuffixAndOnlyItsOwnCommand() {
         const QString game = QStringLiteral("/games/Heroic/Ghostrunner/Ghostrunner.exe");
         QCOMPARE(GameMode::capturedExecutable("Ghostrunner", game, {}, {}), game);

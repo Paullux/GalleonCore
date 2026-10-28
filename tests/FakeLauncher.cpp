@@ -20,6 +20,8 @@ int main(int argc, char *argv[])
         return 1;
     if (key == QStringLiteral("flood") || key == QStringLiteral("error-flood"))
         output.write(QByteArray(qsizetype{128} * 1024, 'x'));
+    else if (key == QStringLiteral("galleon:installed-games"))
+        output.write(R"({"games":[{"directory":"K:/Library/GOG/My Game","title":"My GOG Game","executable":""},{"directory":"G:/DVD/Game","title":"DVD Game","executable":"G:/DVD/Game/game.exe"},{"directory":"relative","title":"Invalid"},{"directory":"K:/Library/Game","title":"Escaping executable","executable":"K:/Outside/game.exe"}]})");
     else
         output.write(QJsonDocument(QJsonObject{{QStringLiteral("name"), key}, {QStringLiteral("icon"), QString()}}).toJson());
     return output.flush() ? 0 : 1;

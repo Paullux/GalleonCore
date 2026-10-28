@@ -25,6 +25,26 @@ QString canonical(QString text) {
     for (const QChar c : text) if (c.isLetterOrNumber()) result += c;
     return result;
 }
+QString alternateSequel(QString title) {
+    // Convert only an isolated final sequel number, never letters inside words
+    // or release years. Keep persistent artwork identifiers unchanged.
+    const QStringList romans{QStringLiteral("I"), QStringLiteral("II"), QStringLiteral("III"), QStringLiteral("IV"),
+        QStringLiteral("V"), QStringLiteral("VI"), QStringLiteral("VII"), QStringLiteral("VIII"), QStringLiteral("IX"),
+        QStringLiteral("X"), QStringLiteral("XI"), QStringLiteral("XII"), QStringLiteral("XIII"), QStringLiteral("XIV"),
+        QStringLiteral("XV"), QStringLiteral("XVI"), QStringLiteral("XVII"), QStringLiteral("XVIII"), QStringLiteral("XIX"), QStringLiteral("XX")};
+    const auto match = QRegularExpression(QStringLiteral("\\b([0-9]{1,2}|[IVXivx]{1,5})[™®]?\\s*$")).match(title);
+    if (!match.hasMatch() || match.capturedStart(1) == 0) return {};
+    const auto token = match.captured(1);
+    const int roman = int(romans.indexOf(token.toUpper()));
+    if (roman >= 0) title.replace(match.capturedStart(1), token.size(), QString::number(roman + 1));
+    else {
+        bool ok = false;
+        const int number = token.toInt(&ok);
+        if (!ok || number < 1 || number > romans.size() || token != QString::number(number)) return {};
+        title.replace(match.capturedStart(1), token.size(), romans[number - 1]);
+    }
+    return title;
+}
 bool trustedArtworkUrl(const QUrl &url) {
     if (url.scheme() != QStringLiteral("https") || url.port(-1) != -1 || !url.userInfo().isEmpty()) return false;
     const QString host = url.host().toLower();
@@ -152,7 +172,21 @@ int GameArtworkResolver::exactGameId(const QJsonObject &response, const QString 
         const int id = game.value(QStringLiteral("id")).toInt();
         if (id > 0 && canonical(game.value(QStringLiteral("name")).toString()) == sought) return id;
     }
+    const QString alternate = alternateSequel(title);
+    if (!alternate.isEmpty()) for (const auto &value : response.value(QStringLiteral("data")).toArray()) {
+        const auto game = value.toObject();
+        const int id = game.value(QStringLiteral("id")).toInt();
+        if (id > 0 && canonical(game.value(QStringLiteral("name")).toString()) == canonical(alternate)) return id;
+    }
     return 0; // Never silently use an unrelated autocomplete result.
+}
+QStringList GameArtworkResolver::searchTitles(const QString &title) {
+    const auto name = GameMode::readableTitle(title);
+    if (name.size() < 3 || name.size() > 120) return {};
+    QStringList names{name};
+    const auto alternate = alternateSequel(name);
+    if (!alternate.isEmpty()) names.append(alternate);
+    return names;
 }
 QList<QUrl> GameArtworkResolver::wideImages(const QJsonObject &response) {
     if (!response.value(QStringLiteral("success")).toBool()) return {};
@@ -249,14 +283,17 @@ void GameArtworkResolver::apiGet(const QUrl &url, const QString &key, std::funct
         done(result, status);
     });
 }
-void GameArtworkResolver::search(const QString &id, const QString &title, const QString &apiKey) {
-    const QString name = GameMode::readableTitle(title);
-    if (name.size() < 3 || name.size() > 120) { finish(id, false); return; }
+void GameArtworkResolver::search(const QString &id, const QString &title, const QString &apiKey, int attempt) {
+    const auto names = searchTitles(title);
+    if (attempt < 0 || attempt >= names.size()) { finish(id, false); return; }
+    const auto &name = names[attempt];
     const QString encoded = QString::fromLatin1(QUrl::toPercentEncoding(name));
     apiGet(apiUrl(QStringLiteral("search/autocomplete/") + encoded), apiKey,
-        [this, id, name, apiKey](const QJsonObject &response, int) {
-            const int game = searchGameId(response, name);
+        [this, id, title, apiKey, attempt](const QJsonObject &response, int status) {
+            const int game = searchGameId(response, GameMode::readableTitle(title));
             if (game > 0) fetchGrid(id, game, apiKey);
+            else if (status == 200 && response.value(QStringLiteral("success")).toBool()
+                && attempt + 1 < searchTitles(title).size()) search(id, title, apiKey, attempt + 1);
             else finish(id, false);
         });
 }

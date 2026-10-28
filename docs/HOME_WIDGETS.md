@@ -271,6 +271,12 @@ Both registry views and user/machine hives are inspected. The recorded installat
 path is used on any local drive; no game-specific folder or drive letter is needed.
 The capture detector and the artwork resolver share this catalogue. Launcher and
 helper exclusions still apply. Existing Steam and manual-profile detection remain.
+On Windows, the catalogue also reads each local Steam account's binary
+`userdata/<id>/config/shortcuts.vdf` to associate non-store games with their
+explicit executable and display name. The reader is bounded in size, depth and
+field count, rejects truncated/unknown formats, and never executes launch options
+or follows URI targets. A shortcut pointing to a separate launcher rather than
+the game executable still needs installation metadata or a manual profile.
 
 On Linux, Heroic/Legendary installed metadata and supported Heroic library entries
 provide game titles independently of installation directory names. Native and
@@ -293,6 +299,10 @@ suffixes such as `-Win64-Shipping` are removed for this fallback. Generic or
 ambiguous names still require a path or manual profile. Folder titles such as
 `RedDeadRedemption2` become `Red Dead Redemption 2` for artwork search, which still
 requires a matching normalized SteamGridDB title.
+An isolated final sequel number from I to XX or 1 to 20 is also matched in the
+other notation. Exact title spelling remains preferred, and a successful empty
+search may retry once with the alternate notation. Years and letters inside words
+are unchanged, as are persistent cache/selection identifiers.
 
 These follow-up changes require fresh hardware testing on both operating systems.
 The original PR #65 tests did not validate all launchers. Registry schema references:

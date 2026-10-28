@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "LauncherCache.h"
+#include "GameInstallations.h"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <utility>
 
 namespace galleond {
@@ -101,6 +103,23 @@ void LauncherCache::finished(bool success)
         const QJsonDocument document = QJsonDocument::fromJson(m_output);
         if (success && !m_bad && document.isObject()) {
             const auto object = document.object();
+            if (reference == QStringLiteral("galleon:installed-games") && object.value(QStringLiteral("games")).isArray()) {
+                QJsonArray games;
+                const auto entries = object.value(QStringLiteral("games")).toArray();
+                if (entries.size() <= 2048) for (const auto &entry : entries) {
+                    const auto record = entry.toObject();
+                    const auto game = GameInstallations::registryRecord(record.value(QStringLiteral("directory")).toString(),
+                                                                        record.value(QStringLiteral("title")).toString());
+                    if (game.directory.isEmpty()) continue;
+                    const auto executable = record.value(QStringLiteral("executable")).toString();
+                    if (!executable.isEmpty() && (executable.size() > 4096 || executable.contains(QChar::Null)
+                        || GameInstallations::titleForPath(executable, {game}).isEmpty())) continue;
+                    games.append(QJsonObject{{QStringLiteral("directory"), game.directory},
+                                             {QStringLiteral("title"), game.title},
+                                             {QStringLiteral("executable"), executable}});
+                }
+                if (entries.size() <= 2048) result.insert(QStringLiteral("games"), games);
+            }
             const auto name = object.value(QStringLiteral("name"));
             const auto icon = object.value(QStringLiteral("icon"));
             if (name.isString() && name.toString().size() <= 80 && icon.isString() && icon.toString().size() <= 4096)
