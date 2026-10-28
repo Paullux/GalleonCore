@@ -40,7 +40,8 @@ private:
     void requestChoices(const QString &title, int steamAppId, const QString &apiKey);
     void apiGet(const QUrl &url, const QString &key, std::function<void(QJsonObject, int)> done);
     void search(const QString &id, const QString &title, const QString &apiKey, int attempt = 0);
-    void fetchGrid(const QString &id, int gameId, const QString &apiKey);
+    void fetchGrid(const QString &id, int gameId, const QString &apiKey,
+                   std::function<void()> noArtwork = {}, bool broad = false);
     void download(const QString &id, const QUrl &url);
     void finish(const QString &id, bool succeeded);
     [[nodiscard]] static QString cachePath(const QString &id);

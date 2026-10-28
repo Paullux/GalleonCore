@@ -150,16 +150,23 @@ QString GameArtworkResolver::preview(const QString &title, int steamAppId, const
 }
 int GameArtworkResolver::searchGameId(const QJsonObject &response, const QString &title) {
     if (const int exact = exactGameId(response, title); exact > 0) return exact;
-    const auto sought = canonical(title);
-    if (sought.size() < 8 || !response.value(QStringLiteral("success")).toBool()) return 0;
-    // A longer edition title may contain the complete base title (e.g. War Chest).
-    // Preserve API ranking; never use an unrelated autocomplete result.
+    if (!response.value(QStringLiteral("success")).toBool()) return 0;
+    const QString sought = title.trimmed();
+    if (canonical(sought).size() < 3) return 0;
+    // Accept an optional English "The" in a SteamGridDB result.
+    // For longer editions, match a whole title followed by punctuation/space:
+    // "0 A.D." -> "0 A.D. Empires Ascendant", never "Doom" -> "Doomsday".
+    // Preserve API ranking, but do not use unrelated autocomplete results.
     for (const auto &entry : response.value(QStringLiteral("data")).toArray()) {
         const auto game = entry.toObject();
-        if (canonical(game.value(QStringLiteral("name")).toString()).startsWith(sought)) {
-            const int id = game.value(QStringLiteral("id")).toInt();
-            if (id > 0) return id;
-        }
+        const int id = game.value(QStringLiteral("id")).toInt();
+        if (id <= 0) continue;
+        const QString candidate = game.value(QStringLiteral("name")).toString().trimmed();
+        const QString withoutThe = candidate.startsWith(QStringLiteral("The "), Qt::CaseInsensitive)
+            ? candidate.mid(4) : candidate;
+        if (withoutThe != candidate && canonical(withoutThe) == canonical(sought)) return id;
+        if (!withoutThe.startsWith(sought, Qt::CaseInsensitive) || withoutThe.size() <= sought.size()) continue;
+        if (!withoutThe.at(sought.size()).isLetterOrNumber()) return id;
     }
     return 0;
 }
@@ -184,8 +191,19 @@ QStringList GameArtworkResolver::searchTitles(const QString &title) {
     const auto name = GameMode::readableTitle(title);
     if (name.size() < 3 || name.size() > 120) return {};
     QStringList names{name};
-    const auto alternate = alternateSequel(name);
-    if (!alternate.isEmpty()) names.append(alternate);
+    // French launcher titles can have an article absent from SteamGridDB.
+    // Keep the original for display/caching and search the stripped title only
+    // after the exact spelling fails.
+    QString withoutArticle = name;
+    withoutArticle.remove(QRegularExpression(QStringLiteral("^(?:le|la|les)\\s+"),
+        QRegularExpression::CaseInsensitiveOption));
+    if (withoutArticle != name && canonical(withoutArticle).size() >= 3)
+        names.append(withoutArticle);
+    const QStringList bases = names;
+    for (const auto &base : bases) {
+        const auto alternate = alternateSequel(base);
+        if (!alternate.isEmpty() && !names.contains(alternate)) names.append(alternate);
+    }
     return names;
 }
 QList<QUrl> GameArtworkResolver::wideImages(const QJsonObject &response) {
@@ -244,7 +262,8 @@ void GameArtworkResolver::requestChoices(const QString &title, int steamAppId, c
         apiGet(apiUrl(QStringLiteral("games/steam/") + QString::number(steamAppId)), apiKey,
             [this, id, title, apiKey](const QJsonObject &response, int httpStatus) {
                 const int game = gameId(response);
-                if (game > 0) fetchGrid(id, game, apiKey);
+                if (game > 0) fetchGrid(id, game, apiKey,
+                    [this, id, title, apiKey] { search(id, title, apiKey); });
                 // A missing Steam mapping can be searched by title, but do not
                 // retry denied, rate-limited or offline API requests.
                 else if (httpStatus == 200 || httpStatus == 404) search(id, title, apiKey);
@@ -286,27 +305,40 @@ void GameArtworkResolver::apiGet(const QUrl &url, const QString &key, std::funct
 void GameArtworkResolver::search(const QString &id, const QString &title, const QString &apiKey, int attempt) {
     const auto names = searchTitles(title);
     if (attempt < 0 || attempt >= names.size()) { finish(id, false); return; }
-    const auto &name = names[attempt];
+    const QString name = names[attempt];
     const QString encoded = QString::fromLatin1(QUrl::toPercentEncoding(name));
     apiGet(apiUrl(QStringLiteral("search/autocomplete/") + encoded), apiKey,
-        [this, id, title, apiKey, attempt](const QJsonObject &response, int status) {
-            const int game = searchGameId(response, GameMode::readableTitle(title));
-            if (game > 0) fetchGrid(id, game, apiKey);
+        [this, id, title, apiKey, attempt, name](const QJsonObject &response, int status) {
+            // Validate against the variant actually sent, not the original title.
+            const int game = searchGameId(response, name);
+            if (game > 0) fetchGrid(id, game, apiKey,
+                [this, id, title, apiKey, attempt] { search(id, title, apiKey, attempt + 1); });
             else if (status == 200 && response.value(QStringLiteral("success")).toBool()
                 && attempt + 1 < searchTitles(title).size()) search(id, title, apiKey, attempt + 1);
             else finish(id, false);
         });
 }
-void GameArtworkResolver::fetchGrid(const QString &id, int gameId, const QString &apiKey) {
-    apiGet(apiUrl(QStringLiteral("grids/game/") + QString::number(gameId)
-                  + QStringLiteral("?dimensions=920x430,460x215&types=static")), apiKey,
-        [this, id](const QJsonObject &response, int) {
+void GameArtworkResolver::fetchGrid(const QString &id, int gameId, const QString &apiKey,
+                                    std::function<void()> noArtwork, bool broad) {
+    const QString filter = broad ? QStringLiteral("?types=static")
+        : QStringLiteral("?dimensions=920x430,460x215&types=static");
+    apiGet(apiUrl(QStringLiteral("grids/game/") + QString::number(gameId) + filter), apiKey,
+        [this, id, gameId, apiKey, broad, noArtwork = std::move(noArtwork)](
+            const QJsonObject &response, int status) mutable {
             const auto urls = wideImages(response);
             if (!urls.isEmpty()) {
                 rememberChoices(id, urls);
                 download(id, urls.first());
+            } else if (!broad && status == 200 && response.value(QStringLiteral("success")).toBool()) {
+                // A game can have wide images in dimensions other than Steam's
+                // two standard grids. Try all static grids before the next title.
+                fetchGrid(id, gameId, apiKey, std::move(noArtwork), true);
+            } else if ((status == 404 || (status == 200 && response.value(QStringLiteral("success")).toBool()))
+                       && noArtwork) {
+                noArtwork();
+            } else {
+                finish(id, false);
             }
-            else finish(id, false);
         });
 }
 void GameArtworkResolver::download(const QString &id, const QUrl &url) {
