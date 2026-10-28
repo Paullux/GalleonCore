@@ -4,6 +4,9 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QDateTime>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QSettings>
@@ -43,6 +46,24 @@ private Q_SLOTS:
         QVERIFY(!GameCapture::isGamePath("D:/Epic Games/MyGame/launcher.exe"));
         QVERIFY(GameCapture::isGamePath("D:/Epic/MyGame/game.exe", {"Game.exe"}));
         QVERIFY(!GameCapture::isGamePath("D:/Epic/MyGame/game.exe"));
+    }
+    void gameBarReportMustBeFreshAndIdentifiedAsGame() {
+        const qint64 now = QDateTime::currentMSecsSinceEpoch();
+        const auto report = [&](bool isGame, const QString &title, qint64 at) {
+            return QJsonDocument(QJsonObject{{"isGame", isGame}, {"displayName", title},
+                {"at", QJsonValue::fromVariant(at)}}).toJson(QJsonDocument::Compact);
+        };
+        const auto good = GameCapture::gameBarDisplayName(report(true, "Red Dead Redemption 2", now), now);
+        QVERIFY(good);
+        QCOMPARE(*good, QStringLiteral("Red Dead Redemption 2"));
+        QVERIFY(!GameCapture::gameBarDisplayName(report(false, "Explorer", now), now));
+        QVERIFY(!GameCapture::gameBarDisplayName(report(true, "Old Game", now - 6000), now));
+        QVERIFY(!GameCapture::gameBarDisplayName(report(true, "Future Game", now + 100), now));
+        QVERIFY(!GameCapture::gameBarDisplayName(report(true, "  ", now), now));
+        QVERIFY(!GameCapture::gameBarDisplayName(report(true, "Game\\nInjected", now), now));
+        QVERIFY(!GameCapture::gameBarDisplayName(report(true, QString(121, QLatin1Char('x')), now), now));
+        QVERIFY(!GameCapture::gameBarDisplayName(QByteArray("{invalid"), now));
+        QVERIFY(!GameCapture::gameBarDisplayName(QByteArray(2049, 'A'), now));
     }
     void captureLifecycleAndBoundedLiveCsv() {
         const QTemporaryDir dir;
