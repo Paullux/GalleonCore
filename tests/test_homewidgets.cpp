@@ -131,6 +131,28 @@ private Q_SLOTS:
         QCOMPARE(images[0].fileName(), QStringLiteral("first.png"));
         QCOMPARE(images[1].fileName(), QStringLiteral("second.png"));
     }
+    void artworkCandidatesVisitAuthorNameAfterUnillustratedExactMatch() {
+        using galleond::GameArtworkResolver;
+        const QJsonObject games{{"success", true}, {"data", QJsonArray{
+            QJsonObject{{"id", 450}, {"name", "Jericho"}},
+            QJsonObject{{"id", 1317}, {"name", "Clive Barker's Jericho"}},
+            QJsonObject{{"id", 10}, {"name", "Jericho City"}},
+            QJsonObject{{"id", 999}, {"name", "Other Jericho Game"}},
+            QJsonObject{{"id", 20}, {"name", "NewJericho"}}}}};
+        QCOMPARE(GameArtworkResolver::searchGameIds(games, "Jericho"), QList<int>({450, 1317, 10}));
+        QCOMPARE(GameArtworkResolver::searchGameId(games, "Jericho"), 450);
+        const auto single = QJsonObject{{"success", true}, {"data", QJsonArray{
+            QJsonObject{{"id", 1317}, {"name", "Clive Barker's Jericho"}}}}};
+        QCOMPARE(GameArtworkResolver::searchGameIds(single, "Jericho"), QList<int>({1317}));
+        QCOMPARE(GameArtworkResolver::searchGameId(single, "Jericho"), 1317);
+        QCOMPARE(GameArtworkResolver::searchGameIds(games, "Not A Game"), QList<int>());
+        QCOMPARE(GameArtworkResolver::searchGameIds(QJsonObject{{"success", false}}, "Jericho"), QList<int>());
+        const QJsonObject fake{{"success", true}, {"data", QJsonArray{
+            QJsonObject{{"id", 7}, {"name", "SuperJericho"}},
+            QJsonObject{{"id", 8}, {"name", "Jerichos"}},
+            QJsonObject{{"id", 9}, {"name", "The Last Jericho"}}}}};
+        QCOMPARE(GameArtworkResolver::searchGameIds(fake, "Jericho"), QList<int>());
+    }
     void steamGridDbResponseValidationIsConservative() {
         const QJsonObject matches{{"success", true},
             {"data", QJsonArray{

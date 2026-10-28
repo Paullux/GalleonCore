@@ -514,6 +514,22 @@ Flickable {
             placeholder: qsTr("Absolute local image path")
             value: ((page.widgets.gameConfig.profiles || {})[gameProcess.input.text.trim().toLowerCase()] || {}).image || ""
         }
+        // Same Apply action as the button at the top of this page. Keep it
+        // next to the artwork fields so saving a custom image is discoverable.
+        Row {
+            spacing: 12
+            Pill {
+                objectName: "applyGameArtwork"
+                text: qsTr("Apply")
+                selected: page.widgets.pending
+                onClicked: page.applyEdits()
+            }
+            Text {
+                height: 32; verticalAlignment: Text.AlignVCenter
+                text: page.widgets.pending ? qsTr("Changes not applied") : qsTr("Settings applied")
+                color: page.widgets.pending ? "#ffb74d" : "#9be7a0"
+            }
+        }
         Text { width: parent.width; wrapMode: Text.Wrap; text: page.widgets.error; color: "#ffb74d" }
     }
 }
