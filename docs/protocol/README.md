@@ -350,3 +350,16 @@ Observed on the unit (firmware 3.06.005, Linux, hidapi), with two phone videos o
 - A keep-alive report (`03 27`) sent right after the picture does **not** flush it: same one-picture lag as sending once.
 
 What galleond does: `StreamDeck::setScreenImage` and `setKeyImage` send every picture twice (the same bytes), unless called with `flush = false` (pictures of a stream, such as the screensaver video: each one is shown when the next arrives). Why the module behaves this way is not known; the duplicate costs a second transfer (about 25 ms for the screen). Key images very probably behave the same (the key page of a theme only showed one press late); that is applied but not yet filmed.
+
+### Stream Deck firmware readback (29 October 2026)
+
+`GalleonK100Factory` uses the Gen2 property service in
+[node-elgato-stream-deck](https://github.com/Julusian/node-elgato-stream-deck/blob/main/packages/core/src/models/galleon-k100.ts).
+Its [getFirmwareVersion](https://github.com/Julusian/node-elgato-stream-deck/blob/main/packages/core/src/services/properties/gen2.ts)
+reads feature report `0x05`, 32 bytes including the report ID. The declared end
+is byte 1 plus 2; version ASCII starts at offset 6, after the checksum field.
+GalleonCore validates the report ID, returned size, declared end and three numeric
+version components. It accepts a trailing NUL, rejects malformed replies, and
+queries once per connection. This reads the module application firmware, not the
+keyboard firmware and not a bootloader. No feature write is needed for this query.
+The implementation follows this upstream source; physical readback is pending.

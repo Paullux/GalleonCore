@@ -114,6 +114,9 @@ ScreenController::ScreenController(galleon::StreamDeck *deck,
     connect(&m_minuteTimer, &QTimer::timeout, this, &ScreenController::tick);
 
     if (m_deck) {
+        const auto publishFirmware = [this] { m_homeWidgets.setFirmwareVersion(m_deck->isOpen() ? m_deck->firmwareVersion() : QString()); };
+        connect(this, &ScreenController::deckAvailableChanged, this, publishFirmware);
+        publishFirmware();
         // The module may be plugged in later, or unplugged: keep looking for it.
         m_deckTimer.setInterval(DeckCheckIntervalMs);
         connect(&m_deckTimer, &QTimer::timeout, this, &ScreenController::checkDeck);

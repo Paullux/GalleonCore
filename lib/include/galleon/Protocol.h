@@ -13,6 +13,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace galleon::protocol {
@@ -49,6 +51,12 @@ inline constexpr std::uint8_t OutputReportId = 0x02;
 inline constexpr std::size_t OutputReportSize = 1024;
 inline constexpr std::uint8_t FeatureReportId = 0x03;
 inline constexpr std::size_t FeatureReportSize = 32;
+// Gen2 properties, used by GalleonK100Factory in node-elgato-stream-deck:
+// packages/core/src/services/properties/gen2.ts (getFirmwareVersion).
+inline constexpr std::uint8_t FirmwareReportId = 0x05;
+[[nodiscard]] std::string firmwareVersion(std::span<const std::uint8_t> report);
+[[nodiscard]] bool validFirmwareVersion(std::string_view version);
+[[nodiscard]] bool firmwareUpdateRecommended(std::string_view version, bool windows);
 
 // Image sizes. Measured: feature report 8 of the module (read 2026-10-18)
 // ends with `d0 02 80 01` = 720 x 384 and holds `a0 00 a0 00` = 160 x 160.

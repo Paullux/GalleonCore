@@ -1055,6 +1055,18 @@ QtObject {
         QVERIFY(qvariant_cast<QObject *>(window->property("daemon")) != nullptr);
         QVERIFY(qvariant_cast<QObject *>(window->property("backend")) != nullptr);
         QCOMPARE(window->property("tabs").toList().size(), 2 + 6); // themes, new tab, keyboard, wallpapers, widgets, gaming, screensavers
+        auto *firmware = window->findChild<QObject *>("firmwareVersion");
+        auto *firmwareWarning = window->findChild<QObject *>("firmwareWarning");
+        QVERIFY(firmware);
+        QVERIFY(firmwareWarning);
+        QVERIFY(window->findChild<QObject *>("firmwareStatusBar"));
+        auto *home = qobject_cast<galleond::HomeWidgets *>(qvariant_cast<QObject *>(backend.property("homeWidgets")));
+        QVERIFY(home);
+        home->setFirmwareVersion("3.06.005");
+        QTRY_VERIFY(firmware->property("text").toString().contains("3.06.005"));
+        QCOMPARE(firmwareWarning->property("visible").toBool(), false); // keyboard tab is not selected
+        home->setFirmwareVersion("3.06.006");
+        QTRY_VERIFY(firmware->property("text").toString().contains("3.06.006"));
         QCOMPARE(window->property("keys").toList().size(), 12);
         QVERIFY(window->property("selected").toMap().isEmpty()); // nothing chosen yet
         window->setProperty("selectedKey", 0);
@@ -1087,7 +1099,18 @@ QtObject {
                 QVERIFY(pol && pol->property("text").toString().contains("export BEFORE_WINE="));
                 QVERIFY(!pol->property("text").toString().contains("%command%"));
                 const auto *flatpak = window->findChild<QQuickItem *>("flatpakFpsAccess");
-                QVERIFY(flatpak && flatpak->isVisible());
+                QVERIFY(flatpak && !flatpak->isVisible());
+                auto *manualHelp = window->findChild<QQuickItem *>("manualLauncherHelp");
+                auto *toggleHelp = window->findChild<QQuickItem *>("toggleManualLauncherHelp");
+                QVERIFY(manualHelp && toggleHelp);
+                QVERIFY(!manualHelp->isVisible());
+                QVERIFY(toggleHelp->property("text").toString().startsWith("▶"));
+                QVERIFY(QMetaObject::invokeMethod(toggleHelp, "clicked"));
+                QVERIFY(manualHelp->isVisible());
+                QVERIFY(flatpak->isVisible());
+                QVERIFY(toggleHelp->property("text").toString().startsWith("▼"));
+                QVERIFY(QMetaObject::invokeMethod(toggleHelp, "clicked"));
+                QVERIFY(!manualHelp->isVisible());
                 const auto *refresh = window->findChild<QQuickItem *>("configureMangoHudButton");
                 QVERIFY(refresh);
             }

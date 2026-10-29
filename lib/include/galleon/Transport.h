@@ -21,6 +21,9 @@ public:
     [[nodiscard]] virtual bool isOpen() const = 0;
     [[nodiscard]] virtual QString serialNumber() const = 0;
 
+    // Optional read-only feature query; unsupported transports return -1.
+    virtual int getFeatureReport(std::span<std::uint8_t> /*report*/) { return -1; }
+
     virtual bool sendFeatureReport(std::span<const std::uint8_t> report) = 0;
     virtual bool write(std::span<const std::uint8_t> report) = 0;
 

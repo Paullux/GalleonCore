@@ -83,6 +83,13 @@ Flickable {
             width: parent.width; wrapMode: Text.Wrap; color: "#b8bec6"
             text: qsTr("Les boutons Gaming apparaissent uniquement pendant un jeu détecté, puis disparaissent du choix des touches à sa fermeture.")
         }
+        Text {
+            objectName: "personalGameHelp"
+            width: parent.width; wrapMode: Text.Wrap; color: "#b9dfc1"
+            text: page.widgets.windowsCapture
+                ? qsTr("Personal or independent game not detected? Add it to a launcher that supports local games, such as Steam, and start it there. You can also associate its executable below. FPS capture must be active; adding a game does not guarantee detection. Use a custom image if no online artwork exists.")
+                : qsTr("For a personal or independent game, add the exported executable to Steam as a non-Steam game, or import it into Heroic, then enable MangoHud using the launcher instructions below. This was reported working with a personal Godot game. A fresh FPS CSV is still required. Use a custom image if no online artwork exists.")
+        }
         Row {
             visible: !!page.widgets.gameState.active
             spacing: 12

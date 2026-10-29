@@ -32,8 +32,13 @@ par jeu, avec **Tout sélectionner**, **Tout désélectionner** et un bouton
 La détection vérifie la présence des exécutables natifs (y compris les AppImages
 avec un raccourci valide) ou des applications Flatpak installées. Un ancien
 dossier de configuration ne suffit plus à faire apparaître un lanceur désinstallé.
+Dans Bosun, les instructions manuelles par lanceur sont regroupées sous
+**▶ Aides manuelles par lanceur**, replié par défaut. Un clic affiche **▼** et
+les sections Flatpak, Steam, Heroic, Lutris, PlayOnLinux et Bottles. Le bouton
+**Configuration unique · jeux et lanceurs** reste directement accessible.
+
 Les raccourcis Steam qui lancent Lutris ou un autre lanceur, ou ciblent un fichier
-`.lnk`/`.desktop`, sont signalés comme indirects et ne sont pas préfixés avec
+`.lnk`/`.desktop`, sont omis de la sélection Steam et ne sont pas préfixés avec
 MangoHud, même si leurs options sont vides. Configurer leur lanceur d’origine.
 Le dossier technique Steam `userdata/0` est ignoré ; les comptes réels conservent
 leurs réglages distincts et leur identifiant est indiqué dans les libellés.
@@ -41,6 +46,19 @@ CrossOver est recherché dans le PATH, `/opt/cxoffice` et `~/cxoffice` ; les
 bouteilles standard de `~/.cxoffice` sont proposées. Les emplacements personnalisés
 restent à configurer manuellement. Format des variables :
 [documentation CodeWeavers](https://support.codeweavers.com/en_US/advanced-crossover-linux-configuration).
+
+**Détection des réglages existants.** La commande Steam complète proposée par
+Galleon (`MANGOHUD_CONFIG=… mangohud %command%`) est reconnue comme déjà configurée
+et conservée à l’identique. Les autres options personnelles restent préservées.
+Les métadonnées Steam peuvent contenir de longues valeurs sans rapport avec les
+jeux ; la lecture reste bornée à 8 Mio par fichier, 1 Mio par valeur et 4 Kio par clé.
+Les chemins YAML Lutris contenant des échappements hexadécimaux sont reconnus.
+Une configuration Lutris dont l’exécutable absolu a disparu n’est plus proposée
+comme une installation présente ; les chemins non résolus restent à examiner.
+Pour Heroic, deux enregistrements de même titre pointant vers le même exécutable
+sont regroupés si une entrée importée explicite existe et si leurs préfixes
+correspondent ; des préfixes distincts restent des profils séparés. Les profils et préfixes
+ne sont pas supprimés ; des installations réellement distinctes restent séparées.
 
 **Réutilisation et restauration.** Actualisez après l’installation d’un jeu, puis
 sélectionnez seulement ce jeu. Les configurations déjà identiques ne sont pas

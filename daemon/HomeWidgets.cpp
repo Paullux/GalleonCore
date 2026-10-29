@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "HomeWidgets.h"
+#include <galleon/Protocol.h>
 #include "FpsReader.h"
 #include "PresentMonService.h"
 #include <QUrl>
@@ -514,7 +515,23 @@ void HomeWidgets::weather() {
         reply->deleteLater();
     });
 }
+void HomeWidgets::simulateOldFirmware() {
+    if (!m_draftMode || m_firmwareSimulation) return;
+    m_firmwareSimulation = true;
+    Q_EMIT changed();
+}
+bool HomeWidgets::firmwareWarning() const {
+    if (m_firmwareSimulation) return true;
+    return galleon::protocol::firmwareUpdateRecommended(m_firmwareVersion.toStdString(), windowsCapture());
+}
+void HomeWidgets::setFirmwareVersion(const QString &version) {
+    const auto validated = galleon::protocol::validFirmwareVersion(version.toStdString()) ? version : QString();
+    if (m_firmwareVersion == validated) return;
+    m_firmwareVersion = validated;
+    Q_EMIT changed();
+}
 void HomeWidgets::refresh() {
+    const auto previousFirmwareVersion = m_firmwareVersion;
     const auto previousCaptureStatus = m_captureStatus;
     const auto previousGameConfig = m_gameConfig;
     const auto previousGameState = m_gameState;
@@ -663,14 +680,13 @@ void HomeWidgets::refresh() {
         m_gameState["artworkStatus"] = m_gameArtwork.status();
     }
     if (m_gameState.value("active").toBool() && (m_gpuLoad || m_gpuTemperature)) m_gameState["gpuProvider"] = m_gpuProvider;
-#ifdef Q_OS_WIN
     // Bosun observes the daemon's actual capture, never launches a second ETW session.
     const auto runtimePath = m_file + QStringLiteral(".runtime.json");
     if (!m_draftMode) {
         QDir().mkpath(QFileInfo(runtimePath).absolutePath());
         QSaveFile runtime(runtimePath);
         const auto data = QJsonDocument(QJsonObject::fromVariantMap({{"at", QDateTime::currentMSecsSinceEpoch()},
-            {"capture", m_captureStatus}, {"game", m_gameState}})).toJson(QJsonDocument::Compact);
+            {"capture", m_captureStatus}, {"game", m_gameState}, {"firmware", m_firmwareVersion}})).toJson(QJsonDocument::Compact);
         if (runtime.open(QIODevice::WriteOnly) && runtime.write(data) == data.size()) runtime.commit();
     } else {
         QFile runtime(runtimePath);
@@ -678,20 +694,27 @@ void HomeWidgets::refresh() {
         const auto state = QJsonDocument::fromJson(data).object().toVariantMap();
         const auto age = QDateTime::currentMSecsSinceEpoch() - state.value("at").toLongLong();
         if (!state.isEmpty() && age >= 0 && age < 10000) {
+            const auto firmware = state.value("firmware").toString();
+            // Revalidate even the local runtime file before rendering its value.
+            m_firmwareVersion = galleon::protocol::validFirmwareVersion(firmware.toStdString()) ? firmware : QString();
+#ifdef Q_OS_WIN
             m_captureStatus = state.value("capture").toMap();
             m_gameState = state.value("game").toMap();
+#endif
         } else {
+            m_firmwareVersion.clear();
+#ifdef Q_OS_WIN
             m_captureStatus = {{"state", "offline"}, {"message", tr("Start the Galleon daemon to detect games automatically.")}};
             m_gameState.clear();
+#endif
         }
     }
-#endif
     weather();
     // Disabled cards do not wake the renderer: the default remains a minute clock.
     for (const auto &entry : m_layout) {
         const auto item = entry.toMap();
         if (!item.value("enabled").toBool()) m_values.remove(item.value("id").toString());
     }
-    if (previousCaptureStatus != m_captureStatus || previousGameConfig != m_gameConfig || previousGameState != m_gameState || previousFpsConfig != m_fpsConfig || previousLocation != m_location || previousLayout != m_layout || previousValues != m_values) Q_EMIT changed();
+    if (previousFirmwareVersion != m_firmwareVersion || previousCaptureStatus != m_captureStatus || previousGameConfig != m_gameConfig || previousGameState != m_gameState || previousFpsConfig != m_fpsConfig || previousLocation != m_location || previousLayout != m_layout || previousValues != m_values) Q_EMIT changed();
 }
 }

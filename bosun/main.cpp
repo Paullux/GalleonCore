@@ -63,6 +63,9 @@ int main(int argc, char *argv[])
     const QCommandLineOption minimizedOption(QStringLiteral("minimized"), QStringLiteral("Start in the notification area when available."));
     const QCommandLineOption simulateUpdateOption(QStringLiteral("simulate-update"),
         QStringLiteral("Test update notification against version 0.0.0 using the real latest release, without saving update preferences."));
+    const QCommandLineOption oldFirmwareOption(QStringLiteral("old-firmware"),
+        QStringLiteral("Show a clearly labelled old Stream Deck firmware simulation, without changing hardware or saved settings."));
+    parser.addOption(oldFirmwareOption);
     parser.addOption(simulateUpdateOption);
     parser.addOption(minimizedOption);
     parser.addOption(pagesOption);
@@ -94,9 +97,11 @@ int main(int argc, char *argv[])
                                   : QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
                                         + QStringLiteral("/galleoncore/pages.json");
     bosun::BosunBackend backend(pagesFile);
+    if (parser.isSet(oldFirmwareOption))
+        qobject_cast<galleond::HomeWidgets *>(backend.homeWidgets())->simulateOldFirmware();
     bosun::DaemonStatus daemon;
 #ifdef Q_OS_WIN
-    if (!parser.isSet(shotOption) && !parser.isSet(pagesOption) && !parser.isSet(simulateUpdateOption)) {
+    if (!parser.isSet(shotOption) && !parser.isSet(pagesOption) && !parser.isSet(simulateUpdateOption) && !parser.isSet(oldFirmwareOption)) {
         // Let the asynchronous IPC probe finish before starting a missing daemon.
         QTimer::singleShot(1000, &daemon, [&daemon] {
             if (const QString error = daemon.start(); !error.isEmpty())
@@ -121,7 +126,7 @@ int main(int argc, char *argv[])
         updates.setRepositoryManaged(managed, known);
         if (known) updates.startAutomaticChecks();
     });
-    if (!parser.isSet(shotOption) && !parser.isSet(pagesOption) && !parser.isSet(simulateUpdateOption)) {
+    if (!parser.isSet(shotOption) && !parser.isSet(pagesOption) && !parser.isSet(simulateUpdateOption) && !parser.isSet(oldFirmwareOption)) {
         QTimer::singleShot(5000, &updates, [&updates, &packageUpdates] {
             if (QStringLiteral(GALLEON_PACKAGE_FORMAT).isEmpty()) updates.startAutomaticChecks();
             else packageUpdates.start(QStringLiteral(GALLEON_PACKAGE_FORMAT));
@@ -134,7 +139,7 @@ int main(int argc, char *argv[])
     engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
     engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
     engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
-    engine.setInitialProperties({{QStringLiteral("startMinimized"), parser.isSet(minimizedOption) && !parser.isSet(simulateUpdateOption) && !parser.isSet(shotOption) && bosun::Tray::isAvailable()},
+    engine.setInitialProperties({{QStringLiteral("startMinimized"), parser.isSet(minimizedOption) && !parser.isSet(simulateUpdateOption) && !parser.isSet(oldFirmwareOption) && !parser.isSet(shotOption) && bosun::Tray::isAvailable()},
                                  {QStringLiteral("updates"), QVariant::fromValue(&updates)},
                                  {QStringLiteral("updatesOpen"), parser.isSet(simulateUpdateOption)},
                                  {QStringLiteral("filePicker"), QVariant::fromValue(filePicker.get())},
@@ -154,6 +159,12 @@ int main(int argc, char *argv[])
     };
     if (const auto height = number(heightOption))
         root->setProperty("height", *height);
+    if (parser.isSet(oldFirmwareOption)) {
+        const auto tabs = root->property("tabs").toList();
+        for (qsizetype i = 0; i < tabs.size(); ++i)
+            if (tabs.at(i).toMap().value(QStringLiteral("kind")).toString() == QStringLiteral("keyboard"))
+                root->setProperty("currentTab", i);
+    }
     if (const auto tab = number(tabOption))
         root->setProperty("currentTab", *tab);
     if (const auto key = number(keyOption))

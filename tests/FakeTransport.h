@@ -28,6 +28,14 @@ public:
     [[nodiscard]] bool isOpen() const override { return m_open; }
     [[nodiscard]] QString serialNumber() const override { return QStringLiteral("FAKE0001"); }
 
+    int getFeatureReport(std::span<std::uint8_t> report) override
+    {
+        ++featureReads;
+        if (!m_open || report.empty() || report[0] != 5 || firmware.empty()) return -1;
+        const auto size = std::min(report.size(), firmware.size());
+        std::copy_n(firmware.begin(), size, report.begin());
+        return static_cast<int>(size);
+    }
     bool sendFeatureReport(std::span<const std::uint8_t> report) override
     {
         featureReports.emplace_back(report.begin(), report.end());
@@ -57,6 +65,8 @@ public:
 
     std::function<void()> beforeWrite;
     int openAttempts = 0;
+    int featureReads = 0;
+    Report firmware;
     bool featureSucceeds = true;
     bool openSucceeds = true;
     bool disconnected = false;
