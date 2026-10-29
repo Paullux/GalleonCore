@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Window
 Flickable {
     id: page
+    property bool manualLauncherHelpOpen: false
     objectName: "gameModePage"
     required property var widgets
     property bool advanced: false
@@ -80,13 +81,6 @@ Flickable {
             text: page.widgets.windowsCapture
                 ? qsTr("Start your Steam game: Galleon detects it and starts FPS capture automatically. Install the official PresentMon MSI once, with its shared service. Click Apply to save changes.")
                 : qsTr("Automatic game artwork, FPS and CPU/GPU gauges. The keyboard screensaver stays off during an active capture. Click Apply to save changes.")
-        }
-        Text {
-            objectName: "personalGameHelp"
-            width: parent.width; wrapMode: Text.Wrap; color: "#aebac6"
-            text: page.widgets.windowsCapture
-                ? qsTr("Personal or independent game not detected? Add it to a launcher that supports local games, such as Steam, and start it there. You can also associate its executable below. FPS capture must be active; adding a game does not guarantee detection. Use a custom image if no online artwork exists.")
-                : qsTr("For a personal or independent game, add the exported executable to Steam as a non-Steam game, or import it into Heroic, then enable MangoHud using the launcher instructions below. This was reported working with a personal Godot game. A fresh FPS CSV is still required. Use a custom image if no online artwork exists.")
         }
         Row {
             spacing: 12
@@ -216,71 +210,86 @@ Flickable {
                 SetupText { text: qsTr("3. Activez Automatique en haut de cette page, puis Appliquer si vous avez changé ce réglage. Une fois votre lanceur configuré, relancez le jeu : les FPS et le mode Jeu doivent apparaître. Sans nouvelles mesures, le mode Jeu se ferme après environ 10 secondes.") }
                 SetupText { text: qsTr("Une ancienne variable MANGOHUD_CONFIG ou une configuration propre au jeu peut remplacer le fichier commun. Vérifiez qu’elle utilise le même dossier de mesures. La boîte configure uniquement les éléments sélectionnés et affiche un compte rendu. Elle n’installe pas MangoHud.") }
             }
-            SetupDivider {}
-            Column {
-                objectName: "flatpakFpsAccess"
-                width: parent.width; spacing: 8
-                SetupTitle { text: qsTr("Flatpak · autoriser les CSV FPS") }
-                SetupText { text: qsTr("Dans Configuration unique, cochez les lanceurs installés sous Permissions Flatpak pour autoriser la lecture de MangoHud.conf et l’écriture des CSV. L’extension MangoHud correspondant au runtime reste nécessaire. Quittez puis relancez les lanceurs après application.") }
+            Pill {
+                objectName: "toggleManualLauncherHelp"
+                activeFocusOnTab: true
+                Keys.onSpacePressed: clicked()
+                Keys.onReturnPressed: clicked()
+                text: (manualLauncherHelp.visible ? "▼ " : "▶ ") + qsTr("Aides manuelles par lanceur")
+                onClicked: page.manualLauncherHelpOpen = !page.manualLauncherHelpOpen
             }
-            SetupDivider {}
             Column {
-                objectName: "steamFpsHelp"
-                width: parent.width; spacing: 8
-                SetupTitle { text: "Steam" }
-                SetupText { text: qsTr("1. Bibliothèque → clic droit sur le jeu → Propriétés → Général → Options de lancement.") }
-                SetupText { text: qsTr("2. Collez cette ligne dans ce champ, sur une seule ligne (sélectionnez le texte puis Ctrl+C) :") }
-                SetupCode { objectName: "steamFpsLaunchCommand"; text: page.widgets.steamLaunchOptions }
-                SetupText { text: qsTr("3. Fermez les propriétés et lancez le jeu. Le réglage reste mémorisé pour les prochains lancements.") }
-                SetupText { text: qsTr("Cette commande appartient à Steam, jamais au terminal. Si des options existent déjà, conservez-les et ne dupliquez pas %command%. Steam Flatpak demande aussi l’extension MangoHud et les permissions décrites dans le guide Linux.") }
-            }
-            SetupDivider {}
-            Column {
-                objectName: "heroicFpsHelp"
-                width: parent.width; spacing: 8
-                SetupTitle { text: "Heroic" }
-                SetupText { text: qsTr("1. Ouvrez les paramètres du jeu et activez MangoHud / Afficher les FPS dans les réglages Linux (l’emplacement dépend de la version).") }
-                SetupText { text: qsTr("2. Dans Configuration unique, sélectionnez les paramètres généraux pour les futurs jeux et chaque jeu déjà installé à configurer. Les réglages généraux seuls ne suffisent pas pour les jeux ayant leurs propres réglages. Ne mettez rien dans Arguments du jeu pour MangoHud.") }
-                SetupText { text: qsTr("Si vous devez définir les options par jeu : Paramètres du jeu → Avancé → Variables d’environnement. Nom : MANGOHUD_CONFIG. Valeur (sans guillemets supplémentaires) :") }
-                SetupCode { text: "autostart_log=1,log_interval=500,output_folder=" + page.widgets.recommendedFpsFolder + ",background_alpha=0,alpha=0" }
-                SetupText { text: qsTr("Heroic Flatpak : installez aussi l’extension MangoHud adaptée et autorisez le fichier de configuration et le dossier des mesures. La case seule ne donne pas ces accès ; voir le guide Linux.") }
-            }
-            SetupDivider {}
-            Column {
-                objectName: "lutrisFpsHelp"
-                width: parent.width; spacing: 8
-                SetupTitle { text: "Lutris" }
-                SetupText { text: qsTr("1. Clic droit sur le jeu → Configurer → Options système → activez Compteur de FPS (MangoHud). Affichez les options avancées si nécessaire.") }
-                SetupText { text: qsTr("2. Avec la préparation commune, aucune commande ni variable par jeu n’est nécessaire. Enregistrez puis relancez le jeu. Ne mettez pas %command% dans Lutris.") }
-                SetupText { text: qsTr("Ancienne version sans cette case : ajoutez seulement mangohud dans Préfixe de commande. Pour des options par jeu : Options système → Variables d’environnement, nom MANGOHUD_CONFIG, valeur :") }
-                SetupCode { text: "autostart_log=1,log_interval=500,output_folder=" + page.widgets.recommendedFpsFolder + ",background_alpha=0,alpha=0" }
-            }
-            SetupDivider {}
-            Column {
-                objectName: "polFpsHelp"
-                width: parent.width; spacing: 8
-                SetupTitle { text: "PlayOnLinux 4" }
-                SetupText { text: qsTr("1. Sélectionnez le raccourci du jeu → Configurer → Divers → Commande à exécuter avant de lancer le programme.") }
-                SetupText { text: qsTr("2. Ajoutez ces deux lignes dans ce champ, en conservant vos commandes existantes :") }
-                SetupCode {
-                    objectName: "polFpsLaunchCommand"
-                    text: "export " + page.widgets.steamLaunchOptions.replace(" mangohud %command%", "") + "\nexport BEFORE_WINE=\"mangohud${BEFORE_WINE:+ $BEFORE_WINE}\""
+                id: manualLauncherHelp
+                objectName: "manualLauncherHelp"
+                visible: page.manualLauncherHelpOpen
+                width: parent.width
+                spacing: 14
+                SetupDivider {}
+                Column {
+                    objectName: "flatpakFpsAccess"
+                    width: parent.width; spacing: 8
+                    SetupTitle { text: qsTr("Flatpak · autoriser les CSV FPS") }
+                    SetupText { text: qsTr("Dans Configuration unique, cochez les lanceurs installés sous Permissions Flatpak pour autoriser la lecture de MangoHud.conf et l’écriture des CSV. L’extension MangoHud correspondant au runtime reste nécessaire. Quittez puis relancez les lanceurs après application.") }
                 }
-                SetupText { text: qsTr("3. Fermez les réglages et relancez le jeu. Ce sont des lignes de pré-lancement, pas des arguments du jeu. Aucun %command% ici.") }
+                SetupDivider {}
+                Column {
+                    objectName: "steamFpsHelp"
+                    width: parent.width; spacing: 8
+                    SetupTitle { text: "Steam" }
+                    SetupText { text: qsTr("1. Bibliothèque → clic droit sur le jeu → Propriétés → Général → Options de lancement.") }
+                    SetupText { text: qsTr("2. Collez cette ligne dans ce champ, sur une seule ligne (sélectionnez le texte puis Ctrl+C) :") }
+                    SetupCode { objectName: "steamFpsLaunchCommand"; text: page.widgets.steamLaunchOptions }
+                    SetupText { text: qsTr("3. Fermez les propriétés et lancez le jeu. Le réglage reste mémorisé pour les prochains lancements.") }
+                    SetupText { text: qsTr("Cette commande appartient à Steam, jamais au terminal. Si des options existent déjà, conservez-les et ne dupliquez pas %command%. Steam Flatpak demande aussi l’extension MangoHud et les permissions décrites dans le guide Linux.") }
+                }
+                SetupDivider {}
+                Column {
+                    objectName: "heroicFpsHelp"
+                    width: parent.width; spacing: 8
+                    SetupTitle { text: "Heroic" }
+                    SetupText { text: qsTr("1. Ouvrez les paramètres du jeu et activez MangoHud / Afficher les FPS dans les réglages Linux (l’emplacement dépend de la version).") }
+                    SetupText { text: qsTr("2. Dans Configuration unique, sélectionnez les paramètres généraux pour les futurs jeux et chaque jeu déjà installé à configurer. Les réglages généraux seuls ne suffisent pas pour les jeux ayant leurs propres réglages. Ne mettez rien dans Arguments du jeu pour MangoHud.") }
+                    SetupText { text: qsTr("Si vous devez définir les options par jeu : Paramètres du jeu → Avancé → Variables d’environnement. Nom : MANGOHUD_CONFIG. Valeur (sans guillemets supplémentaires) :") }
+                    SetupCode { text: "autostart_log=1,log_interval=500,output_folder=" + page.widgets.recommendedFpsFolder + ",background_alpha=0,alpha=0" }
+                    SetupText { text: qsTr("Heroic Flatpak : installez aussi l’extension MangoHud adaptée et autorisez le fichier de configuration et le dossier des mesures. La case seule ne donne pas ces accès ; voir le guide Linux.") }
+                }
+                SetupDivider {}
+                Column {
+                    objectName: "lutrisFpsHelp"
+                    width: parent.width; spacing: 8
+                    SetupTitle { text: "Lutris" }
+                    SetupText { text: qsTr("1. Clic droit sur le jeu → Configurer → Options système → activez Compteur de FPS (MangoHud). Affichez les options avancées si nécessaire.") }
+                    SetupText { text: qsTr("2. Avec la préparation commune, aucune commande ni variable par jeu n’est nécessaire. Enregistrez puis relancez le jeu. Ne mettez pas %command% dans Lutris.") }
+                    SetupText { text: qsTr("Ancienne version sans cette case : ajoutez seulement mangohud dans Préfixe de commande. Pour des options par jeu : Options système → Variables d’environnement, nom MANGOHUD_CONFIG, valeur :") }
+                    SetupCode { text: "autostart_log=1,log_interval=500,output_folder=" + page.widgets.recommendedFpsFolder + ",background_alpha=0,alpha=0" }
+                }
+                SetupDivider {}
+                Column {
+                    objectName: "polFpsHelp"
+                    width: parent.width; spacing: 8
+                    SetupTitle { text: "PlayOnLinux 4" }
+                    SetupText { text: qsTr("1. Sélectionnez le raccourci du jeu → Configurer → Divers → Commande à exécuter avant de lancer le programme.") }
+                    SetupText { text: qsTr("2. Ajoutez ces deux lignes dans ce champ, en conservant vos commandes existantes :") }
+                    SetupCode {
+                        objectName: "polFpsLaunchCommand"
+                        text: "export " + page.widgets.steamLaunchOptions.replace(" mangohud %command%", "") + "\nexport BEFORE_WINE=\"mangohud${BEFORE_WINE:+ $BEFORE_WINE}\""
+                    }
+                    SetupText { text: qsTr("3. Fermez les réglages et relancez le jeu. Ce sont des lignes de pré-lancement, pas des arguments du jeu. Aucun %command% ici.") }
+                }
+                SetupDivider {}
+                Column {
+                    objectName: "bottlesFpsHelp"
+                    width: parent.width; spacing: 8
+                    SetupTitle { text: "Bottles" }
+                    SetupText { text: qsTr("1. Ouvrez la bouteille du jeu → Préférences → Performances → activez Monitor Performance (MangoHud). Sur certaines versions, cette option est dans Affichage.") }
+                    SetupText { text: qsTr("2. Avec la préparation commune, aucune commande de lancement n’est nécessaire. Relancez le jeu depuis la bouteille. N’ajoutez pas %command% à ses arguments.") }
+                    SetupText { text: qsTr("Le bouton commun crée ces options dans MangoHud.conf ; elles sont affichées ici pour vérification, sans saisie supplémentaire nécessaire :") }
+                    SetupCode { objectName: "bottlesFpsConfig"; text: "autostart_log=1\nlog_interval=500\noutput_folder=" + page.widgets.recommendedFpsFolder }
+                    SetupText { text: qsTr("Bottles Flatpak : installez l'extension MangoHud correspondant au runtime, puis utilisez le bouton Autoriser les CSV dans la section Flatpak ci-dessus. Quittez et relancez Bottles après autorisation.") }
+                }
+                SetupDivider {}
+                SetupText { text: qsTr("Besoin d’aide ? Le guide MODE_JEU_LINUX.fr.md détaille l’installation Flatpak, les autres activations Steam et les limites OpenGL / Vulkan / DXVK / VKD3D-Proton. Gamescope nécessite une configuration MangoApp distincte.") }
             }
-            SetupDivider {}
-            Column {
-                objectName: "bottlesFpsHelp"
-                width: parent.width; spacing: 8
-                SetupTitle { text: "Bottles" }
-                SetupText { text: qsTr("1. Ouvrez la bouteille du jeu → Préférences → Performances → activez Monitor Performance (MangoHud). Sur certaines versions, cette option est dans Affichage.") }
-                SetupText { text: qsTr("2. Avec la préparation commune, aucune commande de lancement n’est nécessaire. Relancez le jeu depuis la bouteille. N’ajoutez pas %command% à ses arguments.") }
-                SetupText { text: qsTr("Le bouton commun crée ces options dans MangoHud.conf ; elles sont affichées ici pour vérification, sans saisie supplémentaire nécessaire :") }
-                SetupCode { objectName: "bottlesFpsConfig"; text: "autostart_log=1\nlog_interval=500\noutput_folder=" + page.widgets.recommendedFpsFolder }
-                SetupText { text: qsTr("Bottles Flatpak : installez l'extension MangoHud correspondant au runtime, puis utilisez le bouton Autoriser les CSV dans la section Flatpak ci-dessus. Quittez et relancez Bottles après autorisation.") }
-            }
-            SetupDivider {}
-            SetupText { text: qsTr("Besoin d’aide ? Le guide MODE_JEU_LINUX.fr.md détaille l’installation Flatpak, les autres activations Steam et les limites OpenGL / Vulkan / DXVK / VKD3D-Proton. Gamescope nécessite une configuration MangoApp distincte.") }
         }
         SetupDivider {}
         Column {

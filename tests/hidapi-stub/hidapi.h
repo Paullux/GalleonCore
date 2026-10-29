@@ -20,6 +20,7 @@ hid_device *hid_open_path(const char *path);
 const wchar_t *hid_error(hid_device *device);
 int hid_set_nonblocking(hid_device *device, int enabled);
 int hid_get_serial_number_string(hid_device *device, wchar_t *buffer, std::size_t size);
+int hid_get_feature_report(hid_device *device, unsigned char *data, std::size_t size);
 int hid_send_feature_report(hid_device *device, const unsigned char *data, std::size_t size);
 int hid_write(hid_device *device, const unsigned char *data, std::size_t size);
 int hid_read_timeout(hid_device *device, unsigned char *data, std::size_t size, int timeout);

@@ -94,6 +94,12 @@ QString HidTransport::serialNumber() const
     return QString::fromWCharArray(buffer.data());
 }
 
+int HidTransport::getFeatureReport(std::span<std::uint8_t> report)
+{
+    if (!isOpen() || report.empty() || report.size() > 32) return -1;
+    return hid_get_feature_report(m_device->handle, report.data(), report.size());
+}
+
 bool HidTransport::sendFeatureReport(std::span<const std::uint8_t> report)
 {
     // An empty report means the protocol layer does not know the bytes yet.

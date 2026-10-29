@@ -18,6 +18,44 @@ using galleond::HomeWidgets;
 class TestHomeWidgets : public QObject {
     Q_OBJECT
 private Q_SLOTS:
+    void firmwareSimulationIsExplicitAndNeverSaved() {
+        const QTemporaryDir dir;
+        const auto path = dir.filePath("widgets.json");
+        HomeWidgets editor(nullptr, path, true);
+        QVERIFY(!editor.firmwareSimulation());
+        editor.simulateOldFirmware();
+        QVERIFY(editor.firmwareSimulation());
+        QVERIFY(editor.firmwareWarning());
+        QCOMPARE(editor.firmwareVersion(), QStringLiteral("3.06.005"));
+        QVERIFY(!QFile::exists(path));
+        HomeWidgets daemon(nullptr, path);
+        daemon.simulateOldFirmware();
+        QVERIFY(!daemon.firmwareSimulation());
+        QVERIFY(daemon.firmwareVersion().isEmpty());
+    }
+
+    void bosunFirmwareRejectsStaleAndMalformedRuntimeData() {
+        const QTemporaryDir dir;
+        const auto config = dir.filePath("widgets.json");
+        const auto write = [&](const QString &version, qint64 at) {
+            QFile file(config + ".runtime.json");
+            if (!file.open(QIODevice::WriteOnly)) return false;
+            return file.write(QJsonDocument(QJsonObject{{"at", at}, {"firmware", version}}).toJson()) > 0;
+        };
+        QVERIFY(write("3.06.005", QDateTime::currentMSecsSinceEpoch()));
+        const HomeWidgets editor(nullptr, config, true);
+        QCOMPARE(editor.firmwareVersion(), QStringLiteral("3.06.005"));
+        QCOMPARE(editor.firmwareWarning(), HomeWidgets::windowsCapture());
+        QVERIFY(write("3.06.006", QDateTime::currentMSecsSinceEpoch()));
+        QTRY_COMPARE(editor.firmwareVersion(), QStringLiteral("3.06.006"));
+        QVERIFY(!editor.firmwareWarning());
+        QVERIFY(write("3.06.006", QDateTime::currentMSecsSinceEpoch() - 20000));
+        QTRY_VERIFY(editor.firmwareVersion().isEmpty());
+        QVERIFY(write("<script>", QDateTime::currentMSecsSinceEpoch()));
+        const HomeWidgets invalid(nullptr, config, true);
+        QVERIFY(invalid.firmwareVersion().isEmpty());
+    }
+
     void artworkMatchesRomanSequelsWithoutChangingSavedKeys() {
         using galleond::GameArtworkResolver;
         const QJsonObject games{{"success", true}, {"data", QJsonArray{

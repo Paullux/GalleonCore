@@ -96,6 +96,12 @@ bool StreamDeck::open()
         close();
         return false;
     }
+    // Read once per successful connection, never write a firmware command.
+    std::array<std::uint8_t, protocol::FeatureReportSize> firmware{};
+    firmware[0] = protocol::FirmwareReportId;
+    const int size = m_transport->getFeatureReport(firmware);
+    if (size > 0 && static_cast<std::size_t>(size) <= firmware.size())
+        m_firmwareVersion = QString::fromStdString(protocol::firmwareVersion(std::span(firmware).first(static_cast<std::size_t>(size))));
     m_keepAliveTimer.start();
     m_inputTimer.start();
     ++m_diagnostics.opens;
@@ -106,6 +112,7 @@ void StreamDeck::close()
 {
     if (isOpen())
         ++m_diagnostics.closes;
+    m_firmwareVersion.clear();
     m_inputState = {}; // a device that comes back starts with nothing pressed
     m_keepAliveTimer.stop();
     m_inputTimer.stop();

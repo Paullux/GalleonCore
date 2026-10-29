@@ -114,7 +114,7 @@ class SetupTests(unittest.TestCase):
         updated = fps.patch_crossover(b'[Bottle]\n"Name"="Game"', '/tmp/a"b/MangoHud.conf')
         self.assertIn(b'a\\"b', updated)
 
-    def test_steam_shortcuts_delegating_to_launchers_or_links_are_not_wrapped(self):
+    def test_steam_shortcuts_delegating_to_launchers_or_links_are_omitted(self):
         targets = [('/usr/games/lutris', 'lutris:rungameid/2', 'Lutris'),
                    (str(self.home / '.cxoffice/AlterEGo/desktopdata/AlterEgo.lnk'), '', 'CrossOver'),
                    ('/some/shortcut.lnk', '', 'indirect')]
@@ -124,12 +124,75 @@ class SetupTests(unittest.TestCase):
                     + b'\x01Exe\0' + target.encode() + b'\0\x01LaunchOptions\0'
                     + options.encode() + b'\0\x08\x08\x08')
             path = self.put('.local/share/Steam/userdata/1/config/shortcuts.vdf', data)
-            row = next(r for r in self.scan() if r['kind'] == 'steam-shortcut')
-            self.assertFalse(row['enabled'])
-            self.assertIn(expected, row['note'])
-            self.apply([row])
+            self.assertFalse(any(r['kind'] == 'steam-shortcut' for r in self.scan()))
+            self.assertIn(expected, fps.delegated_shortcut(target, options, self.home))
             self.assertEqual(path.read_bytes(), data)
         self.assertEqual(fps.delegated_shortcut('/games/NeuroHell', '', self.home), '')
+
+    def test_large_steam_metadata_does_not_block_existing_correct_options(self):
+        command = "MANGOHUD_CONFIG='" + self.setup.options() + "' mangohud %command%"
+        data = STEAM.replace(b'"LaunchOptions" ""', b'"LaunchOptions" ' + fps.quote(command).encode(), 1)
+        data += b'"LocalizedTagNames_french" "' + b'x' * 24000 + b'"\n'
+        row = dict(kind='steam', extra='730', note='mangohud %command%')
+        self.assertEqual(self.setup.update(row, data), data)
+        unsafe = data.replace(b'mangohud %command%', b'mangohud %command% ; custom', 1)
+        with self.assertRaises(fps.Preserved):
+            self.setup.update(row, unsafe)
+        with self.assertRaises(fps.SetupError):
+            fps.vdf(b'"key" "' + b'x' * (fps.MAX_VDF_VALUE_CHARS + 1) + b'"')
+        with self.assertRaises(fps.SetupError):
+            fps.vdf(b'"' + b'k' * (fps.MAX_VDF_KEY_CHARS + 1) + b'" "value"')
+
+    def test_yaml_hex_escapes_are_supported_without_rewriting_the_path(self):
+        exe = self.put('Téléchargements/game.exe', 'game')
+        quoted = '"' + str(exe).replace('é', r'\xE9') + '"'
+        data = ('game:\n  exe: ' + quoted + '\nsystem: {}\n').encode()
+        self.assertTrue(fps.lutris_executable_exists(data))
+        updated = self.setup.update(dict(kind='lutris'), data)
+        self.assertIn(quoted.encode(), updated)
+        self.assertIn(b'mangohud: true', updated)
+        self.assertEqual(fps.yaml_string(r'"\u00e9\U0001f600" # comment'), 'é😀')
+        for value in (r'"\xZZ"', r'"\uD800"', r'"\U00110000"', r'"\q"'):
+            with self.assertRaises(fps.SetupError):
+                fps.yaml_string(value)
+
+    def test_missing_lutris_executable_is_not_listed_as_installed(self):
+        self.put('.config/lutris/games/removed.yml', 'game:\n  exe: "' + str(self.home / 'removed.exe') + '"\n')
+        exe = self.put('Games/working.exe', 'game')
+        self.put('.config/lutris/games/working.yml', 'game:\n  exe: "' + str(exe) + '"\n')
+        # Unknown runner substitutions must not be declared uninstalled.
+        self.put('.config/lutris/games/unknown.yml', 'game:\n  exe: $GAMEDIR/game.exe\n')
+        rows = [r for r in self.scan() if r['kind'] == 'lutris']
+        self.assertEqual({r['label'] for r in rows}, {'working', 'unknown'})
+        self.assertIsNone(fps.lutris_executable_exists(b'game:\n  exe: C:/game.exe\n  prefix: $GAMEDIR\n'))
+
+    def test_heroic_same_install_is_listed_once_and_legacy_profile_is_untouched(self):
+        directory = str(self.home / 'Games/Ghostrunner')
+        self.put('.config/legendary/installed.json', json.dumps({'epic': {'title': 'Ghostrunner', 'install_path': directory, 'executable': 'Ghostrunner.exe'}}))
+        self.put('.config/heroic/sideload_apps/library.json', json.dumps({'games': [{'app_name': 'imported', 'title': 'Ghostrunner', 'is_installed': True, 'install': {'executable': directory + '/Ghostrunner.exe'}}]}))
+        legacy = self.put('.config/heroic/GamesConfig/epic.json', '{"epic":{"custom":"keep"},"version":"v0"}')
+        original = legacy.read_bytes()
+        rows = self.scan()
+        games = [r for r in rows if r['kind'] == 'heroic']
+        self.assertEqual([r['extra'] for r in games], ['imported'])
+        results = self.apply([r for r in rows if r['kind'] in ('common', 'heroic')])
+        self.assertTrue(all(r['status'] == 'changed' for r in results))
+        self.assertEqual(legacy.read_bytes(), original)
+        self.assertTrue((self.home / '.config/heroic/GamesConfig/imported.json').is_file())
+
+    def test_heroic_equal_titles_with_different_installations_remain_separate(self):
+        directory = str(self.home / 'Games/Ghostrunner')
+        self.put('.config/legendary/installed.json', json.dumps({'epic': {'title': 'Ghostrunner', 'install_path': directory, 'executable': 'Ghostrunner.exe'}}))
+        self.put('.config/heroic/sideload_apps/library.json', json.dumps({'games': [{'app_name': 'imported', 'title': 'Ghostrunner', 'is_installed': True, 'install': {'executable': directory + '-other/Ghostrunner.exe'}}]}))
+        self.assertEqual(len([r for r in self.scan() if r['kind'] == 'heroic']), 2)
+
+    def test_heroic_same_executable_with_distinct_prefixes_keeps_both_profiles(self):
+        directory = str(self.home / 'Games/Ghostrunner')
+        self.put('.config/legendary/installed.json', json.dumps({'epic': {'title': 'Ghostrunner', 'install_path': directory, 'executable': 'Ghostrunner.exe'}}))
+        self.put('.config/heroic/sideload_apps/library.json', json.dumps({'games': [{'app_name': 'imported', 'title': 'Ghostrunner', 'is_installed': True, 'install': {'executable': directory + '/Ghostrunner.exe'}}]}))
+        for app in ('epic', 'imported'):
+            self.put('.config/heroic/GamesConfig/' + app + '.json', json.dumps({app: {'winePrefix': str(self.home / app)}}))
+        self.assertEqual(len([r for r in self.scan() if r['kind'] == 'heroic']), 2)
 
     def test_steam_changes_only_empty_options_and_keeps_unrelated_bytes(self):
         updated = fps.patch_steam(STEAM, '730', 'mangohud %command%')

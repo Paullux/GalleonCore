@@ -25,6 +25,9 @@ class HomeWidgets : public QObject {
     Q_PROPERTY(QVariantMap gameState READ gameState NOTIFY changed)
     Q_PROPERTY(QVariantMap gameConfig READ gameConfig NOTIFY changed)
     Q_PROPERTY(bool steamGridDbConfigured READ steamGridDbConfigured NOTIFY changed)
+    Q_PROPERTY(bool firmwareSimulation READ firmwareSimulation NOTIFY changed)
+    Q_PROPERTY(QString firmwareVersion READ firmwareVersion NOTIFY changed)
+    Q_PROPERTY(bool firmwareWarning READ firmwareWarning NOTIFY changed)
     Q_PROPERTY(QVariantMap captureStatus READ captureStatus NOTIFY changed)
     Q_PROPERTY(bool windowsCapture READ windowsCapture CONSTANT)
     Q_PROPERTY(bool pending READ pending NOTIFY changed)
@@ -58,6 +61,11 @@ public:
     [[nodiscard]] bool steamGridDbConfigured() const;
     Q_INVOKABLE bool setSteamGridDbApiKey(const QString &apiKey);
     Q_INVOKABLE bool clearSteamGridDbArtworks();
+    [[nodiscard]] QString firmwareVersion() const { return m_firmwareSimulation ? QStringLiteral("3.06.005") : m_firmwareVersion; }
+    [[nodiscard]] bool firmwareSimulation() const { return m_firmwareSimulation; }
+    void simulateOldFirmware();
+    [[nodiscard]] bool firmwareWarning() const;
+    void setFirmwareVersion(const QString &version);
     [[nodiscard]] QVariantMap captureStatus() const { return m_captureStatus; }
     [[nodiscard]] static bool windowsCapture() {
 #ifdef Q_OS_WIN
@@ -111,6 +119,8 @@ private:
     QString m_captureProgram, m_capturePathOption;
     qint64 m_captureDiscoveryAt = 0;
     QVariantMap m_captureStatus;
+    QString m_firmwareVersion;
+    bool m_firmwareSimulation = false;
     QVariantMap m_gameConfig, m_gameState, m_gameSensors;
     bool m_sensorPending = false;
     qint64 m_sensorAt = 0;

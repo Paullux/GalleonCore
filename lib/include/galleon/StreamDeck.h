@@ -51,6 +51,7 @@ public:
     [[nodiscard]] bool isOpen() const;
     [[nodiscard]] QString serialNumber() const;
     [[nodiscard]] QString hidCollection() const;
+    [[nodiscard]] QString firmwareVersion() const { return m_firmwareVersion; }
     [[nodiscard]] Diagnostics diagnostics() const { return m_diagnostics; }
 
     // Return false while the protocol is not implemented.
@@ -99,6 +100,7 @@ private:
     int m_invalidReports = 0;
     bool m_traceInput = false;
     Diagnostics m_diagnostics;
+    QString m_firmwareVersion;
 };
 
 } // namespace galleon

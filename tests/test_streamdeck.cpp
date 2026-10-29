@@ -37,6 +37,24 @@ class TestStreamDeck : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void firmwareIsReadOncePerConnectionAndClearedOnClose()
+    {
+        auto transport = std::make_unique<FakeTransport>();
+        auto *fake = transport.get();
+        fake->firmware = {5, 12, 0, 0, 0, 0, '3', '.', '0', '6', '.', '0', '0', '6'};
+        galleon::StreamDeck deck(std::move(transport));
+        QVERIFY(deck.open());
+        QCOMPARE(deck.firmwareVersion(), QStringLiteral("3.06.006"));
+        QVERIFY(deck.open());
+        QCOMPARE(fake->featureReads, 1);
+        deck.close();
+        QVERIFY(deck.firmwareVersion().isEmpty());
+        fake->firmware.clear();
+        QVERIFY(deck.open());
+        QVERIFY(deck.firmwareVersion().isEmpty());
+        QCOMPARE(fake->featureReads, 2);
+    }
+
     void openFailsWhenTransportFails()
     {
         Fixture f;

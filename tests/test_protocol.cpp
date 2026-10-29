@@ -17,6 +17,32 @@ class TestProtocol : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void firmwareReportIsBoundedAndVersionPolicyIsNumeric()
+    {
+        std::array<std::uint8_t, FeatureReportSize> report{FirmwareReportId, 12, 0, 0, 0, 0, '3', '.', '0', '6', '.', '0', '0', '5'};
+        QCOMPARE(firmwareVersion(report), std::string("3.06.005"));
+        QVERIFY(firmwareUpdateRecommended("3.06.005", true));
+        QVERIFY(!firmwareUpdateRecommended("3.06.005", false));
+        QVERIFY(!firmwareUpdateRecommended("3.06.006", true));
+        QVERIFY(!firmwareUpdateRecommended("3.10.001", true));
+        QVERIFY(!firmwareUpdateRecommended("4.00.000", true));
+        for (const auto *value : {"", "3.06", "3.06.005.extra", "3.06.005<script>", "99999.1.1", "-1.0.0", "3..5"}) {
+            QVERIFY(!validFirmwareVersion(value));
+            QVERIFY(!firmwareUpdateRecommended(value, true));
+        }
+        QVERIFY(firmwareVersion({}).empty());
+        QVERIFY(firmwareVersion(std::span(report).first(13)).empty());
+        report[0] = 6;
+        QVERIFY(firmwareVersion(report).empty());
+        report[0] = FirmwareReportId;
+        report[1] = 255;
+        QVERIFY(firmwareVersion(report).empty());
+        report[1] = 3;
+        QVERIFY(firmwareVersion(report).empty());
+        report[1] = 12;
+        report[8] = 0xff;
+        QVERIFY(firmwareVersion(report).empty());
+    }
     void emptyReportYieldsNoEvent()
     {
         QVERIFY(parseInputReport({}).empty());

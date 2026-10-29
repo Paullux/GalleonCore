@@ -381,3 +381,34 @@ be needed for other Stream Deck devices. A Linux package cannot perform the
 Elgato firmware update. The separate **main keyboard firmware** is updated
 through [Corsair Web Hub](https://www.corsair.com/web-hub) in a compatible
 browser under Device Settings, without installing or uninstalling an app.
+
+### Firmware detection in Bosun
+
+The Keyboard tab displays the **Stream Deck module** firmware read by galleond
+using Gen2 feature report `0x05` (32 bytes). The length and numeric version are
+validated before publication. The read is attempted once per connection; Bosun
+never opens HID. Unknown, malformed or stale daemon state is displayed as unknown.
+Windows alone recommends an update for versions older than `3.06.006`; this is
+based on the owner's `3.06.005` observation, not a guarantee that every older
+version fails or that every newer version fixes all startup problems.
+
+Stop **both Bosun and galleond completely** before opening the official Elgato
+Stream Deck app to update the firmware. Keep the keyboard connected throughout.
+Close Elgato afterwards and disable its automatic startup, or uninstall it if
+unused, before restarting GalleonCore. Corsair Web Hub manages the separate main
+keyboard firmware. No firmware flashing or registry modification is performed.
+
+Protocol sources: [Galleon Gen2 factory](https://github.com/Julusian/node-elgato-stream-deck/blob/main/packages/core/src/models/galleon-k100.ts)
+and [Gen2 firmware reader](https://github.com/Julusian/node-elgato-stream-deck/blob/main/packages/core/src/services/properties/gen2.ts).
+Hardware readback and the Windows warning still need owner validation.
+
+To preview the old-firmware warning without hardware, fully close Bosun, then run
+`galleon-bosun.exe --old-firmware`. It opens the Keyboard tab, labels the displayed
+`3.06.005` as a simulation, and enables the warning on any platform. It changes no
+firmware or saved version; a normal restart resumes actual detection.
+
+The firmware section links to the official [Stream Deck 7.6.0 Windows installer](https://edge.elgato.com/egc/windows/sd/Stream_Deck_7.6.0.23012.msi),
+also available from [Elgato Downloads](https://www.elgato.com/fr/fr/s/downloads).
+`7.6.0` identifies the application, not the module firmware `3.06.xxx`. The Corsair
+Web Hub button is in a separate keyboard lighting section. Opening the download
+link never installs software or flashes firmware automatically.

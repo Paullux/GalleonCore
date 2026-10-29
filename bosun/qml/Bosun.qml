@@ -320,7 +320,48 @@ Window {
             color: "white"
             font.pixelSize: 18
             font.bold: true
-            text: qsTr("Keyboard lighting")
+            text: qsTr("Keyboard and Stream Deck module")
+        }
+        Text {
+            objectName: "firmwareVersion"
+            width: parent.width
+            wrapMode: Text.Wrap
+            textFormat: Text.PlainText
+            color: win.backend.homeWidgets.firmwareWarning ? "#ffb74d" : "#c9ced6"
+            text: win.backend.homeWidgets.firmwareVersion
+                  ? (win.backend.homeWidgets.firmwareSimulation ? qsTr("Simulation — ") : "") + qsTr("Stream Deck firmware: %1").arg(win.backend.homeWidgets.firmwareVersion)
+                  : qsTr("Stream Deck firmware: unknown — connect the module and start the updated daemon.")
+        }
+        Text {
+            objectName: "firmwareWarning"
+            visible: win.backend.homeWidgets.firmwareWarning
+            width: parent.width
+            wrapMode: Text.Wrap
+            textFormat: Text.PlainText
+            color: "#ffb74d"
+            text: qsTr("An older Stream Deck firmware was detected. Version 3.06.005 has caused a Windows freeze on the owner's device. Update to 3.06.006 or later using the official Elgato Stream Deck app. Fully stop Bosun and galleond first; keep the keyboard connected during the update. Then close Elgato and disable its automatic startup (or uninstall it if unused) before restarting GalleonCore. This is separate from the keyboard firmware managed by Corsair Web Hub.")
+        }
+        Pill {
+            objectName: "downloadElgatoStreamDeck"
+            visible: win.backend.homeWidgets.windowsCapture || win.backend.homeWidgets.firmwareSimulation
+            selected: win.backend.homeWidgets.firmwareWarning
+            text: qsTr("Download Elgato Stream Deck 7.6.0 for Windows (.msi)")
+            onClicked: Qt.openUrlExternally("https://edge.elgato.com/egc/windows/sd/Stream_Deck_7.6.0.23012.msi")
+        }
+        Text {
+            visible: win.backend.homeWidgets.windowsCapture || win.backend.homeWidgets.firmwareSimulation
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: "#9aa0a6"
+            font.pixelSize: 13
+            text: qsTr("7.6.0 is the Elgato application version, not the Stream Deck firmware version. Firmware updates are performed inside the Elgato app after fully stopping Bosun and galleond.")
+        }
+        Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+        Text {
+            color: "white"
+            font.pixelSize: 16
+            font.bold: true
+            text: qsTr("Corsair keyboard · lighting and keys")
         }
         Text {
             width: parent.width
@@ -396,7 +437,7 @@ Window {
         x: 0
         y: win.height - height
         width: win.width
-        height: 34
+        height: 52
         color: "#15171a"
         Rectangle {
             width: parent.width
@@ -406,6 +447,7 @@ Window {
         Row {
             x: 20
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -8
             spacing: 8
             Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
@@ -432,12 +474,28 @@ Window {
             anchors.right: parent.right
             anchors.rightMargin: updateButton.visible ? updateButton.width + 28 : 20
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -8
             width: parent.width / 2.4 - (updateButton.visible ? updateButton.width + 8 : 0)
             horizontalAlignment: Text.AlignRight
             elide: Text.ElideRight
             color: win.messageIsError ? "#ff8a80" : "#9be7a0"
             font.pixelSize: 13
             text: win.message
+        }
+        Text {
+            objectName: "firmwareStatusBar"
+            x: 38
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 4
+            width: parent.width - 58
+            font.pixelSize: 11
+            textFormat: Text.PlainText
+            elide: Text.ElideRight
+            color: win.backend.homeWidgets.firmwareWarning ? "#ffb74d" : "#9aa0a6"
+            text: qsTr("Firmware Stream Deck : %1").arg((win.daemon.running || win.backend.homeWidgets.firmwareSimulation) && win.backend.homeWidgets.firmwareVersion
+                  ? win.backend.homeWidgets.firmwareVersion : qsTr("inconnu"))
+                  + (win.backend.homeWidgets.firmwareSimulation ? qsTr(" · SIMULATION") : "")
+                  + ((win.daemon.running || win.backend.homeWidgets.firmwareSimulation) && win.backend.homeWidgets.firmwareWarning ? qsTr(" · Mise à jour recommandée (onglet Clavier)") : "")
         }
         Pill {
             id: updateButton
@@ -446,6 +504,7 @@ Window {
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -8
             height: 26
             selected: win.updates !== null && win.updates.available
             text: win.updates !== null && win.updates.available ? qsTr("Update %1").arg(win.updates.latestVersion) : qsTr("Updates")

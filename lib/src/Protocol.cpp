@@ -4,8 +4,45 @@
 #include "galleon/Protocol.h"
 
 #include <algorithm>
+#include <charconv>
+#include <optional>
+#include <memory>
 
 namespace galleon::protocol {
+namespace {
+std::optional<std::array<unsigned int, 3>> versionParts(std::string_view value)
+{
+    if (value.empty() || value.size() > 17) return std::nullopt;
+    std::array<unsigned int, 3> parts{};
+    for (std::size_t i = 0; i < parts.size(); ++i) {
+        const auto dot = value.find('.');
+        const auto part = value.substr(0, dot);
+        if (part.empty() || part.size() > 5 || !std::ranges::all_of(part, [](char c) { return c >= '0' && c <= '9'; })) return std::nullopt;
+        const auto parsed = std::from_chars(part.data(), std::to_address(part.end()), parts.at(i));
+        if (parsed.ec != std::errc{} || parts.at(i) > 65535) return std::nullopt;
+        if (i == 2) { if (dot != std::string_view::npos) return std::nullopt; }
+        else { if (dot == std::string_view::npos) return std::nullopt; value.remove_prefix(dot + 1); }
+    }
+    return parts;
+}
+}
+std::string firmwareVersion(std::span<const std::uint8_t> report)
+{
+    if (report.size() < 7 || report.size() > FeatureReportSize || report[0] != FirmwareReportId) return {};
+    const auto end = static_cast<std::size_t>(report[1]) + 2;
+    if (end <= 6 || end > report.size()) return {};
+    std::string value;
+    for (const auto byte : report.subspan(6, end - 6)) value.push_back(static_cast<char>(byte));
+    if (!value.empty() && value.back() == '\0') value.pop_back();
+    return versionParts(value) ? value : std::string{};
+}
+bool validFirmwareVersion(std::string_view version) { return versionParts(version).has_value(); }
+bool firmwareUpdateRecommended(std::string_view version, bool windows)
+{
+    const auto parts = versionParts(version);
+    return windows && parts && *parts < std::array<unsigned int, 3>{3, 6, 6};
+}
+
 
 namespace {
 

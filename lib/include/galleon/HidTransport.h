@@ -28,6 +28,7 @@ public:
     [[nodiscard]] QString serialNumber() const override;
     [[nodiscard]] QString openedCollection() const { return m_openedCollection; }
 
+    int getFeatureReport(std::span<std::uint8_t> report) override;
     bool sendFeatureReport(std::span<const std::uint8_t> report) override;
     bool write(std::span<const std::uint8_t> report) override;
     int read(std::span<std::uint8_t> buffer) override;

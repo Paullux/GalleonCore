@@ -24,6 +24,8 @@ import uuid
 
 MAX_BYTES = 8 * 1024 * 1024
 MAX_ROWS = 1024
+MAX_VDF_VALUE_CHARS = 1024 * 1024
+MAX_VDF_KEY_CHARS = 4096
 FLATPAKS = {"com.valvesoftware.Steam": "Steam", "com.heroicgameslauncher.hgl": "Heroic",
             "net.lutris.Lutris": "Lutris", "com.usebottles.bottles": "Bottles"}
 
@@ -133,19 +135,19 @@ def vdf(data):
         elif text[pos] in "{}":
             tokens.append((text[pos], text[pos], pos, pos + 1)); pos += 1
         elif text[pos] == '"':
-            start = pos; pos += 1; value = ""
+            start = pos; pos += 1; chars = []
             while pos < len(text) and text[pos] != '"':
                 char = text[pos]; pos += 1
                 if char == "\\":
                     if pos == len(text):
                         raise SetupError("VDF tronqué")
                     char = {"n": "\n", "t": "\t"}.get(text[pos], text[pos]); pos += 1
-                value += char
-                if len(value) > 4096:
+                chars.append(char)
+                if len(chars) > MAX_VDF_VALUE_CHARS:
                     raise SetupError("Valeur VDF trop longue")
             if pos == len(text):
                 raise SetupError("VDF tronqué")
-            pos += 1; tokens.append(("s", value, start, pos))
+            pos += 1; tokens.append(("s", "".join(chars), start, pos))
         else:
             raise SetupError("Format VDF non pris en charge")
         if len(tokens) > 200000:
@@ -159,7 +161,7 @@ def vdf(data):
         nodes = {}
         while cursor < len(tokens) and tokens[cursor][0] != "}":
             key = tokens[cursor]; cursor += 1
-            if key[0] != "s" or cursor >= len(tokens) or key[1].lower() in nodes:
+            if key[0] != "s" or len(key[1]) > MAX_VDF_KEY_CHARS or cursor >= len(tokens) or key[1].lower() in nodes:
                 raise SetupError("VDF ambigu")
             token = tokens[cursor]; cursor += 1
             if token[0] == "{":
@@ -188,7 +190,15 @@ def quote(text):
     return '"' + text.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n') + '"'
 
 
-def patch_steam(data, appid, launch):
+def same_launch_options(existing, candidates):
+    try:
+        tokens = shlex.split(existing)
+        return any(tokens == shlex.split(candidate) for candidate in candidates)
+    except ValueError:
+        return False
+
+
+def patch_steam(data, appid, launch, alternatives=()):
     text, tree = vdf(data)
     steam = child(child(child(tree, "UserLocalConfigStore"), "Software"), "Valve")
     steam = child(steam, "Steam")
@@ -203,7 +213,7 @@ def patch_steam(data, appid, launch):
         if option:
             if not isinstance(option[0], str):
                 raise SetupError("Options Steam invalides")
-            if option[0].strip() == launch:
+            if same_launch_options(option[0], (launch, *alternatives)):
                 return data
             if option[0].strip():
                 raise Preserved("Options de lancement personnelles conservées")
@@ -262,7 +272,7 @@ def binary_shortcuts(data):
     return child(tree, 'shortcuts')
 
 
-def patch_shortcut(data, index, launch):
+def patch_shortcut(data, index, launch, alternatives=()):
     game = binary_shortcuts(data).get(index)
     if not game or not isinstance(game[0], dict):
         raise SetupError('Raccourci Steam disparu')
@@ -271,13 +281,98 @@ def patch_shortcut(data, index, launch):
     if option:
         if not isinstance(option[0], str):
             raise SetupError('Options du raccourci invalides')
-        if option[0].strip() == launch:
+        if same_launch_options(option[0], (launch, *alternatives)):
             return data
         if option[0].strip():
             raise Preserved('Options de lancement personnelles conservées')
         return data[:option[1]] + value + data[option[2]:]
     pos = game[2]
     return data[:pos] + b'\x01LaunchOptions\0' + value + data[pos:]
+
+
+def yaml_string(value):
+    """Decode one scalar, including YAML's hex escapes, without evaluating YAML."""
+    value = value.strip()
+    if value.startswith('"'):
+        result = []; index = 1
+        escapes = {'0': '\0', 'a': '\a', 'b': '\b', 't': '\t', 'n': '\n',
+                   'v': '\v', 'f': '\f', 'r': '\r', 'e': '\x1b', ' ': ' ',
+                   '"': '"', '/': '/', '\\': '\\', 'N': '\x85', '_': '\xa0', 'L': '\u2028', 'P': '\u2029'}
+        while index < len(value):
+            char = value[index]; index += 1
+            if char == '"':
+                trailing = value[index:].strip()
+                if trailing and not trailing.startswith('#'):
+                    raise SetupError('Chaîne YAML invalide')
+                return ''.join(result)
+            if char == '\\':
+                if index >= len(value):
+                    raise SetupError('Chaîne YAML tronquée')
+                escape = value[index]; index += 1
+                if escape in ('x', 'u', 'U'):
+                    digits = {'x': 2, 'u': 4, 'U': 8}[escape]
+                    token = value[index:index + digits]
+                    if len(token) != digits or not re.fullmatch('[0-9a-fA-F]+', token):
+                        raise SetupError('Échappement YAML invalide')
+                    number = int(token, 16)
+                    if number > 0x10ffff or 0xd800 <= number <= 0xdfff:
+                        raise SetupError('Point Unicode YAML invalide')
+                    char = chr(number); index += digits
+                elif escape in escapes:
+                    char = escapes[escape]
+                else:
+                    raise SetupError('Échappement YAML non pris en charge')
+            result.append(char)
+        raise SetupError('Chaîne YAML tronquée')
+    if value.startswith("'"):
+        match = re.fullmatch(r"'((?:[^']|'')*)'\s*(?:#.*)?", value)
+        if not match:
+            raise SetupError('Chaîne YAML invalide')
+        return match[1].replace("''", "'")
+    if not value or value[0] in '&*!|>{[':
+        raise SetupError('Scalaire YAML non pris en charge')
+    return value.split(' #', 1)[0].rstrip()
+
+
+def lutris_executable_exists(data):
+    """False only for a recognizable, absolute executable that is now missing.
+
+    Inspect the top-level game map only, not embedded installer scripts. Unknown
+    runner formats remain available for manual review; no shell expansion runs.
+    """
+    inside = False; fields = {}; indentation = None
+    for line in data.decode().splitlines():
+        if line.startswith('game:') and line.strip() == 'game:':
+            if inside or fields:
+                return None
+            inside = True; continue
+        if not inside or not line.strip() or line.lstrip().startswith('#'):
+            continue
+        level = len(line) - len(line.lstrip(' '))
+        if level == 0:
+            break
+        if indentation is None:
+            indentation = level
+        if level != indentation:
+            continue
+        match = re.fullmatch(r'\s*(exe|prefix):\s*(.+)', line)
+        if match:
+            if match[1] in fields:
+                return None
+            fields[match[1]] = yaml_string(match[2])
+    executable = fields.get('exe', '').replace('\\', '/')
+    if not executable or any(char in executable for char in ('$', '\0', '\n', '\r')):
+        return None
+    if re.match(r'^[cC]:/', executable):
+        prefix = fields.get('prefix', '')
+        if not Path(prefix).is_absolute():
+            return None
+        executable = str(Path(prefix) / 'drive_c' / executable[3:])
+    elif re.match(r'^[zZ]:/', executable):
+        executable = '/' + executable[3:]
+    if not Path(executable).is_absolute():
+        return None
+    return Path(executable).is_file()
 
 
 def validate_yaml(data):
@@ -295,16 +390,8 @@ def validate_yaml(data):
     def scalar(value):
         if len(value) > 8192 or any(ord(char) < 32 for char in value):
             raise SetupError('Scalaire YAML invalide')
-        if value.startswith('"'):
-            try:
-                decoded = json.loads(value)
-            except ValueError as error:
-                raise SetupError('Chaîne YAML non prise en charge') from error
-            if not isinstance(decoded, str):
-                raise SetupError('Scalaire YAML invalide')
-        elif value.startswith("'"):
-            if not re.fullmatch(r"'(?:[^']|'')*'", value):
-                raise SetupError('Chaîne YAML invalide')
+        if value.startswith(('"', "'")):
+            yaml_string(value)
         elif value not in ('{}', '[]') and (not value or value[0] in '&*!|>{['
                 or re.search(r':(?:\s|$)|\s[&*!|>]', value)):
             raise SetupError('YAML avancé : configuration manuelle nécessaire')
@@ -655,9 +742,11 @@ class Setup:
                         options = game[0].get('launchoptions')
                         route = delegated_shortcut(exe[0] if exe and isinstance(exe[0], str) else '',
                                                    options[0] if options and isinstance(options[0], str) else '', self.home)
+                        if route:
+                            continue
                         self.add(label, name[0] + ' · hors boutique · compte ' + user.name,
-                                 'steam-shortcut', shortcut_path, index, enabled=not bool(route),
-                                 note=route or ('MANGOHUD=1 %command%' if flatpak else 'mangohud %command%'))
+                                 'steam-shortcut', shortcut_path, index,
+                                 note='MANGOHUD=1 %command%' if flatpak else 'mangohud %command%')
             except (OSError, ValueError, TypeError, SetupError):
                 pass
 
@@ -667,13 +756,22 @@ class Setup:
             return
         self.add(label, 'Paramètres généraux · futurs jeux', 'heroic-global', root / 'config.json')
         games = {}
+        identities = {}
+        imported = set()
         for source in (root / 'legendaryConfig/legendary/installed.json', root.parent / 'legendary/installed.json',
                        root / 'nile_config/installed.json'):
             try:
                 obj = json_object(read(source))
                 for appid, game in list(obj.items())[:2048]:
                     if isinstance(game, dict):
-                        games[str(game.get('app_name', appid))] = str(game.get('title', appid))
+                        game_id = str(game.get('app_name', appid))
+                        games[game_id] = str(game.get('title', appid))
+                        directory = game.get('install_path')
+                        executable = game.get('executable')
+                        if isinstance(directory, str) and isinstance(executable, str) and directory and executable:
+                            candidate = Path(directory) / executable.replace('\\', '/')
+                            if candidate.is_absolute():
+                                identities[game_id] = str(candidate.resolve())
             except (OSError, ValueError, TypeError, SetupError):
                 pass
         try:
@@ -694,9 +792,37 @@ class Setup:
                         appid = str(game.get('app_name', game.get('appName', '')))
                         if appid:
                             games[appid] = str(game.get('title', appid))
+                            executable = game.get('install', {}).get('executable')
+                            if isinstance(executable, str) and Path(executable).is_absolute():
+                                identities[appid] = str(Path(executable).resolve())
+                                if source.parent.name == 'sideload_apps':
+                                    imported.add(appid)
             except (OSError, ValueError, TypeError, AttributeError, SetupError):
                 pass
+        prefixes = {}
+        def prefix_for(appid):
+            if appid not in prefixes:
+                if not re.fullmatch(r'[\w.-]{1,200}', appid) or appid in ('.', '..'):
+                    return ('invalid', appid)
+                try:
+                    data = read(root / 'GamesConfig' / (appid + '.json'), missing=True)
+                    profile = json_object(data).get(appid, {}) if data else {}
+                    if not isinstance(profile, dict):
+                        raise SetupError('Profil Heroic invalide')
+                    prefix = profile.get('winePrefix')
+                    if prefix is not None and not isinstance(prefix, str):
+                        raise SetupError('Préfixe Heroic invalide')
+                    prefixes[appid] = str(Path(prefix).resolve()) if prefix and Path(prefix).is_absolute() else prefix
+                except (OSError, ValueError, TypeError, SetupError):
+                    prefixes[appid] = ('invalid', appid)
+            return prefixes[appid]
+        preferred = {}
+        for appid in sorted(imported):
+            preferred[(games[appid].casefold(), identities[appid], prefix_for(appid))] = appid
         for appid, title in sorted(games.items(), key=lambda item: item[1].casefold()):
+            winner = preferred.get((title.casefold(), identities.get(appid), prefix_for(appid)))
+            if winner and appid != winner:
+                continue
             if re.fullmatch(r'[\w.-]{1,200}', appid) and appid not in ('.', '..'):
                 self.add(label, title, 'heroic', root / 'GamesConfig' / (appid + '.json'), appid)
 
@@ -730,6 +856,11 @@ class Setup:
             if not installed:
                 continue
             for path in sorted(set(root.glob('*.yml')) | set(root.glob('*.yaml')))[:256]:
+                try:
+                    if lutris_executable_exists(read(path)) is False:
+                        continue
+                except (OSError, ValueError, SetupError):
+                    pass  # Keep unknown configurations for an explicit manual result.
                 self.add(label, path.stem, 'lutris', path)
         for root, label, installed in (
                 (self.data / 'bottles/bottles', 'Bottles · natif', native['bottles']),
@@ -784,10 +915,10 @@ class Setup:
                      'output_folder=' + str(self.folder), 'background_alpha=0', 'alpha=0']) + '\n').encode()
         if kind == 'crossover':
             return patch_crossover(original, self.mango)
-        if kind == 'steam':
-            return patch_steam(original, row['extra'], row['note'])
-        if kind == 'steam-shortcut':
-            return patch_shortcut(original, row['extra'], row['note'])
+        if kind in ('steam', 'steam-shortcut'):
+            existing_galleon = 'MANGOHUD_CONFIG=' + shlex.quote(self.options()) + ' mangohud %command%'
+            patch = patch_steam if kind == 'steam' else patch_shortcut
+            return patch(original, row['extra'], row['note'], (existing_galleon,))
         if kind.startswith('heroic'):
             obj = json_object(original) if original else {}
             if kind == 'heroic-global':

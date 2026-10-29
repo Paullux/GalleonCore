@@ -83,11 +83,55 @@ proposition, ajouter CrossOver natif par bouteille standard pour Vulkan/DXVK
 (variables MangoHud seulement ; OpenGL et chemins personnalisés restent manuels).
 Les captures du propriétaire confirment aussi deux raccourcis Steam indirects :
 Medal of Honor cible Lutris avec `lutris:rungameid/2` ; AlterEgo cible un `.lnk`
-dans sa bouteille CrossOver. Ces entrées restent visibles mais non sélectionnables,
-avec indication du lanceur à configurer ; aucun préfixe ajouté à leurs options.
+dans sa bouteille CrossOver. Ces entrées étaient initialement visibles mais non sélectionnables. Au retour UX
+du propriétaire, les raccourcis indirects sont désormais omis de la sélection
+Steam ; aucun préfixe ajouté à leurs options.
 Tests de non-régression sur configurations fictives ; aucun réglage de lanceur
 réel modifié pendant le diagnostic. PR et fusion autorisées après validation
 complète et CI par le propriétaire dans cette session.
+
+#### Retours sur les métadonnées réelles — 29 octobre
+
+Le propriétaire confirme Ghostrunner unique dans Heroic : deux enregistrements
+Legendary/importé visent le même exécutable et le même préfixe. Regrouper cette
+installation dans Bosun et configurer l’entrée importée explicite sans supprimer
+l’ancien profil ni les dossiers. CS2 : la commande Galleon complète est correcte ;
+le lecteur VDF bloquait sur des champs Steam de 5 à 20 Kio, sans rapport avec les
+options du jeu. Lecture bornée élargie pour les valeurs, clés toujours bornées,
+et reconnaissance de la commande complète comme déjà configurée, sans écriture.
+CapCut est désinstallé selon le propriétaire : l’entrée en erreur vient de Lutris,
+qui conserve une déclaration installé=1 et un ancien chemin d’installateur absent.
+Les configurations à exécutable absolu manquant sont masquées ; les chemins YAML
+échappés sont reconnus sans réécrire les chemins ni exécuter de contenu.
+Tests sur fixtures et contrôles en mémoire ; aucun fichier réel de lanceur modifié.
+
+#### Détection du firmware Stream Deck — 29 octobre, en validation
+
+Lecture HID en lecture seule du rapport Gen2 0x05, une fois par connexion réussie,
+avec validation de l’identifiant, de la longueur et du numéro de version. Bosun
+observe la version du démon dans un état local borné et daté ; aucune ouverture
+HID depuis Bosun, aucune mise à jour automatique. L’onglet Clavier affiche le
+firmware du **module Stream Deck**, distinct du firmware clavier Corsair.
+Le mode `galleon-bosun --old-firmware` ouvre l’onglet Clavier et simule
+explicitement 3.06.005, sans écriture matérielle ni sauvegarde de cette version.
+Le bouton firmware ouvre le MSI officiel Elgato Stream Deck 7.6.0 ; Web Hub
+est présenté séparément pour le clavier Corsair.
+Sous Windows uniquement, une version réelle antérieure à 3.06.006 affiche le conseil de
+mise à jour et la procédure d’arrêt complet Bosun/galleond avant Elgato, puis
+fermeture/désactivation d’Elgato avant reprise. Une lecture indisponible ou un
+état périmé affiche une version inconnue, sans prétendre que le firmware est à jour.
+Les cinq suites ciblées passent : protocole, transport HID simulé, Stream Deck,
+état partagé et Bosun. La version courante est également affichée en petit dans
+la barre du bas, avec « inconnu » si indisponible. Cas couverts : réponse malformée, comparaison numérique,
+lecture unique, reconnexion, état périmé et affichage. Résultat de validation complète suivi par `tools/check.py status` ;
+lecture sur clavier réel et résultat Windows restent à confirmer.
+
+L’aide aux jeux personnels est déplacée sous l’explication de l’apparition des
+boutons Gaming, avec la même police et taille, en vert pâle. Les aides manuelles
+par lanceur sont regroupées sous un volet ▶/▼ replié par défaut ; le bouton de
+configuration générale reste visible. Rendu vérifié dans
+une capture Bosun et test d’interface réussi. Lutris reste installé à la demande
+du propriétaire ; son retrait n’est plus prévu.
 
 #### Suite prioritaire
 

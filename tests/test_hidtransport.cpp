@@ -16,6 +16,9 @@ struct FakeHid
     int closes = 0;
     int lastTimeout = -1;
     int lastNonblocking = -1;
+    int featureReads = 0;
+    int featureId = -1;
+    std::size_t featureSize = 0;
 };
 FakeHid &state()
 {
@@ -35,6 +38,13 @@ int hid_set_nonblocking(hid_device * /*device*/, int enabled)
     return state().nonblockingResult;
 }
 int hid_get_serial_number_string(hid_device * /*device*/, wchar_t * /*buffer*/, std::size_t /*size*/) { return -1; }
+int hid_get_feature_report(hid_device * /*device*/, unsigned char *data, std::size_t size)
+{
+    ++state().featureReads;
+    state().featureId = std::span(data, size).front();
+    state().featureSize = size;
+    return -1;
+}
 int hid_send_feature_report(hid_device * /*device*/, const unsigned char * /*data*/, std::size_t size) { return static_cast<int>(size); }
 int hid_write(hid_device * /*device*/, const unsigned char * /*data*/, std::size_t size) { return static_cast<int>(size); }
 int hid_read_timeout(hid_device * /*device*/, unsigned char * /*data*/, std::size_t /*size*/, int timeout)
@@ -53,6 +63,23 @@ private Q_SLOTS:
         state().closes = 0;
         state().lastTimeout = -1;
         state().lastNonblocking = -1;
+        state().featureReads = 0;
+    }
+    void firmwareReadUsesExistingHandleAndRejectsInvalidBuffers()
+    {
+        galleon::HidTransport transport(0x1b1c, 0x2b18, 0);
+        std::array<std::uint8_t, 32> report{5};
+        QCOMPARE(transport.getFeatureReport(report), -1);
+        QCOMPARE(state().featureReads, 0);
+        QVERIFY(transport.open());
+        QCOMPARE(transport.getFeatureReport({}), -1);
+        std::array<std::uint8_t, 33> oversized{};
+        QCOMPARE(transport.getFeatureReport(oversized), -1);
+        QCOMPARE(state().featureReads, 0);
+        QCOMPARE(transport.getFeatureReport(report), -1);
+        QCOMPARE(state().featureReads, 1);
+        QCOMPARE(state().featureId, 5);
+        QCOMPARE(state().featureSize, std::size_t{32});
     }
     void failedNonblockingSetupClosesHandleAndAllowsRetry()
     {
