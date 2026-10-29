@@ -133,15 +133,18 @@ bash tools/packaging/debian-build.sh build-deb/dist/*.tar.gz build-deb/ppa noble
 `JOBS` defaults to 4. The legacy standalone `build-deb.sh` remains available as
 documented in `docs/PACKAGING.md`; the PPA uses debhelper source packaging instead.
 
-For the already-published v0.1.0 orig archive, use Debian revision 2: the
+For the already-published v0.2.3 orig archive, use Debian revision 2: the
 `ppa-repair.yml` manual workflow downloads that exact release archive, verifies
-its checksum, and builds `0.1.0-2~noble` and `0.1.0-2~resolute` with the current
+its checksum, and builds `0.2.3-2~noble` and `0.2.3-2~resolute` with the current
 Debian packaging rules. The binary build and all ctest suites must pass, and
 `check-deb-timestamps.py` rejects pre-2000 payload dates before either source
 upload. The original source archive and other distribution artifacts are not
-replaced. This corrects Launchpad's rejection of revision 1 binaries with 1970
-payload timestamps; Launchpad's resulting binary build state must still be
-checked after the upload.
+replaced. Launchpad sets `HOME=/sbuild-nonexistent`; Qt test mode ignores
+`XDG_DATA_HOME`, so the Debian test recipe supplies a disposable writable home
+and removes it even when a test fails. All tests still run and failures still
+stop the package build. Revision 2 repairs this build environment without
+changing application sources. Launchpad's resulting binary build state and
+the APT package indexes must still be checked after the upload.
 Containers for local validation are provided in `validation.Dockerfile` (built on
 the earlier Debian packaging image) and `Fedora.Dockerfile`.
 

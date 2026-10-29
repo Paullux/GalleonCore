@@ -1,13 +1,13 @@
 # SPDX-FileCopyrightText: 2026 Paul Woisard
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-name: PPA v0.1.0 Debian revision 2
+name: PPA v0.2.3 Debian revision 2
 on:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: ppa-v0.1.0-revision-2
+  group: ppa-v0.2.3-revision-2
   cancel-in-progress: false
 jobs:
   build:
@@ -35,13 +35,13 @@ jobs:
             cmake pkg-config qt6-base-dev qt6-declarative-dev libhidapi-dev dbus \
             qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtqml \
             qml6-module-qtqml-workerscript curl ca-certificates
-      - name: Fetch and verify the unchanged v0.1.0 source archive
+      - name: Fetch and verify the unchanged v0.2.3 source archive
         run: |
           set -euo pipefail
           mkdir -p build-deb/released-source
           cd build-deb/released-source
-          base=https://github.com/Paullux/GalleonCore/releases/download/v0.1.0
-          curl -fsSL --retry 3 "$base/galleoncore-0.1.0.tar.gz" -o galleoncore-0.1.0.tar.gz
+          base=https://github.com/Paullux/GalleonCore/releases/download/v0.2.3
+          curl -fsSL --retry 3 "$base/galleoncore-0.2.3.tar.gz" -o galleoncore-0.2.3.tar.gz
           curl -fsSL --retry 3 "$base/SHA256SUMS" -o SHA256SUMS
           sha256sum -c SHA256SUMS
       - name: Build, test and check the revision 2 binary and source
@@ -49,10 +49,10 @@ jobs:
           SERIES: ${{ matrix.series }}
         run: |
           set -euo pipefail
-          bash tools/packaging/debian-build.sh build-deb/released-source/galleoncore-0.1.0.tar.gz \
+          bash tools/packaging/debian-build.sh build-deb/released-source/galleoncore-0.2.3.tar.gz \
             build-deb/ppa-repair "$SERIES" binary 2
           python3 tools/packaging/check-deb-timestamps.py build-deb/ppa-repair/*.deb
-          bash tools/packaging/debian-build.sh build-deb/released-source/galleoncore-0.1.0.tar.gz \
+          bash tools/packaging/debian-build.sh build-deb/released-source/galleoncore-0.2.3.tar.gz \
             build-deb/ppa-repair "$SERIES" source 2
       - uses: actions/upload-artifact@v4
         with:

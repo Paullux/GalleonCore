@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Release source integrity: each package must build the same source bytes."""
 import hashlib
+import os
 import shutil
 import subprocess
 import tarfile
@@ -13,6 +14,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class DistributionSources(unittest.TestCase):
+    def test_debian_tests_get_a_writable_home_and_remove_it_after_failure(self):
+        # Launchpad deliberately provides a nonexistent, unwritable HOME.
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp)
+            (work / 'obj-test').mkdir()
+            commands = work / 'bin'
+            commands.mkdir()
+            ctest = commands / 'ctest'
+            ctest.write_text('#!/bin/sh\nset -eu\nprintf "%s" "$HOME" > observed-home\n'
+                             'touch "$HOME/test-write"\nexit 7\n')
+            ctest.chmod(0o755)
+            env = dict(os.environ, HOME='/sbuild-nonexistent',
+                       PATH=str(commands) + os.pathsep + os.environ['PATH'])
+            result = subprocess.run(['make', '-f', str(ROOT / 'tools/packaging/debian/rules'),
+                                     'override_dh_auto_test'], cwd=work, env=env,
+                                    capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            observed = Path((work / 'observed-home').read_text())
+            self.assertNotEqual(str(observed), env['HOME'])
+            self.assertFalse(observed.exists(), 'The temporary test home must be removed')
+
     def test_sources_are_repeatable_and_aur_checksums_match(self):
         # A minimal checkout also works in tools/check.py's clean copy, without .git.
         with tempfile.TemporaryDirectory() as tmp:
