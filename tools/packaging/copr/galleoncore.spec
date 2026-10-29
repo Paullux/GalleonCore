@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Paul Woisard
 # SPDX-License-Identifier: GPL-3.0-or-later
 Name:           galleoncore
-Version:        0.2.2
+Version:        0.2.3
 Release:        1%{?dist}
 Summary:        Corsair Galleon Stream Deck support and settings
 License:        GPL-3.0-or-later AND LGPL-3.0-or-later AND CC-BY-SA-4.0
@@ -66,6 +66,13 @@ if command -v udevadm >/dev/null 2>&1; then udevadm control --reload-rules || :;
 %{_docdir}/galleoncore/
 
 %changelog
+* Thu Oct 29 2026 Paul Woisard <paulwoisard@gmail.com> - 0.2.3-1
+- Add Gaming artwork selection, persistent images and idle wallpaper reuse
+- Add launcher-aware FPS setup, metadata fixes and scoped Flatpak permissions
+- Detect Stream Deck firmware and add the old-firmware simulation
+- Improve Bosun help and system update notifications
+- Pin stable appimagetool 1.9.1 and update release documentation
+
 * Mon Oct 26 2026 Paul Woisard <paulwoisard@gmail.com> - 0.2.2-1
 - Add scoped Flatpak launcher access to MangoHud FPS CSV logs in Bosun
 

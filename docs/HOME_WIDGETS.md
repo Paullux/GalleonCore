@@ -335,7 +335,10 @@ replaces that game's file. The saved selection takes priority on future launches
 including offline, and does not change the normal wallpaper. The game key uses
 Steam AppID when known, otherwise the normalized title. Removing the API key or
 clearing download caches does not remove the personal selection. It can be
-removed through the personal wallpaper library. All images remain outside Git.
+removed through the personal wallpaper library. The saved image also appears
+as a normal wallpaper option for the idle screen; selecting it there is an
+explicit action and Gaming does not automatically replace the idle wallpaper.
+All images remain outside Git.
 
 ## Personal and independent games
 

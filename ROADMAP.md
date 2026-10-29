@@ -2,6 +2,23 @@
 
 Référence pour reprendre le développement à tout moment, y compris dans une nouvelle session Claude Code. À mettre à jour après chaque fonctionnalité terminée **et** testée (voir « Règle de mise à jour » en bas). Les notes de conception détaillées (protocole, RGB, OpenRGB, Windows) sont dans [docs/ROADMAP.md](docs/ROADMAP.md) ; les règles de code dans [CLAUDE.md](CLAUDE.md).
 
+### Préparation v0.2.3 — PR dédiée, 29 octobre 2026
+
+La PR #74 a été fusionnée dans `main` (`e4133da`). La préparation 0.2.3
+regroupe les notes de version, README anglais/français, site, version CMake,
+changelogs DEB et spec/changelog RPM. Les notes `docs/RELEASE_0.2.3.md` seront
+utilisées pour le corps de la release GitHub. Les fonctionnalités et limites
+sont détaillées dans ces notes et dans les guides existants ; aucune nouvelle
+validation matérielle Windows n’est déduite de la seule fusion.
+
+Échec AppImage post-fusion identifié : remplacement upstream du binaire
+`appimagetool` continuous le 29 octobre, entre la CI de PR et celle de main.
+Passage à la version officielle fixe 1.9.1, dont le SHA-256 téléchargé correspond
+à l’empreinte publiée par GitHub. Les contrôles SHA ne sont pas désactivés.
+Publication et tag v0.2.3 autorisés par le propriétaire une fois la PR, les CI
+et la validation complète de main fusionné réussies. Pas de tag publié par
+cette seule mise à jour documentaire.
+
 ### Notifications de mise à jour — branche en préparation, 29 octobre
 
 Ajout proposé : signal depuis `UpdateChecker::finish()` après validation de la

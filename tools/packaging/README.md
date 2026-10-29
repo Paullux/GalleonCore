@@ -154,8 +154,10 @@ bash tools/packaging/appimage/build.sh build-deb/appimage
 ```
 
 The official linuxdeploy, Qt plugin and appimagetool downloads are SHA-256 pinned
-in `appimage/tools.json`; an upstream continuous asset replacement deliberately
-fails verification until its new digest is reviewed. Qt includes X11, Wayland and
+in `appimage/tools.json`. Appimagetool uses the fixed official 1.9.1 release,
+verified against GitHub’s published asset digest and the downloaded file. The
+linuxdeploy tools still use individually SHA-256-pinned upstream continuous
+assets; replacements deliberately fail verification until reviewed. Qt includes X11, Wayland and
 offscreen plugins, QML modules and resources. FFmpeg remains an optional host
 executable, as do `wpctl`, `gio`, `xdg-open` and systemd. Ubuntu 24.04 or later with
 a normal graphical session is the supported baseline; the image does not bundle
@@ -173,7 +175,7 @@ These explicit commands install the access rules and user service:
 ```sh
 sudo ./install-hardware-rules.sh
 # Keep the AppImage at a stable path; run as your desktop user:
-./install-user-service.sh /absolute/path/GalleonCore-0.1.0-x86_64.AppImage
+./install-user-service.sh /absolute/path/GalleonCore-0.2.3-x86_64.AppImage
 systemctl --user enable --now galleond.service
 ```
 
@@ -196,3 +198,9 @@ Upstream tooling: [Qt deployment plugin](https://github.com/linuxdeploy/linuxdep
 [Launchpad source uploads](https://documentation.ubuntu.com/launchpad/user/how-to/packaging/ppa-package-upload/),
 [COPR CLI](https://developer.fedoraproject.org/deployment/copr/copr-cli.html),
 [Arch PKGBUILD](https://wiki.archlinux.org/title/PKGBUILD).
+
+Release notes are maintained in `docs/RELEASE_<version>.md` and supplied to
+GitHub Releases by the tag workflow. The website retains its previous deployment
+until every download linked for the new version is uploaded. The release workflow
+then dispatches website deployment; repository publishing remains separately gated
+by its configured credentials and settings.
