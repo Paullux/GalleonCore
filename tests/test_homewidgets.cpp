@@ -288,6 +288,35 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(!setup.busy(), 10000);
         QCOMPARE(setup.results().first().toMap().value("status").toString(), QStringLiteral("unchanged"));
     }
+    void fpsSetupReportsFailureToSaveTheBosunSource() {
+        const QTemporaryDir dir;
+        const QByteArray oldHome = qgetenv("HOME");
+        const QByteArray oldConfig = qgetenv("XDG_CONFIG_HOME");
+        const QByteArray oldData = qgetenv("XDG_DATA_HOME");
+        const auto restore = qScopeGuard([oldHome, oldConfig, oldData] {
+            const auto reset = [](const char *key, const QByteArray &value) {
+                if (value.isNull()) qunsetenv(key); else qputenv(key, value);
+            };
+            reset("HOME", oldHome); reset("XDG_CONFIG_HOME", oldConfig); reset("XDG_DATA_HOME", oldData);
+        });
+        qputenv("HOME", dir.path().toUtf8());
+        qputenv("XDG_CONFIG_HOME", dir.filePath("config").toUtf8());
+        qputenv("XDG_DATA_HOME", dir.filePath("data").toUtf8());
+        const QString blocked = dir.filePath("widgets-is-a-directory");
+        QVERIFY(QDir().mkpath(blocked));
+        HomeWidgets editor(nullptr, blocked, true);
+        auto *setup = editor.fpsSetup();
+        setup->scan();
+        QTRY_VERIFY_WITH_TIMEOUT(!setup->busy(), 10000);
+        QVERIFY2(setup->error().isEmpty(), qPrintable(setup->error()));
+        QVERIFY(!setup->rows().isEmpty());
+        setup->apply({setup->rows().first().toMap().value("id").toString()});
+        QTRY_VERIFY_WITH_TIMEOUT(!setup->busy(), 10000);
+        QVERIFY(QFile::exists(dir.filePath("config/MangoHud/MangoHud.conf")));
+        QVERIFY(!setup->error().isEmpty());
+        QCOMPARE(setup->results().first().toMap().value("status").toString(), QStringLiteral("error"));
+        QVERIFY(!setup->results().first().toMap().value("backup").toString().isEmpty());
+    }
     void flatpakPermissionsOnlyForInstalledGameLaunchers() {
         const QTemporaryDir dir;
         QVERIFY(QDir().mkpath(dir.filePath("bin")));

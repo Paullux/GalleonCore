@@ -66,6 +66,18 @@ void FpsSetup::start(const QVariantMap &request) {
 #endif
     Q_EMIT changed();
 }
+void FpsSetup::sourceFailed(const QString &message) {
+    m_error = tr("MangoHud files were prepared, but saving the Bosun FPS source failed: %1").arg(message.left(300));
+    for (auto &entry : m_results) {
+        auto result = entry.toMap();
+        if (result.value(QStringLiteral("common")).toBool()) {
+            result[QStringLiteral("status")] = QStringLiteral("error");
+            result[QStringLiteral("detail")] = m_error;
+            entry = result;
+        }
+    }
+    Q_EMIT changed();
+}
 void FpsSetup::scan() { start({{QStringLiteral("action"), QStringLiteral("scan")}}); }
 void FpsSetup::apply(const QStringList &ids) {
     if (m_busy || ids.isEmpty()) return;
@@ -100,10 +112,11 @@ void FpsSetup::finished(int code, QProcess::ExitStatus status) {
         if (rows.size() <= 1024) m_rows = rows;
     } else if (m_action == QStringLiteral("apply")) {
         m_results = object.value(QStringLiteral("results")).toVariant().toList();
+        bool configured = false;
         for (const auto &entry : m_results) {
-            const auto result = entry.toMap();
-            if (result.value(QStringLiteral("common")).toBool()) Q_EMIT commonConfigured();
+            if (entry.toMap().value(QStringLiteral("common")).toBool()) configured = true;
         }
+        if (configured) Q_EMIT commonConfigured();
     } else if (m_action == QStringLiteral("restore")) {
         for (auto &entry : m_results) {
             auto result = entry.toMap();

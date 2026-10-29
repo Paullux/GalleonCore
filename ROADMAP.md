@@ -32,7 +32,7 @@ Les retours positifs Ghostrunner/Linux (identification et image) et Ghostrunner/
 
 **Recherche d’illustrations confirmée opérationnelle par le propriétaire** après ces retours : conserver le comportement actuel. La stratégie décrite (titre exact, replis de correspondance, articles français et titres courts) explique les essais ; elle ne constitue pas une demande de modification du résolveur. Aucun changement de recherche, de normalisation ni de clé persistante effectué pendant cette session. Les cas Les Sims 4, Beowulf et 0 A.D. ne sont plus à présenter comme des défauts ouverts de recherche.
 
-#### Configuration FPS Linux par sélection — développement du 29 octobre
+#### Configuration FPS Linux par sélection — PR #71, 29 octobre
 
 À la demande du propriétaire : **Configuration unique** ouvre un dialogue modal
 Bosun avec sélection dynamique par groupe/jeu, tout sélectionner/désélectionner,
@@ -50,8 +50,9 @@ Tests sur configurations fictives et dossier personnel isolé : options Steam
 préservées, raccourcis binaires, Heroic global/individuel et variables héritées,
 Lutris/Bottles/PlayOnLinux, permissions Flatpak limitées, réapplication,
 restauration et conflits ; test QML du regroupement/sélection et bouton visible,
-aperçu du dialogue contrôlé. La validation complète Docker et les CI Linux/Windows sont exigées avant fusion ;
-leurs résultats sont à consulter dans la PR associée. Le propriétaire a
+aperçu du dialogue contrôlé. Validation complète Docker réussie sur une première version ; le contrôle est
+rejoué pour le contenu final avant fusion. Résultats et CI Linux/Windows dans la
+[PR #71](https://github.com/Paullux/GalleonCore/pull/71). Le propriétaire a
 explicitement autorisé la PR et sa fusion après validation.
 **Aucun nouvel essai interactif des lanceurs réels n’est revendiqué.**
 Voir [le parcours et les limites](docs/MODE_JEU_LINUX.fr.md).

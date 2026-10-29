@@ -22,6 +22,7 @@ public:
     [[nodiscard]] QVariantList results() const { return m_results; }
     [[nodiscard]] bool busy() const { return m_busy; }
     [[nodiscard]] QString error() const { return m_error; }
+    void sourceFailed(const QString &message);
     Q_INVOKABLE void scan();
     Q_INVOKABLE void apply(const QStringList &ids);
     Q_INVOKABLE void restore(const QString &token);
