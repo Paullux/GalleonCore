@@ -1,0 +1,243 @@
+# SPDX-FileCopyrightText: 2026 Paul Woisard
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Launcher fixtures only: never touch installed games or the user's home."""
+import json
+import os
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+import fps_setup as fps
+
+STEAM = b'''// retain comments and casing
+"UserLocalConfigStore" { "Software" { "Valve" { "Steam" { "apps" {
+"730" { "LastPlayed" "123" "LaunchOptions" "" }
+"440" { "LaunchOptions" "custom --args %command%" }
+} } } } }
+'''
+
+
+class SetupTests(unittest.TestCase):
+    def setUp(self):
+        previous_umask = os.umask(0o022)
+        self.addCleanup(os.umask, previous_umask)
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.home = Path(self.temp.name)
+        self.setup = fps.Setup(self.home, self.home / '.config', self.home / '.local/share')
+
+    def put(self, path, data):
+        path = self.home / path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data if isinstance(data, bytes) else data.encode())
+        return path
+
+    def scan(self):
+        with patch('fps_setup.subprocess.run', side_effect=FileNotFoundError):
+            return self.setup.scan()
+
+    def apply(self, rows):
+        with patch('fps_setup.subprocess.run', side_effect=FileNotFoundError), patch.object(self.setup, 'running', return_value=False):
+            return self.setup.apply(rows)
+
+    def test_steam_changes_only_empty_options_and_keeps_unrelated_bytes(self):
+        updated = fps.patch_steam(STEAM, '730', 'mangohud %command%')
+        self.assertEqual(updated.replace(b'"mangohud %command%"', b'""'), STEAM)
+        self.assertEqual(updated, fps.patch_steam(updated, '730', 'mangohud %command%'))
+        with self.assertRaisesRegex(fps.SetupError, 'personnelles'):
+            fps.patch_steam(STEAM, '440', 'mangohud %command%')
+        created = fps.patch_steam(STEAM, '100', 'MANGOHUD=1 %command%')
+        fps.vdf(created)
+        self.assertIn(b'"100"', created)
+
+    def test_invalid_or_ambiguous_steam_configuration_is_not_rewritten(self):
+        for data in (b'"a" {', b'"a" "x" "A" "y"', b'"a" [bad]', b'"' + b'x' * 5000):
+            with self.assertRaises(fps.SetupError):
+                fps.patch_steam(data, '730', 'mangohud %command%')
+
+    def steam_fixture(self):
+        for appid in ('730', '440'):
+            self.put('.local/share/Steam/steamapps/appmanifest_' + appid + '.acf',
+                     '"AppState" { "appid" "' + appid + '" "name" "Game ' + appid + '" }')
+        return self.put('.local/share/Steam/userdata/1/config/localconfig.vdf', STEAM)
+
+    def test_multiple_games_in_same_steam_file_and_safe_restore(self):
+        path = self.steam_fixture()
+        rows = self.scan()
+        results = self.apply(rows)
+        self.assertEqual([row['status'] for row in results], ['changed', 'preserved', 'changed'])
+        changed = [row for row in results if row.get('backup')]
+        token = changed[-1]['backup']
+        self.assertIn(b'mangohud %command%', path.read_bytes())
+        self.setup.restore(token)
+        self.assertEqual(path.read_bytes(), STEAM)
+        common = changed[0]['backup']
+        self.setup.restore(common)
+        self.assertFalse(self.setup.mango.exists())
+
+    def test_stale_scan_and_running_launcher_do_not_modify_files(self):
+        path = self.steam_fixture()
+        rows = self.scan()
+        self.apply([rows[0]])
+        path.write_bytes(STEAM + b'\n')
+        result = self.apply([row for row in rows if row['kind'] == 'steam'])
+        self.assertTrue(all('modifié' in row['detail'] for row in result))
+        self.assertEqual(path.read_bytes(), STEAM + b'\n')
+        with patch('fps_setup.subprocess.run', side_effect=FileNotFoundError), patch.object(self.setup, 'running', return_value=True):
+            result = self.setup.apply([row for row in self.scan() if row['kind'] == 'steam'])
+        self.assertTrue(all('Fermez' in row['detail'] for row in result))
+
+    def test_heroic_global_and_installed_games_are_independent(self):
+        self.put('.config/heroic/config.json', '{"defaultSettings":{"enviromentOptions":[{"key":"KEEP","value":"yes"}]},"other":42}')
+        self.put('.config/legendary/installed.json', '{"epic-game":{"title":"Installed"}}')
+        self.put('.config/heroic/GamesConfig/epic-game.json', '{"epic-game":{"winePrefix":"keep","enviromentOptions":[{"key":"KEEP","value":"yes"}]},"version":"v0","explicit":true}')
+        rows = self.scan()
+        self.assertEqual([r['kind'] for r in rows], ['common', 'heroic-global', 'heroic'])
+        results = self.apply(rows)
+        self.assertTrue(all(r['status'] == 'changed' for r in results))
+        game = json.loads((self.home / '.config/heroic/GamesConfig/epic-game.json').read_text())
+        self.assertTrue(game['epic-game']['showMangohud'])
+        self.assertEqual(game['epic-game']['winePrefix'], 'keep')
+        self.assertEqual(game['epic-game']['enviromentOptions'][0], dict(key='KEEP', value='yes'))
+        self.assertTrue(game['explicit'])
+        self.assertEqual(json.loads((self.home / '.config/heroic/config.json').read_text())['other'], 42)
+        results = self.apply(self.scan())
+        self.assertTrue(all(r['status'] == 'unchanged' for r in results))
+
+    def test_heroic_personal_environment_is_not_overwritten(self):
+        row = dict(kind='heroic', extra='game')
+        with self.assertRaisesRegex(fps.SetupError, 'personnel'):
+            self.setup.update(row, b'{"game":{"enviromentOptions":[{"key":"MANGOHUD_CONFIG","value":"custom"}]}}')
+        with self.assertRaisesRegex(fps.SetupError, 'dupliqu'):
+            fps.json_object(b'{"game":{},"game":{}}')
+
+    def test_lutris_and_bottles_edits_preserve_unrelated_settings(self):
+        yaml = b'name: Test\ngame:\n  exe: /some/game.exe\nsystem:\n  env:\n    KEEP: "yes"\n  mangohud: false\n# comment\n'
+        row = dict(kind='lutris')
+        updated = self.setup.update(row, yaml)
+        self.assertIn(b'KEEP: "yes"', updated)
+        self.assertIn(b'mangohud: true', updated)
+        self.assertIn(b'MANGOHUD_CONFIGFILE:', updated)
+        self.assertIn(b'# comment', updated)
+        self.assertEqual(updated, self.setup.update(row, updated))
+        for data in (b'Name: Sample\nParameters: {}\nEnvironment_Variables: {}\n',
+                     b'Name: Sample\nParameters:\n  dxvk: true\n'):
+            updated = self.setup.update(dict(kind='bottles'), data)
+            self.assertIn(b'mangohud: true', updated)
+            self.assertEqual(updated, self.setup.update(dict(kind='bottles'), updated))
+        empty = self.setup.update(row, b'game:\n  exe: /game.exe\n')
+        self.assertIn(b'  env:\n    MANGOHUD_CONFIGFILE:', empty)
+
+    def test_nonsteam_shortcuts_are_configured_without_rewriting_other_bytes(self):
+        data = (b'\0shortcuts\0\0' + b'0\0\x01AppName\0NeuroHell\0'
+                + b'\x01Exe\0/game/neurohell\0\x01LaunchOptions\0\0\x08\x08\x08')
+        changed = fps.patch_shortcut(data, '0', 'mangohud %command%')
+        self.assertEqual(changed.replace(b'mangohud %command%', b''), data)
+        self.assertEqual(changed, fps.patch_shortcut(changed, '0', 'mangohud %command%'))
+        self.assertEqual(fps.binary_shortcuts(changed)['0'][0]['appname'][0], 'NeuroHell')
+        with self.assertRaises(fps.SetupError):
+            fps.binary_shortcuts(data[:-1])
+        with self.assertRaisesRegex(fps.SetupError, 'personnelles'):
+            fps.patch_shortcut(changed, '0', 'other %command%')
+
+    def test_new_heroic_game_keeps_inherited_environment_variables(self):
+        self.put('.config/heroic/config.json', '{"defaultSettings":{"enviromentOptions":[{"key":"KEEP","value":"yes"}]}}')
+        self.put('.config/heroic/sideload_apps/library.json', '{"games":[{"app_name":"personal","title":"NeuroHell","is_installed":true}]}')
+        rows = self.scan()
+        self.apply([r for r in rows if r['kind'] in ('common', 'heroic')])
+        data = json.loads((self.home / '.config/heroic/GamesConfig/personal.json').read_text())
+        self.assertEqual(data['personal']['enviromentOptions'][0]['key'], 'KEEP')
+        self.assertEqual(data['version'], 'v0.1')
+
+    def test_flatpak_backup_restores_exact_previous_overrides(self):
+        path = self.put('.local/share/flatpak/overrides/com.valvesoftware.Steam', '[Context]\nfilesystems=/personal;\n')
+        original = path.read_bytes()
+        row = dict(path=str(path), fingerprint=fps.digest(original), extra='com.valvesoftware.Steam')
+        def configure(*args, **kwargs):
+            path.write_bytes(original + b'# added access\n')
+            return type('Result', (), dict(returncode=0, stderr=b''))()
+        with patch('fps_setup.subprocess.run', side_effect=configure):
+            result = self.setup.allow_flatpak(row)
+        self.assertEqual(result['status'], 'changed')
+        self.assertTrue(result['backup'])
+        self.setup.restore(result['backup'])
+        self.assertEqual(path.read_bytes(), original)
+
+    def test_shared_steam_file_is_saved_and_backed_up_once(self):
+        path = self.steam_fixture()
+        path.write_bytes(STEAM.replace(b'custom --args %command%', b''))
+        rows = self.scan()
+        with patch.object(self.setup, 'write', wraps=self.setup.write) as write:
+            results = self.apply(rows)
+        self.assertEqual(write.call_count, 2)  # common config + shared Steam file
+        steam = [r for r in results if r['label'].startswith('Game')]
+        self.assertTrue(all(r['status'] == 'changed' for r in steam))
+        self.assertEqual(steam[0]['backup'], steam[1]['backup'])
+        self.setup.restore(steam[0]['backup'])
+        self.assertEqual(path.read_bytes(), STEAM.replace(b'custom --args %command%', b''))
+
+    def test_yaml_indentation_scalars_and_scalar_lists(self):
+        for data in (b'system:\n  env:\n    KEEP: yes\n   stray: value\n',
+                     b'system: {}\n  mangohud: false\n',
+                     b'Parameters: {mangohud: false}\n', b'Name: "unterminated\n'):
+            with self.assertRaises(fps.SetupError):
+                self.setup.update(dict(kind='bottles'), data)
+        bottles = (b'Name: "Sample"\nInherited_Environment_Variables:\n- HOME\n- PATH\n'
+                   b'Installed_Dependencies: []\nParameters:\n    dxvk: true\n'
+                   b'External_Programs:\n    1234-abcd:\n        name: Game\n        path: C:\\Game\\game.exe\n')
+        updated = self.setup.update(dict(kind='bottles'), bottles)
+        fps.validate_yaml(updated)
+        self.assertIn(b'path: C:\\Game\\game.exe', updated)
+
+    def test_advanced_yaml_is_refused(self):
+        for data in (b'system: &shared\n  env: {}\n', b'system:\n  <<: *alias\n',
+                     b'system:\n  mangohud: false\n  mangohud: true\n', b'system:\n\tenv: {}\n'):
+            with self.assertRaises(fps.SetupError):
+                self.setup.update(dict(kind='lutris'), data)
+
+    def test_playonlinux_preserves_custom_prerun_script(self):
+        row = dict(kind='pol')
+        script = self.setup.update(row, b'')
+        self.assertIn(b'BEFORE_WINE=', script)
+        self.assertEqual(script, self.setup.update(row, script))
+        with self.assertRaisesRegex(fps.SetupError, 'conserv'):
+            self.setup.update(row, b'echo custom\n')
+
+    def test_symlinks_and_world_writable_configs_are_refused(self):
+        original = self.put('outside.txt', 'original')
+        linked = self.home / '.config/MangoHud'
+        linked.parent.mkdir()
+        linked.symlink_to(self.home, target_is_directory=True)
+        with self.assertRaises(fps.SetupError):
+            self.setup.write(linked / 'outside.txt', b'original', b'changed')
+        self.assertEqual(original.read_bytes(), b'original')
+        original.chmod(0o666)
+        with self.assertRaises(fps.SetupError):
+            self.setup.write(original, b'original', b'changed')
+
+    def test_restore_never_clobbers_subsequent_user_edits(self):
+        path = self.put('file.json', 'original')
+        token = self.setup.write(path, b'original', b'changed')
+        path.write_bytes(b'personal edit')
+        with self.assertRaisesRegex(fps.SetupError, 'changé'):
+            self.setup.restore(token)
+        self.assertEqual(path.read_bytes(), b'personal edit')
+        with self.assertRaises(fps.SetupError):
+            self.setup.restore('../file.json')
+
+    def test_flatpak_allowlist_and_permissions_are_narrow(self):
+        result = subprocess_result = type('Result', (), dict(returncode=0, stdout=b'com.valvesoftware.Steam\norg.other.App\n', stderr=b''))()
+        with patch('fps_setup.subprocess.run', return_value=result):
+            rows = self.setup.scan()
+        flatpak = [r for r in rows if r['kind'] == 'flatpak']
+        self.assertEqual(len(flatpak), 1)
+        with patch('fps_setup.subprocess.run', return_value=subprocess_result) as run:
+            self.setup.allow_flatpak(flatpak[0])
+        args = run.call_args.args[0]
+        self.assertIn('--filesystem=' + str(self.setup.mango.parent) + ':ro', args)
+        self.assertIn('--filesystem=' + str(self.setup.folder), args)
+        self.assertFalse(any('filesystem=home' in arg or 'device=' in arg for arg in args))
+
+
+if __name__ == '__main__':
+    unittest.main()

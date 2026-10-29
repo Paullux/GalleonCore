@@ -336,3 +336,39 @@ including offline, and does not change the normal wallpaper. The game key uses
 Steam AppID when known, otherwise the normalized title. Removing the API key or
 clearing download caches does not remove the personal selection. It can be
 removed through the personal wallpaper library. All images remain outside Git.
+
+## Personal and independent games
+
+If a local game is not detected, try adding it to a launcher that supports local
+games and starting it there (for example, a non-Steam shortcut). On Linux,
+importing a game into Heroic is another option; enable MangoHud and its CSV
+logging as described in the Linux launcher guide. A personal Godot export was
+reported working through Steam and Heroic on Linux. This is a troubleshooting
+option, not a guarantee: game mode still requires fresh FPS measurements.
+The owner also reported GTA III and Far Cry working after being added to Steam.
+For a CD-installed copy of Jericho, an initial standalone launch did not activate
+game mode; adding it to a launcher enabled recognition. These observations support
+trying a launcher for older local installations as well as personal games.
+On Windows, the manual executable profile is also available. Use a custom
+image for a personal game with no SteamGridDB entry.
+
+## Linux FPS setup dialog
+
+The **Configuration unique · jeux et lanceurs** button opens a modal selection
+window. Choose common MangoHud logging, installed Steam games (including local
+shortcuts), Heroic defaults for future games and individual existing games,
+Lutris game configurations, whole Bottles bottles, PlayOnLinux shortcuts, and
+permissions for installed Flatpak launchers. Native and Flatpak installations are
+listed separately. Select all/none or a launcher group, then apply the selection;
+the action remains visible while scrolling. Each item reports its own outcome.
+
+Launchers must be fully closed before editing. Empty Steam launch options alone
+are filled; custom options are retained. Heroic defaults do not replace the need
+to configure existing games. Bottles settings cover the entire bottle. Advanced
+YAML or unknown formats receive a manual-action result rather than a guessed
+rewrite. Existing files are backed up before changes; the report can restore a
+whole file if it has not subsequently changed. Shared Steam files restore the
+entire batch for that account. Python 3 runs the embedded offline helper on
+Linux; distro packages declare this dependency, while AppImage users need it on
+the host. Windows capture and artwork lookup are unchanged. See the
+[Linux launcher guide](MODE_JEU_LINUX.fr.md) for scope, backup paths and limits.

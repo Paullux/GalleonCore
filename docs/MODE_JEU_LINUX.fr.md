@@ -1,10 +1,56 @@
 # Mode Jeu sous Linux : guide par lanceur
 
-Faites d’abord la préparation **Commune**, une seule fois. Suivez ensuite
-uniquement la section de votre lanceur : **Steam**, **Heroic**, **Lutris**,
-**PlayOnLinux** ou **Bottles**. Une fois le réglage enregistré, les prochains
-lancements utilisent automatiquement MangoHud et Galleon détecte les mesures.
-Les réglages d’un lanceur ne doivent pas être copiés dans un autre.
+Dans **Bosun → Gaming → Linux · Préparer les FPS**, ouvrez
+**Configuration unique · jeux et lanceurs**. La boîte s’affiche au-dessus de Bosun.
+Elle détecte les configurations locales et propose une sélection par lanceur et
+par jeu, avec **Tout sélectionner**, **Tout désélectionner** et un bouton
+**Appliquer la sélection** qui reste visible pendant le défilement.
+
+1. Installez MangoHud et, pour chaque lanceur Flatpak, l’extension correspondant
+   à son runtime. La boîte n’installe pas de logiciels.
+2. Quittez complètement les lanceurs à configurer, y compris leur icône de
+   notification. Bosun refuse d’écrire leurs fichiers lorsqu’ils sont détectés
+   en cours d’exécution.
+3. Cochez **Commun → Configuration MangoHud et dossier CSV** à la première
+   utilisation. Cette action enregistre la source FPS dans Galleon.
+4. Choisissez les jeux et les permissions voulus, puis **Appliquer la sélection**.
+   Consultez le **Compte rendu** : configuré, déjà configuré, réglages personnels
+   conservés, ou erreur avec une explication. L’application ne prouve pas encore
+   qu’un jeu produit des mesures : relancez-le et vérifiez les FPS.
+
+| Élément | Action |
+|---|---|
+| Steam natif | Ajout de `mangohud %command%` uniquement aux options vides des jeux installés et raccourcis hors boutique, pour chaque compte local détecté |
+| Steam Flatpak | Même sélection, avec `MANGOHUD=1 %command%` ; extension et permissions requises |
+| Heroic natif / Flatpak | Sélection indépendante des paramètres généraux pour les futurs jeux et des jeux déjà installés (Epic/Legendary, GOG, Amazon et jeux importés lorsque leurs métadonnées sont reconnues) ; activation de MangoHud et variable `MANGOHUD_CONFIG` propre à chaque configuration choisie |
+| Lutris natif / Flatpak | Activation de `system.mangohud` et chemin du fichier MangoHud dans l’environnement des configurations de jeux YAML reconnues |
+| Bottles natif / Flatpak | Activation de MangoHud et chemin de configuration **par bouteille**, donc pour tous ses programmes ; le libellé l’indique avant sélection |
+| PlayOnLinux 4 | Pré-lancement MangoHud des raccourcis existants, seulement si le champ est vide ou déjà identique ; les commandes personnelles restent intactes |
+| Permissions Flatpak | Lanceurs installés uniquement : lecture du dossier MangoHud, écriture dans le dossier CSV et `MANGOHUD_CONFIGFILE`, sans accès global au dossier personnel |
+
+**Réutilisation et restauration.** Actualisez après l’installation d’un jeu, puis
+sélectionnez seulement ce jeu. Les configurations déjà identiques ne sont pas
+réécrites. Les sauvegardes privées sont dans
+`~/.local/share/galleoncore/fps-setup-backups` (ou votre dossier XDG de données).
+Le compte rendu de la session propose **Restaurer le fichier de configuration
+précédent**. Plusieurs jeux Steam d’un même compte partagent un fichier : sa
+restauration annule les changements de ce lot pour tous ces jeux. La restauration
+est refusée si le fichier a changé entre-temps ; les sauvegardes sont conservées
+pour une récupération manuelle après fermeture de Bosun. Le dossier CSV et le
+réglage de source FPS de Bosun ne sont pas supprimés lors d’une restauration.
+
+**Limites.** Les fichiers mal formés, les versions Heroic inconnues, les liens
+symboliques dans les chemins d’écriture et les YAML avancés/ambigus restent à
+configurer manuellement. Les options Steam non vides et les commandes
+PlayOnLinux personnelles sont préservées ; un `MANGOHUD_CONFIG` Heroic personnel
+différent demande une adaptation manuelle. Les installations dans des chemins
+non standard peuvent ne pas être détectées. La boîte demande Python 3 sous Linux
+(dépendance déclarée dans les paquets DEB/RPM/AUR ; à installer sur l’hôte pour une
+AppImage si absent). Aucun réglage de pochette SteamGridDB n’est modifié.
+
+Les sections suivantes restent disponibles pour la **configuration manuelle**
+et le diagnostic par lanceur : **Steam**, **Heroic**, **Lutris**, **PlayOnLinux**
+ou **Bottles**. Les réglages d’un lanceur ne doivent pas être copiés dans un autre.
 
 ---
 
@@ -21,7 +67,8 @@ Les réglages d’un lanceur ne doivent pas être copiés dans un autre.
    runtime et les permissions de dossiers : voir **Avancé · Flatpak**, plus bas.
 
 2. Dans **Bosun → Gaming → Linux · Préparer les FPS → Commun**, cliquer sur
-   **Configurer MangoHud pour Galleon**. Le bouton :
+   **Configuration unique · jeux et lanceurs**, puis sélectionner
+   **Commun → Configuration MangoHud et dossier CSV** et appliquer. Cette action :
    - crée le dossier des mesures `~/.local/share/galleoncore/fps` ;
    - crée ou ajuste `~/.config/MangoHud/MangoHud.conf` (ou le dossier XDG configuré) ;
    - conserve les autres options et sauvegarde le fichier existant avant modification ;
@@ -35,7 +82,8 @@ Les réglages d’un lanceur ne doivent pas être copiés dans un autre.
    output_folder=/home/paul/.local/share/galleoncore/fps
    ```
 
-   Le bouton n’installe pas MangoHud et ne modifie pas les lanceurs.
+   La préparation commune n’installe pas MangoHud ; les autres cases de la boîte
+   configurent uniquement les jeux et lanceurs sélectionnés.
 
 3. Activer **Automatique** dans Gaming. Cliquer sur **Appliquer** si ce réglage
    a changé. Laisser le filtre d’exécutable vide pour MangoHud.

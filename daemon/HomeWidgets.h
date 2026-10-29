@@ -5,6 +5,7 @@
 #include "GameMode.h"
 #include "GameArtworkResolver.h"
 #include "GameCapture.h"
+#include "FpsSetup.h"
 #include <QTimer>
 #include <QVariantList>
 #include <QVariantMap>
@@ -14,6 +15,7 @@ namespace galleond {
 // Shared by Bosun and the daemon; an atomic file transfers edits across processes.
 class HomeWidgets : public QObject {
     Q_OBJECT
+    Q_PROPERTY(galleond::FpsSetup* fpsSetup READ fpsSetup CONSTANT)
     Q_PROPERTY(QVariantList layout READ layout NOTIFY changed)
     Q_PROPERTY(QVariantMap values READ values NOTIFY changed)
     Q_PROPERTY(QVariantMap location READ location NOTIFY changed)
@@ -29,6 +31,7 @@ class HomeWidgets : public QObject {
     Q_PROPERTY(QString error READ error NOTIFY changed)
 public:
     explicit HomeWidgets(QObject *parent = nullptr, QString file = {}, bool draftMode = false);
+    [[nodiscard]] FpsSetup *fpsSetup() { return &m_fpsSetup; }
     [[nodiscard]] QVariantList layout() const { return m_layout; }
     [[nodiscard]] QVariantMap values() const {
         auto result = m_values;
@@ -87,6 +90,7 @@ private:
     void weather();
     void pollGameSensors();
     void pollGpu();
+    FpsSetup m_fpsSetup;
     QProcess m_gpuProcess;
     qint64 m_gpuAt = 0;
     int m_gpuSerial = 0;

@@ -8,14 +8,21 @@ Flickable {
     objectName: "gameModePage"
     required property var widgets
     property bool advanced: false
-    property var flatpakLaunchers: []
-    property bool flatpakError: false
-    Component.onCompleted: {
-        if (!widgets.windowsCapture) flatpakLaunchers = widgets.flatpakGameLaunchers()
-    }
     // The confirmed capture state also covers snapshots without the process flag.
     readonly property bool captureRunning: !!widgets.captureStatus.running || widgets.captureStatus.state === "capturing"
     readonly property bool captureReady: !!widgets.captureStatus.installed && widgets.captureStatus.state === "waiting" && !captureRunning && !widgets.captureStatus.starting
+    Connections {
+        target: page.widgets.fpsSetup
+        function onCommonConfigured() {
+            fpsSource.input.text = page.widgets.recommendedFpsFolder
+            fpsProcess.input.text = ""
+        }
+    }
+    FpsSetupDialog {
+        id: fpsSetupDialog
+        setup: page.widgets.fpsSetup
+        transientParent: page.Window.window
+    }
     contentWidth: width
     contentHeight: content.height
     clip: true
@@ -73,6 +80,13 @@ Flickable {
             text: page.widgets.windowsCapture
                 ? qsTr("Start your Steam game: Galleon detects it and starts FPS capture automatically. Install the official PresentMon MSI once, with its shared service. Click Apply to save changes.")
                 : qsTr("Automatic game artwork, FPS and CPU/GPU gauges. The keyboard screensaver stays off during an active capture. Click Apply to save changes.")
+        }
+        Text {
+            objectName: "personalGameHelp"
+            width: parent.width; wrapMode: Text.Wrap; color: "#aebac6"
+            text: page.widgets.windowsCapture
+                ? qsTr("Personal or independent game not detected? Add it to a launcher that supports local games, such as Steam, and start it there. You can also associate its executable below. FPS capture must be active; adding a game does not guarantee detection. Use a custom image if no online artwork exists.")
+                : qsTr("For a personal or independent game, add the exported executable to Steam as a non-Steam game, or import it into Heroic, then enable MangoHud using the launcher instructions below. This was reported working with a personal Godot game. A fresh FPS CSV is still required. Use a custom image if no online artwork exists.")
         }
         Row {
             spacing: 12
@@ -192,71 +206,22 @@ Flickable {
                 width: parent.width; spacing: 8
                 SetupTitle { text: qsTr("Commun · une seule fois") }
                 SetupText { text: qsTr("1. Installez MangoHud avec le gestionnaire de logiciels de votre distribution. Pour un lanceur Flatpak, il faut aussi l’extension MangoHud correspondant à son runtime et les accès aux dossiers.") }
-                SetupText { text: qsTr("2. Cliquez sur le bouton ci-dessous. Il crée le fichier de configuration et le dossier des mesures, puis applique cette source dans Galleon. Vos autres options MangoHud sont conservées et le fichier existant est sauvegardé avant modification.") }
+                SetupText { text: qsTr("2. Ouvrez Configuration unique ci-dessous. Cochez la préparation commune, les jeux ou réglages de lanceurs voulus et les permissions Flatpak nécessaires, puis Appliquer la sélection. Le compte rendu indique les modifications et les réglages personnels conservés.") }
                 Pill {
                     objectName: "configureMangoHudButton"
-                    text: qsTr("Configurer MangoHud pour Galleon")
-                    onClicked: if (page.widgets.configureMangoHud()) {
-                        fpsSource.input.text = page.widgets.recommendedFpsFolder
-                        fpsProcess.input.text = ""
-                        mangoHudResult.text = qsTr("Configuration prête et appliquée. Passez à la section de votre lanceur.")
-                    } else mangoHudResult.text = ""
+                    text: qsTr("Configuration unique · jeux et lanceurs")
+                    onClicked: fpsSetupDialog.open()
                 }
-                SetupText { id: mangoHudResult; visible: text.length > 0; color: "#80e5d1" }
                 SetupText { text: qsTr("Configuration : ~/.config/MangoHud/MangoHud.conf (ou votre dossier XDG). Dossier des mesures : ") + page.widgets.recommendedFpsFolder }
                 SetupText { text: qsTr("3. Activez Automatique en haut de cette page, puis Appliquer si vous avez changé ce réglage. Une fois votre lanceur configuré, relancez le jeu : les FPS et le mode Jeu doivent apparaître. Sans nouvelles mesures, le mode Jeu se ferme après environ 10 secondes.") }
-                SetupText { text: qsTr("Une ancienne variable MANGOHUD_CONFIG ou une configuration propre au jeu peut remplacer le fichier commun. Vérifiez qu’elle utilise le même dossier de mesures. Le bouton configure les fichiers ; il n’installe pas MangoHud et ne modifie pas les lanceurs.") }
+                SetupText { text: qsTr("Une ancienne variable MANGOHUD_CONFIG ou une configuration propre au jeu peut remplacer le fichier commun. Vérifiez qu’elle utilise le même dossier de mesures. La boîte configure uniquement les éléments sélectionnés et affiche un compte rendu. Elle n’installe pas MangoHud.") }
             }
             SetupDivider {}
             Column {
                 objectName: "flatpakFpsAccess"
-                width: parent.width
-                spacing: 8
-                Row {
-                    spacing: 12
-                    SetupTitle { text: qsTr("Flatpak · autoriser les CSV FPS") }
-                    Pill {
-                        objectName: "refreshFlatpakLaunchers"
-                        text: qsTr("Actualiser")
-                        onClicked: page.flatpakLaunchers = page.widgets.flatpakGameLaunchers()
-                    }
-                }
-                SetupText {
-                    text: qsTr("Seuls les lanceurs Flatpak installés apparaissent. Autorisez chaque lanceur utilisé à lire MangoHud.conf et à écrire dans le dossier FPS de Galleon. Aucune autre permission n'est ajoutée.")
-                }
-                SetupText {
-                    visible: page.flatpakLaunchers.length === 0
-                    text: qsTr("Aucun Heroic, Bottles, Lutris ou Steam Flatpak détecté.")
-                }
-                Repeater {
-                    model: page.flatpakLaunchers
-                    delegate: Row {
-                        id: flatpakLauncher
-                        required property var modelData
-                        spacing: 12
-                        Text {
-                            width: 140; height: 32; verticalAlignment: Text.AlignVCenter
-                            text: flatpakLauncher.modelData.name; color: "white"
-                        }
-                        Pill {
-                            text: qsTr("Autoriser les CSV")
-                            onClicked: {
-                                page.flatpakError = !page.widgets.allowFlatpakFpsAccess(flatpakLauncher.modelData.id)
-                                flatpakResult.text = page.flatpakError ? page.widgets.error
-                                    : qsTr("Accès autorisé pour %1. Quittez et relancez ce lanceur.").arg(flatpakLauncher.modelData.name)
-                            }
-                        }
-                    }
-                }
-                SetupText {
-                    id: flatpakResult
-                    visible: text.length > 0
-                    text: ""
-                    color: page.flatpakError ? "#ffb74d" : "#80e5d1"
-                }
-                SetupText {
-                    text: qsTr("Préparez d'abord MangoHud avec le bouton commun. L'extension MangoHud du runtime Flatpak reste nécessaire, ainsi que l'activation du compteur FPS dans le lanceur ou le jeu.")
-                }
+                width: parent.width; spacing: 8
+                SetupTitle { text: qsTr("Flatpak · autoriser les CSV FPS") }
+                SetupText { text: qsTr("Dans Configuration unique, cochez les lanceurs installés sous Permissions Flatpak pour autoriser la lecture de MangoHud.conf et l’écriture des CSV. L’extension MangoHud correspondant au runtime reste nécessaire. Quittez puis relancez les lanceurs après application.") }
             }
             SetupDivider {}
             Column {
@@ -275,7 +240,7 @@ Flickable {
                 width: parent.width; spacing: 8
                 SetupTitle { text: "Heroic" }
                 SetupText { text: qsTr("1. Ouvrez les paramètres du jeu et activez MangoHud / Afficher les FPS dans les réglages Linux (l’emplacement dépend de la version).") }
-                SetupText { text: qsTr("2. Avec la préparation commune, aucune commande ni variable par jeu n’est nécessaire. Enregistrez les réglages et relancez le jeu. Ne mettez rien dans Arguments du jeu pour MangoHud.") }
+                SetupText { text: qsTr("2. Dans Configuration unique, sélectionnez les paramètres généraux pour les futurs jeux et chaque jeu déjà installé à configurer. Les réglages généraux seuls ne suffisent pas pour les jeux ayant leurs propres réglages. Ne mettez rien dans Arguments du jeu pour MangoHud.") }
                 SetupText { text: qsTr("Si vous devez définir les options par jeu : Paramètres du jeu → Avancé → Variables d’environnement. Nom : MANGOHUD_CONFIG. Valeur (sans guillemets supplémentaires) :") }
                 SetupCode { text: "autostart_log=1,log_interval=500,output_folder=" + page.widgets.recommendedFpsFolder + ",background_alpha=0,alpha=0" }
                 SetupText { text: qsTr("Heroic Flatpak : installez aussi l’extension MangoHud adaptée et autorisez le fichier de configuration et le dossier des mesures. La case seule ne donne pas ces accès ; voir le guide Linux.") }

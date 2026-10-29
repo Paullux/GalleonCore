@@ -11,6 +11,7 @@ add_library(galleond_core STATIC
     GameArtworkResolver.h GameArtworkResolver.cpp
     FpsReader.h FpsReader.cpp
     HomeWidgets.h HomeWidgets.cpp
+    FpsSetup.h FpsSetup.cpp
     LauncherCache.h LauncherCache.cpp
     AppsBackend.h AppsBackend.cpp
     CoverLoader.h CoverLoader.cpp
@@ -109,3 +110,9 @@ if(WIN32)
 endif()
 install(TARGETS galleon-presentmon-probe RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES ${PROJECT_SOURCE_DIR}/third_party/notices/PresentMon-API-MIT.txt DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/galleoncore)
+
+qt_add_resources(galleond_core "fps_setup"
+    PREFIX "/fpssetup"
+    BASE "${PROJECT_SOURCE_DIR}"
+    FILES "${PROJECT_SOURCE_DIR}/tools/fps_setup.py"
+)

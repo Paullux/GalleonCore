@@ -28,15 +28,39 @@ Les retours positifs Ghostrunner/Linux (identification et image) et Ghostrunner/
 - **Précision du propriétaire sur les jeux hors boutique / installés depuis un CD** : GTA III et Far Cry fonctionnent en mode Gaming après leur ajout à **Steam**. Pour **Jericho**, un premier lancement autonome n’activait pas le mode Gaming ; après ajout à un lanceur, il est reconnu comme jeu. Le propriétaire cite Steam et/ou Epic comme contournement pour ces installations. Le lanceur fait donc partie des conditions de réussite rapportées ; ne pas présenter les photos comme une validation du lancement autonome de ces jeux. Ce constat concerne les essais du propriétaire, sans attribuer à PresentMon une règle universelle ni modifier la recherche d’illustrations.
 - **Les Sims 4, Beowulf et 0 A.D.** : photos avant avec fond de secours, puis après avec illustration. Deux illustrations différentes sont visibles pour Les Sims 4. Le propriétaire décrit les difficultés de correspondance entre noms localisés, titres courts et ponctuation ; la méthode de sélection de chaque image et la version du programme ne sont pas précisées. Ces retours valident le rendu sur matériel, sans démontrer seuls quel repli réseau a abouti ni la persistance après redémarrage.
 - **NeuroHell** : jeu personnel développé par le propriétaire avec Godot, modèles majoritairement créés avec RodinAI et terrains procéduraux avec une extension Blender. Photos du mode Gaming avec fond de secours, puis image personnalisée. Le propriétaire confirme sous Linux un essai via Heroic avec une AppImage et via Steam avec l’exécutable exporté de Godot. Ce jeu sert de cas concret pour la détection d’un jeu personnel et l’illustration locale, sans dépendance à sa présence sur SteamGridDB.
-- **Aide Bosun Linux/Windows en suivi local séparé** : conseil pour les jeux personnels/indépendants non détectés (lanceur acceptant les jeux locaux, source FPS adaptée, image personnelle). Ce changement d’aide et son complément dans `docs/HOME_WIDGETS.md` ne font pas partie de cette PR documentaire ; ils restent locaux pour une validation distincte.
+- **Aide Bosun Linux/Windows en suivi local séparé** : conseil pour les jeux personnels/indépendants non détectés (lanceur acceptant les jeux locaux, source FPS adaptée, image personnelle). Ce changement d’aide et son complément dans `docs/HOME_WIDGETS.md` ne font pas partie de la PR documentaire #70 ; ils restent locaux pour une validation distincte.
 
 **Recherche d’illustrations confirmée opérationnelle par le propriétaire** après ces retours : conserver le comportement actuel. La stratégie décrite (titre exact, replis de correspondance, articles français et titres courts) explique les essais ; elle ne constitue pas une demande de modification du résolveur. Aucun changement de recherche, de normalisation ni de clé persistante effectué pendant cette session. Les cas Les Sims 4, Beowulf et 0 A.D. ne sont plus à présenter comme des défauts ouverts de recherche.
+
+#### Configuration FPS Linux par sélection — développement du 29 octobre
+
+À la demande du propriétaire : **Configuration unique** ouvre un dialogue modal
+Bosun avec sélection dynamique par groupe/jeu, tout sélectionner/désélectionner,
+bouton d’application fixe et compte rendu par élément. Préparation MangoHud commune,
+Steam natif/Flatpak (jeux installés et raccourcis hors boutique, options vides
+uniquement), Heroic général pour futurs jeux **et** réglages individuels des jeux
+existants, Lutris YAML reconnu, Bottles **par bouteille**, pré-lancement
+PlayOnLinux vide, permissions des quatre lanceurs Flatpak détectés. Sauvegardes
+avant écriture, restauration de fichier avec contrôle de modification, refus des
+lanceurs actifs et fichiers périmés ; formats non pris en charge explicités.
+L’aide aux jeux personnels et le guide jusque-là locaux sont inclus dans ce
+chantier. Aucun changement de recherche de pochettes ni de capture Windows.
+
+Tests sur configurations fictives et dossier personnel isolé : options Steam
+préservées, raccourcis binaires, Heroic global/individuel et variables héritées,
+Lutris/Bottles/PlayOnLinux, permissions Flatpak limitées, réapplication,
+restauration et conflits ; test QML du regroupement/sélection et bouton visible,
+aperçu du dialogue contrôlé. La validation complète Docker et les CI Linux/Windows sont exigées avant fusion ;
+leurs résultats sont à consulter dans la PR associée. Le propriétaire a
+explicitement autorisé la PR et sa fusion après validation.
+**Aucun nouvel essai interactif des lanceurs réels n’est revendiqué.**
+Voir [le parcours et les limites](docs/MODE_JEU_LINUX.fr.md).
 
 #### Suite prioritaire
 
 1. Valider l’arbre fusionné sous GCC, Clang + sanitizers, fuzzing et lint, et contrôler les CI Linux, paquets et Windows/NSIS avant une PR ou publication ultérieure.
 2. Tester sur Linux et Windows les replis SteamGridDB, le choix à la molette (chargement, décompte, annulation, relance hors ligne) et le bouton Appliquer près de l’image personnelle ; documenter les jeux et résultats précis.
-3. Poursuivre séparément le bouton unique de configuration MangoHud par lanceur, l’avertissement firmware Windows et les notifications système de mise à jour. Ces demandes ne sont pas rendues terminées par #66–#69.
+3. Valider la configuration MangoHud par sélection décrite ci-dessus sur les lanceurs réels, puis poursuivre séparément l’avertissement firmware Windows et les notifications système de mise à jour.
 4. Conserver les essais de stabilité longue, démarrage à froid, veille et reconnexion USB ; le RGB par touche reste expérimental et séparé de la préparation v0.2.3.
 
 ### Historique — du 21 au 28 octobre 2026

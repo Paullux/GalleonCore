@@ -9,6 +9,7 @@
 #include <QGuiApplication>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QSignalSpy>
 #include <QDir>
 #include <QScopeGuard>
 #include <QStandardPaths>
@@ -255,6 +256,38 @@ private Q_SLOTS:
     }
 #endif
 #ifdef Q_OS_LINUX
+    void fpsSetupHelperRunsAgainstAnIsolatedHome() {
+        const QTemporaryDir dir;
+        const QByteArray oldHome = qgetenv("HOME");
+        const QByteArray oldConfig = qgetenv("XDG_CONFIG_HOME");
+        const QByteArray oldData = qgetenv("XDG_DATA_HOME");
+        const auto restore = qScopeGuard([oldHome, oldConfig, oldData] {
+            const auto reset = [](const char *key, const QByteArray &value) {
+                if (value.isNull()) qunsetenv(key); else qputenv(key, value);
+            };
+            reset("HOME", oldHome); reset("XDG_CONFIG_HOME", oldConfig); reset("XDG_DATA_HOME", oldData);
+        });
+        qputenv("HOME", dir.path().toUtf8());
+        qputenv("XDG_CONFIG_HOME", dir.filePath("config").toUtf8());
+        qputenv("XDG_DATA_HOME", dir.filePath("data").toUtf8());
+        galleond::FpsSetup setup;
+        const QSignalSpy configured(&setup, &galleond::FpsSetup::commonConfigured);
+        setup.scan();
+        QTRY_VERIFY_WITH_TIMEOUT(!setup.busy(), 10000);
+        QVERIFY2(setup.error().isEmpty(), qPrintable(setup.error()));
+        QVERIFY(!setup.rows().isEmpty());
+        const QString common = setup.rows().first().toMap().value("id").toString();
+        setup.apply({common});
+        QTRY_VERIFY_WITH_TIMEOUT(!setup.busy(), 10000);
+        QCOMPARE(configured.size(), 1);
+        QCOMPARE(setup.results().size(), 1);
+        QCOMPARE(setup.results().first().toMap().value("status").toString(), QStringLiteral("changed"));
+        const auto path = dir.filePath("config/MangoHud/MangoHud.conf");
+        QVERIFY(QFile::exists(path));
+        setup.apply({common});
+        QTRY_VERIFY_WITH_TIMEOUT(!setup.busy(), 10000);
+        QCOMPARE(setup.results().first().toMap().value("status").toString(), QStringLiteral("unchanged"));
+    }
     void flatpakPermissionsOnlyForInstalledGameLaunchers() {
         const QTemporaryDir dir;
         QVERIFY(QDir().mkpath(dir.filePath("bin")));
