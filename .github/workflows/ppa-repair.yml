@@ -32,7 +32,7 @@ jobs:
         run: |
           apt-get update -qq
           DEBIAN_FRONTEND=noninteractive apt-get install -y git build-essential debhelper devscripts \
-            cmake pkg-config qt6-base-dev qt6-declarative-dev libhidapi-dev dbus \
+            cmake pkg-config qt6-base-dev qt6-declarative-dev qt6-websockets-dev libhidapi-dev dbus \
             qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtqml \
             qml6-module-qtqml-workerscript curl ca-certificates
       - name: Fetch and verify the unchanged v0.2.3 source archive
