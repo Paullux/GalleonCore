@@ -174,6 +174,18 @@ int main(int argc, char *argv[])
     // the menu can quit (and stop galleond too). Without a notification area it is an ordinary window.
     auto *window = qobject_cast<QQuickWindow *>(root);
     bosun::Tray tray(QGuiApplication::windowIcon());
+    if (!parser.isSet(shotOption)) {
+        QObject::connect(&updates, &bosun::UpdateChecker::updateNotificationRequested, &tray,
+                         [&tray, &updates](const QString &version) { tray.notifyUpdate(version, updates.simulation()); });
+        QObject::connect(&tray, &bosun::Tray::updateNotificationClicked, &app, [root, window] {
+            root->setProperty("updatesOpen", true);
+            if (window) {
+                window->show();
+                window->raise();
+                window->requestActivate();
+            }
+        });
+    }
     if (window && !parser.isSet(shotOption) && bosun::Tray::isAvailable()) {
         QApplication::setQuitOnLastWindowClosed(false);
         root->setProperty("hideOnClose", true);

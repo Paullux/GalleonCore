@@ -27,11 +27,13 @@ public:
 
     void setIcon(const QIcon &icon);
     void show();
+    void notifyUpdate(const QString &version, bool simulation);
     // The menu is rebuilt for the state of the window and of galleond.
     void update(bool windowShown, bool daemonRunning);
 
 Q_SIGNALS:
     void chosen(bosun::TrayEntry::Action action);
+    void updateNotificationClicked();
 
 private:
     QSystemTrayIcon m_icon;

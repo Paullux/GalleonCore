@@ -54,6 +54,8 @@ public:
     Q_INVOKABLE void openWebsite();
 Q_SIGNALS:
     void changed();
+    // Emitted once per newly discovered version in this session, after changed().
+    void updateNotificationRequested(const QString &version);
     // Main connects this to QDesktopServices. Tests never open a real browser.
     void openUrlRequested(const QUrl &url);
 private:
@@ -72,6 +74,7 @@ private:
     QByteArray m_body;
     std::optional<UpdateRelease> m_release;
     QString m_status;
+    QString m_notifiedVersion;
     qint64 m_lastChecked = 0;
     qint64 m_lastAttempt = 0;
     qint64 m_retryAfter = 0;

@@ -2,6 +2,20 @@
 
 Référence pour reprendre le développement à tout moment, y compris dans une nouvelle session Claude Code. À mettre à jour après chaque fonctionnalité terminée **et** testée (voir « Règle de mise à jour » en bas). Les notes de conception détaillées (protocole, RGB, OpenRGB, Windows) sont dans [docs/ROADMAP.md](docs/ROADMAP.md) ; les règles de code dans [CLAUDE.md](CLAUDE.md).
 
+### Notifications de mise à jour — branche en préparation, 29 octobre
+
+Ajout proposé : signal depuis `UpdateChecker::finish()` après validation de la
+release et publication de l'état utilisé par le bouton vert. Une notification
+par version pendant la session ; aucun envoi depuis le cache seul, les erreurs,
+les versions courantes ou les installations gérées par dépôt. Linux utilise
+D-Bus freedesktop sans dépendre d'une zone de notification ; Windows utilise
+l'icône Qt existante, avec clic ouvrant le panneau Updates. Le mode simulation
+identifie explicitement ses notifications ; le mode capture d'écran les désactive.
+
+Tests de régression ajoutés, **non exécutés dans cette session distante**.
+Compilation, validation complète Linux/Windows et affichage réel restent à vérifier.
+Ne pas classer cette proposition comme implémentée et testée avant ces contrôles.
+
 ### État au 29 octobre 2026 — revue locale de `main`
 
 **Point de reprise actuel : `22ba855` (PR #69).** Synchronisation effectuée avec `git pull --ff-only origin main` le 29 octobre : dépôt déjà à jour, sans modification locale avant cette revue. La version déclarée dans `CMakeLists.txt` reste **0.2.2** ; les compléments ci-dessous sont fusionnés pour préparer la suite, sans nouvelle publication effectuée pendant cette session.
