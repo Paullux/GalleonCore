@@ -109,6 +109,61 @@ class TestBosun : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void fpsDialogGroupsSelectionsAndKeepsApplyVisible() {
+        // An in-memory model: this UI test never scans or edits real launchers.
+        QQmlEngine engine;
+        QQmlComponent fakeComponent(&engine);
+        fakeComponent.setData(R"(import QtQml
+QtObject {
+    property var rows: [
+        {id: "common", group: "Commun", label: "Configuration MangoHud et dossier CSV", enabled: true, note: ""},
+        {id: "one", group: "Steam · natif", label: "Jeu 1", enabled: true, note: "mangohud %command%"},
+        {id: "two", group: "Steam · natif", label: "Jeu 2", enabled: true, note: "mangohud %command%"},
+        {id: "future", group: "Heroic · Flatpak", label: "Paramètres généraux · futurs jeux", enabled: true, note: ""},
+        {id: "installed", group: "Heroic · Flatpak", label: "Jeu déjà installé", enabled: true, note: ""},
+        {id: "unsupported", group: "Lutris · natif", label: "Format non reconnu", enabled: false, note: "Action manuelle nécessaire"}
+    ]
+    property var results: []
+    property bool busy: false
+    property string error: ""
+    property var applied: []
+    signal changed()
+    function scan() { changed() }
+    function apply(ids) { applied = ids; busy = true; changed() }
+    function restore(token) { }
+})", QUrl());
+        const std::unique_ptr<QObject> fake(fakeComponent.create());
+        QVERIFY2(fake, qPrintable(fakeComponent.errorString()));
+        // BosunBackend initializes the embedded UI resource.
+        const QTemporaryDir folder;
+        const bosun::BosunBackend backend(folder.filePath("pages.json"));
+        QQmlComponent component(&engine, QUrl(QStringLiteral("qrc:/bosun/qml/FpsSetupDialog.qml")));
+        const std::unique_ptr<QObject> dialog(component.createWithInitialProperties({{"setup", QVariant::fromValue(fake.get())}}));
+        QVERIFY2(dialog, qPrintable(component.errorString()));
+        QVERIFY(QMetaObject::invokeMethod(dialog.get(), "selectAll", Q_ARG(QVariant, true)));
+        QCOMPARE(dialog->property("selectionCount").toInt(), 5);
+        QVERIFY(QMetaObject::invokeMethod(dialog.get(), "toggleGroup", Q_ARG(QVariant, QStringLiteral("Steam · natif"))));
+        QCOMPARE(dialog->property("selectionCount").toInt(), 3);
+        QVERIFY(QMetaObject::invokeMethod(dialog.get(), "toggleGroup", Q_ARG(QVariant, QStringLiteral("Steam · natif"))));
+        QCOMPARE(dialog->property("selectionCount").toInt(), 5);
+        auto *window = qobject_cast<QQuickWindow *>(dialog.get());
+        QVERIFY(window);
+        window->show();
+        QTest::qWait(80);
+        auto *apply = dialog->findChild<QQuickItem *>("fpsApplySelection");
+        QVERIFY(apply);
+        const QPointF position = apply->mapToScene(QPointF(0, 0));
+        QVERIFY(position.y() >= 0);
+        QVERIFY(position.y() + apply->height() <= window->height());
+        QVERIFY(!window->grabWindow().isNull());
+        const auto screenshot = qEnvironmentVariable("GALLEON_FPS_SETUP_SCREENSHOT");
+        if (!screenshot.isEmpty()) QVERIFY(window->grabWindow().save(screenshot));
+        QVERIFY(QMetaObject::invokeMethod(apply, "clicked"));
+        QCOMPARE(fake->property("applied").toList().size(), 5);
+        QVERIFY(!apply->isEnabled());
+        QVERIFY(QMetaObject::invokeMethod(dialog.get(), "selectAll", Q_ARG(QVariant, false)));
+        QCOMPARE(dialog->property("selectionCount").toInt(), 0);
+    }
     void gamingArtworkGuideLoopsAndStopsWhenHidden() {
         const QTemporaryDir dir;
         galleond::HomeWidgets widgets(nullptr, dir.filePath("widgets.json"), true);
@@ -1033,7 +1088,7 @@ private Q_SLOTS:
                 QVERIFY(!pol->property("text").toString().contains("%command%"));
                 const auto *flatpak = window->findChild<QQuickItem *>("flatpakFpsAccess");
                 QVERIFY(flatpak && flatpak->isVisible());
-                const auto *refresh = window->findChild<QQuickItem *>("refreshFlatpakLaunchers");
+                const auto *refresh = window->findChild<QQuickItem *>("configureMangoHudButton");
                 QVERIFY(refresh);
             }
             QTest::qWait(100);

@@ -42,7 +42,7 @@ Section: utils
 Priority: optional
 Architecture: $arch
 Maintainer: Paul Woisard <paul@localhost>
-Depends: $deps, qml6-module-qtquick (>= 6.4), qml6-module-qtquick-window (>= 6.4), qml6-module-qtqml (>= 6.4), qml6-module-qtqml-workerscript (>= 6.4), libglib2.0-bin, xdg-utils, systemd, udev
+Depends: $deps, qml6-module-qtquick (>= 6.4), qml6-module-qtquick-window (>= 6.4), qml6-module-qtqml (>= 6.4), qml6-module-qtqml-workerscript (>= 6.4), libglib2.0-bin, xdg-utils, systemd, udev, python3
 Recommends: ffmpeg
 Suggests: wireplumber, steam, openrgb
 Installed-Size: $(du -sk "$stage/usr" | cut -f1)

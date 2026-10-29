@@ -14,7 +14,7 @@ Package: galleoncore
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, qml6-module-qtquick (>= 6.4),
  qml6-module-qtquick-window (>= 6.4), qml6-module-qtqml (>= 6.4),
- qml6-module-qtqml-workerscript (>= 6.4), libglib2.0-bin, xdg-utils, systemd, udev
+ qml6-module-qtqml-workerscript (>= 6.4), libglib2.0-bin, xdg-utils, systemd, udev, python3
 Recommends: ffmpeg
 Suggests: wireplumber, steam, openrgb
 Description: Corsair Galleon Stream Deck support and settings

@@ -38,6 +38,9 @@ HomeWidgets::HomeWidgets(QObject *parent, QString file, bool draftMode) : QObjec
         : file + QStringLiteral(".capture.csv")),
     m_draftMode(draftMode), m_file(std::move(file)), m_layout(defaults()) {
     initHomeWidgets();
+    connect(&m_fpsSetup, &FpsSetup::commonConfigured, this, [this] {
+        if (!setFpsSource(recommendedFpsFolder(), {}) || !apply()) m_fpsSetup.sourceFailed(m_error);
+    });
 #ifdef Q_OS_WIN
     m_gpuProcess.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *args) { args->flags |= CREATE_NO_WINDOW; });
 #endif
