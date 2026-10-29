@@ -21,6 +21,6 @@ Use the Windows per-user NSIS Setup or portable ZIP, Ubuntu DEB/PPA, Fedora RPM/
 
 For a Stream Deck firmware update, fully stop **Bosun and galleond**, use the official Elgato Stream Deck app on Windows, keep the keyboard connected, then close Elgato and disable its automatic startup before restarting GalleonCore. The main Corsair keyboard firmware is separate. No firmware flashing is performed by GalleonCore.
 
-Automated CI does not replace physical Windows/Linux startup, reconnect, idle and gameplay checks. The detailed owner observations and remaining limits are recorded in [ROADMAP.md](../ROADMAP.md), [Windows instructions](WINDOWS.md), [Gaming widgets](HOME_WIDGETS.md) and [Linux launcher setup](MODE_JEU_LINUX.fr.md).
+Automated CI does not replace physical Windows/Linux startup, reconnect, idle and gameplay checks. The detailed owner observations and remaining limits are recorded in [ROADMAP.md](https://github.com/Paullux/GalleonCore/blob/v0.2.3/ROADMAP.md), [Windows instructions](https://github.com/Paullux/GalleonCore/blob/v0.2.3/docs/WINDOWS.md), [Gaming widgets](https://github.com/Paullux/GalleonCore/blob/v0.2.3/docs/HOME_WIDGETS.md) and [Linux launcher setup](https://github.com/Paullux/GalleonCore/blob/v0.2.3/docs/MODE_JEU_LINUX.fr.md).
 
 [Full changelog](https://github.com/Paullux/GalleonCore/compare/v0.2.2...v0.2.3)
