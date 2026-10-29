@@ -57,6 +57,24 @@ explicitement autorisé la PR et sa fusion après validation.
 **Aucun nouvel essai interactif des lanceurs réels n’est revendiqué.**
 Voir [le parcours et les limites](docs/MODE_JEU_LINUX.fr.md).
 
+#### Retour sur le dialogue FPS — 29 octobre
+
+Le propriétaire signale des jeux Steam en double, Bottles et PlayOnLinux absents
+de la machine, et CrossOver installé. Lecture seule sur le poste : le dossier
+Steam `userdata/0` doublonnait le jeu du compte réel ; anciennes configurations
+Bottles Flatpak et PlayOnLinux présentes sans application installée ; CrossOver
+confirmé dans `/opt/cxoffice`. Correctif : ignorer le compte technique 0 et les
+alias/identifiants dupliqués, vérifier l’installation native/Flatpak avant
+proposition, ajouter CrossOver natif par bouteille standard pour Vulkan/DXVK
+(variables MangoHud seulement ; OpenGL et chemins personnalisés restent manuels).
+Les captures du propriétaire confirment aussi deux raccourcis Steam indirects :
+Medal of Honor cible Lutris avec `lutris:rungameid/2` ; AlterEgo cible un `.lnk`
+dans sa bouteille CrossOver. Ces entrées restent visibles mais non sélectionnables,
+avec indication du lanceur à configurer ; aucun préfixe ajouté à leurs options.
+Tests de non-régression sur configurations fictives ; aucun réglage de lanceur
+réel modifié pendant le diagnostic. PR et fusion autorisées après validation
+complète et CI par le propriétaire dans cette session.
+
 #### Suite prioritaire
 
 1. Valider l’arbre fusionné sous GCC, Clang + sanitizers, fuzzing et lint, et contrôler les CI Linux, paquets et Windows/NSIS avant une PR ou publication ultérieure.

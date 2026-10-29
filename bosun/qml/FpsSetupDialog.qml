@@ -116,7 +116,7 @@ Window {
         Text {
             textFormat: Text.PlainText;
             width: parent.width; wrapMode: Text.Wrap; color: "#c9ced6"
-            text: qsTr("Heroic : choisissez séparément les futurs jeux et les jeux déjà installés. Bottles : le réglage concerne toute la bouteille. Les extensions MangoHud Flatpak restent à installer pour le runtime de chaque lanceur.")
+            text: qsTr("Heroic : choisissez séparément les futurs jeux et les jeux déjà installés. Bottles et CrossOver : le réglage concerne toute la bouteille. CrossOver : Vulkan/DXVK uniquement, OpenGL à configurer manuellement. Les extensions MangoHud Flatpak restent à installer pour le runtime de chaque lanceur.")
         }
         Row {
             spacing: 8

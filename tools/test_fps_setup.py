@@ -9,6 +9,8 @@ import unittest
 from unittest.mock import patch
 import fps_setup as fps
 
+REAL_NATIVE_INSTALLED = fps.native_installed
+
 STEAM = b'''// retain comments and casing
 "UserLocalConfigStore" { "Software" { "Valve" { "Steam" { "apps" {
 "730" { "LastPlayed" "123" "LaunchOptions" "" }
@@ -23,6 +25,9 @@ class SetupTests(unittest.TestCase):
         self.addCleanup(os.umask, previous_umask)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
+        native = patch('fps_setup.native_installed', return_value=True)
+        native.start()
+        self.addCleanup(native.stop)
         self.home = Path(self.temp.name)
         self.setup = fps.Setup(self.home, self.home / '.config', self.home / '.local/share')
 
@@ -39,6 +44,92 @@ class SetupTests(unittest.TestCase):
     def apply(self, rows):
         with patch('fps_setup.subprocess.run', side_effect=FileNotFoundError), patch.object(self.setup, 'running', return_value=False):
             return self.setup.apply(rows)
+
+    def test_uninstalled_launchers_with_old_configs_are_hidden(self):
+        self.put('.PlayOnLinux/shortcuts/OldGame', 'old shortcut')
+        self.put('.local/share/bottles/bottles/old/bottle.yml', 'Name: Old\n')
+        self.put('.var/app/com.usebottles.bottles/data/bottles/bottles/old/bottle.yml', 'Name: Old\n')
+        self.put('.config/heroic/config.json', '{}')
+        self.put('.cxoffice/Old/cxbottle.conf', '[Bottle]\n')
+        with patch('fps_setup.native_installed', return_value=False):
+            rows = self.scan()
+        self.assertEqual([r['kind'] for r in rows], ['common'])
+
+    def test_steam_account_zero_and_directory_aliases_do_not_duplicate_games(self):
+        self.steam_fixture()
+        self.put('.local/share/Steam/userdata/0/config/localconfig.vdf', STEAM)
+        alias = self.home / '.steam/root'
+        alias.parent.mkdir()
+        alias.symlink_to(self.home / '.local/share/Steam', target_is_directory=True)
+        rows = [r for r in self.scan() if r['kind'] == 'steam']
+        self.assertEqual(len(rows), 2)
+        self.assertFalse(any('/userdata/0/' in r['path'] for r in rows))
+        self.assertEqual(len({r['id'] for r in rows}), 2)
+
+    def test_repeated_flatpak_ids_are_listed_once_and_native_is_separate(self):
+        self.put('.var/app/com.usebottles.bottles/data/bottles/bottles/game/bottle.yml', 'Name: Game\n')
+        self.put('.local/share/bottles/bottles/old/bottle.yml', 'Name: Old\n')
+        result = type('Result', (), dict(returncode=0, stdout=b'com.usebottles.bottles\ncom.usebottles.bottles\n'))()
+        with patch('fps_setup.subprocess.run', return_value=result), patch('fps_setup.native_installed', return_value=False):
+            rows = self.setup.scan()
+        self.assertEqual([r['group'] for r in rows], ['Commun', 'Bottles · Flatpak', 'Permissions Flatpak'])
+        self.setup.add('Another alias', 'duplicate', rows[1]['kind'], rows[1]['path'])
+        self.assertEqual(len(self.setup.rows), 3)
+
+    def test_native_appimage_desktop_is_recognized_but_not_flatpak_shortcut(self):
+        binary = self.put('Heroic.AppImage', '#!/bin/sh\n')
+        binary.chmod(0o755)
+        desktop = self.put('.local/share/applications/heroic.desktop', '[Desktop Entry]\nExec="' + str(binary) + '" %U\n')
+        def which(name):
+            return str(binary) if name == str(binary) else None
+        with patch('fps_setup.shutil.which', side_effect=which):
+            self.assertTrue(REAL_NATIVE_INSTALLED('heroic', self.home, self.setup.data))
+            desktop.write_text('[Desktop Entry]\nExec=flatpak run com.heroicgameslauncher.hgl\n')
+            self.assertFalse(REAL_NATIVE_INSTALLED('heroic', self.home, self.setup.data))
+
+    def test_crossover_configuration_preserves_unrelated_fields_and_restores(self):
+        original = b'[Bottle]\n"Name"="Game"\n; user comment\n[EnvironmentVariables]\n"KEEP"="yes"\n"MANGOHUD"="0"\n[Other]\n"Value"="unchanged"\n'
+        path = self.put('.cxoffice/Game/cxbottle.conf', original)
+        results = self.apply(self.scan())
+        result = next(r for r in results if r['label'].startswith('Game'))
+        self.assertEqual(result['status'], 'changed')
+        updated = path.read_bytes()
+        self.assertIn(b'"KEEP"="yes"', updated)
+        self.assertIn(b'[Other]\n"Value"="unchanged"', updated)
+        self.assertIn(b'"MANGOHUD" = "1"', updated)
+        self.assertEqual(updated, fps.patch_crossover(updated, self.setup.mango))
+        with patch.object(self.setup, 'running', return_value=False):
+            self.setup.restore(result['backup'])
+        self.assertEqual(path.read_bytes(), original)
+
+    def test_crossover_ambiguous_or_personal_configuration_is_preserved(self):
+        for data in (b'[Bottle]\n[EnvironmentVariables]\n"MANGOHUD"="1"\nMANGOHUD=0\n',
+                     b'[Bottle]\n[Bottle]\n', b'[EnvironmentVariables]\n'):
+            with self.assertRaises(fps.SetupError):
+                fps.patch_crossover(data, self.setup.mango)
+        with self.assertRaises(fps.Preserved):
+            fps.patch_crossover(b'[Bottle]\n[EnvironmentVariables]\n"MANGOHUD_CONFIG"="custom"\n', self.setup.mango)
+        with self.assertRaises(fps.SetupError):
+            fps.patch_crossover(b'[Bottle]\n', '/tmp/bad\npath')
+        updated = fps.patch_crossover(b'[Bottle]\n"Name"="Game"', '/tmp/a"b/MangoHud.conf')
+        self.assertIn(b'a\\"b', updated)
+
+    def test_steam_shortcuts_delegating_to_launchers_or_links_are_not_wrapped(self):
+        targets = [('/usr/games/lutris', 'lutris:rungameid/2', 'Lutris'),
+                   (str(self.home / '.cxoffice/AlterEGo/desktopdata/AlterEgo.lnk'), '', 'CrossOver'),
+                   ('/some/shortcut.lnk', '', 'indirect')]
+        for target, options, expected in targets:
+            self.steam_fixture()
+            data = (b'\0shortcuts\0\0' + b'0\0\x01AppName\0Test\0'
+                    + b'\x01Exe\0' + target.encode() + b'\0\x01LaunchOptions\0'
+                    + options.encode() + b'\0\x08\x08\x08')
+            path = self.put('.local/share/Steam/userdata/1/config/shortcuts.vdf', data)
+            row = next(r for r in self.scan() if r['kind'] == 'steam-shortcut')
+            self.assertFalse(row['enabled'])
+            self.assertIn(expected, row['note'])
+            self.apply([row])
+            self.assertEqual(path.read_bytes(), data)
+        self.assertEqual(fps.delegated_shortcut('/games/NeuroHell', '', self.home), '')
 
     def test_steam_changes_only_empty_options_and_keeps_unrelated_bytes(self):
         updated = fps.patch_steam(STEAM, '730', 'mangohud %command%')
