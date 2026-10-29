@@ -204,3 +204,8 @@ GitHub Releases by the tag workflow. The website retains its previous deployment
 until every download linked for the new version is uploaded. The release workflow
 then dispatches website deployment; repository publishing remains separately gated
 by its configured credentials and settings.
+
+GitHub normalizes release asset filenames: the locally built Debian files use
+`-1~noble` / `-1~resolute`, while published download URLs use `-1.noble` /
+`-1.resolute` (as observed on v0.2.2). Website links and the publication guard
+therefore refer to the published filenames, not the local dpkg filenames.
