@@ -6,7 +6,7 @@ name: Website
 on:
   push:
     branches: [main]
-    paths: ["site/**", ".github/workflows/pages.yml", "tools/website/download_stats.py", "tools/test_download_stats*"]
+    paths: ["site/**", ".github/workflows/pages.yml", "tools/website/download_stats.py", "tools/test_download_stats*", "tools/website/release_ready.py", "tools/test_release_ready.py", "CMakeLists.txt"]
   workflow_dispatch:
   schedule:
     - cron: "23 3 * * *"
@@ -35,6 +35,20 @@ jobs:
         run: |
           python3 -m unittest discover -s tools -p 'test_download_stats.py'
           node tools/test_download_stats_js.js
+      - name: Wait for the linked release downloads
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version=$(sed -n 's/project(GalleonCore VERSION \([^ ]*\).*/\1/p' CMakeLists.txt)
+          if gh release view "v$version" --json assets,isDraft,isPrerelease > "$RUNNER_TEMP/site-release.json"; then
+            ready=$(python3 tools/website/release_ready.py "$version" "$RUNNER_TEMP/site-release.json" site/index.html)
+          else
+            ready=false
+          fi
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          if [ "$ready" != true ]; then echo "Keeping the current website until all release downloads exist."; fi
       - name: Collect daily download measurements
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -45,15 +59,18 @@ jobs:
             --previous-url https://paullux.github.io/GalleonCore/downloads-weekly.json \
             --output site/downloads-weekly.json
       - name: Deploy to Cloudflare Pages
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        if: ${{ steps.release.outputs.ready == 'true' && env.CLOUDFLARE_API_TOKEN != '' }}
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: e272635a5bb7cf86402f363a755ce70b
           command: pages deploy site --project-name=galleoncore
       - uses: actions/configure-pages@v5
+        if: steps.release.outputs.ready == 'true'
       - uses: actions/upload-pages-artifact@v3
+        if: steps.release.outputs.ready == 'true'
         with:
           path: site
       - id: deployment
         uses: actions/deploy-pages@v4
+        if: steps.release.outputs.ready == 'true'

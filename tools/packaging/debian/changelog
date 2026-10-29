@@ -1,3 +1,13 @@
+galleoncore (0.2.3-1) unstable; urgency=medium
+
+  * Add Gaming artwork selection, persistent personal images and idle wallpaper reuse.
+  * Add launcher-aware FPS setup, scoped Flatpak permissions and metadata fixes.
+  * Detect Stream Deck firmware and provide a labelled old-firmware preview.
+  * Add system update notifications and improve Bosun Gaming controls and help.
+  * Pin stable appimagetool 1.9.1 and refresh release documentation and website.
+
+ -- Paul Woisard <paulwoisard@gmail.com>  Thu, 29 Oct 2026 22:00:00 +0100
+
 galleoncore (0.2.2-1) unstable; urgency=medium
 
   * Add scoped Flatpak launcher access to MangoHud FPS CSV logs in Bosun.

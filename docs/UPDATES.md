@@ -13,7 +13,12 @@ successful check. **Check now** checks GitHub manually. Automatic checking is
 on by default, starts shortly after Bosun opens, and attempts at most once per
 24 hours while Bosun runs. The switch persists between sessions. Closing Bosun
 stops checks; minimizing to the tray keeps it running. A new version changes the
-bottom-bar button without interrupting work with a popup.
+bottom-bar button. Since 0.2.3, a newly validated newer release can also send
+one system notification per version during the session: freedesktop notifications
+on Linux, and the Qt tray notification on Windows. Cached releases alone,
+failed checks and current/older versions do not notify. Clicking the Windows
+notification opens Updates. Screenshot sessions disable notifications; the
+explicit update simulation labels its notifications as simulated.
 
 **Download** opens the matching release asset in the default browser: Windows
 x86-64 Setup or Linux x86-64 AppImage. If a suitable uploaded asset is absent or

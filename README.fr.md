@@ -11,7 +11,7 @@
 [![Ubuntu PPA](https://img.shields.io/badge/Ubuntu-PPA-E95420?logo=ubuntu&logoColor=white)](https://launchpad.net/~paulwoisard/+archive/ubuntu/galleoncore)
 [![Fedora COPR](https://img.shields.io/badge/Fedora-COPR-51A2DA?logo=fedora&logoColor=white)](https://copr.fedorainfracloud.org/coprs/paullux/GalleonCore/)
 [![Arch AUR](https://img.shields.io/badge/Arch-AUR-1793D1?logo=archlinux&logoColor=white)](https://aur.archlinux.org/packages/galleoncore)
-[![Linux AppImage](https://img.shields.io/badge/Linux-AppImage-8E6BBF?logo=linux&logoColor=white)](https://github.com/Paullux/GalleonCore/releases/download/v0.2.1/GalleonCore-0.2.1-x86_64.AppImage)
+[![Linux AppImage](https://img.shields.io/badge/Linux-AppImage-8E6BBF?logo=linux&logoColor=white)](https://github.com/Paullux/GalleonCore/releases/download/v0.2.3/GalleonCore-0.2.3-x86_64.AppImage)
 [![Licenses](https://img.shields.io/badge/license-GPL%20%2F%20LGPL%20%2F%20CC--BY--SA-blue)](LICENSE.md)
 [![Security policy](https://img.shields.io/badge/security-report%20privately-46505E)](SECURITY.md)
 
@@ -29,7 +29,7 @@ Le Galleon 100 SD est un clavier mécanique full-size dont le pavé numérique e
 
 > GalleonCore n'est affilié ni à Corsair ni à Elgato.
 
-> **0.2.0 :** widgets d’accueil configurables, mode Jeu automatique et commandes Game Bar/OBS. Voir les [notes de version](docs/RELEASE_0.2.0.md) et la [configuration des lanceurs Linux](docs/MODE_JEU_LINUX.fr.md).
+> **0.2.3 :** illustrations Gaming persistantes et réutilisables au repos, configuration FPS des lanceurs, détection du firmware et notifications de mise à jour. [Notes de version](docs/RELEASE_0.2.3.md).
 
 ## Objectifs
 
@@ -83,15 +83,16 @@ Les capteurs dépendent du matériel et des pilotes : NVML pour NVIDIA, AMD-SMI/
 
 [Voir la démonstration vidéo de la 0.2.0 sur YouTube](https://youtu.be/eFwru_OMNNI).
 
-### Notifications de mise à jour (0.2.1)
+### Vérification des mises à jour (0.2.1) et notifications système (0.2.3)
 
 La [vérification des mises à jour](docs/UPDATES.md) de Bosun consulte les versions
 stables sur GitHub et ouvre le téléchargement adapté dans le navigateur. Les
 vérifications automatiques sont désactivables. Les utilisateurs PPA/COPR ne
 reçoivent pas de notification en double lorsqu’un dépôt configuré fournit
 GalleonCore ; les DEB/RPM installés indépendamment conservent les notifications.
-Disponible depuis la 0.2.1 ; `--simulate-update` permet de tester la notification
-sans publier de nouvelle release. Voir les [notes de version 0.2.1](docs/RELEASE_0.2.1.md).
+La vérification existe depuis la 0.2.1 ; la 0.2.3 ajoute les notifications système
+sous Linux et Windows. `--simulate-update` permet de prévisualiser une notification
+explicitement simulée sans publier de release. Voir les [notes de version 0.2.3](docs/RELEASE_0.2.3.md).
 
 ### Windows : les touches du Stream Deck ne répondent pas
 

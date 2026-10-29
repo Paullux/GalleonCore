@@ -38,7 +38,9 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      actions: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -48,7 +50,9 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --verify-tag --title "GalleonCore $TAG" --generate-notes
+          notes="docs/RELEASE_${TAG#v}.md"
+          test -s "$notes"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --verify-tag --title "GalleonCore $TAG" --notes-file "$notes"
           # Upload canonical sources before the AUR recipe referring to this URL is published.
           gh release upload "$TAG" artifacts/linux-sources/*.tar.gz artifacts/linux-sources/SHA256SUMS \
             artifacts/aur/PKGBUILD artifacts/aur/.SRCINFO artifacts/aur/*.pkg.tar.zst \
@@ -60,6 +64,11 @@ jobs:
             artifacts/windows-desktop-x86_64/Windows-SHA256SUMS \
             artifacts/windows-desktop-x86_64/setup/*-Setup.exe \
             artifacts/windows-desktop-x86_64/setup/Windows-Setup-SHA256SUMS --clobber
+      - name: Publish website after all release assets are uploaded
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run pages.yml --ref main
   ppa:
     needs: release
     if: vars.ENABLE_LINUX_PUBLISH == 'true'
