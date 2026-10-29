@@ -74,6 +74,49 @@ protected:
 class TestUpdateChecker : public QObject {
     Q_OBJECT
 private Q_SLOTS:
+    void notificationFollowsValidatedAvailableState_data()
+    {
+        QTest::addColumn<QString>("installed");
+        QTest::addColumn<bool>("cached");
+        QTest::addColumn<bool>("simulation");
+        QTest::addColumn<int>("expected");
+        QTest::newRow("new release") << QStringLiteral("0.2.0") << false << false << 1;
+        QTest::newRow("cached release refreshed") << QStringLiteral("0.2.0") << true << false << 1;
+        QTest::newRow("current release") << QStringLiteral("0.3.0") << false << false << 0;
+        QTest::newRow("newer local build") << QStringLiteral("0.4.0") << false << false << 0;
+        QTest::newRow("simulation") << QStringLiteral("0.3.0") << false << true << 1;
+    }
+    void notificationFollowsValidatedAvailableState()
+    {
+        QFETCH(const QString, installed);
+        QFETCH(const bool, cached);
+        QFETCH(const bool, simulation);
+        QFETCH(const int, expected);
+        const QTemporaryDir dir;
+        const auto path = dir.filePath(QStringLiteral("updates.ini"));
+        if (cached) {
+            QSettings settings(path, QSettings::IniFormat);
+            settings.setValue(QStringLiteral("release"), release());
+            settings.sync();
+        }
+        Manager manager;
+        bosun::UpdateChecker checker({installed, path, windowsPlatform(), 100, false, simulation}, nullptr, &manager);
+        const QSignalSpy notifications(&checker, &bosun::UpdateChecker::updateNotificationRequested);
+        bool availableAtNotification = false;
+        connect(&checker, &bosun::UpdateChecker::updateNotificationRequested, &checker,
+                [&checker, &availableAtNotification] { availableAtNotification = checker.available() && !checker.busy(); });
+        QVERIFY(notifications.isEmpty()); // Construction/cache alone must not notify.
+        checker.checkNow();
+        QTRY_VERIFY(!checker.busy());
+        QCOMPARE(notifications.size(), expected);
+        if (expected) {
+            QVERIFY(availableAtNotification);
+            QCOMPARE(notifications.first().first().toString(), QStringLiteral("0.3.0"));
+        }
+        checker.checkNow(); // Cooldown and unrelated changed() signals must not repeat the alert.
+        checker.setAutomatic(false);
+        QCOMPARE(notifications.size(), expected);
+    }
     void panelReflectsAvailableReleaseAndDownloadAction()
     {
         const QTemporaryDir dir;
@@ -115,9 +158,11 @@ private Q_SLOTS:
         Manager manager;
         manager.status = 0;
         bosun::UpdateChecker checker({QStringLiteral("0.2.0"), path, windowsPlatform()}, nullptr, &manager);
+        const QSignalSpy notifications(&checker, &bosun::UpdateChecker::updateNotificationRequested);
         checker.checkNow();
         QTRY_VERIFY(!checker.busy());
         QVERIFY(checker.available());
+        QVERIFY(notifications.isEmpty());
         QCOMPARE(checker.latestVersion(), QStringLiteral("0.3.0"));
     }
     void distinguishesRepositoriesFromStandalonePackages()
@@ -306,9 +351,11 @@ private Q_SLOTS:
         settings.sync();
         Manager manager;
         bosun::UpdateChecker checker({QStringLiteral("0.2.0"), path, windowsPlatform(), 100, true}, nullptr, &manager);
+        const QSignalSpy notifications(&checker, &bosun::UpdateChecker::updateNotificationRequested);
         checker.startAutomaticChecks();
         checker.checkNow();
         checker.setAutomatic(true);
+        QVERIFY(notifications.isEmpty());
         checker.checkAutomatically();
         QVERIFY(checker.packageManaged());
         QVERIFY(!checker.available());
@@ -337,9 +384,11 @@ private Q_SLOTS:
         manager.body = body;
         manager.pending = pending;
         bosun::UpdateChecker checker({QStringLiteral("0.2.0"), dir.filePath(QStringLiteral("updates.ini")), windowsPlatform(), 20}, nullptr, &manager);
+        const QSignalSpy notifications(&checker, &bosun::UpdateChecker::updateNotificationRequested);
         checker.checkNow();
         QTRY_VERIFY(!checker.busy());
         QVERIFY(!checker.available());
+        QVERIFY(notifications.isEmpty());
         QVERIFY(!checker.status().isEmpty());
         checker.checkNow();
         QCOMPARE(manager.requests, 1);

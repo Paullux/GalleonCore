@@ -213,6 +213,12 @@ void UpdateChecker::finish()
     if (simulation()) m_status = tr("Simulation: real release %1 compared with a fictitious installed version 0.0.0.").arg(m_release->version);
     else m_status = available() ? tr("GalleonCore %1 is available.").arg(m_release->version) : tr("You are using the latest version or a newer build.");
     Q_EMIT changed();
+    // Use the same validated state as the green update button.
+    if (available() && (m_notifiedVersion.isEmpty()
+        || newerStableVersion(m_notifiedVersion, m_release->tag).value_or(false))) {
+        m_notifiedVersion = latestVersion();
+        Q_EMIT updateNotificationRequested(m_notifiedVersion);
+    }
 }
 void UpdateChecker::openDownload()
 {
