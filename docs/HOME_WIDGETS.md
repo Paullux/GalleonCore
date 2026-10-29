@@ -372,3 +372,12 @@ entire batch for that account. Python 3 runs the embedded offline helper on
 Linux; distro packages declare this dependency, while AppImage users need it on
 the host. Windows capture and artwork lookup are unchanged. See the
 [Linux launcher guide](MODE_JEU_LINUX.fr.md) for scope, backup paths and limits.
+
+Launcher detection now checks native executables or installed Flatpak IDs before
+listing their saved configurations, so leftovers from uninstalled applications
+are excluded. Steam's technical userdata/0 directory is excluded, directory
+aliases and repeated Flatpak IDs are deduplicated, and real account-specific
+settings remain separate. Native CrossOver exposes standard ~/.cxoffice bottles
+with Vulkan/DXVK MangoHud environment settings in cxbottle.conf, with the same
+backup/restore protections. This does not configure OpenGL injection or custom
+bottle search paths.

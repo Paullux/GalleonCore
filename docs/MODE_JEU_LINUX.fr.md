@@ -25,8 +25,19 @@ par jeu, avec **Tout sélectionner**, **Tout désélectionner** et un bouton
 | Heroic natif / Flatpak | Sélection indépendante des paramètres généraux pour les futurs jeux et des jeux déjà installés (Epic/Legendary, GOG, Amazon et jeux importés lorsque leurs métadonnées sont reconnues) ; activation de MangoHud et variable `MANGOHUD_CONFIG` propre à chaque configuration choisie |
 | Lutris natif / Flatpak | Activation de `system.mangohud` et chemin du fichier MangoHud dans l’environnement des configurations de jeux YAML reconnues |
 | Bottles natif / Flatpak | Activation de MangoHud et chemin de configuration **par bouteille**, donc pour tous ses programmes ; le libellé l’indique avant sélection |
+| CrossOver natif | Activation Vulkan/DXVK et chemin MangoHud **par bouteille** dans `cxbottle.conf` ; OpenGL reste manuel, aucune modification de `LD_PRELOAD` |
 | PlayOnLinux 4 | Pré-lancement MangoHud des raccourcis existants, seulement si le champ est vide ou déjà identique ; les commandes personnelles restent intactes |
 | Permissions Flatpak | Lanceurs installés uniquement : lecture du dossier MangoHud, écriture dans le dossier CSV et `MANGOHUD_CONFIGFILE`, sans accès global au dossier personnel |
+
+La détection vérifie la présence des exécutables natifs (y compris les AppImages
+avec un raccourci valide) ou des applications Flatpak installées. Un ancien
+dossier de configuration ne suffit plus à faire apparaître un lanceur désinstallé.
+Le dossier technique Steam `userdata/0` est ignoré ; les comptes réels conservent
+leurs réglages distincts et leur identifiant est indiqué dans les libellés.
+CrossOver est recherché dans le PATH, `/opt/cxoffice` et `~/cxoffice` ; les
+bouteilles standard de `~/.cxoffice` sont proposées. Les emplacements personnalisés
+restent à configurer manuellement. Format des variables :
+[documentation CodeWeavers](https://support.codeweavers.com/en_US/advanced-crossover-linux-configuration).
 
 **Réutilisation et restauration.** Actualisez après l’installation d’un jeu, puis
 sélectionnez seulement ce jeu. Les configurations déjà identiques ne sont pas

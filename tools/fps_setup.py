@@ -15,6 +15,8 @@ import os
 from pathlib import Path
 import re
 import stat
+import shutil
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -442,6 +444,117 @@ def yaml_patch(data, section, key, value):
     return ''.join(lines).encode()
 
 
+def installed_flatpaks():
+    try:
+        result = subprocess.run(['flatpak', 'list', '--app', '--columns=application'],
+                                capture_output=True, timeout=5, check=False)
+        if result.returncode == 0:
+            return set(result.stdout.decode().splitlines()) & set(FLATPAKS)
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        pass
+    return set()
+
+
+def native_installed(name, home, data):
+    if shutil.which(name):
+        return True
+    if name == 'crossover':
+        for path in (Path('/opt/cxoffice/bin/crossover'), home / 'cxoffice/bin/crossover'):
+            if path.is_file() and os.access(path, os.X_OK):
+                return True
+    # Native AppImages may only have a desktop launcher, not a PATH entry.
+    # Read Exec as arguments, never execute it or treat a Flatpak shortcut as native.
+    for folder in (data / 'applications', Path('/usr/share/applications')):
+        matches = [path for path in folder.glob('*.desktop') if name in path.name.lower()][:32]
+        for path in matches:
+            try:
+                section = ''
+                for line in read(path).decode().splitlines():
+                    if line.startswith('['):
+                        section = line.strip()
+                    if section != '[Desktop Entry]' or not line.startswith('Exec='):
+                        continue
+                    args = shlex.split(line[5:])
+                    if args and Path(args[0]).name == 'env':
+                        args = args[1:]
+                        while args and '=' in args[0] and not args[0].startswith('-'):
+                            args.pop(0)
+                    if not args or name not in Path(args[0]).name.lower():
+                        continue
+                    executable = shutil.which(args[0])
+                    if executable and Path(executable).is_file() and os.access(executable, os.X_OK):
+                        return True
+            except (OSError, ValueError, SetupError):
+                continue
+    return False
+
+
+def patch_crossover(data, config_file):
+    """CodeWeavers' quoted INI EnvironmentVariables; retain unrelated lines.
+
+    https://support.codeweavers.com/en_US/advanced-crossover-linux-configuration
+    Format also checked against the installed CrossOver cxconfig.py reader.
+    Vulkan/DXVK activation only; do not replace LD_PRELOAD for OpenGL.
+    """
+    if any(char in str(config_file) for char in '\n\r\0'):
+        raise SetupError('Chemin de configuration CrossOver invalide')
+    lines = data.decode().splitlines(keepends=True)
+    desired = {'MANGOHUD': '1', 'MANGOHUD_CONFIGFILE': str(config_file)}
+    section = ''; start = None; end = len(lines); fields = {}; sections = set()
+    seen = set()
+    quoted = re.compile(r'^\s*"((?:[^"\\]|\\.)*)"\s*=\s*"((?:[^"\\]|\\.)*)"\s*(?:;.*)?$')
+    plain = re.compile(r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$')
+    for index, line in enumerate(lines):
+        value = line.strip()
+        if not value or value.startswith((';', '#')):
+            continue
+        header = re.fullmatch(r'\[([^\[\]]+)\]\s*(?:;.*)?', value)
+        if header:
+            if start is not None and end == len(lines):
+                end = index
+            section = header[1].casefold()
+            if section in sections:
+                raise SetupError('Section CrossOver dupliquée : action manuelle nécessaire')
+            sections.add(section)
+            if section == 'environmentvariables':
+                start = index
+            continue
+        match = quoted.fullmatch(line.rstrip('\r\n')) or plain.fullmatch(line.rstrip('\r\n'))
+        if not section or not match:
+            raise SetupError('Format CrossOver non reconnu')
+        key = match[1].casefold()
+        identity = (section, key)
+        if identity in seen:
+            raise SetupError('Variable CrossOver dupliquée : action manuelle nécessaire')
+        seen.add(identity)
+        if section == 'environmentvariables':
+            if not re.fullmatch('[a-z_][a-z0-9_]*', key):
+                raise SetupError('Nom de variable CrossOver non reconnu')
+            if key == 'mangohud_config':
+                raise Preserved('MANGOHUD_CONFIG personnel conservé : action manuelle nécessaire')
+            fields[key] = (index, match[2])
+    if 'bottle' not in sections:
+        raise SetupError('Description de bouteille CrossOver absente')
+    additions = []
+    for key, value in desired.items():
+        encoded = value.replace('\\', '\\\\').replace('"', '\\"')
+        replacement = '"' + key + '" = "' + encoded + '"\n'
+        existing = fields.get(key.casefold())
+        if existing:
+            if existing[1] != encoded:
+                lines[existing[0]] = replacement
+        else:
+            additions.append(replacement)
+    if additions:
+        if lines and not lines[-1].endswith('\n'):
+            lines[-1] += '\n'
+        if start is None:
+            lines += ['[EnvironmentVariables]\n'] + additions
+        else:
+            lines[end:end] = additions
+    return ''.join(lines).encode()
+
+
 class Setup:
     def __init__(self, home=None, config=None, data=None):
         self.home = Path(home or Path.home()).resolve()
@@ -451,6 +564,7 @@ class Setup:
         self.mango = self.config / 'MangoHud/MangoHud.conf'
         self.backups = self.data / 'galleoncore/fps-setup-backups'
         self.rows = []
+        self.row_ids = set()
 
     def options(self):
         return 'autostart_log=1,log_interval=500,output_folder=' + str(self.folder) + ',background_alpha=0,alpha=0'
@@ -460,6 +574,9 @@ class Setup:
             return
         path = Path(path)
         rowid = digest((kind + '\0' + str(path) + '\0' + extra).encode())
+        if rowid in self.row_ids:
+            return
+        self.row_ids.add(rowid)
         row = dict(id=rowid, group=group, label=label[:240], kind=kind, path=str(path),
                    extra=extra, enabled=enabled, note=note)
         try:
@@ -500,7 +617,7 @@ class Setup:
                 except (OSError, ValueError, TypeError, KeyError, SetupError):
                     continue
         for user in sorted((root / 'userdata').glob('*'))[:32]:
-            if not user.name.isdecimal():
+            if not user.name.isdecimal() or int(user.name) == 0:
                 continue
             target = user / 'config/localconfig.vdf'
             for appid, name in sorted(games.items(), key=lambda item: item[1].casefold()):
@@ -561,48 +678,60 @@ class Setup:
 
     def scan(self):
         self.rows = []
+        self.row_ids = set()
+        flatpaks = installed_flatpaks()
+        native = {name: native_installed(name, self.home, self.data)
+                  for name in ('steam', 'heroic', 'lutris', 'bottles', 'playonlinux', 'crossover')}
         self.add('Commun', 'Configuration MangoHud et dossier CSV', 'common', self.mango)
         roots = [self.home / '.steam/steam', self.home / '.steam/root', self.data / 'Steam']
         seen = set()
-        for root in roots:
-            canonical = root.resolve()
-            if canonical not in seen:
-                seen.add(canonical); self.steam(root, 'Steam · natif')
+        if native['steam']:
+            for root in roots:
+                canonical = root.resolve()
+                if canonical not in seen:
+                    seen.add(canonical); self.steam(root, 'Steam · natif')
         apps = self.home / '.var/app'
-        self.steam(apps / 'com.valvesoftware.Steam/data/Steam', 'Steam · Flatpak', True)
-        self.heroic(self.config / 'heroic', 'Heroic · natif')
-        self.heroic(apps / 'com.heroicgameslauncher.hgl/config/heroic', 'Heroic · Flatpak')
-        for root, label in ((self.config / 'lutris/games', 'Lutris · natif'),
-                            (self.data / 'lutris/games', 'Lutris · natif'),
-                            (apps / 'net.lutris.Lutris/config/lutris/games', 'Lutris · Flatpak')):
+        if 'com.valvesoftware.Steam' in flatpaks:
+            root = apps / 'com.valvesoftware.Steam/data/Steam'
+            if root.resolve() not in seen:
+                self.steam(root, 'Steam · Flatpak', True)
+        if native['heroic']:
+            self.heroic(self.config / 'heroic', 'Heroic · natif')
+        if 'com.heroicgameslauncher.hgl' in flatpaks:
+            self.heroic(apps / 'com.heroicgameslauncher.hgl/config/heroic', 'Heroic · Flatpak')
+        for root, label, installed in (
+                (self.config / 'lutris/games', 'Lutris · natif', native['lutris']),
+                (self.data / 'lutris/games', 'Lutris · natif', native['lutris']),
+                (apps / 'net.lutris.Lutris/config/lutris/games', 'Lutris · Flatpak', 'net.lutris.Lutris' in flatpaks)):
+            if not installed:
+                continue
             for path in sorted(set(root.glob('*.yml')) | set(root.glob('*.yaml')))[:256]:
                 self.add(label, path.stem, 'lutris', path)
-        for root, label in ((self.data / 'bottles/bottles', 'Bottles · natif'),
-                            (apps / 'com.usebottles.bottles/data/bottles/bottles', 'Bottles · Flatpak')):
+        for root, label, installed in (
+                (self.data / 'bottles/bottles', 'Bottles · natif', native['bottles']),
+                (apps / 'com.usebottles.bottles/data/bottles/bottles', 'Bottles · Flatpak', 'com.usebottles.bottles' in flatpaks)):
+            if not installed:
+                continue
             for path in sorted(root.glob('*/bottle.yml'))[:256]:
                 self.add(label, path.parent.name + ' · toute la bouteille', 'bottles', path,
                          note='MangoHud s’applique à tous les programmes de cette bouteille')
-        pol = self.home / '.PlayOnLinux'
-        for path in sorted((pol / 'shortcuts').glob('*'))[:256]:
-            if path.is_file() and not path.is_symlink():
-                self.add('PlayOnLinux 4', path.name, 'pol', pol / 'configurations/pre_shortcut' / path.name)
-        try:
-            result = subprocess.run(['flatpak', 'list', '--app', '--columns=application'],
-                                    capture_output=True, timeout=5, check=False)
-            if result.returncode == 0:
-                for appid in result.stdout.decode().splitlines():
-                    if appid.strip() in FLATPAKS:
-                        appid = appid.strip()
-                        self.add('Permissions Flatpak', FLATPAKS[appid], 'flatpak',
-                                 self.data / 'flatpak/overrides' / appid, appid,
-                                 note='Lecture MangoHud.conf et écriture CSV uniquement ; extension MangoHud requise')
-        except (OSError, subprocess.TimeoutExpired):
-            pass
+        if native['playonlinux']:
+            pol = self.home / '.PlayOnLinux'
+            for path in sorted((pol / 'shortcuts').glob('*'))[:256]:
+                if path.is_file() and not path.is_symlink():
+                    self.add('PlayOnLinux 4', path.name, 'pol', pol / 'configurations/pre_shortcut' / path.name)
+        if native['crossover']:
+            for path in sorted((self.home / '.cxoffice').glob('*/cxbottle.conf'))[:256]:
+                self.add('CrossOver · natif', path.parent.name + ' · toute la bouteille', 'crossover', path,
+                         note='Vulkan/DXVK uniquement ; tous les programmes de cette bouteille. OpenGL : configuration manuelle.')
+        for appid in sorted(flatpaks):
+            self.add('Permissions Flatpak', FLATPAKS[appid], 'flatpak', self.data / 'flatpak/overrides' / appid,
+                     appid, note='Lecture MangoHud.conf et écriture CSV uniquement ; extension MangoHud requise')
         return self.rows
 
     def running(self, group):
         needles = {'Steam': ('steam', 'steamwebhelper'), 'Heroic': ('heroic',),
-                   'Lutris': ('lutris',), 'Bottles': ('bottles',), 'PlayOnLinux': ('playonlinux',)}
+                   'Lutris': ('lutris',), 'Bottles': ('bottles',), 'PlayOnLinux': ('playonlinux',), 'CrossOver': ('crossover', 'cxrun', 'wine', 'wine64', 'wineserver')}
         prefix = next((key for key in needles if group.startswith(key)), None)
         if not prefix:
             return False
@@ -629,6 +758,8 @@ class Setup:
                 r'^\s*(autostart_log|log_interval|output_folder|background_alpha|alpha)\s*=', line)]
             return ('\n'.join(lines + ['autostart_log=1', 'log_interval=500',
                      'output_folder=' + str(self.folder), 'background_alpha=0', 'alpha=0']) + '\n').encode()
+        if kind == 'crossover':
+            return patch_crossover(original, self.mango)
         if kind == 'steam':
             return patch_steam(original, row['extra'], row['note'])
         if kind == 'steam-shortcut':
@@ -696,7 +827,6 @@ class Setup:
         raise SetupError('Action inconnue')
 
     def pol_script(self):
-        import shlex
         return ('# GalleonCore MangoHud\nexport MANGOHUD_CONFIG=' + shlex.quote(self.options())
                 + '\nexport BEFORE_WINE="mangohud${BEFORE_WINE:+ $BEFORE_WINE}"\n').encode()
 
