@@ -19,23 +19,19 @@ Publication et tag v0.2.3 autorisés par le propriétaire une fois la PR, les CI
 et la validation complète de main fusionné réussies. Pas de tag publié par
 cette seule mise à jour documentaire.
 
-### Notifications de mise à jour — branche en préparation, 29 octobre
+### Notifications de mise à jour — PR #73 fusionnée, 29 octobre
 
-Ajout proposé : signal depuis `UpdateChecker::finish()` après validation de la
-release et publication de l'état utilisé par le bouton vert. Une notification
-par version pendant la session ; aucun envoi depuis le cache seul, les erreurs,
-les versions courantes ou les installations gérées par dépôt. Linux utilise
-D-Bus freedesktop sans dépendre d'une zone de notification ; Windows utilise
-l'icône Qt existante, avec clic ouvrant le panneau Updates. Le mode simulation
-identifie explicitement ses notifications ; le mode capture d'écran les désactive.
+Implémentées dans `main` : une notification système par version nouvellement
+validée pendant la session, sans notification depuis le cache seul ou une erreur.
+Linux utilise freedesktop D-Bus ; Windows utilise l’icône Qt et ouvre Updates au
+clic. Les installations gérées par dépôt conservent leurs règles de notification.
+La simulation est explicitement identifiée et les captures d’écran sont silencieuses.
+Les tests automatisés et les CI de la PR ont passé ; cela ne vaut pas nouvelle
+validation physique de l’affichage sur le poste Windows du propriétaire.
 
-Tests de régression ajoutés, **non exécutés dans cette session distante**.
-Compilation, validation complète Linux/Windows et affichage réel restent à vérifier.
-Ne pas classer cette proposition comme implémentée et testée avant ces contrôles.
+### Historique de la revue locale du 29 octobre 2026 — avant la PR #70
 
-### État au 29 octobre 2026 — revue locale de `main`
-
-**Point de reprise actuel : `22ba855` (PR #69).** Synchronisation effectuée avec `git pull --ff-only origin main` le 29 octobre : dépôt déjà à jour, sans modification locale avant cette revue. La version déclarée dans `CMakeLists.txt` reste **0.2.2** ; les compléments ci-dessous sont fusionnés pour préparer la suite, sans nouvelle publication effectuée pendant cette session.
+**Référence de cette revue historique : `22ba855` (PR #69).** Synchronisation effectuée avec `git pull --ff-only origin main` le 29 octobre : dépôt déjà à jour, sans modification locale avant cette revue. La version déclarée dans `CMakeLists.txt` était **0.2.2** ; les compléments ci-dessous sont fusionnés pour préparer la suite, sans nouvelle publication effectuée pendant cette session.
 
 #### Fonctionnalités présentes dans les sources
 
@@ -154,7 +150,7 @@ du propriétaire ; son retrait n’est plus prévu.
 
 1. Valider l’arbre fusionné sous GCC, Clang + sanitizers, fuzzing et lint, et contrôler les CI Linux, paquets et Windows/NSIS avant une PR ou publication ultérieure.
 2. Tester sur Linux et Windows les replis SteamGridDB, le choix à la molette (chargement, décompte, annulation, relance hors ligne) et le bouton Appliquer près de l’image personnelle ; documenter les jeux et résultats précis.
-3. Valider la configuration MangoHud par sélection décrite ci-dessus sur les lanceurs réels, puis poursuivre séparément l’avertissement firmware Windows et les notifications système de mise à jour.
+3. Valider la configuration MangoHud par sélection décrite ci-dessus sur les lanceurs réels, et confirmer sur matériel l’avertissement firmware Windows et les notifications déjà implémentés dans les PR #73/#74.
 4. Conserver les essais de stabilité longue, démarrage à froid, veille et reconnexion USB ; le RGB par touche reste expérimental et séparé de la préparation v0.2.3.
 
 ### Historique — du 21 au 28 octobre 2026

@@ -83,15 +83,16 @@ Les capteurs dépendent du matériel et des pilotes : NVML pour NVIDIA, AMD-SMI/
 
 [Voir la démonstration vidéo de la 0.2.0 sur YouTube](https://youtu.be/eFwru_OMNNI).
 
-### Notifications de mise à jour (0.2.1)
+### Vérification des mises à jour (0.2.1) et notifications système (0.2.3)
 
 La [vérification des mises à jour](docs/UPDATES.md) de Bosun consulte les versions
 stables sur GitHub et ouvre le téléchargement adapté dans le navigateur. Les
 vérifications automatiques sont désactivables. Les utilisateurs PPA/COPR ne
 reçoivent pas de notification en double lorsqu’un dépôt configuré fournit
 GalleonCore ; les DEB/RPM installés indépendamment conservent les notifications.
-Disponible depuis la 0.2.1 ; `--simulate-update` permet de tester la notification
-sans publier de nouvelle release. Voir les [notes de version 0.2.1](docs/RELEASE_0.2.1.md).
+La vérification existe depuis la 0.2.1 ; la 0.2.3 ajoute les notifications système
+sous Linux et Windows. `--simulate-update` permet de prévisualiser une notification
+explicitement simulée sans publier de release. Voir les [notes de version 0.2.3](docs/RELEASE_0.2.3.md).
 
 ### Windows : les touches du Stream Deck ne répondent pas
 

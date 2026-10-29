@@ -83,13 +83,14 @@ Sensors depend on hardware and drivers: NVML for NVIDIA, AMD-SMI/hwmon on Linux;
 
 [Watch the 0.2.0 demonstration on YouTube](https://youtu.be/eFwru_OMNNI).
 
-### Update notifications (0.2.1)
+### Update checks (0.2.1) and system notifications (0.2.3)
 
 Bosun's [update checker](docs/UPDATES.md) checks stable GitHub releases and opens
 the appropriate download in your browser. Automatic checks can be disabled.
 PPA/COPR users receive no duplicate alert when a configured repository supplies
-GalleonCore; standalone DEB/RPM installations retain notifications. Available since 0.2.1; use `--simulate-update` to test the notification without
-publishing a new release. See the [0.2.1 release notes](docs/RELEASE_0.2.1.md).
+GalleonCore; standalone DEB/RPM installations retain notifications. The checker is available since 0.2.1; 0.2.3 adds system notifications on Linux
+and Windows. Use `--simulate-update` to preview a labelled update notification
+without publishing a release. See the [0.2.3 release notes](docs/RELEASE_0.2.3.md).
 
 ### Windows: Stream Deck input does not respond
 

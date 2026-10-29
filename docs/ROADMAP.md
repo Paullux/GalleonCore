@@ -13,7 +13,7 @@ La [PR #61](https://github.com/Paullux/GalleonCore/pull/61), issue des recherche
 - **Périmètre non vérifié** : autres firmwares/unités, écriture sous Linux/hidraw, cartographie complète de la bande lumineuse, coexistence avec tous les logiciels.
 - Le contributeur teste d'abord son prototype C# dans la durée ; aucune conversion C++ n'est promise. L'**issue #56 reste ouverte jusqu'à un pilote complet et stable intégré et validé**.
 
-La trajectoire fonctionnelle **v0.2.3** est tenue dans [la feuille principale](../ROADMAP.md#état-au-27-octobre-2026--v022-publiée-prochaine-v023) : fallback Gaming embarqué, SteamGridDB avec cache utilisateur, configuration MangoHud par lanceur (natif/Flatpak), diagnostic de firmware Stream Deck sous Windows, notifications système de mises à jour. Des PR séparées et leurs tests conditionnent une éventuelle publication.
+La préparation **v0.2.3** est tenue dans [la feuille principale](../ROADMAP.md) : illustrations Gaming persistantes, configuration MangoHud par sélection, diagnostic du firmware Stream Deck et notifications système sont présents dans main. Les notes de version, le site et les métadonnées des paquets sont préparés ensemble ; validation complète et CI vertes conditionnent le tag.
 
 Les passages historiques ci-dessous décrivent les hypothèses et choix **à leurs dates respectives**, certains ayant été dépassés par les mesures d'octobre.
 
