@@ -20,7 +20,7 @@ par jeu, avec **Tout sélectionner**, **Tout désélectionner** et un bouton
 
 | Élément | Action |
 |---|---|
-| Steam natif | Ajout de `mangohud %command%` uniquement aux options vides des jeux installés et raccourcis hors boutique, pour chaque compte local détecté |
+| Steam natif | Ajout de `mangohud %command%` uniquement aux options vides des jeux installés et raccourcis directs hors boutique, pour chaque compte local détecté |
 | Steam Flatpak | Même sélection, avec `MANGOHUD=1 %command%` ; extension et permissions requises |
 | Heroic natif / Flatpak | Sélection indépendante des paramètres généraux pour les futurs jeux et des jeux déjà installés (Epic/Legendary, GOG, Amazon et jeux importés lorsque leurs métadonnées sont reconnues) ; activation de MangoHud et variable `MANGOHUD_CONFIG` propre à chaque configuration choisie |
 | Lutris natif / Flatpak | Activation de `system.mangohud` et chemin du fichier MangoHud dans l’environnement des configurations de jeux YAML reconnues |
@@ -32,6 +32,9 @@ par jeu, avec **Tout sélectionner**, **Tout désélectionner** et un bouton
 La détection vérifie la présence des exécutables natifs (y compris les AppImages
 avec un raccourci valide) ou des applications Flatpak installées. Un ancien
 dossier de configuration ne suffit plus à faire apparaître un lanceur désinstallé.
+Les raccourcis Steam qui lancent Lutris ou un autre lanceur, ou ciblent un fichier
+`.lnk`/`.desktop`, sont signalés comme indirects et ne sont pas préfixés avec
+MangoHud, même si leurs options sont vides. Configurer leur lanceur d’origine.
 Le dossier technique Steam `userdata/0` est ignoré ; les comptes réels conservent
 leurs réglages distincts et leur identifiant est indiqué dans les libellés.
 CrossOver est recherché dans le PATH, `/opt/cxoffice` et `~/cxoffice` ; les

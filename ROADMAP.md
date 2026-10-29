@@ -67,6 +67,10 @@ confirmé dans `/opt/cxoffice`. Correctif : ignorer le compte technique 0 et les
 alias/identifiants dupliqués, vérifier l’installation native/Flatpak avant
 proposition, ajouter CrossOver natif par bouteille standard pour Vulkan/DXVK
 (variables MangoHud seulement ; OpenGL et chemins personnalisés restent manuels).
+Les captures du propriétaire confirment aussi deux raccourcis Steam indirects :
+Medal of Honor cible Lutris avec `lutris:rungameid/2` ; AlterEgo cible un `.lnk`
+dans sa bouteille CrossOver. Ces entrées restent visibles mais non sélectionnables,
+avec indication du lanceur à configurer ; aucun préfixe ajouté à leurs options.
 Tests de non-régression sur configurations fictives ; aucun réglage de lanceur
 réel modifié pendant le diagnostic. PR et fusion autorisées après validation
 complète et CI par le propriétaire dans cette session.

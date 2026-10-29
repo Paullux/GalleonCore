@@ -114,6 +114,23 @@ class SetupTests(unittest.TestCase):
         updated = fps.patch_crossover(b'[Bottle]\n"Name"="Game"', '/tmp/a"b/MangoHud.conf')
         self.assertIn(b'a\\"b', updated)
 
+    def test_steam_shortcuts_delegating_to_launchers_or_links_are_not_wrapped(self):
+        targets = [('/usr/games/lutris', 'lutris:rungameid/2', 'Lutris'),
+                   (str(self.home / '.cxoffice/AlterEGo/desktopdata/AlterEgo.lnk'), '', 'CrossOver'),
+                   ('/some/shortcut.lnk', '', 'indirect')]
+        for target, options, expected in targets:
+            self.steam_fixture()
+            data = (b'\0shortcuts\0\0' + b'0\0\x01AppName\0Test\0'
+                    + b'\x01Exe\0' + target.encode() + b'\0\x01LaunchOptions\0'
+                    + options.encode() + b'\0\x08\x08\x08')
+            path = self.put('.local/share/Steam/userdata/1/config/shortcuts.vdf', data)
+            row = next(r for r in self.scan() if r['kind'] == 'steam-shortcut')
+            self.assertFalse(row['enabled'])
+            self.assertIn(expected, row['note'])
+            self.apply([row])
+            self.assertEqual(path.read_bytes(), data)
+        self.assertEqual(fps.delegated_shortcut('/games/NeuroHell', '', self.home), '')
+
     def test_steam_changes_only_empty_options_and_keeps_unrelated_bytes(self):
         updated = fps.patch_steam(STEAM, '730', 'mangohud %command%')
         self.assertEqual(updated.replace(b'"mangohud %command%"', b'""'), STEAM)

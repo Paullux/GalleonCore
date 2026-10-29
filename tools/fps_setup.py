@@ -444,6 +444,26 @@ def yaml_patch(data, section, key, value):
     return ''.join(lines).encode()
 
 
+def delegated_shortcut(executable, options, home):
+    """Don't wrap another launcher or a Windows link as a native executable."""
+    target = executable.strip().strip('"').replace('\\', '/')
+    if not target:
+        return 'Raccourci sans exécutable reconnu : configuration manuelle nécessaire.'
+    path = Path(target)
+    launchers = {'lutris': 'Lutris', 'heroic': 'Heroic', 'bottles': 'Bottles',
+                 'playonlinux': 'PlayOnLinux', 'crossover': 'CrossOver', 'cxrun': 'CrossOver', 'steam': 'Steam'}
+    launcher = launchers.get(path.name.lower())
+    if path.is_relative_to(home / '.cxoffice'):
+        launcher = 'CrossOver'
+    elif options.strip().strip('"').lower().startswith('lutris:'):
+        launcher = 'Lutris'
+    if launcher:
+        return 'Raccourci vers ' + launcher + ' : configurer dans ce lanceur ; options Steam conservées.'
+    if path.suffix.lower() in ('.lnk', '.desktop'):
+        return 'Raccourci indirect : configurer le lanceur d’origine ; options Steam conservées.'
+    return ''
+
+
 def installed_flatpaks():
     try:
         result = subprocess.run(['flatpak', 'list', '--app', '--columns=application'],
@@ -631,9 +651,13 @@ class Setup:
                         continue
                     name = game[0].get('appname')
                     if name and isinstance(name[0], str):
+                        exe = game[0].get('exe')
+                        options = game[0].get('launchoptions')
+                        route = delegated_shortcut(exe[0] if exe and isinstance(exe[0], str) else '',
+                                                   options[0] if options and isinstance(options[0], str) else '', self.home)
                         self.add(label, name[0] + ' · hors boutique · compte ' + user.name,
-                                 'steam-shortcut', shortcut_path, index,
-                                 note='MANGOHUD=1 %command%' if flatpak else 'mangohud %command%')
+                                 'steam-shortcut', shortcut_path, index, enabled=not bool(route),
+                                 note=route or ('MANGOHUD=1 %command%' if flatpak else 'mangohud %command%'))
             except (OSError, ValueError, TypeError, SetupError):
                 pass
 
