@@ -41,6 +41,8 @@ void Tray::show()
     m_icon.show();
 }
 
+// Windows uses m_icon; the Linux D-Bus implementation needs no instance state.
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 void Tray::notifyUpdate(const QString &version, bool simulation)
 {
     const QString title = simulation ? tr("GalleonCore update simulation") : tr("GalleonCore update available");
