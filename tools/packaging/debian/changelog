@@ -1,3 +1,10 @@
+galleoncore (0.2.3-2) unstable; urgency=medium
+
+  * Run package tests with a disposable writable home on Launchpad builders.
+  * Preserve the released upstream source archive and all test suites.
+
+ -- Paul Woisard <paulwoisard@gmail.com>  Thu, 29 Oct 2026 23:50:00 +0100
+
 galleoncore (0.2.3-1) unstable; urgency=medium
 
   * Add Gaming artwork selection, persistent personal images and idle wallpaper reuse.

@@ -2,7 +2,20 @@
 
 Référence pour reprendre le développement à tout moment, y compris dans une nouvelle session Claude Code. À mettre à jour après chaque fonctionnalité terminée **et** testée (voir « Règle de mise à jour » en bas). Les notes de conception détaillées (protocole, RGB, OpenRGB, Windows) sont dans [docs/ROADMAP.md](docs/ROADMAP.md) ; les règles de code dans [CLAUDE.md](CLAUDE.md).
 
-### Préparation v0.2.3 — PR dédiée, 29 octobre 2026
+### Publication v0.2.3 et suivi du PPA — 29 octobre 2026
+
+Les PR #75 et #76 sont fusionnées et le tag `v0.2.3` pointe sur `bcc0dd2`.
+Release GitHub, site public (Cloudflare et GitHub Pages), COPR Fedora
+43/44/45/rawhide et AUR publiés ; versions et liens publics vérifiés.
+Le PPA révision 1 a échoué sur deux tests : Launchpad impose
+`HOME=/sbuild-nonexistent` et le mode de test Qt ignore `XDG_DATA_HOME`.
+Correction de packaging en cours : HOME temporaire accessible pour les tests,
+nettoyé même en cas d’échec ; tous les tests restent obligatoires.
+Le workflow de réparation prépare `0.2.3-2~noble` et `0.2.3-2~resolute`
+depuis l’archive originale publiée, sans déplacer le tag ni remplacer
+les autres paquets. Publication APT à confirmer après validation et upload.
+
+### Préparation v0.2.3 — historique de la PR #75
 
 La PR #74 a été fusionnée dans `main` (`e4133da`). La préparation 0.2.3
 regroupe les notes de version, README anglais/français, site, version CMake,
