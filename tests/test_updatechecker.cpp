@@ -102,13 +102,16 @@ private Q_SLOTS:
         Manager manager;
         bosun::UpdateChecker checker({installed, path, windowsPlatform(), 100, false, simulation}, nullptr, &manager);
         const QSignalSpy notifications(&checker, &bosun::UpdateChecker::updateNotificationRequested);
+        const QSignalSpy panels(&checker, &bosun::UpdateChecker::updatePanelRequested);
         bool availableAtNotification = false;
         connect(&checker, &bosun::UpdateChecker::updateNotificationRequested, &checker,
                 [&checker, &availableAtNotification] { availableAtNotification = checker.available() && !checker.busy(); });
-        QVERIFY(notifications.isEmpty()); // Construction/cache alone must not notify.
+        QVERIFY(notifications.isEmpty());
+        QVERIFY(panels.isEmpty()); // Construction/cache alone must not notify.
         checker.checkNow();
         QTRY_VERIFY(!checker.busy());
         QCOMPARE(notifications.size(), expected);
+        QCOMPARE(panels.size(), expected);
         if (expected) {
             QVERIFY(availableAtNotification);
             QCOMPARE(notifications.first().first().toString(), QStringLiteral("0.3.0"));
@@ -116,6 +119,96 @@ private Q_SLOTS:
         checker.checkNow(); // Cooldown and unrelated changed() signals must not repeat the alert.
         checker.setAutomatic(false);
         QCOMPARE(notifications.size(), expected);
+        QCOMPARE(panels.size(), expected);
+    }
+    void panelPresentationPersistsOnlyAfterAcknowledgement()
+    {
+        const QTemporaryDir dir;
+        const auto path = dir.filePath(QStringLiteral("updates.ini"));
+        const bosun::UpdateChecker::Options options{QStringLiteral("0.2.0"), path, windowsPlatform()};
+        Manager manager;
+        const auto resetCooldown = [&path] {
+            QSettings settings(path, QSettings::IniFormat);
+            settings.remove(QStringLiteral("retryAfter"));
+            settings.sync();
+        };
+        {
+            bosun::UpdateChecker checker(options, nullptr, &manager);
+            const QSignalSpy panels(&checker, &bosun::UpdateChecker::updatePanelRequested);
+            checker.checkNow();
+            QTRY_COMPARE(panels.size(), 1);
+            // No acknowledgement: no window was presented, so a future session retries.
+        }
+        resetCooldown();
+        {
+            bosun::UpdateChecker checker(options, nullptr, &manager);
+            const QSignalSpy panels(&checker, &bosun::UpdateChecker::updatePanelRequested);
+            checker.checkNow();
+            QTRY_COMPARE(panels.size(), 1);
+            checker.acknowledgePanelShown();
+        }
+        resetCooldown();
+        {
+            bosun::UpdateChecker checker(options, nullptr, &manager);
+            const QSignalSpy panels(&checker, &bosun::UpdateChecker::updatePanelRequested);
+            checker.checkNow();
+            QTRY_VERIFY(!checker.busy());
+            QVERIFY(checker.available()); // The green button remains available.
+            QVERIFY(panels.isEmpty());
+        }
+        resetCooldown();
+        manager.body = release(QStringLiteral("v0.4.0"), QStringLiteral("GalleonCore-0.4.0-Windows-x86_64-Setup.exe"));
+        bosun::UpdateChecker checker(options, nullptr, &manager);
+        const QSignalSpy panels(&checker, &bosun::UpdateChecker::updatePanelRequested);
+        checker.checkNow();
+        QTRY_COMPARE(panels.size(), 1);
+    }
+    void storedPresentationVersion_data()
+    {
+        QTest::addColumn<QString>("presented");
+        QTest::addColumn<int>("expected");
+        QTest::newRow("same") << QStringLiteral("0.3.0") << 0;
+        QTest::newRow("release rollback") << QStringLiteral("0.4.0") << 0;
+        QTest::newRow("older prompt") << QStringLiteral("0.2.1") << 1;
+        QTest::newRow("invalid preference") << QStringLiteral("broken") << 1;
+    }
+    void storedPresentationVersion()
+    {
+        QFETCH(const QString, presented);
+        QFETCH(const int, expected);
+        const QTemporaryDir dir;
+        const auto path = dir.filePath(QStringLiteral("updates.ini"));
+        QSettings settings(path, QSettings::IniFormat);
+        settings.setValue(QStringLiteral("presentedVersion"), presented);
+        settings.sync();
+        Manager manager;
+        bosun::UpdateChecker checker({QStringLiteral("0.2.0"), path, windowsPlatform()}, nullptr, &manager);
+        const QSignalSpy panels(&checker, &bosun::UpdateChecker::updatePanelRequested);
+        checker.checkNow();
+        QTRY_VERIFY(!checker.busy());
+        QCOMPARE(panels.size(), expected);
+    }
+    void linuxAndAurPromptButRepositoryManagedPackagesDoNot_data()
+    {
+        QTest::addColumn<bool>("managed");
+        QTest::newRow("AUR or source") << false;
+        QTest::newRow("PPA or COPR") << true;
+    }
+    void linuxAndAurPromptButRepositoryManagedPackagesDoNot()
+    {
+        QFETCH(const bool, managed);
+        const QTemporaryDir dir;
+        Manager manager;
+        const bosun::UpdatePlatform linuxPlatform{QStringLiteral("linux"), QStringLiteral("x86_64"), QStringLiteral("arch"), {}, false};
+        bosun::UpdateChecker checker({QStringLiteral("0.2.0"), dir.filePath(QStringLiteral("updates.ini")), linuxPlatform, 100, managed}, nullptr, &manager);
+        const QSignalSpy panels(&checker, &bosun::UpdateChecker::updatePanelRequested);
+        checker.startAutomaticChecks();
+        if (managed) {
+            QCOMPARE(manager.requests, 0);
+            QVERIFY(panels.isEmpty());
+        } else {
+            QTRY_COMPARE(panels.size(), 1);
+        }
     }
     void panelReflectsAvailableReleaseAndDownloadAction()
     {
@@ -159,10 +252,12 @@ private Q_SLOTS:
         manager.status = 0;
         bosun::UpdateChecker checker({QStringLiteral("0.2.0"), path, windowsPlatform()}, nullptr, &manager);
         const QSignalSpy notifications(&checker, &bosun::UpdateChecker::updateNotificationRequested);
+        const QSignalSpy panels(&checker, &bosun::UpdateChecker::updatePanelRequested);
         checker.checkNow();
         QTRY_VERIFY(!checker.busy());
         QVERIFY(checker.available());
         QVERIFY(notifications.isEmpty());
+        QVERIFY(panels.isEmpty());
         QCOMPARE(checker.latestVersion(), QStringLiteral("0.3.0"));
     }
     void distinguishesRepositoriesFromStandalonePackages()
@@ -204,6 +299,7 @@ private Q_SLOTS:
         QTRY_VERIFY(!checker.busy());
         QVERIFY(checker.available());
         QCOMPARE(checker.latestVersion(), QStringLiteral("0.3.0"));
+        checker.acknowledgePanelShown();
         const QSignalSpy urls(&checker, &bosun::UpdateChecker::openUrlRequested);
         checker.openDownload();
         QCOMPARE(urls.size(), 1);
@@ -352,10 +448,12 @@ private Q_SLOTS:
         Manager manager;
         bosun::UpdateChecker checker({QStringLiteral("0.2.0"), path, windowsPlatform(), 100, true}, nullptr, &manager);
         const QSignalSpy notifications(&checker, &bosun::UpdateChecker::updateNotificationRequested);
+        const QSignalSpy panels(&checker, &bosun::UpdateChecker::updatePanelRequested);
         checker.startAutomaticChecks();
         checker.checkNow();
         checker.setAutomatic(true);
         QVERIFY(notifications.isEmpty());
+        QVERIFY(panels.isEmpty());
         checker.checkAutomatically();
         QVERIFY(checker.packageManaged());
         QVERIFY(!checker.available());
@@ -385,10 +483,12 @@ private Q_SLOTS:
         manager.pending = pending;
         bosun::UpdateChecker checker({QStringLiteral("0.2.0"), dir.filePath(QStringLiteral("updates.ini")), windowsPlatform(), 20}, nullptr, &manager);
         const QSignalSpy notifications(&checker, &bosun::UpdateChecker::updateNotificationRequested);
+        const QSignalSpy panels(&checker, &bosun::UpdateChecker::updatePanelRequested);
         checker.checkNow();
         QTRY_VERIFY(!checker.busy());
         QVERIFY(!checker.available());
         QVERIFY(notifications.isEmpty());
+        QVERIFY(panels.isEmpty());
         QVERIFY(!checker.status().isEmpty());
         checker.checkNow();
         QCOMPARE(manager.requests, 1);

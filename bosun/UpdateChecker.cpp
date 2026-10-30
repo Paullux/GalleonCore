@@ -218,7 +218,19 @@ void UpdateChecker::finish()
         || newerStableVersion(m_notifiedVersion, m_release->tag).value_or(false))) {
         m_notifiedVersion = latestVersion();
         Q_EMIT updateNotificationRequested(m_notifiedVersion);
+        const QString presented = m_settings.value(QStringLiteral("presentedVersion")).toString();
+        // Invalid or missing preferences must not hide a real update. A stored
+        // newer version also suppresses repeat prompts after a release rollback.
+        if (simulation() || presented.isEmpty()
+            || newerStableVersion(presented, m_release->tag).value_or(true))
+            Q_EMIT updatePanelRequested();
     }
+}
+void UpdateChecker::acknowledgePanelShown()
+{
+    if (simulation() || !available()) return;
+    m_settings.setValue(QStringLiteral("presentedVersion"), latestVersion());
+    m_settings.sync();
 }
 void UpdateChecker::openDownload()
 {
