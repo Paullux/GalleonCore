@@ -44,6 +44,7 @@ public:
     [[nodiscard]] bool busy() const { return m_reply != nullptr; }
     [[nodiscard]] bool automatic() const { return m_automatic; }
     [[nodiscard]] bool packageManaged() const;
+    void acknowledgePanelShown();
     void startAutomaticChecks();
     void setRepositoryManaged(bool managed, bool known);
     Q_INVOKABLE void checkNow();
@@ -56,6 +57,8 @@ Q_SIGNALS:
     void changed();
     // Emitted once per newly discovered version in this session, after changed().
     void updateNotificationRequested(const QString &version);
+    // Only after fresh validation, once per version across normal sessions.
+    void updatePanelRequested();
     // Main connects this to QDesktopServices. Tests never open a real browser.
     void openUrlRequested(const QUrl &url);
 private:

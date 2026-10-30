@@ -1,6 +1,16 @@
 # ROADMAP
 
-Référence pour reprendre le développement à tout moment, y compris dans une nouvelle session Claude Code. À mettre à jour après chaque fonctionnalité terminée **et** testée (voir « Règle de mise à jour » en bas). Les notes de conception détaillées (protocole, RGB, OpenRGB, Windows) sont dans [docs/ROADMAP.md](docs/ROADMAP.md) ; les règles de code dans [CLAUDE.md](CLAUDE.md).
+Référence pour reprendre le développement à tout moment, y compris dans une nouvelle session Claude Code. À mettre à jour après chaque fonctionnalité terminée **et** testée (voir « Règle de mise à jour » en bas). Les notes de conception détaillées (protocole, RGB, OpenRGB, Windows) sont dans [docs/ROADMAP.md](docs/ROADMAP.md) ; les règles de code dans [AGENTS.md](AGENTS.md).
+
+### Panneau de mise à jour et règles communes — 30 octobre 2026
+
+Modification préparée : ouverture du panneau Updates après validation d'une
+nouvelle version, sous Linux et Windows (AUR compris), une fois par version
+entre sessions. Les installations DEB/RPM gérées par dépôt (PPA/COPR) restent
+exclues. Simulation sans persistance et captures silencieuses conservées.
+Règles communes dans `AGENTS.md`, importées par `CLAUDE.md`, avec consignes
+sur les responsabilités, dépendances, frontières asynchrones et tests portables.
+Validation automatisée et essai interactif à consigner avant de déclarer testé.
 
 ### Publication v0.2.3 et suivi du PPA — 29 octobre 2026
 

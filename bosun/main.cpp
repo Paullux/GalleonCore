@@ -186,6 +186,15 @@ int main(int argc, char *argv[])
     auto *window = qobject_cast<QQuickWindow *>(root);
     bosun::Tray tray(QGuiApplication::windowIcon());
     if (!parser.isSet(shotOption)) {
+        QObject::connect(&updates, &bosun::UpdateChecker::updatePanelRequested, &app, [&updates, root, window] {
+            if (!window) return;
+            root->setProperty("updatesOpen", true);
+            if (window->isMinimized()) window->showNormal();
+            else window->show();
+            window->raise();
+            window->requestActivate();
+            updates.acknowledgePanelShown();
+        });
         QObject::connect(&updates, &bosun::UpdateChecker::updateNotificationRequested, &tray,
                          [&tray, &updates](const QString &version) { tray.notifyUpdate(version, updates.simulation()); });
         QObject::connect(&tray, &bosun::Tray::updateNotificationClicked, &app, [root, window] {
