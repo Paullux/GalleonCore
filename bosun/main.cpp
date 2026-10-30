@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
         QObject::connect(&updates, &bosun::UpdateChecker::updatePanelRequested, &app, [&updates, root, window] {
             if (!window) return;
             root->setProperty("updatesOpen", true);
-            if (window->isMinimized()) window->showNormal();
+            if (window->windowState() == Qt::WindowMinimized) window->showNormal();
             else window->show();
             window->raise();
             window->requestActivate();
