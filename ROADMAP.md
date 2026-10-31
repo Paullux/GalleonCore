@@ -2,6 +2,19 @@
 
 Référence pour reprendre le développement à tout moment, y compris dans une nouvelle session Claude Code. À mettre à jour après chaque fonctionnalité terminée **et** testée (voir « Règle de mise à jour » en bas). Les notes de conception détaillées (protocole, RGB, OpenRGB, Windows) sont dans [docs/ROADMAP.md](docs/ROADMAP.md) ; les règles de code dans [AGENTS.md](AGENTS.md).
 
+### Diagnostic du Setup Windows de la PR #80 — 31 octobre 2026
+
+La compilation, les tests Qt Windows et les aperçus du ZIP installé ont passé.
+Le test NSIS échoue au contrôle « Bosun démarre seul exactement un démon ».
+Le propriétaire rappelle que le démarrage Windows est habituellement lent.
+Remplacement des 40 tentatives (~12 s) par un budget monotone de 60 s, avec
+attente des endpoints réels, détection immédiate d’un processus sorti et contrôle
+inchangé d’un unique démon installé. Journaux stdout/stderr conservés même en
+échec ; tests PowerShell simulant une disponibilité après plus de 40 sondages,
+un timeout et un processus arrêté. Les vérifications de mise à niveau,
+désinstallation et conservation des données restent obligatoires. Résultat du
+prochain essai natif à confirmer ; aucune correction HID déduite de ce test.
+
 ### Préparation v0.3.0 — 31 octobre 2026
 
 Le propriétaire autorise la création d’une PR et propose une release 0.3.0.
