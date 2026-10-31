@@ -2,6 +2,20 @@
 
 Référence pour reprendre le développement à tout moment, y compris dans une nouvelle session Claude Code. À mettre à jour après chaque fonctionnalité terminée **et** testée (voir « Règle de mise à jour » en bas). Les notes de conception détaillées (protocole, RGB, OpenRGB, Windows) sont dans [docs/ROADMAP.md](docs/ROADMAP.md) ; les règles de code dans [AGENTS.md](AGENTS.md).
 
+### Préparation v0.3.0 — 31 octobre 2026
+
+Le propriétaire autorise la création d’une PR et propose une release 0.3.0.
+Préparation cohérente de la version CMake, des notes de version, README anglais
+et français, site et changelogs DEB/RPM. Les quatre langues sont intégrées au
+paquet principal sur toutes les plateformes. La PR inclut le correctif local
+d’édition des raccourcis, les onglets adaptatifs et leur animation d’une seconde.
+La validation complète Docker a passé avant ce changement de version ; elle est
+rejouée sur l’arbre final avant ouverture de la PR. CI Linux/Windows et paquets
+à contrôler ensuite. Le site conserve sa barrière de publication jusqu’à la
+présence des téléchargements de la nouvelle release. Aucun tag, aucune fusion,
+aucune publication de release ou de paquets n’est autorisée par cette seule PR.
+Aucune nouvelle validation matérielle Windows n’est déduite de cette préparation.
+
 ### Panneau de mise à jour et règles communes — 30 octobre 2026
 
 Modification préparée : ouverture du panneau Updates après validation d'une
@@ -264,6 +278,50 @@ Le mode `--simulate-update` teste la vraie release avec une version de comparais
 Voir [le fonctionnement et les limites](docs/UPDATES.md).
 
 ## 1. Implémenté et testé
+
+### Onglets Bosun à largeur adaptative — 31 octobre 2026
+
+Le titre actif conserve sa largeur complète, mesurée avec la police affichée.
+La réduction se répartit entre les autres onglets, jusqu’à un minimum lisible ;
+la barre reste défilante si nécessaire et garde l’onglet sélectionné visible.
+Une transition QML d’une seconde, avec accélération et décélération douces,
+montre l’onglet actif grandir pendant que les autres rétrécissent ; le défilement
+suit la géométrie pendant l’animation. Les changements rapides repartent de la
+largeur courante. Les captures statiques désactivent cette animation.
+Le sélecteur de langue conserve sa position, sa taille et son fonctionnement.
+Calcul pur dans `TabWidths.js`, six tests de géométrie et test QML avec huit
+thèmes longs en allemand, largeur intermédiaire pendant l’animation puis titre
+entier à l’arrivée ; contrôles ciblés et aperçu vérifiés. La validation
+complète de référence est indiquée par `tools/check.py status`. Le propriétaire
+autorise la création de la PR de préparation 0.3.0 le 31 octobre.
+
+### Langues de Bosun — 31 octobre 2026
+
+Interface et menu de notification : choix immédiat de la langue du système,
+anglais, français, allemand ou espagnol, mémorisé séparément des profils.
+Catalogues intégrés aux mêmes paquets Linux/Windows, sans sous-paquets de langue.
+Les libellés personnels et le brouillon d’une touche sont conservés. Les messages
+techniques provenant du système et les guides externes gardent leur langue propre.
+Les messages fixes de capture reçus du démon sont traduits à l’affichage dans
+Bosun, sans modifier les données IPC.
+Tests de sélection, persistance, repli, traduction QML/menu et intégrité des
+catalogues ajoutés. Les contrôles ciblés locaux et les 86 tests Python ont passé.
+La validation complète de référence et l’arbre vérifié sont consultables avec
+`tools/check.py status` (commande : `tools/check.py full`). Traductions allemandes
+et espagnoles préparées avec assistance IA, relecture native bienvenue.
+Inclure aussi le correctif local d’édition des raccourcis dans la prochaine PR,
+à la demande explicite du propriétaire. Aucun nouvel essai matériel revendiqué.
+
+### Édition des raccourcis Bosun — 30 octobre 2026
+
+Le brouillon d’une touche reste ouvert lors des rafraîchissements du backend
+si la page et le raccourci enregistré sont inchangés. Changer de touche recharge
+les champs ; les champs texte et icône réagissent uniquement à la saisie utilisateur.
+Contrôles ciblés Docker réussis : 10 tests sur 47 sous GCC, clang-tidy,
+qmllint, tests de l’outil et REUSE ; sans sanitizers.
+Binaire local recompilé ; le propriétaire confirme après relance de Bosun que
+l’édition ne se ferme plus. Aucune nouvelle validation sur le module ni
+validation complète revendiquée.
 
 Le 20 octobre, le propriétaire confirme le fonctionnement du correctif des fonds personnels et du bouton « Parcourir » (PR #24).
 

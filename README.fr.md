@@ -2,6 +2,8 @@
 
 # GalleonCore
 
+Bosun inclut le français, l’anglais, l’allemand et l’espagnol. Le menu globe permet de suivre la langue du système ou de changer immédiatement ; le choix est mémorisé. Voir [la maintenance des traductions](docs/TRANSLATIONS.md).
+
 [![Website](https://img.shields.io/badge/website-GalleonCore-46505E)](https://galleoncore.xyz/)
 [![CI](https://github.com/Paullux/GalleonCore/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Paullux/GalleonCore/actions/workflows/ci.yml)
 [![Linux packages](https://github.com/Paullux/GalleonCore/actions/workflows/linux-packages.yml/badge.svg?branch=main)](https://github.com/Paullux/GalleonCore/actions/workflows/linux-packages.yml)
@@ -11,7 +13,7 @@
 [![Ubuntu PPA](https://img.shields.io/badge/Ubuntu-PPA-E95420?logo=ubuntu&logoColor=white)](https://launchpad.net/~paulwoisard/+archive/ubuntu/galleoncore)
 [![Fedora COPR](https://img.shields.io/badge/Fedora-COPR-51A2DA?logo=fedora&logoColor=white)](https://copr.fedorainfracloud.org/coprs/paullux/GalleonCore/)
 [![Arch AUR](https://img.shields.io/badge/Arch-AUR-1793D1?logo=archlinux&logoColor=white)](https://aur.archlinux.org/packages/galleoncore)
-[![Linux AppImage](https://img.shields.io/badge/Linux-AppImage-8E6BBF?logo=linux&logoColor=white)](https://github.com/Paullux/GalleonCore/releases/download/v0.2.3/GalleonCore-0.2.3-x86_64.AppImage)
+[![Linux AppImage](https://img.shields.io/badge/Linux-AppImage-8E6BBF?logo=linux&logoColor=white)](https://github.com/Paullux/GalleonCore/releases/download/v0.3.0/GalleonCore-0.3.0-x86_64.AppImage)
 [![Licenses](https://img.shields.io/badge/license-GPL%20%2F%20LGPL%20%2F%20CC--BY--SA-blue)](LICENSE.md)
 [![Security policy](https://img.shields.io/badge/security-report%20privately-46505E)](SECURITY.md)
 
@@ -29,7 +31,7 @@ Le Galleon 100 SD est un clavier mécanique full-size dont le pavé numérique e
 
 > GalleonCore n'est affilié ni à Corsair ni à Elgato.
 
-> **0.2.3 :** illustrations Gaming persistantes et réutilisables au repos, configuration FPS des lanceurs, détection du firmware et notifications de mise à jour. [Notes de version](docs/RELEASE_0.2.3.md).
+> **0.3.0 :** Bosun en français, anglais, allemand et espagnol, changement de langue immédiat, onglets adaptatifs animés et brouillons des raccourcis préservés. [Notes de version](docs/RELEASE_0.3.0.md).
 
 ## Objectifs
 

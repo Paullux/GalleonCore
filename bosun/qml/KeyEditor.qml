@@ -84,7 +84,10 @@ Column {
         spec = copy
     }
 
-    onKeyChanged: load()
+    // Backend refreshes also rebuild identical key objects. Keep the draft until
+    // the selected page or the saved key actually changes.
+    readonly property string savedKey: JSON.stringify([page, key])
+    onSavedKeyChanged: load()
     Component.onCompleted: load()
 
     Text {
@@ -314,7 +317,7 @@ Column {
                 maximumLength: 24
                 placeholder: qsTr("Text")
                 value: editor.spec.label
-                input.onTextChanged: editor.change("label", input.text)
+                input.onTextEdited: editor.change("label", input.text)
             }
         }
         Column {
@@ -331,7 +334,7 @@ Column {
                     maximumLength: 64
                     placeholder: qsTr("icon-name")
                     value: editor.spec.icon
-                    input.onTextChanged: editor.change("icon", input.text)
+                    input.onTextEdited: editor.change("icon", input.text)
                 }
                 Image {
                     width: 34

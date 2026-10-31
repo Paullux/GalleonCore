@@ -1,3 +1,13 @@
+galleoncore (0.3.0-1) unstable; urgency=medium
+
+  * Add bundled English, French, German and Spanish Bosun interface catalogs.
+  * Detect the system language and remember instant UI and tray language changes.
+  * Add adaptive tab widths with one-second transitions and visible selection.
+  * Preserve unfinished shortcut edits during backend refreshes and language changes.
+  * Include once-per-version update prompts and Launchpad build-test fixes.
+
+ -- Paul Woisard <paulwoisard@gmail.com>  Sat, 31 Oct 2026 11:15:27 +0100
+
 galleoncore (0.2.3-2) unstable; urgency=medium
 
   * Run package tests with a disposable writable home on Launchpad builders.

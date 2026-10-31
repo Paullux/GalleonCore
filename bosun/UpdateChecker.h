@@ -37,7 +37,7 @@ public:
     [[nodiscard]] bool simulation() const { return m_options.simulation; }
     [[nodiscard]] QString installedVersion() const { return m_options.installedVersion; }
     [[nodiscard]] QString latestVersion() const { return m_release ? m_release->version : QString(); }
-    [[nodiscard]] QString status() const { return m_status; }
+    [[nodiscard]] QString status() const;
     [[nodiscard]] QString lastChecked() const;
     [[nodiscard]] QString downloadLabel() const;
     [[nodiscard]] bool available() const;
@@ -66,7 +66,9 @@ private:
     void consume();
     void finish();
     void cancel();
-    void fail(const QString &message);
+    void fail(const char *message);
+    // Source strings are static literals; formatting is deferred until presentation.
+    void setStatus(const char *source, const QString &argument = {});
     Options m_options;
     QSettings m_settings;
     QNetworkAccessManager m_network;
@@ -76,7 +78,9 @@ private:
     QTimer m_periodic;
     QByteArray m_body;
     std::optional<UpdateRelease> m_release;
-    QString m_status;
+    // Keep source text until presentation so cached state follows language changes.
+    const char *m_statusSource = "";
+    QString m_statusArgument;
     QString m_notifiedVersion;
     qint64 m_lastChecked = 0;
     qint64 m_lastAttempt = 0;

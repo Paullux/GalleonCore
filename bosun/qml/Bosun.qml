@@ -12,6 +12,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Window
+import "TabWidths.js" as TabWidths
 
 Window {
     id: win
@@ -19,6 +20,7 @@ Window {
     required property var backend
     required property var daemon
     required property var library
+    property var languages: null
     property var filePicker: null
     property var updates: null
     property bool updatesOpen: false
@@ -29,6 +31,7 @@ Window {
     // With the icon in the notification area, closing the window only hides it.
     property bool hideOnClose: false
     property bool startMinimized: false
+    property bool animateTabs: true
     // The page shown inside a theme's tab: its own, or one of the sub-pages it leads to.
     property string shownPage: ""
     // What the last edit said, in the status bar.
@@ -55,7 +58,7 @@ Window {
     // One tab per theme, a tab to add one, then the fixed ones.
     readonly property var tabs: backend.themes.map(t => ({title: t.name, kind: "theme", page: t.page, color: t.color})).concat([
         {title: "+", kind: "newtab", page: "", color: "#9aa0a6"},
-        {title: qsTr("Keyboard"), kind: "keyboard", page: "", color: lastTheme < backend.themes.length ? backend.themes[lastTheme].color : "#9aa0a6"},
+        {title: qsTr("Keyboard"), kind: "keyboard", page: "", color: "#9aa0a6"},
         {title: qsTr("Wallpapers"), kind: "wallpapers", page: "", color: "#ff00ff"},
         {title: qsTr("Widgets"), kind: "widgets", page: "", color: "#4fc3f7"},
         {title: qsTr("Gaming"), kind: "gaming", page: "", color: "#80e5d1"},
@@ -83,28 +86,61 @@ Window {
             lastTheme = currentTab
     }
 
+    FontMetrics { id: tabFont; font.pixelSize: 14 }
+
     // ---- the tab bar
     Flickable {
         id: tabViewport
+        objectName: "tabViewport"
+        readonly property var tabWidths: TabWidths.distribute(win.tabs.map(tab => Math.ceil(tabFont.advanceWidth(tab.title)) + 24),
+                                                             win.currentTab, width, bar.spacing, 70)
+        function revealSelected() {
+            const selected = tabRepeater.itemAt(win.currentTab)
+            if (!selected) return
+            const left = selected.x
+            const right = left + selected.width
+            const target = left < contentX ? left : right > contentX + width ? right - width : contentX
+            contentX = Math.max(0, Math.min(target, Math.max(0, contentWidth - width)))
+        }
+        Timer {
+            id: revealTimer
+            interval: 0
+            repeat: false
+            onTriggered: tabViewport.revealSelected()
+        }
+        onTabWidthsChanged: revealTimer.start()
+        onContentWidthChanged: revealTimer.start()
         x: 20; y: 16
-        width: win.width - 40; height: 44
+        width: win.width - 224; height: 44
         contentWidth: bar.width; contentHeight: height
         flickableDirection: Flickable.HorizontalFlick
         boundsBehavior: Flickable.StopAtBounds
         clip: true
         Row {
         id: bar
+        objectName: "tabBar"
         height: tabViewport.height
         spacing: 4
 
         Repeater {
+            id: tabRepeater
             model: win.tabs
             delegate: Rectangle {
                 id: tabButton
                 required property var modelData
                 required property int index
                 readonly property bool current: tabButton.index === win.currentTab
-                width: Math.max(90, (win.width - 40 - (win.tabs.length - 1) * 4) / win.tabs.length)
+                readonly property bool resizing: resizeAnimation.running
+                readonly property color accent: modelData.kind === "keyboard" && win.lastTheme < win.backend.themes.length
+                                                ? win.backend.themes[win.lastTheme].color : modelData.color
+                onCurrentChanged: revealTimer.start()
+                onXChanged: if (current) revealTimer.start()
+                onWidthChanged: if (current) revealTimer.start()
+                Behavior on width {
+                    enabled: win.animateTabs
+                    NumberAnimation { id: resizeAnimation; duration: 1000; easing.type: Easing.InOutCubic }
+                }
+                width: tabViewport.tabWidths[tabButton.index] || 70
                 height: bar.height
                 radius: 8
                 color: tabButton.current ? "#2a2d32" : (hover.containsMouse ? "#232529" : "transparent")
@@ -115,7 +151,7 @@ Window {
                     width: parent.width - 16
                     height: 3
                     radius: 1.5
-                    color: tabButton.modelData.color
+                    color: tabButton.accent
                     opacity: tabButton.current ? 1 : 0.45
                 }
                 Text {
@@ -126,6 +162,7 @@ Window {
                     color: tabButton.current ? "white" : "#b8bec6"
                     font.pixelSize: 14
                     text: tabButton.modelData.title
+                    Accessible.name: text
                 }
                 MouseArea {
                     id: hover
@@ -265,6 +302,7 @@ Window {
                 spacing: 22
 
                 KeyEditor {
+                    objectName: "keyEditor"
                     filePicker: win.filePicker
                     visible: win.selected !== null
                     width: parent.width
@@ -446,6 +484,8 @@ Window {
         }
         Row {
             x: 20
+            width: Math.max(120, statusBar.width - x - (updateButton.visible ? updateButton.width + 32 : 20)
+                            - (win.message !== "" ? statusBar.width / 2.4 : 0))
             anchors.verticalCenter: parent.verticalCenter
             anchors.verticalCenterOffset: -8
             spacing: 8
@@ -458,12 +498,15 @@ Window {
             }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
+                width: Math.max(0, parent.width - 18 - (startDaemon.visible ? startDaemon.width + 8 : 0))
+                elide: Text.ElideRight
                 color: "#c9ced6"
                 font.pixelSize: 13
                 text: win.daemon.running ? qsTr("galleond is running: a change reaches the module at once.")
                                          : qsTr("galleond is not running: changes are saved and will show when it starts.")
             }
             Pill {
+                id: startDaemon
                 visible: !win.daemon.running
                 height: 24
                 text: qsTr("Start it")
@@ -510,6 +553,92 @@ Window {
             text: win.updates !== null && win.updates.available ? qsTr("Update %1").arg(win.updates.latestVersion) : qsTr("Updates")
             onClicked: win.updatesOpen = true
         }
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        z: 99
+        visible: languageMenu.expanded
+        onClicked: languageMenu.expanded = false
+    }
+    // Always reachable; language names remain recognizable after an accidental change.
+    Rectangle {
+        id: languageMenu
+        objectName: "languageMenu"
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: 12
+        width: 176
+        height: 32
+        radius: 6
+        color: "#2e3238"
+        visible: win.languages !== null
+        property bool expanded: false
+        function choose(code) {
+            win.message = ""
+            expanded = false
+            forceActiveFocus()
+            // Retranslation rebuilds the option delegates; change language last.
+            win.languages.preference = code
+        }
+        activeFocusOnTab: true
+        border.width: activeFocus ? 2 : 0
+        border.color: "#80e5d1"
+        Keys.onPressed: event => {
+            if (event.key === Qt.Key_Return || event.key === Qt.Key_Space) {
+                expanded = !expanded
+                event.accepted = true
+            } else if (event.key === Qt.Key_Escape) {
+                expanded = false
+                event.accepted = true
+            }
+        }
+        Accessible.role: Accessible.ComboBox
+        Accessible.name: qsTr("Language")
+        Accessible.onPressAction: { forceActiveFocus(); expanded = !expanded }
+        Text {
+            anchors.centerIn: parent
+            color: "white"
+            text: "🌐 " + (win.languages && win.languages.preference === "system" ? qsTr("System language")
+                          : win.languages && win.languages.language === "fr" ? "Français"
+                          : win.languages && win.languages.language === "de" ? "Deutsch"
+                          : win.languages && win.languages.language === "es" ? "Español" : "English") + " ▾"
+            font.pixelSize: 12
+        }
+        MouseArea { anchors.fill: parent; onClicked: { languageMenu.forceActiveFocus(); languageMenu.expanded = !languageMenu.expanded } }
+        Column {
+            anchors.top: parent.bottom
+            anchors.right: parent.right
+            visible: languageMenu.expanded
+            Repeater {
+                model: [{code: "system", name: qsTr("System language")}, {code: "en", name: "English"}, {code: "fr", name: "Français"}, {code: "de", name: "Deutsch"}, {code: "es", name: "Español"}]
+                delegate: Rectangle {
+                    id: languageOption
+                    required property var modelData
+                    objectName: "languageOption_" + modelData.code
+                    width: 180
+                    height: 36
+                    color: activeFocus ? "#3a3f47" : "#2e3238"
+                    activeFocusOnTab: visible
+                    Keys.onReturnPressed: languageMenu.choose(modelData.code)
+                    Keys.onSpacePressed: languageMenu.choose(modelData.code)
+                    Keys.onEscapePressed: { languageMenu.expanded = false; languageMenu.forceActiveFocus() }
+                    Accessible.role: Accessible.RadioButton
+                    Accessible.checkable: true
+                    Accessible.checked: win.languages !== null && win.languages.preference === modelData.code
+                    Accessible.name: modelData.name
+                    Accessible.onPressAction: languageMenu.choose(modelData.code)
+                    Text { anchors.centerIn: parent; color: "white"; text: (win.languages !== null && win.languages.preference === languageOption.modelData.code ? "✓ " : "") + languageOption.modelData.name }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            languageMenu.choose(languageOption.modelData.code)
+                        }
+                    }
+                }
+            }
+        }
+        z: 100
     }
 
     UpdatePanel {

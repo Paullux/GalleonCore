@@ -93,10 +93,10 @@ RecordingController::RecordingController(QObject *parent, QString preferences) :
     m_socket.setMaxAllowedIncomingMessageSize(65536);
     m_socket.setMaxAllowedIncomingFrameSize(65536);
     m_deadline.setSingleShot(true); m_deadline.setInterval(5000);
-    connect(&m_deadline, &QTimer::timeout, this, [this] { m_socket.abort(); clearObs(); m_message = tr("OBS WebSocket response timed out"); Q_EMIT changed(); });
+    connect(&m_deadline, &QTimer::timeout, this, [this] { m_socket.abort(); clearObs(); m_message = QStringLiteral("OBS WebSocket response timed out"); Q_EMIT changed(); });
     connect(&m_socket, &QWebSocket::textMessageReceived, this, &RecordingController::receive);
     connect(&m_socket, &QWebSocket::disconnected, this, [this] {
-        if (static_cast<int>(m_socket.closeCode()) == 4009) m_message = tr("OBS WebSocket authentication failed: check the password");
+        if (static_cast<int>(m_socket.closeCode()) == 4009) m_message = QStringLiteral("OBS WebSocket authentication failed: check the password");
         clearObs(); Q_EMIT changed();
     });
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
@@ -104,7 +104,7 @@ RecordingController::RecordingController(QObject *parent, QString preferences) :
 #else
     connect(&m_socket, qOverload<QAbstractSocket::SocketError>(&QWebSocket::error), this,
 #endif
-        [this](QAbstractSocket::SocketError) { clearObs(); m_message = tr("OBS unavailable: enable its WebSocket server and check the port/password"); Q_EMIT changed(); });
+        [this](QAbstractSocket::SocketError) { clearObs(); m_message = QStringLiteral("OBS unavailable: enable its WebSocket server and check the port/password"); Q_EMIT changed(); });
     connect(&m_timer, &QTimer::timeout, this, &RecordingController::refresh);
     m_timer.start(3000); refresh();
 }
@@ -125,9 +125,9 @@ QVariantList RecordingController::options() const {
 QString RecordingController::status() const {
     if (backend() == QStringLiteral("gamebar")) {
         if (!m_windows || !m_gameBar) return tr("Game Bar is unavailable on this computer");
-        return m_barMessage.isEmpty() ? tr("Game Bar: shortcuts only; recording state is not confirmed") : m_barMessage;
+        return m_barMessage.isEmpty() ? tr("Game Bar: shortcuts only; recording state is not confirmed") : tr(m_barMessage.toUtf8().constData());
     }
-    if (!m_message.isEmpty()) return m_message;
+    if (!m_message.isEmpty()) return tr(m_message.toUtf8().constData());
     if (!m_ready) return tr("OBS: start OBS and enable Tools → WebSocket Server Settings");
     if (!m_recordKnown) return tr("OBS connected; waiting for recording status");
     if (!m_record) return tr("OBS: recording stopped");
@@ -175,7 +175,7 @@ bool RecordingController::configure(const QString &choice, int port, const QStri
     QDir().mkpath(QFileInfo(m_preferences).absolutePath());
     QFile preferenceFile(m_preferences);
     if (!preferenceFile.exists() && !preferenceFile.open(QIODevice::WriteOnly, QFileDevice::ReadOwner | QFileDevice::WriteOwner)) {
-        m_message = tr("Could not save recording preferences"); Q_EMIT changed(); return false;
+        m_message = QStringLiteral("Could not save recording preferences"); Q_EMIT changed(); return false;
     }
     preferenceFile.close();
     QSettings settings(m_preferences, QSettings::IniFormat);
@@ -183,7 +183,7 @@ bool RecordingController::configure(const QString &choice, int port, const QStri
     if (replacePassword) settings.setValue(QStringLiteral("obsPassword"), password);
     settings.sync();
     QFile::setPermissions(m_preferences, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
-    if (settings.status() != QSettings::NoError) { m_message = tr("Could not save recording preferences"); Q_EMIT changed(); return false; }
+    if (settings.status() != QSettings::NoError) { m_message = QStringLiteral("Could not save recording preferences"); Q_EMIT changed(); return false; }
     refresh(); return true;
 }
 void RecordingController::clearObs() {
@@ -219,7 +219,7 @@ void RecordingController::receive(const QString &message) {
     const auto root = QJsonDocument::fromJson(message.toUtf8()).object();
     const int op = root.value("op").toInt(-1); const auto data = root.value("d").toObject();
     if (op == 0 && !m_ready) {
-        if (data.value("rpcVersion").toInt() < 1) { m_message = tr("Unsupported OBS WebSocket protocol"); m_socket.abort(); return; }
+        if (data.value("rpcVersion").toInt() < 1) { m_message = QStringLiteral("Unsupported OBS WebSocket protocol"); m_socket.abort(); return; }
         QJsonObject identify{{"rpcVersion", 1}, {"eventSubscriptions", 64}};
         if (data.contains("authentication")) {
             const auto auth = data.value("authentication").toObject();
@@ -265,7 +265,7 @@ void RecordingController::receive(const QString &message) {
 void RecordingController::trigger(int index) {
     if (index < 0 || index >= 4 || !buttons().at(index).toMap().value("enabled").toBool()) return;
     if (backend() == QStringLiteral("gamebar")) {
-        m_barMessage = m_shortcut(index) ? tr("Game Bar shortcut sent; recording state is not confirmed") : tr("Could not send Game Bar shortcut");
+        m_barMessage = m_shortcut(index) ? QStringLiteral("Game Bar shortcut sent; recording state is not confirmed") : QStringLiteral("Could not send Game Bar shortcut");
     } else {
         const QStringList commands{QStringLiteral("ToggleRecord"), QStringLiteral("ToggleRecordPause"), QStringLiteral("SaveReplayBuffer"), QStringLiteral("ToggleReplayBuffer")};
         request(commands.at(index));

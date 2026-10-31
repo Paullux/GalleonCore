@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "BosunBackend.h"
+#include "LanguageSettings.h"
 #include "DaemonStatus.h"
 #include "FilePicker.h"
 #include "UpdateChecker.h"
@@ -96,9 +97,19 @@ int main(int argc, char *argv[])
                                   ? QDir::current().absoluteFilePath(parser.value(pagesOption))
                                   : QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
                                         + QStringLiteral("/galleoncore/pages.json");
+    const bool preview = parser.isSet(shotOption) || parser.isSet(pagesOption)
+                         || parser.isSet(simulateUpdateOption) || parser.isSet(oldFirmwareOption);
+    // NOLINTNEXTLINE(misc-const-correctness) -- QML writes the language preference through its QObject property.
+    bosun::LanguageSettings languages(preview ? QString() : QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
+                                                       + QStringLiteral("/galleoncore/bosun.conf"));
     bosun::BosunBackend backend(pagesFile);
     if (parser.isSet(oldFirmwareOption))
         qobject_cast<galleond::HomeWidgets *>(backend.homeWidgets())->simulateOldFirmware();
+    QObject::connect(&languages, &bosun::LanguageSettings::changed, &backend, [&backend] {
+        Q_EMIT backend.changed();
+        auto *recording = qobject_cast<galleond::RecordingController *>(backend.recording());
+        if (recording) Q_EMIT recording->changed();
+    });
     bosun::DaemonStatus daemon;
 #ifdef Q_OS_WIN
     if (!parser.isSet(shotOption) && !parser.isSet(pagesOption) && !parser.isSet(simulateUpdateOption) && !parser.isSet(oldFirmwareOption)) {
@@ -118,6 +129,7 @@ int main(int argc, char *argv[])
     const auto filePicker = std::make_unique<bosun::FilePicker>();
     bosun::UpdateChecker updates({QCoreApplication::applicationVersion(), {}, bosun::currentUpdatePlatform(), 15000,
                                   !QStringLiteral(GALLEON_PACKAGE_FORMAT).isEmpty(), parser.isSet(simulateUpdateOption)});
+    QObject::connect(&languages, &bosun::LanguageSettings::changed, &updates, [&updates] { Q_EMIT updates.changed(); });
     QObject::connect(&updates, &bosun::UpdateChecker::openUrlRequested, &app, [](const QUrl &url) {
         if (!QDesktopServices::openUrl(url)) qWarning() << "Could not open update link in the browser";
     });
@@ -135,12 +147,15 @@ int main(int argc, char *argv[])
     if (parser.isSet(simulateUpdateOption))
         QTimer::singleShot(0, &updates, &bosun::UpdateChecker::checkNow);
     QQmlApplicationEngine engine;
+    QObject::connect(&languages, &bosun::LanguageSettings::changed, &engine, &QQmlApplicationEngine::retranslate);
     engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
     engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
     engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
     engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
     engine.setInitialProperties({{QStringLiteral("startMinimized"), parser.isSet(minimizedOption) && !parser.isSet(simulateUpdateOption) && !parser.isSet(oldFirmwareOption) && !parser.isSet(shotOption) && bosun::Tray::isAvailable()},
                                  {QStringLiteral("updates"), QVariant::fromValue(&updates)},
+                                 {QStringLiteral("languages"), QVariant::fromValue(&languages)},
+                                 {QStringLiteral("animateTabs"), !parser.isSet(shotOption)},
                                  {QStringLiteral("updatesOpen"), parser.isSet(simulateUpdateOption)},
                                  {QStringLiteral("filePicker"), QVariant::fromValue(filePicker.get())},
                                  {QStringLiteral("backend"), QVariant::fromValue(&backend)},
@@ -210,6 +225,7 @@ int main(int argc, char *argv[])
         QApplication::setQuitOnLastWindowClosed(false);
         root->setProperty("hideOnClose", true);
         const auto refresh = [&] { tray.update(window->isVisible(), daemon.running()); };
+        QObject::connect(&languages, &bosun::LanguageSettings::changed, &tray, refresh);
         QObject::connect(window, &QWindow::visibleChanged, &tray, refresh);
         QObject::connect(&daemon, &bosun::DaemonStatus::changed, &tray, refresh);
         QObject::connect(&tray, &bosun::Tray::chosen, &app, [&](bosun::TrayEntry::Action action) {

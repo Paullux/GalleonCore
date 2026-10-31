@@ -122,7 +122,7 @@ Flickable {
             objectName: "gameCaptureStatus"
             visible: page.widgets.windowsCapture
             width: parent.width; wrapMode: Text.Wrap; color: "#aebac6"
-            text: page.widgets.captureStatus.message || qsTr("Waiting for the daemon…")
+            text: page.widgets.captureStatus.message ? qsTranslate("GameCapture", page.widgets.captureStatus.message) : qsTr("Waiting for the daemon…")
         }
         Text {
             width: parent.width; wrapMode: Text.Wrap; color: "#aebac6"

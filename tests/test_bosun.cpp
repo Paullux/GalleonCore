@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "BosunBackend.h"
+#include "LanguageSettings.h"
 #include "DaemonStatus.h"
 #include "WallpaperLibrary.h"
 #include "Required.h"
@@ -11,10 +12,15 @@
 #include <QDir>
 #include <QFile>
 #include <QGuiApplication>
+#include <QFontMetricsF>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
 #include <QQmlPropertyMap>
 #include <QQuickWindow>
+#include <QPointer>
 #include <QQuickItem>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -140,6 +146,16 @@ QtObject {
         QQmlComponent component(&engine, QUrl(QStringLiteral("qrc:/bosun/qml/FpsSetupDialog.qml")));
         const std::unique_ptr<QObject> dialog(component.createWithInitialProperties({{"setup", QVariant::fromValue(fake.get())}}));
         QVERIFY2(dialog, qPrintable(component.errorString()));
+        bosun::LanguageSettings languages({});
+        languages.setPreference("de");
+        QVariant label;
+        const QVariantMap steamRow{{"kind", "steam-shortcut"}, {"label", "Mon jeu %1 · hors boutique · compte 42"}};
+        QVERIFY(QMetaObject::invokeMethod(dialog.get(), "rowLabel", Q_RETURN_ARG(QVariant, label), Q_ARG(QVariant, steamRow)));
+        QCOMPARE(label.toString(), QStringLiteral("Mon jeu %1 · ohne Shop · Konto 42"));
+        const QVariantMap bottleRow{{"kind", "bottles"}, {"label", "Ma bouteille · toute la bouteille"}};
+        QVERIFY(QMetaObject::invokeMethod(dialog.get(), "rowLabel", Q_RETURN_ARG(QVariant, label), Q_ARG(QVariant, bottleRow)));
+        QCOMPARE(label.toString(), QStringLiteral("Ma bouteille · ganze Flasche"));
+        languages.setPreference("en");
         QVERIFY(QMetaObject::invokeMethod(dialog.get(), "selectAll", Q_ARG(QVariant, true)));
         QCOMPARE(dialog->property("selectionCount").toInt(), 5);
         QVERIFY(QMetaObject::invokeMethod(dialog.get(), "toggleGroup", Q_ARG(QVariant, QStringLiteral("Steam · natif"))));
@@ -250,6 +266,18 @@ QtObject {
         QVERIFY(button->property("enabledLook").toBool());
         widgets.insert("captureStatus", QVariantMap{{"state", "offline"}});
         QVERIFY(!button->property("enabledLook").toBool());
+        // IPC messages remain in the daemon's language; translate fixed UI text locally.
+        const QString message = QStringLiteral("Ready. Start a supported game; capture starts automatically.");
+        widgets.insert("captureStatus", QVariantMap{{"installed", true}, {"state", "waiting"}, {"message", message}});
+        auto *status = page->findChild<QObject *>("gameCaptureStatus");
+        QVERIFY(status);
+        bosun::LanguageSettings languages({});
+        connect(&languages, &bosun::LanguageSettings::changed, &engine, &QQmlEngine::retranslate);
+        languages.setPreference("fr");
+        QCOMPARE(status->property("text").toString(), QStringLiteral("Prêt. Lancez un jeu pris en charge ; la capture démarre automatiquement."));
+        languages.setPreference("en");
+        QCOMPARE(status->property("text").toString(), message);
+        QCOMPARE(widgets.value("captureStatus").toMap().value("message").toString(), message);
     }
     void gameTabAppliesItsOwnFields() {
         const QTemporaryDir dir;
@@ -1033,13 +1061,79 @@ QtObject {
         QVERIFY(backend.subPagesOf("no-such-page").isEmpty());
     }
 
+    void selectedTabKeepsItsTitleVisibleWithoutMovingLanguagePicker()
+    {
+        const QTemporaryDir folder;
+        const auto file = folder.filePath("pages.json");
+        QJsonArray themes;
+        QJsonObject pages;
+        for (int i = 0; i < 8; ++i) {
+            const auto page = QStringLiteral("page%1").arg(i);
+            themes.append(QJsonObject{{"name", QString::number(i) + QString(22, QLatin1Char('W'))},
+                                      {"page", page}, {"color", "#80e5d1"}});
+            pages.insert(page, QJsonObject{{"keys", QJsonArray{}}});
+        }
+        QVERIFY(writeFile(file, QJsonDocument(QJsonObject{{"version", 1}, {"home", "page0"},
+                                                         {"themes", themes}, {"pages", pages}}).toJson()));
+        const bosun::BosunBackend backend(file);
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = folder.filePath("own"), .settingsFile = folder.filePath("galleond.conf")});
+        bosun::LanguageSettings languages({});
+        languages.setPreference("de");
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.setInitialProperties({{"backend", QVariant::fromValue(&backend)}, {"daemon", QVariant::fromValue(&daemon)},
+                                     {"library", QVariant::fromValue(&library)}, {"languages", QVariant::fromValue(&languages)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+        QVERIFY(window);
+        window->setWidth(1000);
+        auto *picker = window->findChild<QQuickItem *>("languageMenu");
+        auto *viewport = window->findChild<QQuickItem *>("tabViewport");
+        auto *bar = window->findChild<QQuickItem *>("tabBar");
+        QVERIFY(picker && viewport && bar);
+        QTRY_VERIFY(picker->x() > 0); // Wait for the initial window anchors.
+        const auto pickerPosition = picker->position();
+        const auto pickerSize = picker->size();
+        for (const int index : {7, 13}) {
+            window->setProperty("currentTab", index);
+            QPointer<QQuickItem> selected;
+            for (auto *item : bar->childItems())
+                if (item->property("current").toBool()) selected = item;
+            QVERIFY(selected);
+            const auto target = viewport->property("tabWidths").toList().at(index).toDouble();
+            const auto initialWidth = selected->width();
+            QTRY_VERIFY(selected && selected->property("resizing").toBool());
+            QTest::qWait(200);
+            QVERIFY(selected && selected->width() > initialWidth && selected->width() < target);
+            QTRY_VERIFY(selected && qAbs(selected->width() - target) < 0.5);
+            QFont font = QGuiApplication::font();
+            font.setPixelSize(14);
+            const auto title = selected->property("modelData").toMap().value("title").toString();
+            QTRY_VERIFY(selected && selected->width() >= QFontMetricsF(font).horizontalAdvance(title) + 8);
+            QTRY_VERIFY(selected && selected->mapToItem(viewport, QPointF()).x() >= -1);
+            QTRY_VERIFY(selected && selected->mapToItem(viewport, QPointF()).x() + selected->width() <= viewport->width() + 1);
+            QCOMPARE(picker->position(), pickerPosition);
+            QCOMPARE(picker->size(), pickerSize);
+            QVERIFY(viewport->x() + viewport->width() <= picker->x());
+        }
+    }
+
     void theWindowHasATabPerThemeAndTheFixedOnes()
     {
         const QTemporaryDir dir;
         const QString file = dir.filePath("pages.json");
         QVERIFY(writeFile(file, twoThemes()));
-        const bosun::BosunBackend backend(file);
+        bosun::BosunBackend backend(file);
+        bosun::LanguageSettings languages({});
+        languages.setPreference("en");
         QQmlApplicationEngine engine;
+        connect(&languages, &bosun::LanguageSettings::changed, &engine, &QQmlApplicationEngine::retranslate);
+        connect(&languages, &bosun::LanguageSettings::changed, &backend, [&backend] { Q_EMIT backend.changed(); });
         engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
         const bosun::DaemonStatus daemon("/nonexistent/systemctl");
         const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
@@ -1047,7 +1141,8 @@ QtObject {
         engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
         engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
         engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
-                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)},
+                                     {QStringLiteral("languages"), QVariant::fromValue(&languages)}});
         engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
         QVERIFY(!engine.rootObjects().isEmpty());
         QObject *window = engine.rootObjects().constFirst();
@@ -1071,6 +1166,28 @@ QtObject {
         QVERIFY(window->property("selected").toMap().isEmpty()); // nothing chosen yet
         window->setProperty("selectedKey", 0);
         QCOMPARE(window->property("selected").toMap().value("label").toString(), QStringLiteral("Play"));
+        // Unrelated backend notifications must not discard an unfinished shortcut.
+        auto *editor = window->findChild<QObject *>("keyEditor");
+        QVERIFY(editor);
+        QVERIFY(QMetaObject::invokeMethod(editor, "change", Q_ARG(QVariant, QVariant("label")),
+                                        Q_ARG(QVariant, QVariant("Unfinished shortcut"))));
+        backend.reload();
+        QVERIFY(QMetaObject::invokeMethod(&backend, "changed"));
+        QCoreApplication::processEvents();
+        QCOMPARE(editor->property("spec").toMap().value("label").toString(), QStringLiteral("Unfinished shortcut"));
+        QCOMPARE(window->property("selectedKey").toInt(), 0);
+        auto *languageMenu = window->findChild<QObject *>("languageMenu");
+        QVERIFY(languageMenu);
+        languageMenu->setProperty("expanded", true);
+        QVERIFY(QMetaObject::invokeMethod(languageMenu, "choose", Q_ARG(QVariant, QStringLiteral("fr"))));
+        QCOMPARE(languageMenu->property("expanded").toBool(), false);
+        QCOMPARE(window->property("tabs").toList().at(3).toMap().value("title").toString(), QStringLiteral("Clavier"));
+        QCOMPARE(window->property("tabs").toList().first().toMap().value("title").toString(), QStringLiteral("Control"));
+        QCOMPARE(editor->property("spec").toMap().value("label").toString(), QStringLiteral("Unfinished shortcut"));
+        QCOMPARE(backend.mediaCommands().first().toMap().value("label").toString(), QStringLiteral("Lecture / pause"));
+        languages.setPreference("en");
+        window->setProperty("selectedKey", 1);
+        QVERIFY(editor->property("spec").toMap().value("label").toString() != QStringLiteral("Unfinished shortcut"));
         // Another tab forgets the selection; a fixed tab has no keys.
         window->setProperty("currentTab", 1);
         QCOMPARE(window->property("selectedKey").toInt(), -1);

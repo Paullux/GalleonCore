@@ -1032,7 +1032,7 @@ class Setup:
         for wanted in selected[:MAX_ROWS]:
             row = current.get(wanted.get('id'))
             if row is None:
-                results.append(dict(id=wanted.get('id'), label=wanted.get('label', '')[:240],
+                results.append(dict(id=wanted.get('id'), label=wanted.get('label', '')[:240], kind=wanted.get('kind', ''),
                                     status='error', detail='Élément disparu : actualisez la liste'))
             else:
                 files.setdefault(row['path'], []).append((row, wanted))
@@ -1043,7 +1043,7 @@ class Setup:
                 original = read(path, missing=True)
                 updated = original
                 for row, wanted in entries:
-                    result = dict(id=row['id'], label=row['label'], status='error', detail='')
+                    result = dict(id=row['id'], label=row['label'], kind=row['kind'], status='error', detail='')
                     file_results.append(result)
                     try:
                         if not row['enabled']:
@@ -1077,7 +1077,7 @@ class Setup:
                         result.update(status='changed', detail='Configuré', backup=token)
             except (OSError, ValueError, TypeError, KeyError, SetupError) as error:
                 if not file_results:
-                    file_results = [dict(id=row['id'], label=row['label'], status='error', detail=str(error))
+                    file_results = [dict(id=row['id'], label=row['label'], kind=row['kind'], status='error', detail=str(error))
                                     for row, _ in entries]
                 for result in changed:
                     result.update(status='error', detail=str(error))
