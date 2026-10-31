@@ -2,6 +2,31 @@
 
 Notes de conception du projet (en français). Le README public est en anglais.
 
+## Langues de Bosun — 31 octobre 2026
+
+`bosun::LanguageSettings` gère le choix système/en/fr/de/es et sa persistance
+locale, séparément des profils. Un adaptateur `QTranslator` lit des catalogues
+JSON intégrés à `bosun_core` ; aucun outil Linguist ni paquet de langue séparé
+n’est requis à la compilation ou à l’installation. Le choix ne concerne que le
+processus Bosun, pas la langue du démon ni les libellés personnels du module.
+`main.cpp` relie le changement à la retraduction QML et au rafraîchissement du
+menu de notification et des propriétés de présentation. Les messages conservés
+par le panneau Updates restent sous forme de texte source jusqu’à leur affichage.
+Aucune dépendance du démon vers Bosun n’est ajoutée. Les comptes rendus du helper
+FPS conservent leur type d’élément pour traduire les suffixes d’affichage sans
+modifier les noms ni les identifiants utilisés pour appliquer les réglages.
+La barre d’onglets mesure les titres avec `FontMetrics` et délègue la répartition
+pure des largeurs à `bosun/qml/TabWidths.js` : titre actif entier, diminution
+égale des autres jusqu’au minimum, puis défilement. Une `Behavior on width`
+QML anime les largeurs pendant une seconde (`InOutCubic`) ; le suivi de la
+sélection utilise la géométrie réellement affichée à chaque étape. Le modèle
+d’onglets ne dépend plus de la couleur du dernier thème, afin de ne pas recréer
+les délégués et interrompre la transition. Les captures restent statiques.
+Le sélecteur de langue reste
+séparé de cette géométrie. Le calcul et le maintien en vue de la sélection sont
+testés, y compris avec huit thèmes longs et les titres allemands.
+Détails de maintenance et limites : [TRANSLATIONS.md](TRANSLATIONS.md).
+
 ## Mise à jour technique — 27 octobre 2026
 
 La [PR #61](https://github.com/Paullux/GalleonCore/pull/61), issue des recherches d'[Aaryush1 dans l'issue #56](https://github.com/Paullux/GalleonCore/issues/56), documente **un flux de couleurs non persistantes par touche** sur le clavier Galleon 100 SD (**firmware de la partie clavier 2.3.88, Windows 11, une seule unité testée**). Cela remplace l'ancienne incertitude sur l'existence de ce flux, **mais GalleonCore ne fournit toujours pas de pilote RGB clavier natif**. Cette partie clavier est distincte du firmware du module Stream Deck, notamment le problème Windows observé en version **3.06.005**.

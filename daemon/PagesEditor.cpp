@@ -8,6 +8,7 @@
 #include "DesktopEntries.h"
 #include "PagesConfig.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -36,7 +37,7 @@ bool load(const QString &file, QJsonObject &root, bool &original, EditResult &er
     if (original) {
         QFile in(file);
         if (!in.open(QIODevice::ReadOnly)) {
-            error = failure(QStringLiteral("cannot read %1: %2").arg(file, in.errorString()));
+            error = failure(QCoreApplication::translate("PagesEditor", "cannot read %1: %2").arg(file, in.errorString()));
             return false;
         }
         bytes = in.read(MaxPagesFileBytes + 1);
@@ -58,12 +59,12 @@ bool load(const QString &file, QJsonObject &root, bool &original, EditResult &er
 bool pageKeys(QJsonObject &root, const QString &page, int key, QJsonArray &keys, EditResult &error)
 {
     if (key < 0 || key >= galleon::protocol::KeyCount) {
-        error = failure(QStringLiteral("key must be from 0 to %1").arg(galleon::protocol::KeyCount - 1));
+        error = failure(QCoreApplication::translate("PagesEditor", "key must be from 0 to %1").arg(galleon::protocol::KeyCount - 1));
         return false;
     }
     const QJsonObject pages = root.value(QStringLiteral("pages")).toObject();
     if (!pages.contains(page)) {
-        error = failure(QStringLiteral("no page named '%1'").arg(page));
+        error = failure(QCoreApplication::translate("PagesEditor", "no page named '%1'").arg(page));
         return false;
     }
     keys = pages.value(page).toObject().value(QStringLiteral("keys")).toArray();
@@ -169,7 +170,7 @@ bool validIndex(const QJsonArray &entries, int index, EditResult &error)
 {
     if (index >= 0 && index < entries.size())
         return true;
-    error = failure(QStringLiteral("there is no video number %1").arg(index));
+    error = failure(QCoreApplication::translate("PagesEditor", "there is no video number %1").arg(index));
     return false;
 }
 
@@ -211,11 +212,11 @@ EditResult write(const QString &file, const QJsonObject &root, bool original)
     }
     QSaveFile out(file);
     if (!out.open(QIODevice::WriteOnly))
-        return failure(QStringLiteral("cannot write %1: %2").arg(file, out.errorString()));
+        return failure(QCoreApplication::translate("PagesEditor", "cannot write %1: %2").arg(file, out.errorString()));
     out.write(bytes);
     out.setPermissions(permissions & ~QFile::WriteOther);
     if (!out.commit())
-        return failure(QStringLiteral("cannot write %1: %2").arg(file, out.errorString()));
+        return failure(QCoreApplication::translate("PagesEditor", "cannot write %1: %2").arg(file, out.errorString()));
     return {.ok=true, .errors={}};
 }
 
@@ -269,7 +270,7 @@ bool validThemeIndex(const QJsonArray &themes, int index, EditResult &error)
 {
     if (index >= 0 && index < themes.size())
         return true;
-    error = failure(QStringLiteral("there is no theme number %1").arg(index));
+    error = failure(QCoreApplication::translate("PagesEditor", "there is no theme number %1").arg(index));
     return false;
 }
 
@@ -285,9 +286,9 @@ EditResult PagesEditor::addSubPage(const QString &file, const QString &parent, c
         return error;
     QJsonObject pages = root.value(QStringLiteral("pages")).toObject();
     if (!pages.contains(parent))
-        return failure(QStringLiteral("no page named '%1'").arg(parent));
+        return failure(QCoreApplication::translate("PagesEditor", "no page named '%1'").arg(parent));
     if (pages.contains(name))
-        return failure(QStringLiteral("there is already a page named '%1'").arg(name));
+        return failure(QCoreApplication::translate("PagesEditor", "there is already a page named '%1'").arg(name));
     QJsonArray keys = pages.value(parent).toObject().value(QStringLiteral("keys")).toArray();
     // The last free key: the one that a "More" key usually takes.
     QList<bool> used(galleon::protocol::KeyCount, false);
@@ -300,7 +301,7 @@ EditResult PagesEditor::addSubPage(const QString &file, const QString &parent, c
     for (int index = galleon::protocol::KeyCount - 1; index >= 0 && free < 0; --index)
         free = used.at(index) ? -1 : index;
     if (free < 0)
-        return failure(QStringLiteral("every key of this page is used: empty one first"));
+        return failure(QCoreApplication::translate("PagesEditor", "every key of this page is used: empty one first"));
     keys.append(QJsonObject{{QStringLiteral("key"), free},
                             {QStringLiteral("label"), moreLabel},
                             {QStringLiteral("action"), QJsonObject{{QStringLiteral("type"), QStringLiteral("page")}, {QStringLiteral("page"), name}}}});
@@ -322,7 +323,7 @@ EditResult PagesEditor::addTheme(const QString &file, const QString &name, const
         return error;
     QJsonObject pages = root.value(QStringLiteral("pages")).toObject();
     if (pages.contains(page))
-        return failure(QStringLiteral("there is already a page named '%1'").arg(page));
+        return failure(QCoreApplication::translate("PagesEditor", "there is already a page named '%1'").arg(page));
     pages.insert(page, QJsonObject{{QStringLiteral("keys"), QJsonArray()}});
     root.insert(QStringLiteral("pages"), pages);
     QJsonArray themes = root.value(QStringLiteral("themes")).toArray();
@@ -360,10 +361,10 @@ EditResult PagesEditor::removeTheme(const QString &file, int index)
     if (!validThemeIndex(themes, index, error))
         return error;
     if (themes.size() <= 1)
-        return failure(QStringLiteral("the last theme cannot be removed"));
+        return failure(QCoreApplication::translate("PagesEditor", "the last theme cannot be removed"));
     const QString page = themes.at(index).toObject().value(QStringLiteral("page")).toString();
     if (page == root.value(QStringLiteral("home")).toString())
-        return failure(QStringLiteral("this theme opens the home page, where the module starts: it cannot be removed"));
+        return failure(QCoreApplication::translate("PagesEditor", "this theme opens the home page, where the module starts: it cannot be removed"));
     themes.removeAt(index);
     root.insert(QStringLiteral("themes"), themes);
     // The page goes with its theme, unless another theme or a key still leads to it.
@@ -387,7 +388,7 @@ EditResult PagesEditor::moveTheme(const QString &file, int index, int delta)
         return error;
     const int target = index + delta;
     if (target < 0 || target >= themes.size())
-        return failure(QStringLiteral("there is no place to move it to"));
+        return failure(QCoreApplication::translate("PagesEditor", "there is no place to move it to"));
     const QJsonValue moving = themes.at(index);
     themes.removeAt(index);
     themes.insert(target, moving);
@@ -398,7 +399,7 @@ EditResult PagesEditor::moveTheme(const QString &file, int index, int delta)
 EditResult PagesEditor::setScreensaverIdleMinutes(const QString &file, int minutes)
 {
     if (minutes < 1 || minutes > 720)
-        return failure(QStringLiteral("the screensaver starts after 1 to 720 minutes"));
+        return failure(QCoreApplication::translate("PagesEditor", "the screensaver starts after 1 to 720 minutes"));
     return editScreensaver(file, [minutes](QJsonObject &saver) {
         saver.insert(QStringLiteral("idle_minutes"), minutes);
         return EditResult{.ok = true, .errors = {}};
@@ -408,7 +409,7 @@ EditResult PagesEditor::setScreensaverIdleMinutes(const QString &file, int minut
 EditResult PagesEditor::setScreensaverFps(const QString &file, int fps)
 {
     if (fps < 1 || fps > 20)
-        return failure(QStringLiteral("the module shows 1 to 20 images per second"));
+        return failure(QCoreApplication::translate("PagesEditor", "the module shows 1 to 20 images per second"));
     return editScreensaver(file, [fps](QJsonObject &saver) {
         saver.insert(QStringLiteral("fps"), fps);
         return EditResult{.ok = true, .errors = {}};
@@ -444,15 +445,15 @@ EditResult PagesEditor::setScreensaverVideoTitle(const QString &file, int index,
 EditResult PagesEditor::addScreensaverVideo(const QString &file, const QString &video, const QString &title)
 {
     if (video.trimmed().isEmpty())
-        return failure(QStringLiteral("no video file was given"));
+        return failure(QCoreApplication::translate("PagesEditor", "no video file was given"));
     return editScreensaver(file, [&](QJsonObject &saver) {
         QJsonArray entries = videoEntries(saver);
         if (entries.size() >= MaxScreensaverVideos)
-            return failure(QStringLiteral("the screensaver can show %1 videos at most: remove one first").arg(MaxScreensaverVideos));
+            return failure(QCoreApplication::translate("PagesEditor", "the screensaver can show %1 videos at most: remove one first").arg(MaxScreensaverVideos));
         const QString place = placeOf(video, file);
         for (const auto &entry : std::as_const(entries)) {
             if (placeOf(entry.toObject().value(QStringLiteral("file")).toString(), file) == place)
-                return failure(QStringLiteral("this video is already in the list"));
+                return failure(QCoreApplication::translate("PagesEditor", "this video is already in the list"));
         }
         QJsonObject item{{QStringLiteral("file"), video}};
         if (!title.trimmed().isEmpty())
@@ -479,10 +480,10 @@ EditResult PagesEditor::removeScreensaverVideo(const QString &file, int index)
 EditResult PagesEditor::assignApp(const QString &file, const QString &page, int key, const QString &desktop)
 {
     if (!DesktopEntries::isValidReference(desktop))
-        return failure(QStringLiteral("'%1' is not a desktop file name (such as firefox.desktop)").arg(desktop.left(80)));
+        return failure(QCoreApplication::translate("PagesEditor", "'%1' is not a desktop file name (such as firefox.desktop)").arg(desktop.left(80)));
     // A typo must not be saved: the application has to exist now.
     if (!DesktopEntries::lookup(desktop).isValid())
-        return failure(QStringLiteral("no application named '%1'").arg(desktop));
+        return failure(QCoreApplication::translate("PagesEditor", "no application named '%1'").arg(desktop));
 
     QJsonObject root;
     bool original = false;
@@ -505,12 +506,12 @@ EditResult PagesEditor::setKey(const QString &file, const QString &page, int key
     static const QStringList types{QStringLiteral("app"), QStringLiteral("media"), QStringLiteral("page"), QStringLiteral("back"),
                                    QStringLiteral("key"), QStringLiteral("steam")};
     if (!types.contains(spec.type))
-        return failure(QStringLiteral("a key does one of: %1").arg(types.join(QStringLiteral(", "))));
+        return failure(QCoreApplication::translate("PagesEditor", "a key does one of: %1").arg(types.join(QStringLiteral(", "))));
     if (spec.type == QLatin1String("app")) {
         if (!DesktopEntries::isValidReference(spec.desktop))
-            return failure(QStringLiteral("'%1' is not a desktop file name (such as firefox.desktop)").arg(spec.desktop.left(80)));
+            return failure(QCoreApplication::translate("PagesEditor", "'%1' is not a desktop file name (such as firefox.desktop)").arg(spec.desktop.left(80)));
         if (!DesktopEntries::lookup(spec.desktop).isValid())
-            return failure(QStringLiteral("no application named '%1'").arg(spec.desktop));
+            return failure(QCoreApplication::translate("PagesEditor", "no application named '%1'").arg(spec.desktop));
     }
     QJsonObject root;
     bool original = false;

@@ -2,6 +2,8 @@
 
 # GalleonCore
 
+Bosun includes English, French, German and Spanish. Use the globe menu to follow the system language or switch immediately; the choice is remembered. See [translation maintenance](docs/TRANSLATIONS.md).
+
 [![Website](https://img.shields.io/badge/website-GalleonCore-46505E)](https://galleoncore.xyz/)
 [![CI](https://github.com/Paullux/GalleonCore/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Paullux/GalleonCore/actions/workflows/ci.yml)
 [![Linux packages](https://github.com/Paullux/GalleonCore/actions/workflows/linux-packages.yml/badge.svg?branch=main)](https://github.com/Paullux/GalleonCore/actions/workflows/linux-packages.yml)
@@ -11,7 +13,7 @@
 [![Ubuntu PPA](https://img.shields.io/badge/Ubuntu-PPA-E95420?logo=ubuntu&logoColor=white)](https://launchpad.net/~paulwoisard/+archive/ubuntu/galleoncore)
 [![Fedora COPR](https://img.shields.io/badge/Fedora-COPR-51A2DA?logo=fedora&logoColor=white)](https://copr.fedorainfracloud.org/coprs/paullux/GalleonCore/)
 [![Arch AUR](https://img.shields.io/badge/Arch-AUR-1793D1?logo=archlinux&logoColor=white)](https://aur.archlinux.org/packages/galleoncore)
-[![Linux AppImage](https://img.shields.io/badge/Linux-AppImage-8E6BBF?logo=linux&logoColor=white)](https://github.com/Paullux/GalleonCore/releases/download/v0.2.3/GalleonCore-0.2.3-x86_64.AppImage)
+[![Linux AppImage](https://img.shields.io/badge/Linux-AppImage-8E6BBF?logo=linux&logoColor=white)](https://github.com/Paullux/GalleonCore/releases/download/v0.3.0/GalleonCore-0.3.0-x86_64.AppImage)
 [![Licenses](https://img.shields.io/badge/license-GPL%20%2F%20LGPL%20%2F%20CC--BY--SA-blue)](LICENSE.md)
 [![Security policy](https://img.shields.io/badge/security-report%20privately-46505E)](SECURITY.md)
 
@@ -29,7 +31,7 @@ The Galleon 100 SD is a full-size mechanical keyboard whose numpad is replaced b
 
 > GalleonCore is not affiliated with Corsair or Elgato.
 
-> **0.2.3:** persistent Gaming artwork and idle wallpaper reuse, launcher FPS setup, firmware detection and system update notifications. [Release notes](docs/RELEASE_0.2.3.md).
+> **0.3.0:** Bosun in English, French, German and Spanish, instant language switching, animated adaptive tabs and preserved shortcut drafts. [Release notes](docs/RELEASE_0.3.0.md).
 
 ## Goals
 

@@ -178,7 +178,7 @@ These explicit commands install the access rules and user service:
 ```sh
 sudo ./install-hardware-rules.sh
 # Keep the AppImage at a stable path; run as your desktop user:
-./install-user-service.sh /absolute/path/GalleonCore-0.2.3-x86_64.AppImage
+./install-user-service.sh /absolute/path/GalleonCore-0.3.0-x86_64.AppImage
 systemctl --user enable --now galleond.service
 ```
 

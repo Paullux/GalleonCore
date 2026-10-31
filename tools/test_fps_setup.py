@@ -45,6 +45,13 @@ class SetupTests(unittest.TestCase):
         with patch('fps_setup.subprocess.run', side_effect=FileNotFoundError), patch.object(self.setup, 'running', return_value=False):
             return self.setup.apply(rows)
 
+    def test_reports_keep_kind_for_translated_labels(self):
+        common = next(row for row in self.scan() if row['kind'] == 'common')
+        result = self.apply([common])[0]
+        self.assertEqual(result['kind'], 'common')
+        self.assertEqual(result['label'], common['label'])
+        self.assertEqual(result['status'], 'changed')
+
     def test_uninstalled_launchers_with_old_configs_are_hidden(self):
         self.put('.PlayOnLinux/shortcuts/OldGame', 'old shortcut')
         self.put('.local/share/bottles/bottles/old/bottle.yml', 'Name: Old\n')

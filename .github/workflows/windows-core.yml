@@ -137,7 +137,15 @@ jobs:
           $env:QT_QUICK_BACKEND = "software"
           $env:QT_QPA_FONTDIR = "$env:SystemRoot/Fonts"
           $setup = (Get-ChildItem setup/*-Setup.exe | Select-Object -First 1).FullName
+          ./tools/packaging/windows/test-setup-readiness.ps1
           ./tools/packaging/windows/test-setup.ps1 -Setup $setup
+      - name: Preserve installed application startup logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-setup-logs
+          path: setup-app-*.log
+          if-no-files-found: ignore
       - name: Archive desktop for interactive testing
         shell: pwsh
         run: |

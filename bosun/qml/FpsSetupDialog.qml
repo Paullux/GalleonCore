@@ -18,6 +18,17 @@ Window {
     minimumWidth: 560; minimumHeight: 420
     color: "#171d26"
     onClosing: close => { if (setup.busy) close.accepted = false }
+    function setupText(value) { return qsTranslate("FpsSetup", value || "") }
+    // Only helper-generated suffixes are translated; game and bottle names stay intact.
+    function rowLabel(row) {
+        if (row.kind === "steam" || row.kind === "steam-shortcut") {
+            const match = (row.kind === "steam-shortcut" ? /^(.*) · hors boutique · compte ([0-9]+)$/ : /^(.*) · compte ([0-9]+)$/).exec(row.label)
+            if (match) return (row.kind === "steam-shortcut" ? qsTr("%1 · non-store · account %2") : qsTr("%1 · account %2")).replace(/%[12]/g, token => token === "%1" ? match[1] : match[2])
+        }
+        if ((row.kind === "bottles" || row.kind === "crossover") && row.label.endsWith(" · toute la bouteille"))
+            return qsTr("%1 · whole bottle").arg(row.label.slice(0, -" · toute la bouteille".length))
+        return row.kind === "common" || row.kind === "heroic-global" ? setupText(row.label) : row.label
+    }
     function refresh() {
         if (setup.busy) return
         scanning = true
@@ -154,7 +165,7 @@ Window {
                     readonly property var enabledRows: rows.filter(row => row.enabled)
                     readonly property int selectedCount: enabledRows.filter(row => !!dialog.selectedIds[row.id]).length
                     Choice {
-                        width: parent.width; label: group.modelData
+                        width: parent.width; label: dialog.setupText(group.modelData)
                         state: group.selectedCount === 0 ? 0 : group.selectedCount === group.enabledRows.length ? 2 : 1
                         available: !dialog.setup.busy && group.enabledRows.length > 0
                         onToggled: dialog.toggleGroup(group.modelData)
@@ -166,7 +177,7 @@ Window {
                             required property var modelData
                             x: 24; width: group.width - 24
                             Choice {
-                                width: parent.width; label: entry.modelData.label
+                                width: parent.width; label: dialog.rowLabel(entry.modelData)
                                 state: dialog.selectedIds[entry.modelData.id] ? 2 : 0
                                 available: !dialog.setup.busy && entry.modelData.enabled
                                 onToggled: dialog.toggle(entry.modelData.id, !dialog.selectedIds[entry.modelData.id])
@@ -174,7 +185,7 @@ Window {
                             Text {
             textFormat: Text.PlainText;
                                 x: 32; width: parent.width - 38
-                                visible: text.length > 0; text: entry.modelData.note
+                                visible: text.length > 0; text: dialog.setupText(entry.modelData.note)
                                 wrapMode: Text.Wrap; color: entry.modelData.enabled ? "#aebac6" : "#ffb74d"; font.pixelSize: 13
                             }
                         }
@@ -194,10 +205,10 @@ Window {
                     required property var modelData
                     width: report.width; spacing: 4
                     Text {
-            textFormat: Text.PlainText; width: parent.width; text: result.modelData.label; color: "white"; font.bold: true; wrapMode: Text.Wrap }
+            textFormat: Text.PlainText; width: parent.width; text: dialog.rowLabel(result.modelData); color: "white"; font.bold: true; wrapMode: Text.Wrap }
                     Text {
             textFormat: Text.PlainText;
-                        width: parent.width; wrapMode: Text.Wrap; text: result.modelData.detail
+                        width: parent.width; wrapMode: Text.Wrap; text: dialog.setupText(result.modelData.detail)
                         color: result.modelData.status === "error" ? "#ffb74d" : "#80e5d1"
                     }
                     ActionButton {
@@ -213,7 +224,7 @@ Window {
         id: footer
         x: 20; y: parent.height - height - 16; width: parent.width - 40; spacing: 8
         Text {
-            textFormat: Text.PlainText; width: parent.width; text: dialog.setup.error; visible: text.length > 0; wrapMode: Text.Wrap; color: "#ffb74d" }
+            textFormat: Text.PlainText; width: parent.width; text: dialog.setupText(dialog.setup.error); visible: text.length > 0; wrapMode: Text.Wrap; color: "#ffb74d" }
         Text {
             textFormat: Text.PlainText; width: parent.width; text: dialog.setup.busy ? qsTr("Opération en cours…") : qsTr("%1 élément(s) sélectionné(s)").arg(dialog.selectionCount); color: "#c9ced6" }
         Row {

@@ -20,6 +20,47 @@ $settingsKey = 'HKCU:\Software\galleoncore\galleond'
 New-Item -Path $settingsKey -Force | Out-Null
 New-ItemProperty -Path $settingsKey -Name SetupPreservationTest -Value 'Keep settings' -PropertyType String -Force | Out-Null
 $processes = @()
+$launchNumber = 0
+$env:QT_FORCE_STDERR_LOGGING = '1'
+
+function Start-LoggedApplication([string]$Name, [string]$Arguments) {
+    $script:launchNumber++
+    $prefix = "setup-app-$($script:launchNumber)-$Name"
+    $child = Start-Process (Join-Path $root "bin/$Name.exe") -ArgumentList $Arguments -PassThru `
+        -RedirectStandardOutput "$prefix-stdout.log" -RedirectStandardError "$prefix-stderr.log"
+    $null = $child.Handle
+    return $child
+}
+# A wall-clock budget accommodates slow first-run initialization without accepting
+# a process that has exited or replacing endpoint readiness with a fixed sleep.
+function Wait-ApplicationsReady([int]$TimeoutSeconds = 60, [scriptblock]$Probe = {
+    & $windowsPowerShell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $helper -InstallDir $root -Mode Probe
+    return ($LASTEXITCODE -eq 0)
+}) {
+    $clock = [System.Diagnostics.Stopwatch]::StartNew()
+    do {
+        foreach ($child in $script:processes) {
+            $child.Refresh()
+            if ($child.HasExited) { throw "Setup application $($child.Id) exited before readiness (exit: $($child.ExitCode))." }
+        }
+        if (& $Probe) { return $true }
+        Start-Sleep -Milliseconds 300
+    } while ($clock.Elapsed.TotalSeconds -lt $TimeoutSeconds)
+    return $false
+}
+function Write-StartupDiagnostics {
+    foreach ($child in $script:processes) {
+        try {
+            $child.Refresh()
+            if ($child.HasExited) { Write-Host "Setup child $($child.Id) exited: $($child.ExitCode)" }
+            else { Write-Host "Setup child $($child.Id) is still running." }
+        } catch { Write-Host "Could not inspect setup child: $_" }
+    }
+    foreach ($log in @(Get-ChildItem -Path 'setup-app-*.log' -ErrorAction SilentlyContinue)) {
+        Write-Host "Application log: $($log.Name)"
+        Get-Content -LiteralPath $log.FullName -Tail 200 -ErrorAction SilentlyContinue
+    }
+}
 
 function Run-Installer([string]$Program, [string]$Arguments) {
     $child = Start-Process -FilePath $Program -ArgumentList $Arguments -PassThru
@@ -30,15 +71,10 @@ function Run-Installer([string]$Program, [string]$Arguments) {
     if ($child.ExitCode -ne 0) { throw "Installer failed: $($child.ExitCode)" }
 }
 function Start-Applications {
-    $daemon = Start-Process (Join-Path $root 'bin/galleond.exe') -ArgumentList "--pages `"$pages`"" -PassThru
-    $bosun = Start-Process (Join-Path $root 'bin/galleon-bosun.exe') -ArgumentList "--minimized --pages `"$pages`"" -PassThru
+    $daemon = Start-LoggedApplication 'galleond' "--pages `"$pages`""
+    $bosun = Start-LoggedApplication 'galleon-bosun' "--minimized --pages `"$pages`""
     $script:processes = @($daemon, $bosun)
-    $ready = $false
-    for ($attempt = 0; $attempt -lt 20; $attempt++) {
-        & $windowsPowerShell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $helper -InstallDir $root -Mode Probe
-        if ($LASTEXITCODE -eq 0) { $ready = $true; break }
-        Start-Sleep -Milliseconds 300
-    }
+    $ready = Wait-ApplicationsReady
     if (-not $ready) { throw 'Installed Bosun and daemon did not expose their private endpoints.' }
 }
 function Assert-Closed {
@@ -57,14 +93,9 @@ try {
     if ((Get-ItemPropertyValue $runKey GalleonCore) -ne $daemonCommand) { throw 'Daemon sign-in command missing or incorrectly quoted.' }
     if ((Get-ItemPropertyValue $runKey GalleonBosun) -ne $bosunCommand) { throw 'Bosun tray sign-in command missing or incorrectly quoted.' }
     # Launch Bosun alone, as from the Start menu: it must start its missing daemon.
-    $bosun = Start-Process (Join-Path $root 'bin/galleon-bosun.exe') -ArgumentList '--minimized' -PassThru
+    $bosun = Start-LoggedApplication 'galleon-bosun' '--minimized'
     $script:processes = @($bosun)
-    $ready = $false
-    for ($attempt = 0; $attempt -lt 40; $attempt++) {
-        & $windowsPowerShell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $helper -InstallDir $root -Mode Probe
-        if ($LASTEXITCODE -eq 0) { $ready = $true; break }
-        Start-Sleep -Milliseconds 300
-    }
+    $ready = Wait-ApplicationsReady
     $daemon = @(Get-Process galleond -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq (Join-Path $root 'bin/galleond.exe') })
     $script:processes += $daemon
     if (-not $ready -or $daemon.Count -ne 1) { throw 'Bosun did not automatically start one installed daemon.' }
@@ -92,6 +123,9 @@ try {
     }
     if (-not (Test-Path $sentinel)) { throw 'Uninstall removed personal data.' }
     if ((Get-ItemPropertyValue $settingsKey SetupPreservationTest) -ne 'Keep settings') { throw 'Uninstall removed settings.' }
+} catch {
+    Write-StartupDiagnostics
+    throw
 } finally {
     # Only CI-owned processes created by this script may be terminated on failure.
     foreach ($child in $processes) { if (-not $child.HasExited) { $child.Kill() } }

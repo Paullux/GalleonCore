@@ -43,7 +43,7 @@ class BosunBackend : public QObject
     // The names of all the pages (the pages of the themes, and the sub-pages they lead to).
     Q_PROPERTY(QStringList pageNames READ pageNames NOTIFY changed)
     // What a key can do: [{id, label}] for media, the names of the keys of the keypad.
-    Q_PROPERTY(QVariantList mediaCommands READ mediaCommands CONSTANT)
+    Q_PROPERTY(QVariantList mediaCommands READ mediaCommands NOTIFY changed)
     Q_PROPERTY(QStringList keypadKeys READ keypadKeys CONSTANT)
     // Goes up at each reading, to make the window ask for the pictures again.
     Q_PROPERTY(int revision READ revision NOTIFY changed)
