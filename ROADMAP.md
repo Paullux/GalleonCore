@@ -2,6 +2,16 @@
 
 Référence pour reprendre le développement à tout moment, y compris dans une nouvelle session Claude Code. À mettre à jour après chaque fonctionnalité terminée **et** testée (voir « Règle de mise à jour » en bas). Les notes de conception détaillées (protocole, RGB, OpenRGB, Windows) sont dans [docs/ROADMAP.md](docs/ROADMAP.md) ; les règles de code dans [AGENTS.md](AGENTS.md).
 
+### Site et README en quatre langues — 3 novembre 2026
+
+Ajout de l’allemand et de l’espagnol au site (accueil, confidentialité, CGU,
+bandeau de consentement, compteurs) et aux README (`README.de.md`,
+`README.es.md`). Le sélecteur de langue du site propose les quatre langues et
+choisit la langue du navigateur au premier passage. Contrôlé par script sur le
+rendu (chaque chaîne existe dans les quatre langues) ; les traductions DE/ES
+sont à relire par un locuteur natif avant publication. Aucun changement de code
+ni de protocole.
+
 ### Diagnostic du Setup Windows de la PR #80 — 31 octobre 2026
 
 La compilation, les tests Qt Windows et les aperçus du ZIP installé ont passé.

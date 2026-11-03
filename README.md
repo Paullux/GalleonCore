@@ -17,7 +17,7 @@ Bosun includes English, French, German and Spanish. Use the globe menu to follow
 [![Licenses](https://img.shields.io/badge/license-GPL%20%2F%20LGPL%20%2F%20CC--BY--SA-blue)](LICENSE.md)
 [![Security policy](https://img.shields.io/badge/security-report%20privately-46505E)](SECURITY.md)
 
-🇫🇷 [Lire en français](README.fr.md)
+🇫🇷 [Lire en français](README.fr.md) · 🇩🇪 [Auf Deutsch lesen](README.de.md) · 🇪🇸 [Leer en español](README.es.md)
 
 🌐 [Website](https://galleoncore.xyz/)
 

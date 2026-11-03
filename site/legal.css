@@ -1,8 +1,12 @@
 /* SPDX-FileCopyrightText: 2026 Paul Woisard */
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 
-:root[data-lang="en"] [lang="fr"]:not(html),
-:root[data-lang="fr"] [lang="en"]:not(html) { display: none; }
+:root[data-lang="en"] :is([lang="fr"], [lang="de"], [lang="es"]):not(html),
+:root[data-lang="fr"] :is([lang="en"], [lang="de"], [lang="es"]):not(html),
+:root[data-lang="de"] :is([lang="en"], [lang="fr"], [lang="es"]):not(html),
+:root[data-lang="es"] :is([lang="en"], [lang="fr"], [lang="de"]):not(html) { display: none; }
+
+select.lang-toggle { font: inherit; color: inherit; background: transparent; border: 1px solid #aeb5bc; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
 
 .legal-links { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-block: 12px; }
 .legal-links button { border: 0; padding: 0; background: none; color: inherit; font: inherit; text-decoration: underline; text-underline-offset: .18em; cursor: pointer; }

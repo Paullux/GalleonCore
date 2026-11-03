@@ -64,8 +64,8 @@ and publication setup are in [tools/packaging/README.md](tools/packaging/README.
 ## Pull requests
 
 Create a focused branch, make a clear commit and open a PR against `main` with the
-problem, resulting behavior and validation performed. Keep `README.md` and
-`README.fr.md` synchronized when changing public documentation. Write source,
+problem, resulting behavior and validation performed. Keep `README.md` and its
+translations (`README.fr.md`, `README.de.md`, `README.es.md`) synchronized when changing public documentation. Write source,
 comments and other public documents in English. Update the roadmap when a feature
 is completed, while keeping unconfirmed hardware behavior explicitly unconfirmed.
 
