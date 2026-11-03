@@ -17,7 +17,7 @@ Bosun inclut le français, l’anglais, l’allemand et l’espagnol. Le menu gl
 [![Licenses](https://img.shields.io/badge/license-GPL%20%2F%20LGPL%20%2F%20CC--BY--SA-blue)](LICENSE.md)
 [![Security policy](https://img.shields.io/badge/security-report%20privately-46505E)](SECURITY.md)
 
-🇬🇧 [Read in English](README.md) · *La version anglaise fait référence en cas de différence.*
+🇬🇧 [Read in English](README.md) · 🇩🇪 [Auf Deutsch lesen](README.de.md) · 🇪🇸 [Leer en español](README.es.md) · *La version anglaise fait référence en cas de différence.*
 
 🌐 [Site web](https://galleoncore.xyz/)
 
