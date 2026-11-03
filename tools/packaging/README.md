@@ -157,10 +157,11 @@ bash tools/packaging/appimage/build.sh build-deb/appimage
 ```
 
 The official linuxdeploy, Qt plugin and appimagetool downloads are SHA-256 pinned
-in `appimage/tools.json`. Appimagetool uses the fixed official 1.9.1 release,
-verified against GitHub’s published asset digest and the downloaded file. The
-linuxdeploy tools still use individually SHA-256-pinned upstream continuous
-assets; replacements deliberately fail verification until reviewed. Qt includes X11, Wayland and
+in `appimage/tools.json`. All three use fixed upstream release tags (appimagetool
+1.9.1, linuxdeploy `1-alpha-20251107-1`, linuxdeploy-plugin-qt `1-alpha-20250213-1`),
+never the moving `continuous` tag, which upstream republishes. Update a tool by
+choosing a newer tag and recording its SHA-256 in the same commit; a replaced
+binary deliberately fails verification until reviewed. Qt includes X11, Wayland and
 offscreen plugins, QML modules and resources. FFmpeg remains an optional host
 executable, as do `wpctl`, `gio`, `xdg-open` and systemd. Ubuntu 24.04 or later with
 a normal graphical session is the supported baseline; the image does not bundle
