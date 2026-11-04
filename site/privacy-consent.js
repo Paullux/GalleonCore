@@ -34,6 +34,23 @@
   var choice = null;
   try { choice = localStorage.getItem(key); } catch (error) {}
 
+  // Localize page titles and accessible labels as well as visible paragraphs.
+  function localizePage() {
+    var language = root.getAttribute("lang") || "en";
+    document.querySelectorAll("[data-localized]").forEach(function (element) {
+      var value = element.getAttribute("data-" + language) || element.getAttribute("data-en");
+      var target = element.getAttribute("data-localized");
+      if (!value) return;
+      if (target === "text") element.textContent = value;
+      else element.setAttribute(target, value);
+      if (target === "alt" && element.nextElementSibling &&
+          element.nextElementSibling.classList.contains("badge-fallback")) {
+        element.nextElementSibling.textContent = value;
+      }
+    });
+  }
+  document.addEventListener("galleoncore:language-change", localizePage);
+
   if (document.body.classList.contains("legal-page")) {
     var languages = ["en", "fr", "de", "es"];
     var savedLanguage = null;
@@ -46,6 +63,7 @@
       root.setAttribute("data-lang", value);
       root.setAttribute("lang", value);
       if (select) select.value = value;
+      document.dispatchEvent(new CustomEvent("galleoncore:language-change"));
     }
     setLegalLanguage(language);
     if (select) select.addEventListener("change", function () {
@@ -61,6 +79,8 @@
     fallback.textContent = image.alt;
     image.after(fallback);
   });
+
+  localizePage();
 
   function applyExternal(enabled) {
     root.dataset.externalAllowed = enabled ? "yes" : "no";
@@ -86,7 +106,7 @@
   var banner = document.createElement("aside");
   banner.className = "privacy-banner";
   banner.setAttribute("aria-label", "Privacy choices / Choix de confidentialité / Datenschutzeinstellungen / Opciones de privacidad");
-  banner.innerHTML = '<p><span lang="en">This site stores your language and privacy choice on this device. Optional fonts, status badges, live download counts and cookie-free Matomo visitor statistics contact external services only if you allow them. You can change your choice at any time. <a href="privacy.html">Privacy details</a>.</span><span lang="fr">Ce site mémorise ta langue et ton choix de confidentialité sur cet appareil. Les polices, badges, compteurs en direct et statistiques de fréquentation Matomo (sans cookies) sont activés uniquement avec ton accord. Tu peux modifier ton choix à tout moment. <a href="privacy.html">Détails sur la confidentialité</a>.</span><span lang="de">Diese Website speichert deine Sprache und deine Datenschutzauswahl auf diesem Gerät. Optionale Schriften, Statusabzeichen, Live-Download-Zähler und cookiefreie Matomo-Besucherstatistiken kontaktieren externe Dienste nur, wenn du es erlaubst. Du kannst deine Auswahl jederzeit ändern. <a href="privacy.html">Datenschutzdetails</a>.</span><span lang="es">Este sitio guarda tu idioma y tu elección de privacidad en este dispositivo. Las fuentes opcionales, las insignias de estado, los contadores de descargas en directo y las estadísticas de visitas de Matomo sin cookies solo contactan con servicios externos si lo permites. Puedes cambiar tu elección en cualquier momento. <a href="privacy.html">Detalles de privacidad</a>.</span></p><div class="privacy-actions"><button type="button" data-choice="no"><span lang="en">Reject optional content</span><span lang="fr">Refuser le contenu facultatif</span><span lang="de">Optionale Inhalte ablehnen</span><span lang="es">Rechazar el contenido opcional</span></button><button type="button" data-choice="yes"><span lang="en">Allow optional content</span><span lang="fr">Autoriser le contenu facultatif</span><span lang="de">Optionale Inhalte erlauben</span><span lang="es">Permitir el contenido opcional</span></button></div>';
+  banner.innerHTML = '<p><span lang="en">This site stores your language and privacy choice on this device. Optional fonts, status badges, live download counts and cookie-free Matomo visitor statistics contact external services only if you allow them. You can change your choice at any time. <a href="privacy.html">Privacy details</a>.</span><span lang="fr">Ce site mémorise ta langue et ton choix de confidentialité sur cet appareil. Les polices, badges, compteurs en direct et statistiques de fréquentation Matomo (sans cookies) sont activés uniquement avec ton accord. Tu peux modifier ton choix à tout moment. <a href="privacy.html">Détails sur la confidentialité</a>.</span><span lang="de">Diese Website speichert deine Sprache und deine Datenschutzeinstellungen auf diesem Gerät. Optionale Schriften, Status-Badges, Live-Download-Zähler und cookiefreie Matomo-Besucherstatistiken kontaktieren externe Dienste nur, wenn du es erlaubst. Du kannst deine Auswahl jederzeit ändern. <a href="privacy.html">Datenschutzdetails</a>.</span><span lang="es">Este sitio guarda tu idioma y tu elección de privacidad en este dispositivo. Las fuentes opcionales, las insignias de estado, los contadores de descargas en directo y las estadísticas de visitas de Matomo sin cookies solo contactan con servicios externos si lo permites. Puedes cambiar tu elección en cualquier momento. <a href="privacy.html">Detalles de privacidad</a>.</span></p><div class="privacy-actions"><button type="button" data-choice="no"><span lang="en">Reject optional content</span><span lang="fr">Refuser le contenu facultatif</span><span lang="de">Optionale Inhalte ablehnen</span><span lang="es">Rechazar el contenido opcional</span></button><button type="button" data-choice="yes"><span lang="en">Allow optional content</span><span lang="fr">Autoriser le contenu facultatif</span><span lang="de">Optionale Inhalte erlauben</span><span lang="es">Permitir el contenido opcional</span></button></div>';
   document.body.append(banner);
   banner.hidden = choice === "yes" || choice === "no";
   applyExternal(choice === "yes");

@@ -27,22 +27,22 @@ Den Entwicklungsstand des Projekts findest du in [ROADMAP.md](ROADMAP.md) (auf F
 
 Das Galleon 100 SD ist eine mechanische Tastatur in voller Größe, deren Ziffernblock durch ein Elgato-Stream-Deck-Modul ersetzt ist: 12 LCD-Tasten, ein Bildschirm und zwei Drehregler. Corsair und Elgato unterstützen das Stream-Deck-Modul nur unter Windows und macOS. GalleonCore will jeden Teil der Tastatur unter Linux nutzbar machen und in den Desktop integrieren.
 
-> **Aktive Entwicklung.** Die Tasten, der Bildschirm und die Drehregler des Stream Decks funktionieren unter Linux, Galleon Bosun dient zur Konfiguration des Moduls. Plasma-Widgets sind weiterhin geplant. Ein Windows-Desktop-Build mit Bosun-gestaltetem NSIS-Setup und portablem ZIP steht für interaktive Tests bereit ([Details](docs/WINDOWS.md)); den ausführlichen Validierungsstand zeigt die [Roadmap](ROADMAP.md).
+> **Aktive Entwicklung.** Die Tasten, der Bildschirm und die Drehregler des Stream Decks funktionieren unter Linux, Galleon Bosun dient zur Konfiguration des Moduls. Plasma-Widgets sind weiterhin geplant. Ein Windows-Desktop-Build mit NSIS-Setup im Bosun-Design und portablem ZIP steht für interaktive Tests bereit ([Details](docs/WINDOWS.md)); den ausführlichen Validierungsstand zeigt die [Roadmap](ROADMAP.md).
 
 > GalleonCore steht in keiner Verbindung zu Corsair oder Elgato.
 
-> **0.3.0:** Bosun auf Englisch, Französisch, Deutsch und Spanisch, sofortiger Sprachwechsel, animierte anpassungsfähige Tabs und erhaltene Entwürfe von Tastenkürzeln. [Versionshinweise](docs/RELEASE_0.3.0.md).
+> **0.3.0:** Bosun auf Englisch, Französisch, Deutsch und Spanisch, sofortiger Sprachwechsel, animierte Tabs mit anpassbarer Breite und erhaltene Bearbeitungsentwürfe für Tastenbelegungen. [Versionshinweise](docs/RELEASE_0.3.0.md).
 
 ## Ziele
 
 - **Stream-Deck-Modul**: auf den 12 Tasten und dem Bildschirm zeichnen, Tasten und Drehregler lesen.
 - **Gemeinsame Widgets**: dieselben QML-Widgets (Uhr, Systemmonitor, aktuell laufender Titel …) werden auf dem Tastaturbildschirm gerendert *und* als KDE-Plasma-Widgets auf dem Desktop angezeigt.
-- **RGB-Beleuchtung**: RGB pro Taste, Stimmungsleiste und Drehregler-Ringe über [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB).
+- **RGB-Beleuchtung**: RGB pro Taste, RGB-Lichtleiste und Drehregler-Ringe über [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB).
 - **OpenRGB-Plugin**: das Deck aus OpenRGB konfigurieren und Deck-Themes mit der Beleuchtung synchronisieren.
 - **Windows-Desktop-Vorschau** auf demselben Kern, mit nativen Medien-, Audio- und Tastatur-Backends; die Hardwarevalidierung steht noch aus.
 
 Startbildschirm-Widgets lassen sich im Tab **Widgets** von Bosun bearbeiten (Position, Größe und Sichtbarkeit) und mit **Anwenden** speichern. Die erste Ausbaustufe umfasst Wetter, CPU/RAM, die CPU-Temperatur unter Linux, die Erkennung unvollständiger Downloads und Spiel-FPS über die MangoHud-CSV unter Linux bzw. den PresentMon-Dienst/die API unter Windows, mit einstellbarer Textgröße; siehe [unterstützte Plattformen und aktuelle Grenzen](docs/HOME_WIDGETS.md).
-Ein automatischer Spielbildschirm zeigt jetzt lokale Spielgrafiken, FPS und CPU/GPU-Temperaturen, solange die Erfassung läuft, und hält den Bildschirmschoner der Tastatur bis zu ihrem Ende aus.
+Ein automatischer Spielbildschirm zeigt jetzt lokale Spielgrafiken, FPS und CPU/GPU-Temperaturen, solange die Erfassung läuft, und verhindert, dass der Bildschirmschoner der Tastatur während der Erfassung startet.
 
 ## Status
 
@@ -53,7 +53,7 @@ Ein automatischer Spielbildschirm zeigt jetzt lokale Spielgrafiken, FPS und CPU/
 | Daemon + D-Bus-Schnittstelle | Hintergrundauswahl (`galleond --preview`) und `org.galleoncore.Deck` (`SetWallpaper`, `ClearWallpaper`, `Wallpapers`) |
 | Tastenseiten (JSON) und Musikplayer (MPRIS) | Implementiert, Tests grün; **Tasten, Drehregler, der Bildschirm „Läuft gerade“ (echtes Cover, Titel, Interpret, Zeitleiste) und eine Anwendungstaste mit ihrem Symbol auf dem Modul bestätigt** (Hot-Reload, Doppeldruck, Video-Vorschaubilder und das Anwendungsfenster sind noch nicht zurückgemeldet) |
 | KDE-Plasma-Widgets | Grundgerüst |
-| RGB-Beleuchtung | **In Untersuchung.** Das Protokoll (Corsair „V2“/Bragi) wird noch nirgends unterstützt. Die Unterstützung soll in OpenRGB selbst einfließen. |
+| RGB-Beleuchtung | **Experimentell.** Eine nicht persistente Corsair-V2/Bragi-Sequenz für RGB pro Taste ist für eine Tastatur unter Windows 11 dokumentiert (Tastatur-Firmware 2.3.88). GalleonCore enthält noch keinen nativen Treiber für RGB pro Taste; Linux-Unterstützung und weitere Geräte- und Firmwarevarianten sind noch nicht bestätigt. |
 | OpenRGB-Plugin | Drehregler-Ringe im separaten Plugin umgesetzt; RGB der Tastatur bleibt in Untersuchung |
 | Windows | Desktop-Vorschau; native CI und interaktive Validierung werden in [WINDOWS.md](docs/WINDOWS.md) verfolgt |
 
@@ -107,7 +107,7 @@ GalleonCore und andere Apps, die das Modul steuern. Öffne in der Elgato-Stream-
 App unter Windows oder macOS **Einstellungen → Geräte → Galleon 100 SD →
 Firmware aktualisieren**. Lasse die Tastatur angeschlossen, bis das Update abgeschlossen ist.
 Notiere die neue Version, schließe Stream Deck und starte GalleonCore unter Windows
-für einen Kaltstart-Test neu. Wenn du Stream Deck nur für diese Tastatur nutzt, kannst du es
+nach einem Kaltstart von Windows erneut. Wenn du Stream Deck nur für diese Tastatur nutzt, kannst du es
 nach dem Firmware-Update deinstallieren; lasse es installiert, wenn ein anderes Gerät
 es braucht. Der Screenshot des Eigentümers zeigt
 Version `3.06.005`, die [Elgato in den Versionshinweisen zu 7.4.1 aufführt](https://edge.elgato.com/egc/sd_content/releasenotes/7.4.1.html).
@@ -271,7 +271,7 @@ Dafür musst du das JSON nie bearbeiten:
 ./build/daemon/galleond --clear-key 4
 ```
 
-**Galleon Bosun** (in Arbeit) ist das Einstellungsfenster: ein Tab pro Theme mit den 12 Tasten, so gezeichnet, wie das Modul sie darstellt, sowie Tabs für die Tastaturbeleuchtung, Hintergrundbilder und Bildschirmschoner (noch nicht gebaut). Vorerst zeigt es die Tasten nur an; das Bearbeiten folgt.
+**Galleon Bosun** ist die Einstellungsanwendung: Du kannst die 12 Tasten jedes Themes bearbeiten, Themes verwalten, Hintergrundbilder importieren und zuschneiden, Video-Bildschirmschoner einrichten sowie Startbildschirm-Widgets und Spieleinstellungen anpassen. Der Tab „Tastatur“ zeigt Firmware-Informationen und Links zu den offiziellen Werkzeugen; einen nativen Treiber für RGB pro Taste bietet er nicht. Bosun öffnet das HID-Gerät nie selbst: Den Hardwarezugriff übernimmt `galleond`.
 
 ```sh
 ./build/bosun/galleon-bosun
@@ -291,11 +291,11 @@ Eine Liste `themes` gibt Seiten einen Namen und eine Farbe. Ein Druck auf den Dr
 "dials": { "0": { "press": { "type": "theme" } } }
 ```
 
-Die Ringfarben verwenden den Feature-Report des Stream-Deck-Protokolls pro LED (`03 24 <led> <r> <g> <b>`, aus rust-elgato-streamdeck PR 63). Er wurde auf dem Modul noch nicht verifiziert. Höchstens 8 Themes; die Farbe hat die Form `#rrggbb`; die Seite eines Themes muss existieren.
+Die Ringfarben verwenden den Feature-Report des Stream-Deck-Protokolls pro LED (`03 24 <led> <r> <g> <b>`, aus rust-elgato-streamdeck PR 63). Die Farben der Drehregler-Ringe wurden am 19. Oktober 2026 am Modul des Projekteigentümers bestätigt; das bestätigt nicht die RGB-Steuerung einzelner Tasten der Haupttastatur. Höchstens 8 Themes; die Farbe hat die Form `#rrggbb`; die Seite eines Themes muss existieren.
 
 ### Hintergrundbild mit einem Drehregler wählen
 
-Die Hintergrundbilder sind nach Stil und dann nach Dateiname geordnet, wobei Zahlen als Zahlen gelesen werden (`-2` vor `-10`); der Drehregler bewegt sich pro Drehung um ein Hintergrundbild, und Drehungen werden ignoriert, nicht eingereiht, bis das Hintergrundbild der letzten Drehung wirklich auf dem Bildschirm steht plus eine Ruhezeit von `screen.wallpaper_step_delay_ms` (Standard 150; 0: keine Regel, jede Raststufe zählt). Der Bildschirm zeigt Namen und Platz des gerade gewählten Hintergrundbilds (`portrait-01   10/24`).
+Die Hintergrundbilder sind nach Stil und dann nach Dateiname in natürlicher Zahlenfolge geordnet (`-2` vor `-10`). Jede angenommene Raststufe des Drehreglers wählt das nächste oder vorherige Hintergrundbild. Weitere Drehungen werden verworfen und nicht vorgemerkt, bis dieses Bild angezeigt wird und anschließend weitere `screen.wallpaper_step_delay_ms` verstrichen sind (Standard: 150 ms; 0 deaktiviert diese Begrenzung, sodass jede Raststufe zählt). Der Bildschirm zeigt den Namen und die Position des ausgewählten Hintergrundbilds (`portrait-01   10/24`).
 
 Ein Druck auf den Drehregler mit `{ "type": "wallpaper-mode" }` schaltet diesen Drehregler von der Player-Steuerung auf die Hintergrundauswahl: Drehen blättert durch die Hintergrundbilder des Katalogs (gespeichert, auch während eines laufenden Titels angezeigt), und ein zweiter Druck bestätigt und kehrt zurück. Drehungen werden ignoriert, bis der Bildschirm Namen und Platz des Hintergrundbilds zeigt. Nach der letzten Drehung wird ein Countdown von `screen.wallpaper_validate_seconds` (Standard 4) in einem Kreis angezeigt, während der Drehregler in der Auswahl bleibt (magentafarbener Ring, eine Drehung startet ihn neu); wenn er endet, wird die Auswahl bestätigt: Der Drehregler ist wieder die Player-Steuerung (weißer Ring und weiße Linie), und das gewählte Hintergrundbild bleibt `screen.wallpaper_hold_seconds` Sekunden auf dem Bildschirm, bevor ein laufender Titel ihn zurückerobert. Eine dünne Linie am unteren Bildschirmrand und der Ring des rechten Drehreglers zeigen den Modus: weiß für die Player-Steuerung, magenta für die Hintergrundauswahl.
 
