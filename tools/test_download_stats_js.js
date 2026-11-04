@@ -56,4 +56,14 @@ assert.deepEqual(stats.recentEstimate(
   { windows: 0, ubuntu: 0, fedora: 0, arch: 0, appimage: 0 },
   { ppa: 0, copr: 0 }
 ), { value: 0, window: "24h" });
+// Missing and stale collection dates must remain distinguishable in every language.
+const staleWords = { en: "outdated", fr: "ancien", de: "veraltet", es: "desactualizado" };
+Object.entries(staleWords).forEach(([language, word]) => {
+  assert.equal(stats.repositoryDates({ ppa: "2026-11-03", copr: "2026-11-04" }, "2026-11-04", language),
+    `PPA 2026-11-03 (${word}); COPR 2026-11-04`);
+  assert.equal(stats.repositoryDates({}, "2026-11-04", language),
+    `PPA — (${word}); COPR — (${word})`);
+});
+assert.equal(stats.repositoryDates({}, "2026-11-04", "unknown"),
+  "PPA — (outdated); COPR — (outdated)");
 console.log("Live download classification, deltas, and approximate totals passed");

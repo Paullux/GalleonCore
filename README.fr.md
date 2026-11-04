@@ -53,7 +53,7 @@ Un mode Jeu automatique affiche une image locale du jeu, les FPS et les tempéra
 | Démon + interface D-Bus | Choix du fond (`galleond --preview`) et `org.galleoncore.Deck` (`SetWallpaper`, `ClearWallpaper`, `Wallpapers`) |
 | Pages de boutons (JSON) et lecteur de musique (MPRIS) | Implémentés, tests verts ; **touches, molettes, écran « en cours de lecture » (vraie pochette, titre, artiste, durée) et une touche d'application avec son icône confirmés sur le module** (rechargement à chaud, double appui, images de vidéos et fenêtre des applications : pas encore rapportés) |
 | Widgets KDE Plasma | Squelette |
-| Éclairage RVB | **En cours d'investigation.** Le protocole (Corsair « V2 »/Bragi) n'est encore supporté nulle part. Le support doit être intégré en amont dans OpenRGB. |
+| Éclairage RVB | **Expérimental.** Une séquence Corsair V2/Bragi non persistante par touche est documentée sur un clavier sous Windows 11 (firmware clavier 2.3.88). GalleonCore ne fournit pas encore de pilote RVB natif par touche ; le fonctionnement Linux et la compatibilité plus large restent à vérifier. |
 | Plugin OpenRGB | Anneaux des molettes implémentés dans le plugin séparé ; RVB du clavier toujours en investigation |
 | Windows | Préversion desktop ; CI native et essais interactifs suivis dans [WINDOWS.md](docs/WINDOWS.md) |
 
@@ -278,7 +278,7 @@ Tu n'as jamais besoin de modifier le JSON pour cela :
 ./build/daemon/galleond --clear-key 4
 ```
 
-**Galleon Bosun** (en cours de construction) est la fenêtre de réglage : un onglet par thème avec les 12 touches dessinées comme sur le module, et des onglets pour l'éclairage du clavier, les fonds d'écran et les écrans de veille (pas encore faits). Elle montre seulement les touches pour l'instant ; l'édition vient ensuite.
+**Galleon Bosun** est l’application de réglage : modification des 12 touches de chaque thème, gestion des thèmes, import et recadrage des fonds, configuration des écrans de veille vidéo, disposition des widgets d’accueil et réglages Gaming. L’onglet Clavier affiche les informations du firmware et des liens vers les outils officiels ; il ne fournit pas de pilote RVB natif par touche. Bosun n’ouvre jamais le périphérique HID : `galleond` assure l’accès au matériel.
 
 ```sh
 ./build/bosun/galleon-bosun
@@ -298,11 +298,11 @@ Une liste `themes` donne un nom et une couleur à des pages. Un appui de molette
 "dials": { "0": { "press": { "type": "theme" } } }
 ```
 
-La couleur des anneaux utilise le rapport de fonctionnalité par LED du protocole Stream Deck (`03 24 <led> <r> <v> <b>`, tiré de la PR 63 de rust-elgato-streamdeck). Il n'est pas encore vérifié sur le module. 8 thèmes au plus ; la couleur est `#rrggbb` ; la page d'un thème doit exister.
+La couleur des anneaux utilise le rapport de fonctionnalité par LED du protocole Stream Deck (`03 24 <led> <r> <v> <b>`, tiré de la PR 63 de rust-elgato-streamdeck). Les couleurs des anneaux ont été confirmées sur le module du propriétaire le 19 octobre 2026 ; cela ne valide pas le RVB par touche du clavier principal. 8 thèmes au plus ; la couleur est `#rrggbb` ; la page d'un thème doit exister.
 
 ### Choisir le fond d'écran avec une molette
 
-Les fonds sont classés par style, puis par nom de fichier en lisant les nombres comme des nombres (`-2` avant `-10`) ; la molette avance d'un fond à la fois, et les rotations sont ignorées, pas mises en file, tant que le fond du dernier cran n'est pas réellement à l'écran, plus un repos de `screen.wallpaper_step_delay_ms` (150 par défaut ; 0 : aucune règle, chaque cran compte), et l'écran montre le nom et la place du fond en cours de choix (`portrait-01   10/24`).
+Les fonds sont classés par style, puis par nom de fichier dans l’ordre numérique naturel (`-2` avant `-10`). Chaque cran de molette accepté sélectionne le fond suivant ou précédent. Les rotations suivantes sont ignorées, sans être mises en file, jusqu’à l’affichage de ce fond puis pendant un délai supplémentaire de `screen.wallpaper_step_delay_ms` (150 ms par défaut ; 0 désactive cette limitation pour compter chaque cran). L’écran indique le nom et la position du fond sélectionné (`portrait-01   10/24`).
 
 Un appui de molette avec `{ "type": "wallpaper-mode" }` fait passer cette molette du contrôle du lecteur au choix du fond d'écran : la tourner parcourt les fonds du catalogue (le choix est retenu, et le fond s'affiche même pendant qu'une piste joue), un second appui valide et revient en arrière. Les rotations sont ignorées tant que l'écran n'affiche pas le nom et la place du fond. Après la dernière rotation, un décompte de `screen.wallpaper_validate_seconds` (4 par défaut) s'affiche dans un cercle pendant que la molette reste dans le choix (anneau magenta, une rotation le relance) ; à sa fin le choix est validé : la molette redevient le contrôle du lecteur (anneau et ligne blancs) et le fond choisi reste à l'écran pendant `screen.wallpaper_hold_seconds` secondes avant qu'une piste en cours reprenne la main. Une fine ligne en bas de l'écran et l'anneau de la molette droite indiquent le mode : blanc pour le contrôle du lecteur, magenta pour le choix du fond.
 

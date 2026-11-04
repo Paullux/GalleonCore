@@ -53,7 +53,7 @@ An automatic game screen now shows local game artwork, FPS and CPU/GPU temperatu
 | Daemon + D-Bus interface | Wallpaper picker (`galleond --preview`) and `org.galleoncore.Deck` (`SetWallpaper`, `ClearWallpaper`, `Wallpapers`) |
 | Button pages (JSON) and music player (MPRIS) | Implemented, tests green; **keys, dials, the now-playing screen (real cover, title, artist, timeline) and an application key with its icon confirmed on the module** (hot reload, double press, video thumbnails and the apps window not reported yet) |
 | KDE Plasma widgets | Skeleton |
-| RGB lighting | **Under investigation.** The protocol (Corsair "V2"/Bragi) is not supported anywhere yet. Support is meant to land upstream in OpenRGB. |
+| RGB lighting | **Experimental.** A non-persistent per-key Corsair V2/Bragi sequence is documented for one Windows 11 keyboard (keyboard firmware 2.3.88). GalleonCore does not yet include a native per-key RGB driver; Linux support and wider compatibility remain unverified. |
 | OpenRGB plugin | Dial rings implemented in the separate plugin; keyboard RGB remains under investigation |
 | Windows | Desktop preview; native CI and interactive validation tracked in [WINDOWS.md](docs/WINDOWS.md) |
 
@@ -106,8 +106,7 @@ If you encounter the same symptom, record the firmware version first. Close
 GalleonCore and other apps controlling the module. In the Elgato Stream Deck
 app on Windows or macOS, open **Preferences → Devices → Galleon 100 SD →
 Update Firmware**. Keep the keyboard connected until the update finishes.
-Record the new version, close Stream Deck, and restart GalleonCore on Windows
-for a cold-start test. If you use Stream Deck only for this keyboard, you can
+Record the new version, close Stream Deck, and test GalleonCore after a cold Windows start. If you use Stream Deck only for this keyboard, you can
 uninstall it after the firmware update; leave it installed if another device
 needs it. The owner's screenshot shows
 version `3.06.005`, which [Elgato lists in its 7.4.1 release notes](https://edge.elgato.com/egc/sd_content/releasenotes/7.4.1.html).
@@ -271,7 +270,7 @@ You never need to edit the JSON for this:
 ./build/daemon/galleond --clear-key 4
 ```
 
-**Galleon Bosun** (work in progress) is the settings window: one tab per theme with the 12 keys drawn as the module draws them, and tabs for the keyboard lighting, wallpapers and screensavers (not built yet). It only shows the keys for now; editing comes next.
+**Galleon Bosun** is the settings application: edit the 12 keys of each theme, manage themes, import and crop wallpapers, configure video screensavers, and arrange home widgets and Gaming settings. The Keyboard tab provides firmware information and links to the official tools; it does not provide a native per-key RGB driver. Bosun never opens the HID device: `galleond` handles hardware access.
 
 ```sh
 ./build/bosun/galleon-bosun
@@ -291,11 +290,11 @@ A `themes` list gives pages a name and a colour. A dial press with `{ "type": "t
 "dials": { "0": { "press": { "type": "theme" } } }
 ```
 
-The ring colours use the Stream Deck protocol's per-LED feature report (`03 24 <led> <r> <g> <b>`, from rust-elgato-streamdeck PR 63). It has not been verified on the module yet. At most 8 themes; the colour is `#rrggbb`; a theme's page must exist.
+The ring colours use the Stream Deck protocol's per-LED feature report (`03 24 <led> <r> <g> <b>`, from rust-elgato-streamdeck PR 63). The dial-ring colours were confirmed on the owner’s module on 19 October 2026; this does not validate per-key RGB on the main keyboard. At most 8 themes; the colour is `#rrggbb`; a theme's page must exist.
 
 ### Choosing the wallpaper with a dial
 
-The wallpapers are listed by style, then by file name with numbers read as numbers (`-2` before `-10`); the dial moves one wallpaper per turn, and turns are ignored, not queued, until the wallpaper of the last turn is really on the screen plus a rest of `screen.wallpaper_step_delay_ms` (default 150; 0: no rule, every detent counts), and the screen shows the name and place of the wallpaper being chosen (`portrait-01   10/24`).
+Wallpapers are sorted by style, then by filename using natural numeric order (`-2` before `-10`). Each accepted dial detent selects the next or previous wallpaper. Further rotations are ignored, not queued, until that wallpaper is displayed and an additional `screen.wallpaper_step_delay_ms` has elapsed (default 150 ms; 0 disables this throttling so every detent counts). The screen shows the selected wallpaper’s name and position (`portrait-01   10/24`).
 
 A dial press with `{ "type": "wallpaper-mode" }` switches that dial from the player control to choosing the wallpaper: turning it steps through the wallpapers of the catalog (remembered, shown even while a track plays), and a second press validates and goes back. Turns are ignored until the screen shows the name and place of the wallpaper. After the last turn a countdown of `screen.wallpaper_validate_seconds` (default 4) is shown in a circle while the dial stays in the choice (magenta ring, a turn starts it again); when it ends the choice is validated: the dial is the player control again (white ring and line) and the chosen wallpaper stays on the screen for `screen.wallpaper_hold_seconds` seconds before a playing track takes it back. A thin line along the bottom of the screen and the right dial's ring show the mode: white for the player control, magenta for choosing the wallpaper.
 

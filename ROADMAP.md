@@ -2,6 +2,20 @@
 
 Référence pour reprendre le développement à tout moment, y compris dans une nouvelle session Claude Code. À mettre à jour après chaque fonctionnalité terminée **et** testée (voir « Règle de mise à jour » en bas). Les notes de conception détaillées (protocole, RGB, OpenRGB, Windows) sont dans [docs/ROADMAP.md](docs/ROADMAP.md) ; les règles de code dans [AGENTS.md](AGENTS.md).
 
+### Relecture allemande et espagnole — 4 novembre 2026
+
+Corrections de sens et de formulation dans les README et le site : rotation des
+molettes, veille pendant la capture, prérequis du paquet `.deb` et accès exclusif
+au périphérique. Les quatre README décrivent désormais les fonctions existantes
+de Bosun et distinguent les anneaux confirmés le 19 octobre du RGB par touche
+encore expérimental. Les titres, descriptions et libellés accessibles suivent
+la langue choisie ; les compteurs traduisent aussi le relevé quotidien et les
+dates périmées. Les commandes, exemples JSON et conditions de sécurité restent
+inchangés. Cette relecture assistée ne constitue pas une validation native ni
+un nouvel essai matériel. Validation complète de l’arbre courant à consulter
+avec `python3 tools/check.py status` ; les 14 contrôles CI doivent réussir avant
+la fusion de la PR demandée par le propriétaire.
+
 ### Site et README en quatre langues — 3 novembre 2026
 
 Ajout de l’allemand et de l’espagnol au site (accueil, confidentialité, CGU,

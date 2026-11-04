@@ -31,13 +31,13 @@ El Galleon 100 SD es un teclado mecánico de tamaño completo cuyo teclado numé
 
 > GalleonCore no está afiliado a Corsair ni a Elgato.
 
-> **0.3.0:** Bosun en inglés, francés, alemán y español, cambio de idioma instantáneo, pestañas adaptables animadas y borradores de atajos conservados. [Notas de la versión](docs/RELEASE_0.3.0.md).
+> **0.3.0:** Bosun en inglés, francés, alemán y español, cambio de idioma instantáneo, pestañas adaptables animadas y conservación de los cambios sin guardar en los accesos directos. [Notas de la versión](docs/RELEASE_0.3.0.md).
 
 ## Objetivos
 
 - **Módulo Stream Deck**: dibujar en las 12 teclas y en la pantalla, leer las teclas y los diales.
 - **Widgets compartidos**: los mismos widgets QML (reloj, monitor del sistema, lo que está sonando…) se renderizan en la pantalla del teclado *y* se muestran como widgets de KDE Plasma en el escritorio.
-- **Iluminación RGB**: RGB por tecla, barra de ambiente y anillos de los diales, a través de [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB).
+- **Iluminación RGB**: RGB por tecla, barra de iluminación ambiental y anillos de los diales, a través de [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB).
 - **Complemento de OpenRGB**: configurar el deck desde OpenRGB y sincronizar los temas del deck con la iluminación.
 - **Vista previa de escritorio para Windows**, con el mismo núcleo y backends nativos de multimedia, audio y teclado; la validación en hardware sigue pendiente.
 
@@ -53,7 +53,7 @@ Una pantalla de juego automática muestra ahora la ilustración local del juego,
 | Daemon + interfaz D-Bus | Selector de fondos (`galleond --preview`) y `org.galleoncore.Deck` (`SetWallpaper`, `ClearWallpaper`, `Wallpapers`) |
 | Páginas de teclas (JSON) y reproductor de música (MPRIS) | Implementado, pruebas en verde; **teclas, diales, la pantalla «reproduciendo ahora» (carátula real, título, artista, línea de tiempo) y una tecla de aplicación con su icono confirmados en el módulo** (la recarga en caliente, la doble pulsación, las miniaturas de vídeo y la ventana de aplicaciones aún no se han comunicado) |
 | Widgets de KDE Plasma | Esqueleto |
-| Iluminación RGB | **En investigación.** El protocolo (Corsair «V2»/Bragi) aún no es compatible en ningún sitio. La idea es que el soporte llegue a OpenRGB. |
+| Iluminación RGB | **Experimental.** Se ha documentado una secuencia Corsair V2/Bragi no persistente de RGB por tecla en un teclado con Windows 11 (firmware del teclado 2.3.88). GalleonCore aún no incluye un controlador nativo de RGB por tecla; el funcionamiento en Linux y la compatibilidad con otros dispositivos y firmwares siguen sin verificarse. |
 | Complemento de OpenRGB | Anillos de los diales implementados en el complemento aparte; el RGB del teclado sigue en investigación |
 | Windows | Vista previa de escritorio; la CI nativa y la validación interactiva se siguen en [WINDOWS.md](docs/WINDOWS.md) |
 
@@ -247,7 +247,7 @@ Las 12 teclas y los 2 diales ejecutan las acciones de un archivo JSON, `~/.confi
 
 - Las teclas se numeran de 0 a 11, fila por fila desde arriba a la izquierda. Una tecla sin `action` no hace nada.
 - `icon`: un nombre del tema de iconos del escritorio, o un archivo junto al archivo de páginas (`.png`, `.jpg`, `.svg`; sin ruta). Puede ser un objeto con un nombre por estado del reproductor (`playing`, `paused`, `stopped`).
-- Acciones: `media` (`play-pause`, `next`, `previous`, `stop`, `shuffle`, `repeat` (none, playlist, track), `mute` (el sonido del sistema, para todos los reproductores), `raise` (traer al frente la ventana del reproductor), `fullscreen` (un reproductor de vídeo), `restart` (volver al principio de la pista), `volume` con `step` en porcentaje, `seek` con `seconds`). Una tecla `shuffle` o `repeat` muestra su estado: añade `"state_labels": ["off", "on"]` (shuffle) o `["none", "list", "track"]` (repeat) para elegir las palabras; la tecla se ve más clara mientras está activada. Además `page` (abrir una página), `back`, `app` (iniciar una aplicación, véase más abajo), `none`. Un `turn` de dial admite `volume` o `seek`, aplicado una vez por cada clic.
+- Acciones: `media` (`play-pause`, `next`, `previous`, `stop`, `shuffle`, `repeat` (none, playlist, track), `mute` (el sonido del sistema, para todos los reproductores), `raise` (traer al frente la ventana del reproductor), `fullscreen` (un reproductor de vídeo), `restart` (volver al principio de la pista), `volume` con `step` en porcentaje, `seek` con `seconds`). Una tecla `shuffle` o `repeat` muestra su estado: añade `"state_labels": ["off", "on"]` (shuffle) o `["none", "list", "track"]` (repeat) para elegir las palabras; la tecla se ve más clara mientras está activada. Además `page` (abrir una página), `back`, `app` (iniciar una aplicación, véase más abajo), `none`. Un `turn` de dial admite `volume` o `seek`, aplicado una vez por cada paso de giro.
 - El reproductor de música se encuentra a través de MPRIS: el que está sonando, o si no el último que sonó.
 - Las acciones proceden únicamente de este archivo. La única forma de iniciar un programa es una tecla `app`, que nombra un archivo `.desktop`: no se puede escribir ningún comando en el archivo.
 - `galleond --render-keys keys.png` dibuja las teclas de la primera página en una imagen, sin el hardware.
@@ -271,7 +271,7 @@ Para esto nunca necesitas editar el JSON:
 ./build/daemon/galleond --clear-key 4
 ```
 
-**Galleon Bosun** (en desarrollo) es la ventana de ajustes: una pestaña por tema con las 12 teclas dibujadas como las dibuja el módulo, y pestañas para la iluminación del teclado, los fondos de pantalla y los salvapantallas (aún sin construir). Por ahora solo muestra las teclas; la edición llegará después.
+**Galleon Bosun** es la aplicación de ajustes: permite editar las 12 teclas de cada tema, gestionar los temas, importar y recortar fondos de pantalla, configurar salvapantallas de vídeo y ajustar los widgets de inicio y el modo de juego. La pestaña Teclado muestra información del firmware y enlaces a las herramientas oficiales; no ofrece un controlador nativo de RGB por tecla. Bosun nunca abre el dispositivo HID: `galleond` se encarga del acceso al hardware.
 
 ```sh
 ./build/bosun/galleon-bosun
@@ -291,11 +291,11 @@ Una lista `themes` da a las páginas un nombre y un color. Una pulsación de dia
 "dials": { "0": { "press": { "type": "theme" } } }
 ```
 
-Los colores de los anillos usan el informe de características por LED del protocolo del Stream Deck (`03 24 <led> <r> <g> <b>`, del PR 63 de rust-elgato-streamdeck). Aún no se ha verificado en el módulo. Como máximo 8 temas; el color es `#rrggbb`; la página de un tema debe existir.
+Los colores de los anillos usan el informe de características por LED del protocolo del Stream Deck (`03 24 <led> <r> <g> <b>`, del PR 63 de rust-elgato-streamdeck). Los colores de los anillos se confirmaron en el módulo del propietario del proyecto el 19 de octubre de 2026; esto no valida el RGB por tecla del teclado principal. Como máximo 8 temas; el color es `#rrggbb`; la página de un tema debe existir.
 
 ### Elegir el fondo de pantalla con un dial
 
-Los fondos se ordenan por estilo y después por nombre de archivo, leyendo los números como números (`-2` antes que `-10`); el dial avanza un fondo por giro, y los giros se ignoran, no se ponen en cola, hasta que el fondo del último giro está realmente en la pantalla más un descanso de `screen.wallpaper_step_delay_ms` (por defecto 150; 0: sin regla, cada muesca cuenta), y la pantalla muestra el nombre y la posición del fondo que se está eligiendo (`portrait-01   10/24`).
+Los fondos se ordenan por estilo y después por nombre de archivo, siguiendo el orden numérico natural (`-2` antes que `-10`). Cada paso de giro aceptado del dial selecciona el fondo siguiente o anterior. Los giros posteriores se ignoran, sin ponerse en cola, hasta que se muestra ese fondo y transcurre un intervalo adicional de `screen.wallpaper_step_delay_ms` (150 ms por defecto; 0 desactiva esta limitación para contar cada paso de giro). La pantalla muestra el nombre y la posición del fondo seleccionado (`portrait-01   10/24`).
 
 Una pulsación de dial con `{ "type": "wallpaper-mode" }` cambia ese dial del control del reproductor a la elección de fondo: al girarlo se recorren los fondos del catálogo (recordado, mostrado incluso mientras suena una pista), y una segunda pulsación valida y vuelve. Los giros se ignoran hasta que la pantalla muestra el nombre y la posición del fondo. Tras el último giro se muestra en un círculo una cuenta atrás de `screen.wallpaper_validate_seconds` (por defecto 4) mientras el dial sigue en la elección (anillo magenta; un giro la reinicia); cuando termina, la elección se valida: el dial vuelve a ser el control del reproductor (anillo y línea blancos) y el fondo elegido se queda en la pantalla durante `screen.wallpaper_hold_seconds` segundos antes de que una pista en reproducción lo recupere. Una línea fina en la parte inferior de la pantalla y el anillo del dial derecho indican el modo: blanco para el control del reproductor, magenta para la elección de fondo.
 
@@ -319,7 +319,7 @@ Una página puede pedir que sus teclas de aplicación se ordenen por uso con `"s
 }
 ```
 
-`"menu": { "category": "Game", "max": N }` rellena las teclas libres de la página con hasta N aplicaciones de esa categoría del menú del escritorio (las `Categories` de freedesktop de cada archivo `.desktop`; `Game` para los juegos del menú de KDE, los haya lanzado quien los haya lanzado: juegos de KDE, Lutris, Heroic, Wine, accesos directos de Steam…), las más usadas primero. Un acceso directo del menú que inicia un juego de Steam (`steam steam://rungameid/<n>`) se puntúa según el tiempo de juego y el último inicio de ese juego en los datos locales de Steam, aunque el juego no esté instalado aquí. Las herramientas (Proton, los runtimes de Steam) y todo lo que ya esté en la página se omiten, y un acceso directo de un juego de Steam y el mismo juego de la lista propia de Steam se muestran una sola vez.
+`"menu": { "category": "Game", "max": N }` rellena las teclas libres de la página con hasta N aplicaciones de esa categoría del menú del escritorio (las `Categories` de freedesktop de cada archivo `.desktop`; `Game` para los juegos del menú de KDE, independientemente del lanzador utilizado: juegos de KDE, Lutris, Heroic, Wine, accesos directos de Steam…), las más usadas primero. Un acceso directo del menú que inicia un juego de Steam (`steam steam://rungameid/<n>`) se puntúa según el tiempo de juego y el último inicio de ese juego en los datos locales de Steam, aunque el juego no esté instalado aquí. Las herramientas (Proton, los runtimes de Steam) y todo lo que ya esté en la página se omiten, y un acceso directo de un juego de Steam y el mismo juego de la lista propia de Steam se muestran una sola vez.
 
 `"steam": { "max": N }` rellena las teclas libres de la página con hasta N juegos de Steam instalados, los más jugados primero. Lee los propios archivos de Steam en este equipo, en solo lectura y sin red, cuenta ni clave: el tiempo de juego y la fecha del último inicio de cada juego (`userdata/<id>/config/localconfig.vdf`), y el nombre de cada juego instalado (`appmanifest_*.acf` en las carpetas de biblioteca). Las herramientas como Proton y los runtimes de Steam se omiten. Un juego de Steam puntúa por sus horas jugadas, atenuadas por el tiempo transcurrido desde su último inicio, más sus inicios desde el módulo. Un solo juego también puede ser una tecla propia: `{ "type": "steam", "appid": 730 }` lo inicia mediante `steam steam://rungameid/730`.
 
