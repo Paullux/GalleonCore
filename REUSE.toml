@@ -26,7 +26,7 @@ SPDX-FileCopyrightText = "2026 Paul Woisard"
 SPDX-License-Identifier = "CC-BY-SA-4.0"
 
 [[annotations]]
-path = "site/screenshots/*.png"
+path = ["site/screenshots/*.png", "site/screenshots/thumbs/*.png"]
 SPDX-FileCopyrightText = "2026 Paul Woisard"
 SPDX-License-Identifier = "CC-BY-SA-4.0"
 
