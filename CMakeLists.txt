@@ -16,6 +16,7 @@ option(GALLEON_SANITIZE "Build with AddressSanitizer and UndefinedBehaviorSaniti
 option(GALLEON_SOURCE_TREE_PATHS "Let galleond and galleon-bosun find the widgets and wallpapers in the source tree when run from the build folder (turn OFF for a package: the paths of the build machine must not end up in the programs)" ON)
 set(GALLEON_PACKAGE_FORMAT "" CACHE STRING "Native package format for repository detection (deb or rpm)")
 option(GALLEON_FUZZ "Build the libFuzzer targets (Clang only)" OFF)
+option(GALLEON_BUILD_KEYBOARD_PROBE "Build the read-only keyboard probe (firmware and brightness through HidTransport)" OFF)
 
 # Linux desktop integration remains the default. Windows desktop builds are
 # explicit while native integration and deployment are being validated.
@@ -66,6 +67,9 @@ include(GNUInstallDirs)
 
 add_subdirectory(lib)
 add_subdirectory(media)
+if(GALLEON_BUILD_KEYBOARD_PROBE)
+    add_subdirectory(tools/keyboard-read-probe)
+endif()
 if(GALLEON_BUILD_DESKTOP)
     add_subdirectory(daemon)
     add_subdirectory(bosun)

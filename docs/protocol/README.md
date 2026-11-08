@@ -266,6 +266,17 @@ Every other property read the same value in every run: `0x01` = 7, `0x02` = `0x0
 
 Not run on Windows: the power-cycle persistence check and `-SoftwareMode`/`-Hold` (see "Not established" above and the option descriptions in the script's header comment).
 
+## galleon::HidTransport keyboard probe confirmed on Windows (2026-11-08)
+
+`tools/keyboard-read-probe` (`-DGALLEON_BUILD_KEYBOARD_PROBE=ON`, off by default; its logic is tested with a fake transport by `tests/test_keyboardreadprobe.cpp`) builds only command `0x02` (get property) for properties `0x13` and `0xEA`, and refuses to send anything unless the opened interface reports usage page `0xFF42` usage `1`. Unlike `bragi-probe.ps1`, it reads through `galleon::HidTransport` (hidapi) — the same class `galleond` uses — instead of a raw `ReadFile`/`WriteFile` port. Run on the same keyboard, after `bragi-probe.ps1` above:
+
+```text
+prop 0x13: raw(128 bytes) 00 00 00 02 00 02 03 58 00 00 00 00  status=0 value=0x580302 (5767938)  firmware 2.3.88
+prop 0xea: raw(128 bytes) 00 00 00 02 00 e8 03 00 00 00 00 00  status=0 value=0x3e8 (1000)  brightness 100 %
+```
+
+Firmware and brightness match the Linux and `bragi-probe.ps1` measurements above byte for byte (the slider was at 100 % during this run). **The raw answers are 128 bytes, not 129.** `HidTransport::write` still sends hidapi's required 129-byte frame (report-ID byte `0x00` plus the 128-byte payload — the same convention `bragi-probe.ps1`'s `WriteFile` has to apply by hand, see above), but `hid_read_timeout` hands back the 128-byte payload alone on Windows, exactly like `hidraw` on Linux. hidapi already absorbs the platform difference that `bragi-probe.ps1`'s raw port had to handle itself, so application code reading through `HidTransport` does not need to know which OS it is on. No keyboard-specific transport is needed for this read path.
+
 ## Live per-key lighting (Windows, 2026-10-25)
 
 > **Safety, read before writing a frame.**
