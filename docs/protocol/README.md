@@ -244,8 +244,27 @@ Keyboard part `1b1c:2b0c`, firmware **2.3.88**, vendor interface (usage page 0xF
 - What 0x01 and 0x02 are. 0x02 read 1000 on 2026-10-18 (before the Web Hub steps above) and 800 on 2026-11-08, while 0xEA is a different property. 800 is one of the slider's steps, so it may be another brightness-like setting on the same scale, but nothing here shows it.
 - Whether the keyboard's own keys change 0xEA.
 - Other firmware versions and other units.
+- Whether a power-cycle persistence test (unplug both cables, replug) on Windows gives anything different from the Linux one below. Not repeated on Windows: the value lives in the keyboard's own storage, read back identically through the same vendor-interface bytes on both hosts, so a different result would be surprising; it has not been ruled out by a direct test.
 
 **Consequence for software.** Writing 0xEA changes the keyboard for good. A program that does so must read the current value first, keep it, and put it back on exit and at its next start if it was killed. Dimming that must not last belongs in the live per-key stream (scale the RGB values), which returns to the saved profile when released.
+
+## Keyboard brightness: property 0xEA confirmed on Windows (2026-11-08)
+
+`tools/windows/bragi-probe.ps1` (the Windows port of `tools/linux/bragi-probe.c`, through `ReadFile`/`WriteFile` with overlapped I/O on the vendor interface's device path `...&MI_01` instead of `/dev/hidraw`) was run on the same keyboard as the Linux measurements above, firmware confirmed **2.3.88** by property `0x13` in every run below, while the Web Hub's brightness slider was moved one step at a time and the script re-run after each move:
+
+| Slider | `0xea` read back | Matches the Linux table above |
+|---|---|---|
+| 100 % | `0x03e8` (1000) | yes |
+| 80 % | `0x0320` (800) | yes |
+| 60 % | `0x0258` (600) | yes |
+| 40 % | `0x0190` (400) | yes |
+| 20 % | `0x00c8` (200) | yes |
+| 0 % | `0x0000` (0) | yes |
+| 100 % | `0x03e8` (1000) | yes |
+
+Every other property read the same value in every run: `0x01` = 7, `0x02` = `0x0320` (800), `0x05` = status 5 (no reply, same as Linux's "no argument" case), `0x0a` = 5, `0x41` = 2, `0x6e` = 1. All seven match the Linux 2026-11-08 run byte for byte, including `0x01` = 7 (the earlier Linux run of 2026-10-18 had read 4, so this is a value that moved between sessions on Linux too, not a Windows/Linux difference). **Property `0xEA` and its slider mapping are therefore confirmed identical on Windows, on this unit and firmware.**
+
+Not run on Windows: the power-cycle persistence check and `-SoftwareMode`/`-Hold` (see "Not established" above and the option descriptions in the script's header comment).
 
 ## Live per-key lighting (Windows, 2026-10-25)
 

@@ -114,7 +114,7 @@ Plutôt que d'attendre une version d'OpenRGB qui intègre le contrôleur, le pil
 
 ### Luminosité du clavier : étude d'un curseur (8 novembre 2026)
 
-**Étude seulement, rien n'est implémenté.** Le protocole est décrit dans [`docs/protocol/README.md`](protocol/README.md#keyboard-brightness-property-0xea-linux-2026-11-08) : propriété `0xEA`, de 0 à 1000 par pas de 200 (les curseurs du Web Hub), conservée après un débranchement. Mesuré sur **une unité, firmware 2.3.88, sous Linux** ; rien n'est validé sous Windows.
+**Étude seulement, rien n'est implémenté.** Le protocole est décrit dans [`docs/protocol/README.md`](protocol/README.md#keyboard-brightness-property-0xea-linux-2026-11-08) : propriété `0xEA`, de 0 à 1000 par pas de 200 (les curseurs du Web Hub), conservée après un débranchement. Mesuré sur **une unité, firmware 2.3.88** ; les six paliers et la lecture sont désormais confirmés identiques sous Linux et sous Windows (même clavier) — seul le test de persistance au débranchement n'a été refait que sous Linux.
 
 Contraintes retenues pour un curseur :
 - **L'écriture est durable** : lire la valeur avant, la mémoriser dans la configuration, la remettre à la sortie et au démarrage suivant si le processus a été tué. Écrire seulement quand le curseur s'arrête, pas à chaque cran. Une atténuation qui ne doit pas durer passe par le flux par touche (volatile), pas par `0xEA`.
@@ -132,7 +132,7 @@ Découpage envisagé, une responsabilité par fichier, dans une bibliothèque du
 
 **Transport.** À vérifier avant d'écrire quoi que ce soit : `HidTransport` (hidapi, hidraw sous Linux, HID natif sous Windows) choisit l'interface par son numéro (`interfaceNumber`) ; l'interface fabricant du clavier est la numéro 1. S'il suffit, il n'y a pas de transport propre au clavier et aucun pendant Windows à écrire. Sinon : une implémentation par système derrière l'interface `Transport`, choisie dans CMake.
 
-**Windows.** La version Windows compte autant d'utilisateurs que les paquets Linux. Elle a besoin de sa propre série de mesures avant toute annonce : la luminosité n'y a pas été lue ni écrite, et les concurrents de l'anneau lumineux (Dynamic Lighting, OpenRGB) s'y ajoutent. Relire [`WINDOWS_HID_HISTORY.md`](WINDOWS_HID_HISTORY.md) avant de décider qui ouvre le clavier et quand.
+**Windows.** La version Windows compte autant d'utilisateurs que les paquets Linux. `tools/windows/bragi-probe.ps1` (port de `tools/linux/bragi-probe.c`, `ReadFile`/`WriteFile` natifs sur l'interface fabricant) a confirmé le 8 novembre 2026, sur le même clavier, que la propriété `0xEA` et les six paliers du curseur du Web Hub sont identiques à ce qui a été mesuré sous Linux (détail dans [`docs/protocol/README.md`](protocol/README.md#keyboard-brightness-property-0xea-confirmed-on-windows-2026-11-08)). Restent à faire sous Windows : le test de persistance au débranchement (non refait, jugé redondant — la valeur vit dans le clavier, pas dans le pilote) et les concurrents de l'anneau lumineux (Dynamic Lighting, OpenRGB) pour l'écriture à venir. Relire [`WINDOWS_HID_HISTORY.md`](WINDOWS_HID_HISTORY.md) avant de décider qui ouvre le clavier et quand.
 
 **Ordre.** Cette note et la documentation du protocole (une PR) ; série de tests sous Windows, puis mise à jour de la documentation ; ensuite seulement l'implémentation, dans une autre PR. Reste à trancher : qui écrit (`galleond`, un assistant séparé ou le plugin OpenRGB ci-dessus) et si cette fonction relève de GalleonCore ou du contrôleur RVB.
 
