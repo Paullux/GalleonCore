@@ -145,7 +145,7 @@ This differs from the `08 02 <property>` request given by galleon-deck and by Op
 
 **Commands seen** (counts in the capture): 0x01 (26), 0x02 (65), 0x05 (66), 0x06 (12), 0x07 (3), 0x08 (43), 0x09 (42), 0x0d (55), 0x12 (12). They match the command numbers of OpenRGB's `corsair_v2_cmd` (SET 0x01, GET 0x02, STOP_TX 0x05, BLK_W1 0x06, BLK_WN 0x07, START_TX 0x0D); that is an observation of the same numbers, not proof of the same semantics.
 
-- `00 01 00 02 <property>`: read a property. Answers seen include property 0x02 = 0x03e8 (1000), 0x41 = 2, and 0x13 = bytes `02 03 58`, which reads as firmware **2.3.88**, the version the keyboard was updated to after the Windows measurements. The galleon-deck notes mention firmware 3.70.1, so the protocol details they give may belong to another firmware generation.
+- `00 01 00 02 <property>`: read a property. Answers seen include property 0x02 = 0x03e8 (1000; it read 800 on 2026-11-08, so it is not the brightness, see [Keyboard brightness](#keyboard-brightness-property-0xea-linux-2026-11-08)), 0x41 = 2, and 0x13 = bytes `02 03 58`, which reads as firmware **2.3.88**, the version the keyboard was updated to after the Windows measurements. The galleon-deck notes mention firmware 3.70.1, so the protocol details they give may belong to another firmware generation.
 - `00 01 00 01 03 00 <1|2>`: set property 3 to 1 or 2 (what OpenRGB calls the render mode); the Web Hub toggles it many times, always answered `00 00 00 01 00`.
 - `0x0d`, `0x09`, `0x08`, `0x05`: open a resource, query its size, read it, close it (a file-like sequence; interpretation, not documented).
 - `0x06` / `0x07`: block writes. The three colour changes each produced one write whose payload contains the text "Profile": the Web Hub stored the colour in the keyboard's **saved profile**. That is a persistent write: **do not replay it** (project rule: nothing that writes to flash).
@@ -205,6 +205,47 @@ So the device exposes a small file system: a file is opened into a numbered buff
 - Reply layout seen: byte 4 = status, data from byte 5; the describe reply carries the size as 16 bits at byte 7 (0x23 for file 0x26, 0x89 for the profile, 8 here).
 
 Not found in the client: any name or function for a live per-key colour stream. The client has lighting "layers" and "effects" stored as profile data.
+
+## Keyboard brightness: property 0xEA (Linux, 2026-11-08)
+
+Keyboard part `1b1c:2b0c`, firmware **2.3.88**, vendor interface (usage page 0xFF42, usage 1, 128-byte reports), one unit. Two sources, both on Linux: the reports the Web Hub exchanged with the keyboard, logged by a read-only WebHID wrapper (Chrome, `navigator.hid`, bytes only; the raw log is not in the repository because the answers to command 0x08 carry device identifiers), and the read-only probe `tools/linux/bragi-probe.c`, which reads the property after the Web Hub was closed.
+
+**Observed.**
+
+- The Web Hub's brightness slider moves in steps of 20 %. At each step it sets **property 0xEA** to a 16-bit little-endian value, from 0 (off) to 1000 (100 %):
+
+  | Slider | Value | Bytes after `01 ea 00` | Read back by `bragi-probe` |
+  |---|---|---|---|
+  | 0 % | 0 | `00 00` | 0x0000 |
+  | 20 % | 200 | `c8 00` | 0x00c8 |
+  | 40 % | 400 | `90 01` | 0x0190 |
+  | 60 % | 600 | `58 02` | 0x0258 |
+  | 80 % | 800 | `20 03` | 0x0320 |
+  | 100 % | 1000 | `e8 03` | 0x03e8 |
+
+  Values are decimal in the first two columns: 0x0200 would be 512, not 200.
+- The Web Hub wraps the write between the two mode changes it also uses elsewhere (log of the 60 % and 100 % steps; times are from the wrapper's clock):
+
+  ```text
+  OUT 00 01 00 01 03 00 02          set property 3 to 2
+  OUT 00 01 00 01 ea 00 58 02       set property 0xEA to 600     (slider 60 %)
+  OUT 00 01 00 01 03 00 01          set property 3 to 1
+  IN  00 00 00 01 00                status 0 for each of the three
+  ```
+
+  Same sequence with `e8 03` for 100 %. Each report is zero-padded to 128 bytes. No block write (`0x06`/`0x07`) is involved.
+- The Web Hub reads the property when it connects: `00 01 00 02 ea 00` is answered `00 00 00 02 00 <lo> <hi>`, which is the value the keyboard holds.
+- **The value is kept across a power cycle.** Set to 60 %, both USB cables of the keyboard unplugged for 30 s, plugged back: the keys were still at 60 % and `bragi-probe` read 0x0258. One unit, one test.
+- Properties 0x01 (7), 0x02 (800), 0x05 (status 5 without the extra argument), 0x0a (5), 0x13 (firmware), 0x41 (2) and 0x6e (1) did not change while 0xEA went through all six values.
+
+**Not established.**
+
+- Whether another command writes the brightness without keeping it (a volatile variant). None is known. The live per-key stream below is volatile, but it carries colours, not this property.
+- What 0x01 and 0x02 are. 0x02 read 1000 on 2026-10-18 (before the Web Hub steps above) and 800 on 2026-11-08, while 0xEA is a different property. 800 is one of the slider's steps, so it may be another brightness-like setting on the same scale, but nothing here shows it.
+- Whether the keyboard's own keys change 0xEA.
+- Other firmware versions and other units.
+
+**Consequence for software.** Writing 0xEA changes the keyboard for good. A program that does so must read the current value first, keep it, and put it back on exit and at its next start if it was killed. Dimming that must not last belongs in the live per-key stream (scale the RGB values), which returns to the saved profile when released.
 
 ## Live per-key lighting (Windows, 2026-10-25)
 

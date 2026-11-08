@@ -16,8 +16,10 @@
 // The `08 02 <property>` format of galleon-deck and OpenRGB got NO answer on
 // this firmware (first version of this probe, which framed it correctly).
 // Properties asked: only ones the Web Hub read with status 0:
-//   0x01 (4), 0x02 (1000, probably brightness), 0x05 (0x0501), 0x0a (5),
-//   0x13 (firmware, bytes 02 03 58 = 2.3.88), 0x41 (2), 0x6e (1).
+//   0x01 (4), 0x02 (1000 on 2026-10-18, 800 on 2026-11-08 while 0xea was 600: NOT the Web Hub brightness, meaning unknown), 0x05 (0x0501), 0x0a (5),
+//   0x13 (firmware, bytes 02 03 58 = 2.3.88), 0x41 (2), 0x6e (1),
+//   0xea (brightness, 1000 = 100 %, kept after an unplug, tested 2026-11-08: the Web Hub read 0x03e8 at start and set 0x0258 then 0x03e8
+//   when the slider went to about 60 % and back, Web Hub capture of 2026-11-08, firmware 2.3.88).
 //
 // Optional: ./bragi-probe --software-mode
 //   Does what the Web Hub does around its reads (capture, property 3 set to 2
@@ -66,7 +68,7 @@ static int sendFrame(int fd, const uint8_t frame[PacketSize])
 }
 
 static const uint8_t CommandGet = 0x02;
-static const uint8_t Properties[] = {0x01, 0x02, 0x05, 0x0a, 0x13, 0x41, 0x6e};
+static const uint8_t Properties[] = {0x01, 0x02, 0x05, 0x0a, 0x13, 0x41, 0x6e, 0xea};
 // Report descriptor start of the interface: Usage Page (0xFF42), Usage (1).
 static const uint8_t VendorDescriptorStart[] = {0x06, 0x42, 0xff, 0x09, 0x01};
 

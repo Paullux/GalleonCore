@@ -112,6 +112,30 @@ Plutôt que d'attendre une version d'OpenRGB qui intègre le contrôleur, le pil
 - La proposition au cœur d'OpenRGB reste l'objectif à terme.
 - Qui écrit sur le clavier (plugin ou `galleond`) reste à trancher.
 
+### Luminosité du clavier : étude d'un curseur (8 novembre 2026)
+
+**Étude seulement, rien n'est implémenté.** Le protocole est décrit dans [`docs/protocol/README.md`](protocol/README.md#keyboard-brightness-property-0xea-linux-2026-11-08) : propriété `0xEA`, de 0 à 1000 par pas de 200 (les curseurs du Web Hub), conservée après un débranchement. Mesuré sur **une unité, firmware 2.3.88, sous Linux** ; rien n'est validé sous Windows.
+
+Contraintes retenues pour un curseur :
+- **L'écriture est durable** : lire la valeur avant, la mémoriser dans la configuration, la remettre à la sortie et au démarrage suivant si le processus a été tué. Écrire seulement quand le curseur s'arrête, pas à chaque cran. Une atténuation qui ne doit pas durer passe par le flux par touche (volatile), pas par `0xEA`.
+- **Céder la place** au Web Hub et à tout autre contrôleur, comme le décrit la section du 27 octobre (réponse non demandée, ou mode différent de 2).
+- **Bosun n'ouvre jamais le HID** : il garde la valeur à restaurer, un autre processus lit et écrit.
+
+Découpage envisagé, une responsabilité par fichier, dans une bibliothèque du clavier **indépendante** de celle du Stream Deck (LGPL-3.0-or-later comme `lib/`, aucune dépendance dans un sens ni dans l'autre) :
+
+| Fichier | Responsabilité |
+|---|---|
+| `BragiFrame` | construire les trames (lire, régler une propriété), fonctions pures |
+| `BragiReply` | valider une réponse (longueur, statut, valeur), fonctions pures |
+| `Brightness` | paliers 0 à 1000 et pourcentages, valeur invalide refusée, fonctions pures |
+| `KeyboardLink` | lire, mémoriser, écrire, restaurer, céder la place, au-dessus d'un `Transport` (testé avec un faux transport) |
+
+**Transport.** À vérifier avant d'écrire quoi que ce soit : `HidTransport` (hidapi, hidraw sous Linux, HID natif sous Windows) choisit l'interface par son numéro (`interfaceNumber`) ; l'interface fabricant du clavier est la numéro 1. S'il suffit, il n'y a pas de transport propre au clavier et aucun pendant Windows à écrire. Sinon : une implémentation par système derrière l'interface `Transport`, choisie dans CMake.
+
+**Windows.** La version Windows compte autant d'utilisateurs que les paquets Linux. Elle a besoin de sa propre série de mesures avant toute annonce : la luminosité n'y a pas été lue ni écrite, et les concurrents de l'anneau lumineux (Dynamic Lighting, OpenRGB) s'y ajoutent. Relire [`WINDOWS_HID_HISTORY.md`](WINDOWS_HID_HISTORY.md) avant de décider qui ouvre le clavier et quand.
+
+**Ordre.** Cette note et la documentation du protocole (une PR) ; série de tests sous Windows, puis mise à jour de la documentation ; ensuite seulement l'implémentation, dans une autre PR. Reste à trancher : qui écrit (`galleond`, un assistant séparé ou le plugin OpenRGB ci-dessus) et si cette fonction relève de GalleonCore ou du contrôleur RVB.
+
 ## 4. Écran du clavier et Plasmoids
 
 Un Plasmoid ne peut pas s'afficher directement sur le Galleon, qui attend des JPEG envoyés en HID.
