@@ -14,6 +14,7 @@
 #include <QSignalSpy>
 #include <QTest>
 
+#include <array>
 #include <memory>
 
 using namespace galleond;
@@ -160,8 +161,8 @@ private Q_SLOTS:
 
     void anyInputAfterTheStartStopsIt()
     {
-        const std::pair<Kind, int> inputs[] = {{Kind::KeyPressed, 3}, {Kind::KeyReleased, 3}, {Kind::DialRotated, 1},
-                                               {Kind::DialPressed, 0}};
+        const std::array<std::pair<Kind, int>, 4> inputs{{{Kind::KeyPressed, 3}, {Kind::KeyReleased, 3}, {Kind::DialRotated, 1},
+                                                          {Kind::DialPressed, 0}}};
         for (const auto &[kind, index] : inputs) {
             MatrixTrigger trigger;
             trigger.onEvent(Kind::DialPressed, 0, 0);
@@ -255,7 +256,7 @@ private Q_SLOTS:
     void holdingBothDialsDrawsGreenOnTheModuleAndAnnouncesIt()
     {
         Fixture f;
-        QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
         f.transport->writes.clear();
         f.transport->pendingReads.push_back(dialButtons(true, true));
         QTRY_COMPARE_WITH_TIMEOUT(active.count(), 1, 3000);
@@ -267,7 +268,7 @@ private Q_SLOTS:
     void releasingBeforeTheHoldIsOverStartsNothing()
     {
         Fixture f;
-        QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
         f.transport->pendingReads.push_back(dialButtons(true, true));
         QTest::qWait(100);
         f.transport->pendingReads.push_back(dialButtons(true, false));
@@ -279,7 +280,7 @@ private Q_SLOTS:
     void keyPressStopsItAndGivesTheScreenBack()
     {
         Fixture f;
-        QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
         f.transport->pendingReads.push_back(dialButtons(true, true));
         QTRY_COMPARE_WITH_TIMEOUT(active.count(), 1, 3000);
         f.transport->pendingReads.push_back(dialButtons(false, false)); // fingers lifted: it goes on
@@ -295,7 +296,7 @@ private Q_SLOTS:
     {
         Fixture f;
         f.controller->setInhibited(true);
-        QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
         f.transport->pendingReads.push_back(dialButtons(true, true));
         QTest::qWait(700);
         QCOMPARE(active.count(), 0);
@@ -304,7 +305,7 @@ private Q_SLOTS:
     void aModuleThatDisappearsEndsTheRain()
     {
         Fixture f;
-        QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
         f.transport->pendingReads.push_back(dialButtons(true, true));
         QTRY_COMPARE_WITH_TIMEOUT(active.count(), 1, 3000);
         f.transport->disconnected = true;

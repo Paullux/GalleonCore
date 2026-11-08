@@ -8,6 +8,7 @@
 #include <QtGlobal>
 
 #include <array>
+#include <cstdint>
 
 namespace galleond {
 
@@ -24,8 +25,8 @@ class MatrixTrigger
 public:
     static constexpr qint64 DefaultHoldMs = 5000;
 
-    enum class Kind { KeyPressed, KeyReleased, DialPressed, DialReleased, DialRotated };
-    enum class Action { None, Start, Stop };
+    enum class Kind : std::uint8_t { KeyPressed, KeyReleased, DialPressed, DialReleased, DialRotated };
+    enum class Action : std::uint8_t { None, Start, Stop };
 
     explicit MatrixTrigger(qint64 holdMs = DefaultHoldMs) : m_holdMs(holdMs) {}
 

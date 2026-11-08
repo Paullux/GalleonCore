@@ -27,14 +27,14 @@ MatrixTrigger::Action MatrixTrigger::onEvent(Kind kind, int index, qint64 nowMs)
 
     if (m_running) {
         if (kind == Kind::DialReleased) {
-            m_down[dial] = false;
-            if (m_ignoreRelease[dial]) {
-                m_ignoreRelease[dial] = false;
+            m_down.at(dial) = false;
+            if (m_ignoreRelease.at(dial)) {
+                m_ignoreRelease.at(dial) = false;
                 return Action::None;
             }
         }
         if (kind == Kind::DialPressed)
-            m_down[dial] = true;
+            m_down.at(dial) = true;
         m_running = false;
         m_ignoreRelease.fill(false);
         return Action::Stop;
@@ -42,14 +42,14 @@ MatrixTrigger::Action MatrixTrigger::onEvent(Kind kind, int index, qint64 nowMs)
 
     switch (kind) {
     case Kind::DialPressed:
-        m_down[dial] = true;
+        m_down.at(dial) = true;
         if (std::ranges::all_of(m_down, [](bool down) { return down; })) {
             m_armed = true;
             m_armedAt = nowMs;
         }
         break;
     case Kind::DialReleased:
-        m_down[dial] = false;
+        m_down.at(dial) = false;
         m_armed = false;
         break;
     case Kind::DialRotated:
