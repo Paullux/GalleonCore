@@ -48,6 +48,20 @@ function Wait-ApplicationsReady([int]$TimeoutSeconds = 60, [scriptblock]$Probe =
     } while ($clock.Elapsed.TotalSeconds -lt $TimeoutSeconds)
     return $false
 }
+# Diagnostic only: records every galleond process with its parent and start time, in the
+# console and in setup-app-daemons.log (uploaded with the other setup logs). It never
+# changes whether the test passes; it tells apart a daemon started twice from a second
+# daemon that is still exiting when the processes are counted.
+function Write-DaemonReport([string]$When, $Bosun) {
+    $lines = @("galleond processes $When (Bosun pid $($Bosun.Id)):")
+    $found = @(Get-CimInstance Win32_Process -Filter "Name = 'galleond.exe'" -ErrorAction SilentlyContinue)
+    if ($found.Count -eq 0) { $lines += '  none' }
+    foreach ($p in $found) {
+        $started = if ($p.CreationDate) { $p.CreationDate.ToString('o') } else { 'unknown' }
+        $lines += "  pid $($p.ProcessId) parent $($p.ParentProcessId) started $started path $($p.ExecutablePath) command $($p.CommandLine)"
+    }
+    $lines | Tee-Object -FilePath 'setup-app-daemons.log' -Append | Write-Host
+}
 function Write-StartupDiagnostics {
     foreach ($child in $script:processes) {
         try {
@@ -98,7 +112,11 @@ try {
     $ready = Wait-ApplicationsReady
     $daemon = @(Get-Process galleond -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq (Join-Path $root 'bin/galleond.exe') })
     $script:processes += $daemon
-    if (-not $ready -or $daemon.Count -ne 1) { throw 'Bosun did not automatically start one installed daemon.' }
+    Write-DaemonReport 'when counted' $bosun
+    if ($daemon.Count -ne 1) { Start-Sleep -Seconds 3; Write-DaemonReport '3 seconds later' $bosun }
+    if (-not $ready -or $daemon.Count -ne 1) {
+        throw "Bosun did not automatically start one installed daemon (ready: $ready, installed daemons: $($daemon.Count))."
+    }
     # Get-Process returns a snapshot; retain its native handle before exit so ExitCode remains readable.
     $null = $daemon[0].Handle
     Run-Installer (Resolve-Path $Setup).Path "/S /D=$root"
