@@ -17,6 +17,7 @@ option(GALLEON_SOURCE_TREE_PATHS "Let galleond and galleon-bosun find the widget
 set(GALLEON_PACKAGE_FORMAT "" CACHE STRING "Native package format for repository detection (deb or rpm)")
 option(GALLEON_FUZZ "Build the libFuzzer targets (Clang only)" OFF)
 option(GALLEON_BUILD_KEYBOARD_PROBE "Build the read-only keyboard probe (firmware and brightness through HidTransport)" OFF)
+option(GALLEON_BUILD_KEYBOARD_BRIGHTNESS_TOOL "Build the manual brightness read/write test tool (lib/keyboard/)" OFF)
 
 # Linux desktop integration remains the default. Windows desktop builds are
 # explicit while native integration and deployment are being validated.
@@ -70,6 +71,9 @@ add_subdirectory(lib/keyboard)
 add_subdirectory(media)
 if(GALLEON_BUILD_KEYBOARD_PROBE)
     add_subdirectory(tools/keyboard-read-probe)
+endif()
+if(GALLEON_BUILD_KEYBOARD_BRIGHTNESS_TOOL)
+    add_subdirectory(tools/keyboard-brightness)
 endif()
 if(GALLEON_BUILD_DESKTOP)
     add_subdirectory(daemon)
