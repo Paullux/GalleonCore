@@ -25,8 +25,6 @@ target_include_directories(galleon_keyboard PUBLIC
 target_link_libraries(galleon_keyboard PUBLIC galleon PRIVATE galleon_warnings)
 set_target_properties(galleon_keyboard PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-install(TARGETS galleon_keyboard
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-install(DIRECTORY include/galleon/keyboard DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/galleon)
+# Internal static library, like galleon_media/galleon_smtc/galleon_keys/galleon_platform in
+# media/CMakeLists.txt: nothing outside this build tree links it yet, so it is never installed
+# (an installed .a with no package consumer is what rpmbuild's "unpackaged file" check caught).
