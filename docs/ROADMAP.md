@@ -154,6 +154,14 @@ Avant d'écrire la moindre ligne de `KeyboardLink`, les deux points laissés ouv
 
 Répond aux deux points laissés ouverts les 16 octobre et 8 novembre : c'est `galleond` qui écrit, dans une bibliothèque et un composant propres au clavier, jamais mêlés à ceux du Stream Deck. **Règle, rien d'implémenté.**
 
+### Amorce de `lib/keyboard/` (10 novembre 2026)
+
+Première tranche de code, suivant la règle ci-dessus, pour un premier essai de curseur de luminosité :
+- `lib/keyboard/` (cible CMake `galleon_keyboard`, LGPL-3.0-or-later) : `BragiFrame` (trames get/set, fonctions pures), `BragiReply` (analyse d'une réponse get — 4 octets de valeur — ou set — simple écho de statut —, pure), `Brightness` (plage 0-1000, conversions pourcentage, pure), `KeyboardLink` (`readBrightness`/`writeBrightness` au-dessus d'un `galleon::Transport`, même discipline anti-trame-périmée/anti-timeout que `tools/keyboard-read-probe`, mais code indépendant : aucun include de `Protocol.h`/`StreamDeck.h`). Aucun fichier de `Protocol`/`StreamDeck` n'a été touché.
+- `writeBrightness` écrit puis relit systématiquement pour confirmer la valeur ; une valeur hors 0-1000 n'est jamais envoyée. Le statut de l'écho est conservé mais ne décide pas seul du succès (le même principe que `KeyboardReadProbe::readProperty`, qui garde un statut non nul sans échouer).
+- **Hors scope, à faire avant tout branchement dans `galleond`** : mémoriser la valeur précédente pour la restaurer à la sortie ou après un plantage, et céder la place au Web Hub (détection de mode étranger). Rien de cela n'est improvisé ici.
+- Testé avec `tests/test_keyboardlink.cpp` (`tests/FakeTransport.h`), sur le même modèle que `tests/test_keyboardreadprobe.cpp`. **Non rejoué par `tools/check.py`** : écrit depuis une session sans Docker ni Qt 6 installés (environnement Windows sans la chaîne CI) ; le code a été relu à la main (déport d'octets vérifié contre le capture du Web Hub) mais seule une vraie construction/exécution de `ctest` confirmera qu'il compile et que les tests passent. **Aucune écriture HID réelle tentée** : revient à l'utilisateur, avec le matériel.
+
 ## 4. Écran du clavier et Plasmoids
 
 Un Plasmoid ne peut pas s'afficher directement sur le Galleon, qui attend des JPEG envoyés en HID.

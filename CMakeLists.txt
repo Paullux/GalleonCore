@@ -66,6 +66,7 @@ endif()
 include(GNUInstallDirs)
 
 add_subdirectory(lib)
+add_subdirectory(lib/keyboard)
 add_subdirectory(media)
 if(GALLEON_BUILD_KEYBOARD_PROBE)
     add_subdirectory(tools/keyboard-read-probe)
