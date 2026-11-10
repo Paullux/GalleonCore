@@ -47,6 +47,10 @@ galleon_add_test(test_streamdeck FakeTransport.h)
 galleon_add_test(test_keyboardreadprobe FakeTransport.h ../tools/keyboard-read-probe/KeyboardReadProbe.cpp)
 target_include_directories(test_keyboardreadprobe PRIVATE ../tools/keyboard-read-probe)
 
+# lib/keyboard/, independent of Protocol/StreamDeck (see AGENTS.md); fake transport only.
+galleon_add_test(test_keyboardlink FakeTransport.h)
+target_link_libraries(test_keyboardlink PRIVATE galleon_keyboard)
+
 # Compile the real adapter against a fake C API: never enumerate real hardware.
 add_executable(test_hidtransport test_hidtransport.cpp ../lib/src/HidTransport.cpp)
 target_include_directories(test_hidtransport PRIVATE hidapi-stub ../lib/include)
