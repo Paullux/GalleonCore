@@ -285,7 +285,7 @@ Firmware and brightness match the Linux and `bragi-probe.ps1` measurements above
 > - **Write only property 3 = 1 or 2.** Values 3 and 5 put the device in a bootloader. Never create, write or delete files other than the live frame in buffer 0.
 > - Earlier attempts with other frame layouts froze the whole keyboard until it was unplugged (see [galleon-deck](webhub-lighting-analysis.md)). Use exactly the layout below.
 
-Measured by an outside contributor on one Galleon 100 SD, firmware 2.3.88, Windows 11, through the vendor interface (usage page 0xFF42, usage 1, 128-byte reports). The tool is a small C# library that sends only allowlisted commands, modeled on `bragi-probe`. Source and run notes: [Aaryush1/GalleonCore `lab/`](https://github.com/Aaryush1/GalleonCore/tree/key-lighting/lab). Discussion: [#56](https://github.com/Paullux/GalleonCore/issues/56).
+Measured by an outside contributor on one Galleon 100 SD, firmware 2.3.88, Windows 11, through the vendor interface (usage page 0xFF42, usage 1, 128-byte reports). The tool is a small C# library that sends only allowlisted commands, modeled on `bragi-probe`. Source and run notes: [Aaryush1/GalleonCore `lab/`](https://github.com/Aaryush1/GalleonCore/tree/key-lighting/lab). Discussion: [#56](https://github.com/Paullux/GalleonCore/issues/56). How the C# solution is built and what it protects against: [WINDOWS_LIVE_LIGHTING_CSHARP.md](../WINDOWS_LIVE_LIGHTING_CSHARP.md).
 
 ### Verified on the hardware
 

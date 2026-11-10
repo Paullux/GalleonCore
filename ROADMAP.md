@@ -278,6 +278,8 @@ Chaque chantier doit rester une **PR de périmètre limité** avec ses tests de 
 
 L'[issue #56](https://github.com/Paullux/GalleonCore/issues/56) reste **ouverte** pour suivre l'endurance de l'implémentation expérimentale C# d'Aaryush1 (tests jour après jour, plantages et watchdog, veille/réveil, reconnexions USB, coexistence Web Hub). Une collaboration pour un pilote **natif C++** est seulement une possibilité future, **sans engagement du contributeur**.
 
+L'architecture et les protections de cette solution C# sont décrites (en anglais) dans [docs/WINDOWS_LIVE_LIGHTING_CSHARP.md](docs/WINDOWS_LIVE_LIGHTING_CSHARP.md) ; ce document ne change pas l'état du chantier.
+
 Ne pas intégrer le flux d'écriture en production avant une validation dédiée : format strict des **440 octets** (`12 00` + 146 triplets RGB), commandes et modes autorisés (**propriété 3 : 1 ou 2 uniquement ; jamais 3/5, modes bootloader**), restitution du contrôle en sortie/erreur/veille, watchdog indépendant, cession de contrôle si Web Hub ou autre pilote intervient. Les résultats actuels ne démontrent ni le fonctionnement Linux ni la compatibilité avec tous les firmwares. Fermer #56 seulement lorsqu'un **pilote RGB complet et stable est intégré et validé dans GalleonCore**.
 
 ### Candidat 0.2.0 — 24 octobre 2026
