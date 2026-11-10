@@ -41,7 +41,10 @@ MatrixRainController::MatrixRainController(galleon::StreamDeck *deck, ScreenRend
     connect(m_deck, &galleon::StreamDeck::keyReleased, this, [this](int key) { onEvent(Kind::KeyReleased, key); });
     connect(m_deck, &galleon::StreamDeck::dialPressed, this, [this](int dial) { onEvent(Kind::DialPressed, dial); });
     connect(m_deck, &galleon::StreamDeck::dialReleased, this, [this](int dial) { onEvent(Kind::DialReleased, dial); });
-    connect(m_deck, &galleon::StreamDeck::dialRotated, this, [this](int dial, int) { onEvent(Kind::DialRotated, dial); });
+    connect(m_deck, &galleon::StreamDeck::dialRotated, this, [this](int dial, int steps) {
+        Q_UNUSED(steps);
+        onEvent(Kind::DialRotated, dial);
+    });
     // A module that went away forgets which buttons were held.
     connect(m_deck, &galleon::StreamDeck::disconnected, this, [this] {
         const bool wasRunning = m_trigger.isRunning();
