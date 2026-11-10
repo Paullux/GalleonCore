@@ -136,7 +136,23 @@ Découpage envisagé, une responsabilité par fichier, dans une bibliothèque du
 
 **Windows.** La version Windows compte autant d'utilisateurs que les paquets Linux. `tools/windows/bragi-probe.ps1` (port de `tools/linux/bragi-probe.c`, `ReadFile`/`WriteFile` natifs sur l'interface fabricant) a confirmé le 8 novembre 2026, sur le même clavier, que la propriété `0xEA` et les six paliers du curseur du Web Hub sont identiques à ce qui a été mesuré sous Linux (détail dans [`docs/protocol/README.md`](protocol/README.md#keyboard-brightness-property-0xea-confirmed-on-windows-2026-11-08)). Restent à faire sous Windows : le test de persistance au débranchement (non refait, jugé redondant — la valeur vit dans le clavier, pas dans le pilote) et les concurrents de l'anneau lumineux (Dynamic Lighting, OpenRGB) pour l'écriture à venir. Relire [`WINDOWS_HID_HISTORY.md`](WINDOWS_HID_HISTORY.md) avant de décider qui ouvre le clavier et quand.
 
-**Ordre.** Cette note et la documentation du protocole (une PR) ; série de tests sous Windows, puis mise à jour de la documentation ; ensuite seulement l'implémentation, dans une autre PR. Reste à trancher : qui écrit (`galleond`, un assistant séparé ou le plugin OpenRGB ci-dessus) et si cette fonction relève de GalleonCore ou du contrôleur RVB.
+**Ordre.** Cette note et la documentation du protocole (une PR) ; série de tests sous Windows, puis mise à jour de la documentation ; ensuite seulement l'implémentation, dans une autre PR.
+
+### Règles de séparation : bibliothèque et démon du clavier (10 novembre 2026)
+
+Avant d'écrire la moindre ligne de `KeyboardLink`, les deux points laissés ouverts ci-dessus (ligne 113 et ligne 139) sont tranchés.
+
+**Bibliothèque.** Le découpage en fichiers du 8 novembre (`BragiFrame`, `BragiReply`, `Brightness`, `KeyboardLink`) devient une bibliothèque **à part**, pas des fichiers ajoutés à `lib/` tel qu'il existe aujourd'hui :
+- Dossier `lib/keyboard/` (en-têtes publics sous `include/galleon/keyboard/`), même licence LGPL-3.0-or-later que `lib/`, cible CMake séparée (`galleon_keyboard`).
+- Elle ne dépend que de `Transport`/`HidTransport` (génériques, déjà utilisés en lecture par `tools/keyboard-read-probe`). Elle ne dépend jamais de `Protocol.h` ni de `StreamDeck.h`, et `Protocol`/`StreamDeck` ne dépendent jamais d'elle. Les deux protocoles appartiennent à deux parties USB différentes du même produit (clavier `1b1c:2b0c` contre module Stream Deck `1b1c:2b18`) : rien ne les relie à part le transport générique.
+- Testée avec `tests/FakeTransport.h`, comme `StreamDeck` ; aucun test ne doit construire les deux bibliothèques ensemble pour vérifier le comportement de l'une.
+
+**Démon.** `galleond` reste **un seul processus**, qui tient les deux parties USB (règle d'instance unique inchangée), mais par un composant séparé :
+- Nouveau composant (nom provisoire `KeyboardController`) dans `daemon/`, propriétaire de son propre `Transport` ouvert sur l'interface fabricant (`MI_01`) de la partie clavier. La politique de sécurité déjà décrite (lire avant d'écrire, mémoriser, restaurer, céder la place) reste entièrement dans `KeyboardLink` ; `KeyboardController` ne fait que la brancher au reste du démon (D-Bus, configuration), exactement comme `ScreenController` le fait pour `StreamDeck`.
+- Ni `ScreenController`, `PagesController`, `TileRenderer` ni `MprisController` n'appellent `KeyboardController`, et l'inverse non plus. Câblage à part dans `Wiring.cpp`.
+- Cette fonction (luminosité, propriété `0xEA`) reste dans GalleonCore / `galleond` : ce n'est pas le pilote RVB par touche, qui reste bloqué et dont le code resterait, lui, dans le fork d'OpenRGB (section 3 ci-dessus). Si ce pilote RVB par touche finit par être écrit, il reste hors de `galleond` et hors de cette bibliothèque clavier.
+
+Répond aux deux points laissés ouverts les 16 octobre et 8 novembre : c'est `galleond` qui écrit, dans une bibliothèque et un composant propres au clavier, jamais mêlés à ceux du Stream Deck. **Règle, rien d'implémenté.**
 
 ## 4. Écran du clavier et Plasmoids
 

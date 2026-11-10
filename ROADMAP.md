@@ -2,6 +2,10 @@
 
 Référence pour reprendre le développement à tout moment, y compris dans une nouvelle session Claude Code. À mettre à jour après chaque fonctionnalité terminée **et** testée (voir « Règle de mise à jour » en bas). Les notes de conception détaillées (protocole, RGB, OpenRGB, Windows) sont dans [docs/ROADMAP.md](docs/ROADMAP.md) ; les règles de code dans [AGENTS.md](AGENTS.md).
 
+### Règles de séparation bibliothèque/démon du clavier — 10 novembre 2026
+
+Décision d'architecture avant tout code sur la luminosité (propriété `0xEA`) : une bibliothèque `lib/keyboard/` indépendante de `lib/` (Stream Deck), un composant `KeyboardController` séparé dans `galleond`, aucune dépendance croisée entre les deux parties USB du produit (clavier `1b1c:2b0c`, module Stream Deck `1b1c:2b18`). C'est `galleond` qui écrira la propriété, jamais un processus séparé ni le plugin OpenRGB — qui reste, lui, réservé au RVB par touche. Détails dans [docs/ROADMAP.md, section 3](docs/ROADMAP.md#3-contrôleur-rvb-pour-openrgb). **Règle d'architecture seulement, rien n'est encore implémenté.**
+
 ### Relecture allemande et espagnole — 4 novembre 2026
 
 Corrections de sens et de formulation dans les README et le site : rotation des
