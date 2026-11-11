@@ -12,6 +12,11 @@ Column {
     required property var backend
     required property int index // the theme's place in the list
     required property var theme // {name, page, color}
+    property var filePicker: null
+    property string author: ""
+    property string license: "CC-BY-SA-4.0"
+    property string description: ""
+    property bool includeDials: false
     property bool confirming: false
     signal answered(string error, string done)
     // The tab moved or went: the window follows it.
@@ -105,5 +110,77 @@ Column {
         color: "#7d8591"
         font.pixelSize: 12
         text: qsTr("Page “%1”. Removing a tab removes its page too, unless a key still leads to it. The tab that opens the home page cannot be removed.").arg(editor.theme.page)
+    }
+    Rectangle {
+        width: parent.width
+        height: 1
+        color: "#33ffffff"
+    }
+    Text {
+        color: "white"
+        font.pixelSize: 16
+        font.bold: true
+        text: qsTr("Share this tab")
+    }
+    Text {
+        width: parent.width
+        wrapMode: Text.Wrap
+        color: "#7d8591"
+        font.pixelSize: 12
+        text: qsTr("Makes a .gc.theme file with this tab's keys and pictures. Share only what you made or may redistribute: no logos, characters or screenshots of others.")
+    }
+    Row {
+        spacing: 8
+        Field {
+            width: 180
+            maximumLength: 64
+            placeholder: qsTr("Author")
+            value: editor.author
+            input.onTextChanged: editor.author = input.text
+        }
+        Field {
+            width: 140
+            maximumLength: 40
+            placeholder: qsTr("Licence")
+            value: editor.license
+            input.onTextChanged: editor.license = input.text
+        }
+    }
+    Field {
+        width: 328
+        maximumLength: 300
+        placeholder: qsTr("A line about the theme (optional)")
+        value: editor.description
+        input.onTextChanged: editor.description = input.text
+    }
+    Row {
+        spacing: 8
+        Pill {
+            objectName: "exportTheme"
+            selected: true
+            text: qsTr("Export as a theme file…")
+            enabledLook: editor.filePicker !== null && editor.author.trim() !== "" && editor.license.trim() !== ""
+            onClicked: {
+                const path = editor.filePicker.themeSave(editor.theme.page)
+                if (path === "")
+                    return
+                const result = editor.backend.exportTheme(editor.index, path, {
+                    author: editor.author.trim(), license: editor.license.trim(),
+                    description: editor.description.trim(), includeDials: editor.includeDials})
+                if (result.ok) {
+                    let words = qsTr("Theme saved.")
+                    if (result.warnings.length > 0)
+                        words += " " + result.warnings.join(" · ")
+                    editor.answered("", words)
+                } else {
+                    editor.answered(result.errors.slice(0, 3).join(" · "), "")
+                }
+            }
+        }
+        Pill {
+            text: editor.includeDials ? qsTr("✓ With my dial settings") : qsTr("With my dial settings")
+            selected: editor.includeDials
+            onClicked: editor.includeDials = !editor.includeDials
+        }
     }
 }

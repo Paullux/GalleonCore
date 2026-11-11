@@ -18,6 +18,10 @@ public:
     Q_INVOKABLE QString picture();
     Q_INVOKABLE QString video();
     Q_INVOKABLE QString application();
+    // A theme file to install; empty when cancelled.
+    Q_INVOKABLE QString theme();
+    // Where to save a theme file; `name` is the suggested file name without its extension. Empty when cancelled.
+    Q_INVOKABLE QString themeSave(const QString &name);
 };
 
 } // namespace bosun

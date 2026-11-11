@@ -7,7 +7,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 A theme is a set of keys for the Stream Deck module, the colour that goes with it, what the two dials do, and the pictures it needs. A theme file is meant to be shared, so it is checked completely before anything is installed.
 
-Status: the reader and validator (`daemon/StoredZip.*`, `daemon/ThemePackage.*`, fuzz target `fuzz_theme_package`), the installer (`daemon/ThemeInstallPlan.*`, `daemon/ThemeInstaller.*`), the exporter (`daemon/ThemeExporter.*`) and the Bosun backend calls (`importTheme`, `exportTheme`) exist and are tested. The buttons in Bosun, the store on the website and a trial on the module are still to do: nothing here has been confirmed on the module yet.
+Status: the reader and validator (`daemon/StoredZip.*`, `daemon/ThemePackage.*`, fuzz target `fuzz_theme_package`), the installer (`daemon/ThemeInstallPlan.*`, `daemon/ThemeInstaller.*`), the exporter (`daemon/ThemeExporter.*`) and the Bosun backend calls (`importTheme`, `exportTheme`) exist and are tested. Bosun has the buttons: "Install a theme file…" in the + tab, and "Export as a theme file…" in a tab's editor (the wallpaper choice for an export is not in the interface yet). The store on the website and a trial on the module are still to do: nothing here has been confirmed on the module yet.
 
 ## The file
 

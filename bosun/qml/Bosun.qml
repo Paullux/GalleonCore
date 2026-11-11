@@ -323,7 +323,9 @@ Window {
                     color: "#33ffffff"
                 }
                 TabEditor {
+                    objectName: "tabEditor"
                     width: parent.width
+                    filePicker: win.filePicker
                     backend: win.backend
                     index: Math.min(win.currentTab, win.backend.themes.length - 1)
                     theme: win.backend.themes[Math.min(win.currentTab, win.backend.themes.length - 1)]
@@ -342,8 +344,18 @@ Window {
         y: 90
         width: Math.min(win.width - 60, 560)
         backend: win.backend
+        filePicker: win.filePicker
         onAnswered: (error, done) => win.answered(error, done)
         onCreated: win.currentTab = win.backend.themes.length - 1
+    }
+
+    // A theme was installed: show its tab here, and on the module.
+    Connections {
+        target: win.backend
+        function onThemeInstalled(themeIndex, page) {
+            win.currentTab = themeIndex
+            win.daemon.showTheme(page)
+        }
     }
 
     // ---- the keyboard

@@ -108,6 +108,10 @@ public:
     QString videoPath;
     Q_INVOKABLE QString picture() { return picturePath; }
     Q_INVOKABLE QString video() { return videoPath; }
+    QString themePath;
+    QString themeSavePath;
+    Q_INVOKABLE QString theme() { return themePath; }
+    Q_INVOKABLE QString themeSave(const QString &/*name*/) { return themeSavePath; }
 };
 
 class TestBosun : public QObject
@@ -396,6 +400,94 @@ QtObject {
         picker.videoPath.clear();
         QVERIFY(QMetaObject::invokeMethod(videoButton, "clicked"));
         QCOMPARE(backend->candidate().value("path").toString(), video);
+    }
+
+    void aThemeFileChosenInTheNewTabIsInstalledAndShown()
+    {
+        const QTemporaryDir dir;
+        QVERIFY(QDir().mkpath(dir.filePath("source")));
+        QVERIFY(QDir().mkpath(dir.filePath("target")));
+        const QString source = dir.filePath("source/pages.json");
+        QVERIFY(writeFile(source, R"({"version": 1, "home": "mine",
+            "themes": [{"name": "Mine", "page": "mine", "color": "#336699"}],
+            "pages": {"mine": {"keys": [{"key": 0, "label": "Next", "action": {"type": "media", "command": "next"}}]}}})"));
+        bosun::BosunBackend from(source, {.ffprobe = "/nonexistent", .ffmpeg = "/nonexistent", .thumbnailFolder = dir.filePath("thumbs")});
+        const QVariantMap exported = from.exportTheme(0, dir.filePath("mine"), {{"author", "A. Person"}, {"license", "CC-BY-SA-4.0"}});
+        QVERIFY(exported.value("ok").toBool());
+
+        const QString target = dir.filePath("target/pages.json");
+        QVERIFY(writeFile(target, twoThemes()));
+        const auto backend = std::make_unique<bosun::BosunBackend>(target, bosun::BosunBackend::Tools{.ffprobe = "/nonexistent", .ffmpeg = "/nonexistent",
+            .thumbnailFolder = dir.filePath("thumbs"), .wallpaperRoot = dir.filePath("wallpapers")});
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const auto library = std::make_unique<bosun::WallpaperLibrary>(bosun::WallpaperLibrary::Places{.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        FakeFilePicker picker;
+        picker.themePath = exported.value("file").toString();
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(backend.get()));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(library.get()));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(library.get()));
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(backend.get())},
+                                     {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(library.get())},
+                                     {QStringLiteral("filePicker"), QVariant::fromValue(&picker)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto *root = engine.rootObjects().constFirst();
+        root->setProperty("currentTab", backend->themes().size()); // the "+" tab
+        auto *button = root->findChild<QQuickItem *>("importTheme");
+        QVERIFY(button);
+        QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
+        QCOMPARE(backend->themes().size(), 3);
+        QCOMPARE(root->property("currentTab").toInt(), 2); // the window shows the new tab
+        QVERIFY(!root->property("messageIsError").toBool());
+
+        picker.themePath = dir.filePath("none.gc.theme"); // a file that is not there: said, nothing added
+        root->setProperty("currentTab", backend->themes().size());
+        QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
+        QCOMPARE(backend->themes().size(), 3);
+        QVERIFY(root->property("messageIsError").toBool());
+
+        picker.themePath.clear(); // cancelled: nothing happens
+        QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
+        QCOMPARE(backend->themes().size(), 3);
+    }
+
+    void aTabIsExportedFromItsEditor()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const auto backend = std::make_unique<bosun::BosunBackend>(file, bosun::BosunBackend::Tools{.ffprobe = "/nonexistent", .ffmpeg = "/nonexistent",
+                                                                                                .thumbnailFolder = dir.filePath("thumbs")});
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const auto library = std::make_unique<bosun::WallpaperLibrary>(bosun::WallpaperLibrary::Places{.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        FakeFilePicker picker;
+        picker.themeSavePath = dir.filePath("music");
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(backend.get()));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(library.get()));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(library.get()));
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(backend.get())},
+                                     {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(library.get())},
+                                     {QStringLiteral("filePicker"), QVariant::fromValue(&picker)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto *root = engine.rootObjects().constFirst();
+        root->setProperty("currentTab", 1);
+        auto *editor = root->findChild<QQuickItem *>("tabEditor");
+        auto *button = root->findChild<QQuickItem *>("exportTheme");
+        QVERIFY(editor);
+        QVERIFY(button);
+        QVERIFY(!button->property("enabledLook").toBool()); // no author yet
+        editor->setProperty("author", "A. Person");
+        QVERIFY(button->property("enabledLook").toBool());
+        QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
+        QVERIFY2(QFile::exists(dir.filePath("music.gc.theme")), "the file is made with its extension");
+        QVERIFY(!root->property("messageIsError").toBool());
     }
 
     void themesAreTheTabs()
