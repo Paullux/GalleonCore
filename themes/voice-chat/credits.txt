@@ -1,6 +1,6 @@
 Voice chat: a first example theme for GalleonCore.
 
-Pictures: drawn for this theme by Paul Woisard, from plain shapes (see PROVENANCE.md in the source folder). CC-BY-SA-4.0.
+Pictures: the key pictures are drawn for this theme by Paul Woisard, from plain shapes; the wallpaper is supplied by the same author (see PROVENANCE.md in the source folder). CC-BY-SA-4.0.
 
 Before the keys do anything, give your voice chat application these keyboard shortcuts. The keys send F14 to F18, which have no default action on most desktops (on KDE, F13 opens System Settings and F20 toggles the microphone, so they are not used here):
   Mute microphone      F14

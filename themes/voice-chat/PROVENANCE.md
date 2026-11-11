@@ -5,3 +5,4 @@
 - `theme.json`, `credits.txt`: original text. CC-BY-SA-4.0.
 - Key pictures such as `media-skip-backward` are names from the user's own desktop icon theme and are not distributed with the theme.
 - Not confirmed on the module yet; the F14 to F18 shortcuts also depend on the voice chat application accepting them.
+- `wallpapers/wallpaper-01.jpg`: 720 x 384 picture supplied by the author (Paul Woisard) on 2026-11-11, added to the theme as its wallpaper. It shows generic chat bubbles, a headset, a game controller and a microphone on a purple night sky: no logo, character or real person. **To be filled in by the author before publication: the tool or software that made it, the date, and the prompt if it is AI-generated** (see ASSETS.md). CC-BY-SA-4.0 once confirmed.
