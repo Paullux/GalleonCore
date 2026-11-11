@@ -429,6 +429,10 @@ Le 20 octobre, le propriétaire confirme le fonctionnement du correctif des fond
 
 ## 2. En cours
 
+### Thèmes partageables `.gc.theme` — en cours (11 novembre 2026)
+
+Branche `feat/theme-package`. Fait et testé (tests, fuzzing, clang-tidy, validation complète) : conteneur zip « stored » (`StoredZip`), validateur de thème (`ThemePackage`), spécification [docs/THEME_FORMAT.md](docs/THEME_FORMAT.md). **Pas encore** : installation et basculement vers le nouveau thème (Bosun et Stream Deck), export avec recompression JPEG (qualité 80 minimum), boutons dans Bosun, spécification et store sur le site. Rien de tout cela n'est confirmé sur le module.
+
 - **Mode Jeu automatique (23 octobre)** : écran dédié au-dessus de l'accueil/du média pendant une capture FPS fraîche, FPS, températures et charges CPU/GPU sur cadrans gradués de style automobile, illustration locale Steam ou association manuelle par exécutable, onglets Bosun Widgets et Mode Jeu séparés, chacun avec bouton Appliquer. Arrêt de la veille du module pendant le jeu, réveil immédiat et délai complet restauré à la sortie. Sources Linux hwmon/MangoHud, NVIDIA Linux/Windows et serveur local LibreHardwareMonitor optionnel. Détection fondée sur la capture active (retour sous dix secondes sans nouvelles données), disposition jeu fixe pour cette première version ; validation native Windows et sur le module à effectuer. [Détails](docs/HOME_WIDGETS.md).
 
 
