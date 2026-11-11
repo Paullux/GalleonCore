@@ -1,0 +1,27 @@
+{
+  "formatVersion": 1,
+  "id": "voice-chat",
+  "name": "Voice chat",
+  "author": "Paul Woisard",
+  "license": "CC-BY-SA-4.0",
+  "description": "Mic, headphones, push-to-talk, camera and screen share keys for a voice chat application, with volume and media keys.",
+  "color": "#6c5ce7",
+  "keys": [
+    { "key": 0, "label": "Mute", "icon": "mute.png", "action": { "type": "key", "key": "kp1" } },
+    { "key": 1, "label": "Deafen", "icon": "deafen.png", "action": { "type": "key", "key": "kp2" } },
+    { "key": 2, "label": "Talk", "icon": "talk.png", "action": { "type": "key", "key": "kp3" } },
+    { "key": 3, "label": "Discord",
+      "action": { "type": "app", "desktop": "discord.desktop",
+                  "alternatives": ["com.discordapp.Discord.desktop", "discord_discord.desktop"] } },
+    { "key": 4, "label": "Camera", "icon": "camera.png", "action": { "type": "key", "key": "kp4" } },
+    { "key": 5, "label": "Share", "icon": "share.png", "action": { "type": "key", "key": "kp5" } },
+    { "key": 6, "label": "Previous", "icon": "media-skip-backward", "action": { "type": "media", "command": "previous" } },
+    { "key": 7, "label": "Play",
+      "icon": { "playing": "media-playback-pause", "paused": "media-playback-start", "stopped": "media-playback-start" },
+      "action": { "type": "media", "command": "play-pause" } },
+    { "key": 8, "label": "Vol -", "icon": "audio-volume-low", "action": { "type": "media", "command": "volume", "step": -5 } },
+    { "key": 9, "label": "Sound off", "icon": "audio-volume-muted", "action": { "type": "media", "command": "mute" } },
+    { "key": 10, "label": "Vol +", "icon": "audio-volume-high", "action": { "type": "media", "command": "volume", "step": 5 } },
+    { "key": 11, "label": "Next", "icon": "media-skip-forward", "action": { "type": "media", "command": "next" } }
+  ]
+}

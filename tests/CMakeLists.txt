@@ -75,6 +75,7 @@ function(galleond_add_test name)
     target_compile_definitions(${name} PRIVATE
         GALLEON_SOURCE_WIDGETS="${CMAKE_SOURCE_DIR}/widgets"
         GALLEON_SOURCE_WALLPAPERS="${CMAKE_SOURCE_DIR}/public/wallpaper"
+        GALLEON_SOURCE_THEMES="${CMAKE_SOURCE_DIR}/themes"
     )
 endfunction()
 

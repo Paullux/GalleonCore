@@ -8,6 +8,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QDir>
+#include <QFile>
 #include <QTest>
 
 using namespace galleond;
@@ -327,6 +329,36 @@ private Q_SLOTS:
         QJsonObject manifest = validManifest();
         manifest["steam"] = QJsonObject{{"max", 6}};
         QVERIFY(!parseThemeEntries({manifestEntry(manifest), validEntries().at(1)}).package.has_value());
+    }
+
+    // The themes shipped in the repository are checked by the same validator as anyone's.
+    void everyThemeShippedWithGalleonCoreIsValid()
+    {
+        const QDir themes(QString::fromUtf8(GALLEON_SOURCE_THEMES));
+        QVERIFY2(themes.exists(), "the themes folder of the source tree is missing");
+        const QStringList folders = themes.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        QVERIFY(!folders.isEmpty());
+        for (const QString &folder : folders) {
+            const QDir theme(themes.filePath(folder));
+            std::vector<ZipEntry> entries;
+            for (const QString &name : {QStringLiteral("theme.json"), QStringLiteral("credits.txt")}) {
+                QFile file(theme.filePath(name));
+                if (file.open(QIODevice::ReadOnly))
+                    entries.push_back({name, file.readAll()});
+            }
+            for (const QString &sub : {QStringLiteral("icons"), QStringLiteral("wallpapers")}) {
+                const QStringList files = QDir(theme.filePath(sub)).entryList(QDir::Files);
+                for (const QString &name : files) {
+                    QFile file(theme.filePath(sub + QLatin1Char('/') + name));
+                    QVERIFY(file.open(QIODevice::ReadOnly));
+                    entries.push_back({sub + QLatin1Char('/') + name, file.readAll()});
+                }
+            }
+            const ThemeParseResult result = parseThemeEntries(entries);
+            QVERIFY2(result.package.has_value(), qPrintable(folder + QLatin1String(": ") + joined(result)));
+            QCOMPARE(required(result.package).meta.id, folder); // the folder is named after the theme
+            QCOMPARE(required(result.package).meta.license, QStringLiteral("CC-BY-SA-4.0"));
+        }
     }
 
     void imageInspectionReadsTheSizeFromTheHeader()

@@ -1,0 +1,12 @@
+Voice chat: a first example theme for GalleonCore.
+
+Pictures: drawn for this theme by Paul Woisard, from plain shapes (see PROVENANCE.md in the source folder). CC-BY-SA-4.0.
+
+Before the first six keys do anything, give your voice chat application these keyboard shortcuts, using the numeric keypad keys:
+  Mute microphone      Numpad 1
+  Deafen               Numpad 2
+  Push to talk         Numpad 3 (held while the key is pressed)
+  Turn camera on/off   Numpad 4
+  Share screen         Numpad 5
+
+The "Discord" key starts the application if it is installed (deb, Flatpak or Snap). No logo of any application is included.
