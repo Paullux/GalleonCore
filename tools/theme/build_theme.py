@@ -33,7 +33,8 @@ def contents(name, path):
     newlines and written back as LF, so a checkout's own line endings (CRLF on
     Windows with core.autocrlf) never change the packed bytes."""
     if name in TEXT_NAMES:
-        return path.read_text(encoding='utf-8', newline=None).encode('utf-8')
+        with open(path, 'r', encoding='utf-8', newline=None) as text:
+            return text.read().encode('utf-8')
     return path.read_bytes()
 
 
