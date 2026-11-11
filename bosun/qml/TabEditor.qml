@@ -17,6 +17,7 @@ Column {
     property string license: "CC-BY-SA-4.0"
     property string description: ""
     property bool includeDials: false
+    property var wallpapers: [] // picture files to put in the theme (at most 4)
     property bool confirming: false
     signal answered(string error, string done)
     // The tab moved or went: the window follows it.
@@ -24,6 +25,7 @@ Column {
     signal removed
 
     spacing: 10
+    onIndexChanged: wallpapers = []
 
     Timer {
         id: forget
@@ -156,6 +158,43 @@ Column {
     Row {
         spacing: 8
         Pill {
+            objectName: "addThemeWallpapers"
+            text: qsTr("Add wallpapers…")
+            enabledLook: editor.filePicker !== null && editor.wallpapers.length < 4
+            onClicked: {
+                const chosen = editor.filePicker.pictures()
+                const merged = editor.wallpapers.slice()
+                for (const path of chosen) {
+                    if (merged.length < 4 && merged.indexOf(path) < 0)
+                        merged.push(path)
+                }
+                editor.wallpapers = merged
+            }
+        }
+        Pill {
+            visible: editor.wallpapers.length > 0
+            text: qsTr("Remove them")
+            onClicked: editor.wallpapers = []
+        }
+        Text {
+            visible: editor.wallpapers.length > 0
+            height: 32
+            verticalAlignment: Text.AlignVCenter
+            color: "#9aa0a6"
+            font.pixelSize: 12
+            text: qsTr("Wallpapers: %1").arg(editor.wallpapers.map(p => p.split("/").pop()).join(", "))
+        }
+    }
+    Text {
+        width: parent.width
+        wrapMode: Text.Wrap
+        color: "#7d8591"
+        font.pixelSize: 12
+        text: qsTr("Up to 4 wallpapers: they are shrunk to the screen and saved as JPEG.")
+    }
+    Row {
+        spacing: 8
+        Pill {
             objectName: "exportTheme"
             selected: true
             text: qsTr("Export as a theme file…")
@@ -166,7 +205,8 @@ Column {
                     return
                 const result = editor.backend.exportTheme(editor.index, path, {
                     author: editor.author.trim(), license: editor.license.trim(),
-                    description: editor.description.trim(), includeDials: editor.includeDials})
+                    description: editor.description.trim(), includeDials: editor.includeDials,
+                    wallpapers: editor.wallpapers})
                 if (result.ok) {
                     let words = qsTr("Theme saved.")
                     if (result.warnings.length > 0)

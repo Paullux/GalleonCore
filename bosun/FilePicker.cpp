@@ -15,6 +15,13 @@ QString FilePicker::picture() // NOLINT(readability-convert-member-functions-to-
                                        tr("Pictures (*.jpg *.jpeg *.png *.webp *.bmp);;All files (*)"));
 }
 
+QStringList FilePicker::pictures() // NOLINT(readability-convert-member-functions-to-static): QML invokes this QObject method.
+{
+    return QFileDialog::getOpenFileNames(nullptr, tr("Choose wallpapers"),
+                                        QStandardPaths::writableLocation(QStandardPaths::PicturesLocation),
+                                        tr("Pictures (*.jpg *.jpeg *.png *.webp *.bmp);;All files (*)"));
+}
+
 QString FilePicker::video() // NOLINT(readability-convert-member-functions-to-static): QML invokes this QObject method.
 {
     return QFileDialog::getOpenFileName(nullptr, tr("Choose a video"),
