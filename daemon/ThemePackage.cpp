@@ -4,6 +4,7 @@
 #include "ThemePackage.h"
 
 #include "DesktopEntries.h"
+#include "WellKnownApps.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -343,8 +344,13 @@ private:
         }
     }
 
+    // Either a literal desktop file ID (unique to one system) or one of the
+    // small set of applications a theme may name portably (see WellKnownApps.h),
+    // never a path: a shared file must stay installable on another system.
     static bool isPackageDesktopId(const QString &name)
     {
+        if (WellKnownApps::find(name))
+            return true;
         return name.endsWith(QLatin1String(".desktop")) && !name.contains(QLatin1Char('/')) && !name.contains(QLatin1Char('\\'))
             && DesktopEntries::isValidReference(name);
     }

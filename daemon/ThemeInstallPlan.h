@@ -29,7 +29,11 @@ struct ThemeInstallContext
     QStringList existingIconFiles;         // file names in the icon folder
     QStringList existingWallpaperStyles;   // folder names in the wallpaper folder
     int existingThemeCount = 0;
-    std::function<bool(const QString &)> desktopExists; // is this desktop file ID installed here?
+    // The literal reference to store for this candidate (a desktop file ID, a
+    // path, or a resolved well-known app), or empty when it is not installed
+    // here. A well-known candidate ("discord") never ends up stored as such:
+    // this is what turns it into whatever this machine actually has.
+    std::function<QString(const QString &)> resolveDesktop;
     bool applyDials = false; // the dials are shared by every theme: copy the theme's only when asked
 };
 

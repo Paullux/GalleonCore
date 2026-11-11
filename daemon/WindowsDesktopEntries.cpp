@@ -4,6 +4,7 @@
 #include "DesktopEntries.h"
 #include "InitialPages.h"
 #include "SteamLibrary.h"
+#include "WellKnownApps.h"
 #include <QFile>
 
 #include <QCryptographicHash>
@@ -19,11 +20,14 @@
 #include <QSettings>
 #include <QRegularExpression>
 #include <array>
+#include <cwchar>
+#include <vector>
 #include <windows.h>
 #include <shellapi.h>
 #include <shlobj.h>
 #include <shobjidl.h>
 #include <wrl/client.h>
+#include <winver.h>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QUrl>
@@ -50,6 +54,52 @@ struct ShortcutInfo
     QString arguments;
     QString icon;
 };
+
+struct VersionStrings
+{
+    QString productName;
+    QString companyName;
+};
+
+// ProductName/CompanyName from the target's own version resource, set by its
+// vendor at build time: unlike a shortcut's display name, neither the user's
+// language nor a renamed shortcut changes them. Empty fields when the file
+// carries no version info at all (not every executable does).
+VersionStrings versionStrings(const QString &exePath)
+{
+    VersionStrings result;
+    const std::wstring path = QDir::toNativeSeparators(exePath).toStdWString();
+    DWORD handle = 0;
+    const DWORD size = GetFileVersionInfoSizeW(path.c_str(), &handle);
+    if (size == 0)
+        return result;
+    std::vector<BYTE> data(size);
+    if (!GetFileVersionInfoW(path.c_str(), handle, size, data.data()))
+        return result;
+    struct LangCodePage
+    {
+        WORD language;
+        WORD codePage;
+    };
+    LangCodePage *translations = nullptr;
+    UINT translationsBytes = 0;
+    if (!VerQueryValueW(data.data(), L"\\VarFileInfo\\Translation", reinterpret_cast<void **>(&translations), &translationsBytes)
+        || translationsBytes < sizeof(LangCodePage))
+        return result;
+    const LangCodePage lcp = translations[0];
+    const auto queryString = [&](const wchar_t *name) -> QString {
+        std::array<wchar_t, 64> subBlock{};
+        swprintf(subBlock.data(), subBlock.size(), L"\\StringFileInfo\\%04x%04x\\%ls", lcp.language, lcp.codePage, name);
+        void *value = nullptr;
+        UINT length = 0;
+        if (!VerQueryValueW(data.data(), subBlock.data(), &value, &length) || length == 0)
+            return {};
+        return QString::fromWCharArray(static_cast<const wchar_t *>(value), static_cast<int>(length) - 1); // drop the trailing NUL
+    };
+    result.productName = queryString(L"ProductName");
+    result.companyName = queryString(L"CompanyName");
+    return result;
+}
 
 QString expandedPath(const wchar_t *path)
 {
@@ -163,15 +213,78 @@ bool allowedFile(const QFileInfo &info)
     return info.isAbsolute() && info.isFile() && !info.isSymbolicLink()
         && (suffix == QStringLiteral("lnk") || suffix == QStringLiteral("exe") || suffix == QStringLiteral("url"));
 }
+
+// The executable a candidate reference ultimately starts, for signature matching:
+// a shortcut's own target, or the reference itself when it already is one.
+QString targetExecutable(const QString &reference)
+{
+    if (QFileInfo(reference).suffix().compare(QStringLiteral("lnk"), Qt::CaseInsensitive) == 0)
+        return shortcutInfo(reference, false).target;
+    if (QFileInfo(reference).suffix().compare(QStringLiteral("exe"), Qt::CaseInsensitive) == 0)
+        return reference;
+    return {}; // a .url (Steam) is never a well-known application
+}
+
+bool matchesWellKnown(const QString &reference, const WellKnownApp &known)
+{
+    const QString target = targetExecutable(reference);
+    if (target.isEmpty())
+        return false;
+    const VersionStrings info = versionStrings(target);
+    return WellKnownApps::windowsSignatureMatches(QFileInfo(target).fileName(), info.productName, info.companyName, known);
+}
+
+// Every reference resolveWellKnown should try, in the same order list() scans them.
+QStringList wellKnownCandidates()
+{
+    QStringList candidates;
+    for (const QString &root : startMenuRoots()) {
+        QDirIterator files(root, {QStringLiteral("*.lnk"), QStringLiteral("*.exe")}, QDir::Files, QDirIterator::Subdirectories);
+        while (files.hasNext())
+            candidates.push_back(files.next());
+    }
+    for (const QString &hive : {QStringLiteral("HKEY_CURRENT_USER"), QStringLiteral("HKEY_LOCAL_MACHINE")}) {
+        for (const QSettings::Format format : {QSettings::NativeFormat, QSettings::Registry32Format}) {
+            QSettings registered(hive + QStringLiteral("\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths"), format);
+            for (const QString &group : registered.childGroups()) {
+                QString path = registered.value(group + QStringLiteral("/.")).toString().trimmed();
+                if (path.startsWith(QLatin1Char('"')) && path.endsWith(QLatin1Char('"')))
+                    path = path.mid(1, path.size() - 2);
+                if (!path.isEmpty())
+                    candidates.push_back(path);
+            }
+        }
+    }
+    return candidates;
+}
 }
 
 bool DesktopEntries::isValidReference(const QString &desktop)
 {
     if (desktop.isEmpty() || desktop.size() > 4096 || desktop.contains(QChar::Null))
         return false;
+    if (WellKnownApps::find(desktop))
+        return true;
     const QFileInfo info(desktop);
     const QString suffix = info.suffix().toLower();
     return info.isAbsolute() && (suffix == QStringLiteral("lnk") || suffix == QStringLiteral("exe") || suffix == QStringLiteral("url"));
+}
+
+QString DesktopEntries::wellKnownIdFor(const QString &desktop)
+{
+    if (!isValidReference(desktop) || WellKnownApps::find(desktop))
+        return {};
+    const QString target = targetExecutable(desktop);
+    if (target.isEmpty())
+        return {};
+    const VersionStrings info = versionStrings(target);
+    const QString baseName = QFileInfo(target).fileName();
+    for (const QString &id : WellKnownApps::knownIds()) {
+        if (const WellKnownApp *app = WellKnownApps::find(id);
+            app && WellKnownApps::windowsSignatureMatches(baseName, info.productName, info.companyName, *app))
+            return id;
+    }
+    return {};
 }
 
 DesktopApp DesktopEntries::read(const QString &file, const QString &id)
@@ -221,6 +334,17 @@ DesktopApp DesktopEntries::lookup(const QString &desktop)
 {
     if (!isValidReference(desktop))
         return {};
+    if (const WellKnownApp *known = WellKnownApps::find(desktop)) {
+        // A theme names an application portably: there is no ID to look up
+        // directly, so every candidate list() would scan is tried in turn.
+        for (const QString &candidate : wellKnownCandidates()) {
+            if (!matchesWellKnown(candidate, *known))
+                continue;
+            if (DesktopApp app = read(candidate, candidate); app.isValid())
+                return app;
+        }
+        return {};
+    }
     return read(desktop, desktop);
 }
 

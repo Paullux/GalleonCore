@@ -3,6 +3,7 @@
 
 #include "ThemeExporter.h"
 
+#include "DesktopEntries.h"
 #include "InitialPages.h"
 #include "PagesConfig.h"
 #include "ThemePackage.h"
@@ -104,6 +105,26 @@ QString colorText(std::uint32_t rgb)
     return QStringLiteral("#%1").arg(rgb & 0xFFFFFFU, 6, 16, QLatin1Char('0'));
 }
 
+// An "app" key naming one of the applications WellKnownApps.h knows is
+// rewritten to that portable id: the literal reference this machine resolved
+// (a desktop file ID, a Windows shortcut path) is specific to it, so exporting
+// it as-is would make the theme installable here and nowhere else.
+void portableizeAppActions(QJsonArray &keys)
+{
+    for (int i = 0; i < keys.size(); ++i) {
+        QJsonObject key = keys.at(i).toObject();
+        QJsonObject action = key.value(QStringLiteral("action")).toObject();
+        if (action.value(QStringLiteral("type")).toString() != QLatin1String("app"))
+            continue;
+        const QString id = DesktopEntries::wellKnownIdFor(action.value(QStringLiteral("desktop")).toString());
+        if (id.isEmpty())
+            continue;
+        action.insert(QStringLiteral("desktop"), id);
+        key.insert(QStringLiteral("action"), action);
+        keys[i] = key;
+    }
+}
+
 class Exporter
 {
 public:
@@ -121,6 +142,7 @@ public:
                 m_warnings.push_back(QStringLiteral("the page's \"%1\" setting depends on this computer and is not part of the theme").arg(field));
         }
         collectPictures(keys, theme.page);
+        portableizeAppActions(keys);
         QJsonObject manifest{{QStringLiteral("formatVersion"), ThemeFormatVersion},
                              {QStringLiteral("id"), theme.page},
                              {QStringLiteral("name"), theme.name},

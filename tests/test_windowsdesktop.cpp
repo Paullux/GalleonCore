@@ -148,6 +148,31 @@ private slots:
         QVERIFY(found);
     }
 
+    void aPortableAppIdIsNotFooledByAnExeJustSharingItsName()
+    {
+        if (qEnvironmentVariable("GITHUB_ACTIONS") != QStringLiteral("true"))
+            QSKIP("Temporary Start Menu shortcuts are isolated to the Windows CI runner");
+        const QTemporaryDir files;
+        const QString root = QStandardPaths::writableLocation(QStandardPaths::ApplicationsLocation);
+        QVERIFY(QDir().mkpath(root));
+        const QTemporaryDir menu(QDir(root).filePath(QStringLiteral("galleon-wellknown-XXXXXX")));
+        QVERIFY(files.isValid());
+        QVERIFY(menu.isValid());
+        // notepad.exe renamed to Discord.exe: the file name alone must not be
+        // enough, since its own version info says it is something else.
+        const QString executable = files.filePath(QStringLiteral("Discord.exe"));
+        QVERIFY(QFile::copy(QDir(qEnvironmentVariable("SystemRoot")).filePath(QStringLiteral("System32/notepad.exe")), executable));
+        const HRESULT apartment = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        const auto cleanup = qScopeGuard([apartment] { if (SUCCEEDED(apartment)) CoUninitialize(); });
+        Microsoft::WRL::ComPtr<IShellLinkW> link;
+        QVERIFY(SUCCEEDED(CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(link.GetAddressOf()))));
+        QVERIFY(SUCCEEDED(link->SetPath(QDir::toNativeSeparators(executable).toStdWString().c_str())));
+        Microsoft::WRL::ComPtr<IPersistFile> persist;
+        QVERIFY(SUCCEEDED(link.As(&persist)));
+        QVERIFY(SUCCEEDED(persist->Save(QDir::toNativeSeparators(menu.filePath(QStringLiteral("Discord.lnk"))).toStdWString().c_str(), TRUE)));
+        QVERIFY(!galleond::DesktopEntries::lookup(QStringLiteral("discord")).isValid());
+    }
+
     void browserShortcutsKeepSeparateAppsProfilesAndIcons()
     {
         if (qEnvironmentVariable("GITHUB_ACTIONS") != QStringLiteral("true"))

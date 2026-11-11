@@ -73,10 +73,11 @@ QString chooseDesktop(const QString &first, const QStringList &alternatives, con
 {
     QStringList candidates{first};
     candidates.append(alternatives);
-    if (context.desktopExists) {
+    if (context.resolveDesktop) {
         for (const QString &candidate : std::as_const(candidates)) {
-            if (context.desktopExists(candidate))
-                return candidate;
+            const QString resolved = context.resolveDesktop(candidate);
+            if (!resolved.isEmpty())
+                return resolved;
         }
     }
     warnings.push_back(QStringLiteral("%1 does not seem to be installed here").arg(first));
