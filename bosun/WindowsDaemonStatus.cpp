@@ -70,6 +70,11 @@ QString DaemonStatus::showGaming() {
     galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::Gaming, {}}, this);
     return {};
 }
+QString DaemonStatus::showTheme(const QString &page) {
+    if (!running()) return {};
+    galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::Theme, {}, page}, this);
+    return {};
+}
 QString DaemonStatus::start() { return running() ? QString{} : ask(QStringLiteral("start")); }
 QString DaemonStatus::stop() { return running() ? ask(QStringLiteral("stop")) : QString{}; }
 } // namespace bosun

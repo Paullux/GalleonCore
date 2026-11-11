@@ -5,6 +5,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 
 namespace bosun {
 
@@ -16,8 +17,14 @@ class FilePicker final : public QObject
 public:
     using QObject::QObject;
     Q_INVOKABLE QString picture();
+    // Several pictures at once (wallpapers of a theme); empty when cancelled.
+    Q_INVOKABLE QStringList pictures();
     Q_INVOKABLE QString video();
     Q_INVOKABLE QString application();
+    // A theme file to install; empty when cancelled.
+    Q_INVOKABLE QString theme();
+    // Where to save a theme file; `name` is the suggested file name without its extension. Empty when cancelled.
+    Q_INVOKABLE QString themeSave(const QString &name);
 };
 
 } // namespace bosun

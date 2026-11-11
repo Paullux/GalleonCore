@@ -1,0 +1,17 @@
+Voice chat: a first example theme for GalleonCore.
+
+Pictures: the key pictures are drawn for this theme by Paul Woisard, from plain shapes; the wallpaper is supplied by the same author (see PROVENANCE.md in the source folder). CC-BY-SA-4.0.
+
+Before the keys do anything, give your voice chat application these keyboard shortcuts. The keys send F14 to F18, which have no default action on most desktops (on KDE, F13 opens System Settings and F20 toggles the microphone, so they are not used here):
+  Mute microphone      F14
+  Deafen               F15
+  Push to talk         F16 (held while the key is pressed)
+  Turn camera on/off   F17
+  Share screen         F18
+
+In Discord (Linux, KDE):
+  1. Settings > Keybinds > Add a keybind, and choose the action (one per key above).
+  2. Open KDE System Settings > Shortcuts > Discord, click the shortcut of that action, choose "Custom" and press the matching key on the module. KDE records it as "Launch (5)" to "Launch (9)" for F14 to F18: those are the names Linux gives these keys, and the F14 that Discord proposes by itself does not match them. Do this in KDE even if Discord shows a key.
+  3. If you change the action of a Discord shortcut afterwards, record its key again in KDE.
+  4. Close Discord's Keybinds page: Discord switches its shortcuts off while it is visible.
+F19 and F24 have no name on Linux and cannot be used as shortcuts. Discord's own default shortcuts (for example Ctrl+Shift+M to mute) need modifier keys, which a theme cannot send.

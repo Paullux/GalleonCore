@@ -28,3 +28,10 @@ body.legal-page { margin: 0; background: #e3e5e7; color: #1f242b; font: 1rem/1.6
 .legal-page a { text-underline-offset: .18em; }
 .legal-page button { cursor: pointer; }
 .legal-page footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #aeb5bc; }
+
+.legal-page pre { overflow-x: auto; padding: 14px; background: #d5d9dd; border-radius: 6px; font-size: .9rem; line-height: 1.45; }
+.legal-page code { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.legal-page table.spec { width: 100%; border-collapse: collapse; margin-block: 1rem; font-size: .95rem; }
+.legal-page table.spec th, .legal-page table.spec td { padding: 6px 10px; border: 1px solid #aeb5bc; text-align: left; vertical-align: top; }
+.legal-page a.button { display: inline-block; padding: 9px 16px; border: 2px solid currentColor; border-radius: 6px; color: inherit; font-weight: 600; text-decoration: none; }
+.legal-page a.button:hover, .legal-page a.button:focus-visible { background: #1f242b; color: #e3e5e7; }

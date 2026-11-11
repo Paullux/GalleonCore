@@ -34,6 +34,7 @@ namespace galleond {
 
 namespace {
 
+constexpr int PendingThemeMs = 10000; // how long a request for a theme not yet read stays valid
 constexpr int ReloadDelayMs = 250; // editors write a file in several steps
 constexpr int MinLaunchIntervalMs = 700; // a double press must not start an application twice
 #ifndef Q_OS_WIN
@@ -202,6 +203,27 @@ bool PagesController::showGaming()
     return false;
 }
 
+bool PagesController::showThemePage(const QString &page)
+{
+    for (std::size_t i = 0; i < m_config.themes.size(); ++i) {
+        if (m_config.themes[i].page != page)
+            continue;
+        m_pendingThemePage.clear();
+        m_themeApply.stop();
+        m_themePending = false;
+        m_themeTimeout.stop();
+        m_themeDial = -1;
+        setWallpaperMode(-1);
+        m_sent.fill(QImage());
+        selectTheme(static_cast<int>(i));
+        Q_EMIT themeModeChanged();
+        return true;
+    }
+    m_pendingThemePage = page;
+    m_pendingThemeAge.start();
+    return false;
+}
+
 void PagesController::addGamingPage()
 {
     if (!m_gameActive || !m_recording || !m_recordingPage.isEmpty()) return;
@@ -363,6 +385,13 @@ void PagesController::reload()
         return;
     qInfo() << "galleond: pages loaded from" << m_file;
     setConfig(*result.config);
+    if (!m_pendingThemePage.isEmpty()) {
+        const QString page = m_pendingThemePage;
+        if (m_pendingThemeAge.isValid() && m_pendingThemeAge.elapsed() < PendingThemeMs)
+            showThemePage(page);
+        else
+            m_pendingThemePage.clear();
+    }
 }
 
 const Page *PagesController::effectivePage() const

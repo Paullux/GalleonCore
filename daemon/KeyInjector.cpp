@@ -13,13 +13,14 @@ namespace {
 constexpr std::array<const char *, AllowedKeyCount> Names{
     "kp0", "kp1", "kp2", "kp3", "kp4", "kp5", "kp6", "kp7", "kp8", "kp9",
     "kpdot", "kpenter", "kpplus", "kpminus", "kpasterisk", "kpslash", "numlock", "backspace",
+    "f13", "f14", "f15", "f16", "f17", "f18", "f19", "f20", "f21", "f22", "f23", "f24",
 };
-static_assert(static_cast<int>(KeyCode::Backspace) == AllowedKeyCount);
+static_assert(static_cast<int>(KeyCode::F24) == AllowedKeyCount);
 }
 
 bool isAllowedKeyCode(int code)
 {
-    return code >= static_cast<int>(KeyCode::Kp0) && code <= static_cast<int>(KeyCode::Backspace);
+    return code >= static_cast<int>(KeyCode::Kp0) && code <= static_cast<int>(KeyCode::F24);
 }
 
 std::optional<int> keyCodeForName(const QString &name)

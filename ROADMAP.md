@@ -4,7 +4,7 @@ Référence pour reprendre le développement à tout moment, y compris dans une 
 
 ### Règles de séparation bibliothèque/démon du clavier — 10 novembre 2026
 
-Décision d'architecture avant tout code sur la luminosité (propriété `0xEA`) : une bibliothèque `lib/keyboard/` indépendante de `lib/` (Stream Deck), un composant `KeyboardController` séparé dans `galleond`, aucune dépendance croisée entre les deux parties USB du produit (clavier `1b1c:2b0c`, module Stream Deck `1b1c:2b18`). C'est `galleond` qui écrira la propriété, jamais un processus séparé ni le plugin OpenRGB — qui reste, lui, réservé au RVB par touche. Détails dans [docs/ROADMAP.md, section 3](docs/ROADMAP.md#3-contrôleur-rvb-pour-openrgb). **Règle d'architecture seulement, rien n'est encore implémenté.**
+Décision d'architecture avant tout code sur la luminosité (propriété `0xEA`) : une bibliothèque `lib/keyboard/` indépendante de `lib/` (Stream Deck), un composant `KeyboardController` séparé dans `galleond`, aucune dépendance croisée entre les deux parties USB du produit (clavier `1b1c:2b0c`, module Stream Deck `1b1c:2b18`). C'est `galleond` qui écrira la propriété, jamais un processus séparé ni le plugin OpenRGB — qui reste, lui, réservé au RVB par touche. Détails dans [docs/ROADMAP.md, section 3](docs/ROADMAP.md#3-contrôleur-rvb-pour-openrgb). **Règle d'architecture ; seul l'outil manuel `tools/keyboard-brightness` existe (voir « Implémenté et testé »), rien n'est branché dans `galleond`.**
 
 ### Relecture allemande et espagnole — 4 novembre 2026
 
@@ -322,6 +322,10 @@ Voir [le fonctionnement et les limites](docs/UPDATES.md).
 
 ## 1. Implémenté et testé
 
+### Outil manuel de luminosité du clavier — 11 novembre 2026
+
+`tools/keyboard-brightness` (option CMake `GALLEON_BUILD_KEYBOARD_BRIGHTNESS_TOOL`, hors build par défaut) lit ou écrit la luminosité globale du clavier (propriété `0xEA`, 0 à 1000) via `lib/keyboard/` (`galleon_keyboard`) et `galleon::HidTransport`. Sans argument : lecture seule ; avec une valeur : écriture puis relecture de confirmation. Tests : `tests/test_keyboardlink.cpp` (faux transport). **Sur le module** : confirmé par le propriétaire sous **Windows** (10 novembre) et sous **Linux** (11 novembre : lecture, écriture 100 puis 1000, relecture identique), firmware clavier 2.3.88, une seule unité. Pas encore de mémorisation/restauration ni de cession de place au Web Hub : rien n'est branché dans `galleond`.
+
 ### Onglets Bosun à largeur adaptative — 31 octobre 2026
 
 Le titre actif conserve sa largeur complète, mesurée avec la police affichée.
@@ -424,6 +428,10 @@ Le 20 octobre, le propriétaire confirme le fonctionnement du correctif des fond
 | **Découverte du site** : descriptions des trois pages, Open Graph et Twitter Card sur l’accueil, `robots.txt`, sitemap XML, favicon SVG/ICO/PNG et icônes Apple/Android dérivées du logo Bosun | oui (validation locale des références, formats et dimensions) ; déploiement Pages à vérifier | sans objet (site web) |
 
 ## 2. En cours
+
+### Thèmes partageables `.gctheme` — en cours (11 novembre 2026)
+
+Branche `feat/theme-package`. Fait et testé (tests, fuzzing, clang-tidy, validation complète) : conteneur zip « stored » (`StoredZip`), validateur de thème (`ThemePackage`), installation (`ThemeInstaller`, noms uniques, choix de l'application installée deb/Flatpak/Snap), export (`ThemeExporter`, JPEG qualité 80 minimum), basculement vers le nouveau thème dans Bosun et sur le Stream Deck (`ShowTheme`), boutons « Installer un fichier de thème » (onglet +) et « Exporter » (éditeur d'onglet) dans Bosun, spécification [docs/THEME_FORMAT.md](docs/THEME_FORMAT.md). Site : pages `themes.html` (installer, partager, proposer par e-mail, règles de contenu, liste des thèmes publiés — vide pour l'instant) et `theme-format.html` (spécification), en quatre langues, section « Propositions de thèmes » dans la confidentialité (durée de conservation de 30 jours à confirmer par le propriétaire), liens dans les pieds de page et le sitemap. **Pas encore** : choix des fonds d'écran à l'export dans l'interface, premiers thèmes publiés, boîte `themes@` dédiée (le bouton utilise `contact@`), mention dans les README. **Confirmé sur le module par le propriétaire (11 novembre 2026, Linux, KDE)** : installation du thème d'exemple Voice chat depuis Bosun, affichage de l'onglet sur le Stream Deck, lancement de Discord, touches média (lecture/pause d'une vidéo YouTube en arrière-plan, volume et coupure du son, y compris depuis WhatsApp Web). **Non confirmé** : les touches Mute, Deafen, Talk, Camera et Share, qui envoient les touches du pavé numérique 1 à 5 et n'agissent que si l'application a ces raccourcis (WhatsApp Web n'en a pas) ; F13 à F24 sont acceptées, mais F13 ouvre les paramètres système sous KDE (XF86Tools) et F20 coupe le micro : le thème utilise F14 à F18 (XF86Launch5 à 9).
 
 - **Mode Jeu automatique (23 octobre)** : écran dédié au-dessus de l'accueil/du média pendant une capture FPS fraîche, FPS, températures et charges CPU/GPU sur cadrans gradués de style automobile, illustration locale Steam ou association manuelle par exécutable, onglets Bosun Widgets et Mode Jeu séparés, chacun avec bouton Appliquer. Arrêt de la veille du module pendant le jeu, réveil immédiat et délai complet restauré à la sortie. Sources Linux hwmon/MangoHud, NVIDIA Linux/Windows et serveur local LibreHardwareMonitor optionnel. Détection fondée sur la capture active (retour sous dix secondes sans nouvelles données), disposition jeu fixe pour cette première version ; validation native Windows et sur le module à effectuer. [Détails](docs/HOME_WIDGETS.md).
 

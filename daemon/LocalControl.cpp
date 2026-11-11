@@ -3,6 +3,8 @@
 
 #include "LocalControl.h"
 
+#include <QRegularExpression>
+
 #include <QCryptographicHash>
 #include <QDir>
 #include <QJsonDocument>
@@ -37,11 +39,19 @@ std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
     const QJsonObject object = document.object();
     const QString action = object.value(QStringLiteral("action")).toString();
     if (object.size() == 1 && action == QStringLiteral("ping"))
-        return LocalCommand{LocalAction::Ping, {}};
+        return LocalCommand{LocalAction::Ping, {}, {}};
     if (object.size() == 1 && action == QStringLiteral("gaming"))
-        return LocalCommand{LocalAction::Gaming, {}};
+        return LocalCommand{LocalAction::Gaming, {}, {}};
+    if (object.size() == 2 && action == QStringLiteral("theme")) {
+        const QJsonValue page = object.value(QStringLiteral("page"));
+        // A page name, as a pages file allows; the controller finds the theme, nothing else is done with it.
+        static const QRegularExpression pattern(QStringLiteral("^[a-z0-9_-]{1,32}$"));
+        if (!page.isString() || !pattern.match(page.toString()).hasMatch())
+            return std::nullopt;
+        return LocalCommand{LocalAction::Theme, {}, page.toString()};
+    }
     if (object.size() == 1 && action == QStringLiteral("stop"))
-        return LocalCommand{LocalAction::Stop, {}};
+        return LocalCommand{LocalAction::Stop, {}, {}};
     if (object.size() != 2 || action != QStringLiteral("wallpaper"))
         return std::nullopt;
     const QJsonValue value = object.value(QStringLiteral("name"));
@@ -51,7 +61,7 @@ std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
     // The catalog performs the final lookup. No path or process is executed here.
     if (name.isEmpty() || name.size() > 1024 || name.contains(QChar::Null))
         return std::nullopt;
-    return LocalCommand{LocalAction::Wallpaper, name};
+    return LocalCommand{LocalAction::Wallpaper, name, {}};
 }
 
 QByteArray encodeLocalCommand(const LocalCommand &command)
@@ -60,6 +70,10 @@ QByteArray encodeLocalCommand(const LocalCommand &command)
     switch (command.action) {
     case LocalAction::Ping: object.insert(QStringLiteral("action"), QStringLiteral("ping")); break;
     case LocalAction::Gaming: object.insert(QStringLiteral("action"), QStringLiteral("gaming")); break;
+    case LocalAction::Theme:
+        object.insert(QStringLiteral("action"), QStringLiteral("theme"));
+        object.insert(QStringLiteral("page"), command.page);
+        break;
     case LocalAction::Stop: object.insert(QStringLiteral("action"), QStringLiteral("stop")); break;
     case LocalAction::Wallpaper:
         object.insert(QStringLiteral("action"), QStringLiteral("wallpaper"));
@@ -179,6 +193,7 @@ void LocalControl::acceptConnections()
             case LocalAction::Gaming: Q_EMIT gamingRequested(); break;
             case LocalAction::Ping: break;
             case LocalAction::Wallpaper: Q_EMIT wallpaperRequested(command->wallpaper); break;
+            case LocalAction::Theme: Q_EMIT themeRequested(command->page); break;
             case LocalAction::Stop: Q_EMIT stopRequested(); break;
             }
         };

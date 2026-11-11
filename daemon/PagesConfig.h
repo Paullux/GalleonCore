@@ -147,6 +147,7 @@ struct Theme
     QString page;          // the page it opens (the stack is reset to it)
     std::uint32_t rgb = 0; // 0xRRGGBB
     ThemeTrigger when = ThemeTrigger::None;
+    QString wallpaper{}; // NOLINT(readability-redundant-member-init): designated initializers elsewhere leave it out. The screen's wallpaper while this theme is shown, by catalog name ("style/file.jpg"); empty: the user's own choice
 
     friend bool operator==(const Theme &, const Theme &) = default;
 };
@@ -195,11 +196,15 @@ inline constexpr int MaxPages = 32;
 inline constexpr int MaxLabelLength = 24;
 inline constexpr int MaxNameLength = 64;
 inline constexpr int MaxThemes = 8;
+inline constexpr int MaxWallpaperNameLength = 160;
 inline constexpr int MaxSteamKeys = 12;
 inline constexpr int MaxVideoPathLength = 400;
 inline constexpr int MaxScreensaverVideos = 8;
 inline constexpr int MaxVideoTitleLength = 60;
 inline constexpr int MaxPageDepth = 8; // pages opened one from another, at run time
+
+// A wallpaper name as the catalog gives them ("manga-classic/manga-classic-01.jpg"). Only the shape is checked here.
+[[nodiscard]] bool isWallpaperName(const QString &name);
 
 // Parses and validates the content of a pages file. Never throws, never reads
 // outside `json`; any problem is an entry of `errors` and no config is returned.

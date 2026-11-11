@@ -243,6 +243,75 @@ private Q_SLOTS:
         QVERIFY(!f.controller->SetWallpaper("mine/never-there.png"));
     }
 
+    // ---- a wallpaper of its own for a theme (tab) ----
+
+    static void addRedWallpaper(const Fixture &f)
+    {
+        QImage red(1600, 900, QImage::Format_RGB32);
+        red.fill(QColor(200, 30, 30));
+        QVERIFY(red.save(f.dir.filePath("wall/style/red.png")));
+    }
+
+    void aThemeWallpaperIsShownWithoutBeingSavedAndTheSavedChoiceComesBack()
+    {
+        Fixture f;
+        QVERIFY(f.controller->SetWallpaper(f.wallpaper()));
+        addRedWallpaper(f);
+
+        f.controller->setThemeWallpaper(QStringLiteral("style/red.png"));
+        QVERIFY(near(pixelOf(f.lastScreen(), FarRightX, Row), qRgb(200, 30, 30)));
+        QCOMPARE(QSettings(QStringLiteral("galleoncore"), QStringLiteral("galleond")).value(QStringLiteral("wallpaper")).toString(),
+                 f.wallpaper()); // the person's own choice is untouched
+
+        f.controller->setThemeWallpaper({}); // another theme, with none of its own
+        QVERIFY(near(pixelOf(f.lastScreen(), FarRightX, Row), Wallpaper));
+        QCOMPARE(f.controller->wallpaper(), f.wallpaper());
+    }
+
+    void aThemeWallpaperTheCatalogDoesNotKnowIsLeftOut()
+    {
+        Fixture f;
+        QVERIFY(f.controller->SetWallpaper(f.wallpaper()));
+        f.controller->setThemeWallpaper(QStringLiteral("style/never-there.png"));
+        QCOMPARE(f.controller->wallpaper(), f.wallpaper());
+        QVERIFY(near(pixelOf(f.lastScreen(), FarRightX, Row), Wallpaper));
+    }
+
+    void aThemeWithoutWallpaperDoesNotRedrawTheScreen()
+    {
+        Fixture f;
+        QVERIFY(f.controller->SetWallpaper(f.wallpaper()));
+        const std::size_t before = f.frames();
+        f.controller->setThemeWallpaper({});
+        f.controller->setThemeWallpaper({});
+        QCOMPARE(f.frames(), before);
+    }
+
+    void theSameThemeWallpaperIsNotDrawnTwice()
+    {
+        Fixture f;
+        QVERIFY(f.controller->SetWallpaper(f.wallpaper()));
+        addRedWallpaper(f);
+        f.controller->setThemeWallpaper(QStringLiteral("style/red.png"));
+        const std::size_t before = f.frames();
+        f.controller->setThemeWallpaper(QStringLiteral("style/red.png"));
+        QCOMPARE(f.frames(), before);
+    }
+
+    void aThemeWallpaperAskedForBeforeRestoreStillWinsOverTheSavedChoice()
+    {
+        Fixture f;
+        QVERIFY(f.controller->SetWallpaper(f.wallpaper())); // saved
+        addRedWallpaper(f);
+        ScreenController again(f.deck.get(), f.wallpaperRenderer.get(), WallpaperCatalog(f.dir.filePath("wall")),
+                               widgetsDir() + "/WallpaperClock.qml");
+        again.setThemeWallpaper(QStringLiteral("style/red.png"));
+        again.restore(); // the saved green is shown first, then the theme's own takes the screen
+        QCOMPARE(again.wallpaper(), QStringLiteral("style/red.png"));
+        QCOMPARE(QSettings(QStringLiteral("galleoncore"), QStringLiteral("galleond")).value(QStringLiteral("wallpaper")).toString(),
+                 f.wallpaper());
+    }
+
     void theWallpaperShowsWhenNothingPlays()
     {
         Fixture f;

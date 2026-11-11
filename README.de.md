@@ -301,7 +301,9 @@ Ein Druck auf den Drehregler mit `{ "type": "wallpaper-mode" }` schaltet diesen 
 
 ### Keypad-Theme, automatische Themes und getönte Tasten
 
-Eine Aktion `{ "type": "key", "key": "kp7" }` drückt eine Tastaturtaste über ein virtuelles Keypad (`/dev/uinput`), gehalten, solange die Taste gehalten wird. Es wird nur eine feste Liste von Namen akzeptiert (`kp0` bis `kp9`, `kpdot`, `kpenter`, `kpplus`, `kpminus`, `kpasterisk`, `kpslash`, `numlock`, `backspace`), und das virtuelle Gerät erhält keine anderen Tasten. Num Lock muss aktiv sein, damit die Ziffern des Keypads Ziffern tippen. Das virtuelle Gerät braucht Schreibzugriff auf `/dev/uinput` (`tools/udev/71-galleon-uinput.rules`).
+Eine Aktion `{ "type": "key", "key": "kp7" }` drückt eine Tastaturtaste über ein virtuelles Keypad (`/dev/uinput`), gehalten, solange die Taste gehalten wird. Es wird nur eine feste Liste von Namen akzeptiert (`kp0` bis `kp9`, `kpdot`, `kpenter`, `kpplus`, `kpminus`, `kpasterisk`, `kpslash`, `numlock`, `backspace`, `f13` bis `f24`), und das virtuelle Gerät erhält keine anderen Tasten. Num Lock muss aktiv sein, damit die Ziffern des Keypads Ziffern tippen. Das virtuelle Gerät braucht Schreibzugriff auf `/dev/uinput` (`tools/udev/71-galleon-uinput.rules`).
+
+Ein Theme kann ein eigenes Hintergrundbild haben, `"wallpaper": "stil/bild.jpg"` (ein Name aus der Hintergrundliste): Der Bildschirm zeigt es, solange das Theme angezeigt wird, ohne Ihre gespeicherte Wahl zu ändern; ein Theme ohne eigenes zeigt Ihr Hintergrundbild. In Bosun stellt „Hintergrundbild dieses Tabs“ es ein.
 
 Ein Theme kann sich mit `"when": "media"` (ein Player startet) oder `"when": "no-media"` (keiner ist mehr übrig: gestoppt oder nicht vorhanden; ein pausierter Player zählt weiterhin als einer) selbst wählen. Nur in diesen Momenten: Deine eigene Wahl mit dem Drehregler bleibt bis zur nächsten Änderung bestehen. Höchstens ein Theme pro Auslöser. Die Tasten der Seite eines Themes werden auf einem dunkleren Farbton der Themefarbe gezeichnet, heller, solange sie gehalten werden.
 

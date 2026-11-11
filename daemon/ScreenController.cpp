@@ -22,6 +22,7 @@
 namespace galleond {
 
 bool ScreenController::ShowGaming() { return m_showGaming && m_showGaming(); }
+bool ScreenController::ShowTheme(const QString &page) { return m_showTheme && m_showTheme(page); }
 
 
 namespace {
@@ -174,6 +175,53 @@ void ScreenController::restore()
     // player answers a little later) takes the screen when that time is over.
     if (SetWallpaper(name))
         startHold();
+    m_themeWallpaperShown = false;
+    applyThemeWallpaper(); // the theme that is shown at the start may have a wallpaper of its own
+}
+
+void ScreenController::setThemeWallpaper(const QString &name)
+{
+    if (name == m_themeWallpaper)
+        return;
+    m_themeWallpaper = name;
+    applyThemeWallpaper();
+}
+
+void ScreenController::applyThemeWallpaper()
+{
+    if (m_choosingWallpaper)
+        return; // the person is choosing: leave the screen to them
+    if (!m_themeWallpaper.isEmpty()) {
+        if (!m_catalog.find(m_themeWallpaper))
+            m_catalog.rescan();
+        if (m_catalog.find(m_themeWallpaper)) {
+            if (m_wallpaper == m_themeWallpaper)
+                return;
+            m_wallpaper = m_themeWallpaper; // not saved: it belongs to the theme
+            m_themeWallpaperShown = true;
+            qInfo().noquote() << "galleond: wallpaper of the theme" << m_themeWallpaper;
+            Q_EMIT wallpaperChanged();
+            draw();
+            scheduleNextMinute();
+            return;
+        }
+        qWarning() << "galleond: the wallpaper" << m_themeWallpaper << "of the theme is not in the catalog";
+    }
+    if (!m_themeWallpaperShown)
+        return;
+    m_themeWallpaperShown = false;
+    // Back to the user's own choice.
+    const QString saved = settings().value(settingWallpaper()).toString();
+    if (!saved.isEmpty() && m_catalog.find(saved)) {
+        m_wallpaper = saved;
+        Q_EMIT wallpaperChanged();
+        draw();
+        scheduleNextMinute();
+    } else {
+        m_minuteTimer.stop();
+        m_wallpaper.clear();
+        Q_EMIT wallpaperChanged();
+    }
 }
 
 bool ScreenController::SetWallpaper(const QString &name)

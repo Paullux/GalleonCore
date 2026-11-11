@@ -18,6 +18,7 @@
 #include <QSet>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <ThemeInstaller.h>
 #include <QTest>
 
 #include <memory>
@@ -1301,6 +1302,104 @@ private Q_SLOTS:
         f.media.setExtras(false, MediaController::Loop::None); // and back
         QTRY_VERIFY_WITH_TIMEOUT(qGray(background(0)) <= qGray(offShuffle) + 6, 2000);
         QTRY_VERIFY_WITH_TIMEOUT(qGray(background(1)) <= qGray(offRepeat) + 6, 2000);
+    }
+
+    // ---- showing a theme by its page (a theme just installed from a .gctheme file) ----
+
+    static QByteArray twoThemes(bool withSecond)
+    {
+        QJsonArray themes{QJsonObject{{"name", "A"}, {"page", "a"}, {"color", "#ffffff"}}};
+        QJsonObject pages{{"a", page({keyJson(0, "Next", mediaAction("next"))})}};
+        if (withSecond) {
+            themes.append(QJsonObject{{"name", "B"}, {"page", "b"}, {"color", "#336699"}});
+            pages.insert("b", page({keyJson(0, "Stop", mediaAction("stop"))}));
+        }
+        return QJsonDocument(QJsonObject{{"version", 1}, {"home", "a"}, {"pages", pages}, {"themes", themes}}).toJson();
+    }
+
+    void aThemeCanBeShownByItsPage()
+    {
+        QTemporaryDir const dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes(true)));
+        Fixture f;
+        f.controller->loadFile(file);
+        QVERIFY(f.controller->showThemePage(QStringLiteral("b")));
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.media.stopCount, 1);
+        QCOMPARE(f.media.nextCount, 0);
+    }
+
+    void aPageThatIsNoThemeIsNotShown()
+    {
+        QTemporaryDir const dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes(true)));
+        Fixture f;
+        f.controller->loadFile(file);
+        QVERIFY(!f.controller->showThemePage(QStringLiteral("nothing")));
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.media.nextCount, 1); // still the first theme
+    }
+
+    void aThemeNotReadYetIsShownOnceThePagesFileIsRead()
+    {
+        QTemporaryDir const dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes(false)));
+        Fixture f;
+        f.controller->loadFile(file);
+        QVERIFY(!f.controller->showThemePage(QStringLiteral("b"))); // installed a moment ago, not read yet
+        QVERIFY(writeFile(file, twoThemes(true)));
+        f.controller->loadFile(file);
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.media.stopCount, 1);
+    }
+
+    // The theme shipped in themes/voice-chat, installed as a user would, then shown by its page.
+    void theShippedVoiceChatThemeIsPlayedByItsKeys()
+    {
+        QTemporaryDir const dir;
+        const QString pagesFile = dir.filePath("pages.json");
+        QVERIFY(writeFile(pagesFile, twoThemes(false)));
+        const ThemeInstallResult installed = installTheme({QString::fromUtf8(GALLEON_SOURCE_THEMES) + "/voice-chat.gctheme", pagesFile,
+                                                           dir.filePath("wallpapers"), false});
+        QVERIFY2(installed.ok, qPrintable(installed.errors.join('\n')));
+
+        Fixture f;
+        FakeInjector injector;
+        f.controller->setKeyInjector(&injector);
+        f.controller->loadFile(pagesFile);
+        QVERIFY(f.controller->showThemePage(installed.page));
+
+        f.pressKey(0, true); // Mute: F14, held while the key is
+        QCOMPARE(injector.events.size(), size_t(1));
+        QCOMPARE(injector.events[0].first, static_cast<int>(KeyCode::F14));
+        QVERIFY(injector.events[0].second);
+        f.pressKey(0, false);
+        QVERIFY(!injector.events.back().second);
+
+        f.pressKey(7, true); // Play
+        f.pressKey(7, false);
+        QCOMPARE(f.media.playPauseCount, 1);
+        f.pressKey(8, true); // Vol -
+        f.pressKey(8, false);
+        QCOMPARE(f.media.volumeTotal, -5);
+        f.pressKey(10, true); // Vol +
+        f.pressKey(10, false);
+        QCOMPARE(f.media.volumeTotal, 0);
+        f.pressKey(9, true); // Sound off
+        f.pressKey(9, false);
+        QCOMPARE(f.media.muteCount, 1);
+        f.pressKey(11, true); // Next
+        f.pressKey(11, false);
+        QCOMPARE(f.media.nextCount, 1);
+        f.pressKey(6, true); // Previous
+        f.pressKey(6, false);
+        QCOMPARE(f.media.previousCount, 1);
     }
 };
 

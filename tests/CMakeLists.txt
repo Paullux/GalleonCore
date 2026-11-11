@@ -75,6 +75,7 @@ function(galleond_add_test name)
     target_compile_definitions(${name} PRIVATE
         GALLEON_SOURCE_WIDGETS="${CMAKE_SOURCE_DIR}/widgets"
         GALLEON_SOURCE_WALLPAPERS="${CMAKE_SOURCE_DIR}/public/wallpaper"
+        GALLEON_SOURCE_THEMES="${CMAKE_SOURCE_DIR}/themes"
     )
 endfunction()
 
@@ -138,6 +139,10 @@ endif()
 galleond_add_test(test_wallpapercatalog)
 galleond_add_test(test_screenrenderer)
 galleond_add_test(test_pagesconfig)
+galleond_add_test(test_storedzip)
+galleond_add_test(test_themepackage)
+galleond_add_test(test_themeinstall)
+galleond_add_test(test_themeexport)
 galleond_add_test(test_desktopentries)
 galleond_add_test(test_pageseditor)
 galleond_add_test(test_appsbackend)

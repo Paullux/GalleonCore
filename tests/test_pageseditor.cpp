@@ -483,7 +483,7 @@ private Q_SLOTS:
         bad.page = "no-such-page";
         QVERIFY(!PagesEditor::setKey(env.pages(), "music", 0, bad).ok);
         bad = spec("key");
-        bad.keyName = "f13";
+        bad.keyName = "f12";
         QVERIFY(!PagesEditor::setKey(env.pages(), "music", 0, bad).ok);
         KeySpec longLabel = spec("back");
         longLabel.label = QString(MaxLabelLength + 1, 'x');
@@ -600,6 +600,29 @@ private Q_SLOTS:
         QVERIFY(!PagesEditor::setTheme(env.pages(), 1, "Songs", "nope").ok);
         QVERIFY(!PagesEditor::setTheme(env.pages(), 1, "", "#aabbcc").ok);
         QVERIFY(!PagesEditor::setTheme(env.pages(), 9, "Songs", "#aabbcc").ok);
+        QCOMPARE(readFile(env.pages()), before);
+    }
+
+    void aThemeCanGetAWallpaperAndGiveItBack()
+    {
+        Environment const env;
+        QVERIFY(writeFile(env.pages(), themesFile()));
+        QVERIFY(PagesEditor::setThemeWallpaper(env.pages(), 1, "music/music-tab.jpg").ok);
+        QCOMPARE(configOf(env.pages()).themes[1].wallpaper, QStringLiteral("music/music-tab.jpg"));
+        QVERIFY(configOf(env.pages()).themes[0].wallpaper.isEmpty()); // the other tabs are not touched
+        QVERIFY(PagesEditor::setThemeWallpaper(env.pages(), 1, QString()).ok);
+        QVERIFY(configOf(env.pages()).themes[1].wallpaper.isEmpty());
+        QVERIFY(!readFile(env.pages()).contains("wallpaper"));
+    }
+
+    void aWallpaperThatIsNotACatalogNameIsRefusedAndNothingIsWritten()
+    {
+        Environment const env;
+        QVERIFY(writeFile(env.pages(), themesFile()));
+        const QByteArray before = readFile(env.pages());
+        QVERIFY(!PagesEditor::setThemeWallpaper(env.pages(), 1, "../../etc/passwd").ok);
+        QVERIFY(!PagesEditor::setThemeWallpaper(env.pages(), 1, "style/a.gif").ok);
+        QVERIFY(!PagesEditor::setThemeWallpaper(env.pages(), 9, "style/a.jpg").ok); // no such tab
         QCOMPARE(readFile(env.pages()), before);
     }
 

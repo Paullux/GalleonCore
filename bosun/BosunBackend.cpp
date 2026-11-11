@@ -4,6 +4,14 @@
 #include <InitialPages.h>
 
 #include "BosunBackend.h"
+
+#include <QSaveFile>
+
+#include <WallpaperCatalog.h>
+
+#include <ThemeInstaller.h>
+
+#include <ThemeExporter.h>
 #include <RecordingIcons.h>
 
 #include "CropMath.h"
@@ -143,6 +151,7 @@ BosunBackend::BosunBackend(QString pagesFile, QObject *parent)
 BosunBackend::BosunBackend(QString pagesFile, const Tools &tools, QObject *parent)
     : QObject(parent)
     , m_file(std::move(pagesFile))
+    , m_wallpaperRoot(tools.wallpaperRoot)
     , m_tiles(QFileInfo(m_file).absolutePath())
     , m_probe(tools.ffprobe)
     , m_thumbnails(tools.thumbnailFolder.isEmpty()
@@ -231,7 +240,8 @@ void BosunBackend::reload()
     for (const galleond::Theme &theme : parsed.config->themes) {
         m_themes.append(QVariantMap{{QStringLiteral("name"), theme.name},
                                     {QStringLiteral("page"), theme.page},
-                                    {QStringLiteral("color"), QColor::fromRgb(theme.rgb).name()}});
+                                    {QStringLiteral("color"), QColor::fromRgb(theme.rgb).name()},
+                                    {QStringLiteral("wallpaper"), theme.wallpaper}});
     }
     Q_EMIT changed();
 }
@@ -676,6 +686,97 @@ QString BosunBackend::clearKey(const QString &page, int key)
 QString BosunBackend::addTheme(const QString &name, const QString &color)
 {
     return applied(galleond::PagesEditor::addTheme(m_file, name, color, pageNameFor(name, pageNames())));
+}
+
+namespace {
+
+constexpr qint64 MaxWallpaperSourceBytes = 32LL * 1024 * 1024;
+
+QString localPath(const QString &pathOrUrl)
+{
+    return pathOrUrl.startsWith(QLatin1String("file:")) ? QUrl(pathOrUrl).toLocalFile() : pathOrUrl;
+}
+
+QVariantMap failed(const QStringList &errors)
+{
+    return {{QStringLiteral("ok"), false}, {QStringLiteral("errors"), errors}, {QStringLiteral("warnings"), QStringList()}};
+}
+
+} // namespace
+
+QString BosunBackend::setThemeWallpaper(int index, const QString &pathOrUrl)
+{
+    if (!m_config || index < 0 || static_cast<std::size_t>(index) >= m_config->themes.size())
+        return tr("There is no such tab.");
+    const QString page = m_config->themes.at(static_cast<std::size_t>(index)).page;
+    QFile in(localPath(pathOrUrl));
+    if (!in.open(QIODevice::ReadOnly))
+        return tr("Cannot read %1: %2").arg(in.fileName(), in.errorString());
+    const std::optional<QByteArray> jpeg = galleond::reencodeWallpaper(in.read(MaxWallpaperSourceBytes + 1), 85);
+    if (!jpeg)
+        return tr("This is not a picture that can be used as a wallpaper.");
+    const QString root = m_wallpaperRoot.isEmpty() ? galleond::WallpaperCatalog::userRoot() : m_wallpaperRoot;
+    const QString fileName = page + QStringLiteral("-tab.jpg");
+    const QString folder = QDir(root).filePath(page);
+    QDir().mkpath(folder);
+    QSaveFile out(QDir(folder).filePath(fileName));
+    if (!out.open(QIODevice::WriteOnly) || out.write(*jpeg) != jpeg->size() || !out.commit())
+        return tr("Cannot write %1: %2").arg(out.fileName(), out.errorString());
+    return applied(galleond::PagesEditor::setThemeWallpaper(m_file, index, page + QLatin1Char('/') + fileName));
+}
+
+QString BosunBackend::clearThemeWallpaper(int index)
+{
+    return applied(galleond::PagesEditor::setThemeWallpaper(m_file, index, QString()));
+}
+
+QStringList BosunBackend::wallpaperRoots() const
+{
+    QStringList roots = galleond::WallpaperCatalog::defaultRoots({}, {});
+    if (!m_wallpaperRoot.isEmpty() && !roots.contains(m_wallpaperRoot))
+        roots.prepend(m_wallpaperRoot);
+    return roots;
+}
+
+QVariantMap BosunBackend::importTheme(const QString &pathOrUrl, bool applyDials)
+{
+    const QString wallpaperRoot = m_wallpaperRoot.isEmpty() ? galleond::WallpaperCatalog::userRoot() : m_wallpaperRoot;
+    const galleond::ThemeInstallResult result = galleond::installTheme({localPath(pathOrUrl), m_file, wallpaperRoot, applyDials});
+    if (!result.ok)
+        return failed(result.errors);
+    reload();
+    Q_EMIT themeInstalled(result.themeIndex, result.page);
+    return {{QStringLiteral("ok"), true},
+            {QStringLiteral("errors"), QStringList()},
+            {QStringLiteral("warnings"), result.warnings},
+            {QStringLiteral("page"), result.page},
+            {QStringLiteral("themeName"), result.themeName},
+            {QStringLiteral("themeIndex"), result.themeIndex}};
+}
+
+QVariantMap BosunBackend::exportTheme(int themeIndex, const QString &pathOrUrl, const QVariantMap &meta)
+{
+    galleond::ThemeExportOptions options;
+    options.pagesFile = m_file;
+    options.themeIndex = themeIndex;
+    options.author = meta.value(QStringLiteral("author")).toString();
+    options.license = meta.value(QStringLiteral("license")).toString();
+    options.description = meta.value(QStringLiteral("description")).toString();
+    options.credits = meta.value(QStringLiteral("credits")).toString();
+    options.wallpaperFiles = meta.value(QStringLiteral("wallpapers")).toStringList();
+    options.includeDials = meta.value(QStringLiteral("includeDials")).toBool();
+    options.wallpaperRoots = wallpaperRoots();
+    const galleond::ThemeExportResult result = galleond::exportTheme(options);
+    if (!result.file)
+        return failed(result.errors);
+
+    QString path = localPath(pathOrUrl);
+    if (!path.endsWith(QLatin1String(".gctheme")))
+        path += QStringLiteral(".gctheme");
+    QSaveFile out(path);
+    if (!out.open(QIODevice::WriteOnly) || out.write(*result.file) != result.file->size() || !out.commit())
+        return failed({tr("Cannot write %1: %2").arg(path, out.errorString())});
+    return {{QStringLiteral("ok"), true}, {QStringLiteral("errors"), QStringList()}, {QStringLiteral("warnings"), result.warnings}, {QStringLiteral("file"), path}};
 }
 
 QString BosunBackend::addSubPage(const QString &page)

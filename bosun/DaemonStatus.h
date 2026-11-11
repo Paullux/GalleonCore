@@ -43,6 +43,8 @@ public:
     Q_INVOKABLE [[nodiscard]] QString start();
     Q_INVOKABLE [[nodiscard]] QString stop();
     Q_INVOKABLE [[nodiscard]] QString showGaming();
+    // Shows the theme with this page name on the module; "" when the request was sent, else why not.
+    Q_INVOKABLE [[nodiscard]] QString showTheme(const QString &page);
 
 Q_SIGNALS:
     void changed();

@@ -29,6 +29,7 @@ struct KeyMapping
 };
 
 // Linux input-event-codes.h translates the shared whitelist to uinput codes.
+static_assert(KEY_F24 - KEY_F13 == 11, "F13 to F24 are consecutive");
 constexpr std::array<KeyMapping, AllowedKeyCount> Mapping{{
     {KeyCode::Kp0, KEY_KP0}, {KeyCode::Kp1, KEY_KP1}, {KeyCode::Kp2, KEY_KP2},
     {KeyCode::Kp3, KEY_KP3}, {KeyCode::Kp4, KEY_KP4}, {KeyCode::Kp5, KEY_KP5},
@@ -36,6 +37,9 @@ constexpr std::array<KeyMapping, AllowedKeyCount> Mapping{{
     {KeyCode::Kp9, KEY_KP9}, {KeyCode::KpDot, KEY_KPDOT}, {KeyCode::KpEnter, KEY_KPENTER},
     {KeyCode::KpPlus, KEY_KPPLUS}, {KeyCode::KpMinus, KEY_KPMINUS}, {KeyCode::KpAsterisk, KEY_KPASTERISK},
     {KeyCode::KpSlash, KEY_KPSLASH}, {KeyCode::NumLock, KEY_NUMLOCK}, {KeyCode::Backspace, KEY_BACKSPACE},
+    {KeyCode::F13, KEY_F13}, {KeyCode::F14, KEY_F14}, {KeyCode::F15, KEY_F15}, {KeyCode::F16, KEY_F16},
+    {KeyCode::F17, KEY_F17}, {KeyCode::F18, KEY_F18}, {KeyCode::F19, KEY_F19}, {KeyCode::F20, KEY_F20},
+    {KeyCode::F21, KEY_F21}, {KeyCode::F22, KEY_F22}, {KeyCode::F23, KEY_F23}, {KeyCode::F24, KEY_F24},
 }};
 
 } // namespace

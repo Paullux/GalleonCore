@@ -41,6 +41,35 @@ private slots:
         QVERIFY(!isAllowedKeyCode(AllowedKeyCount + 1));
     }
 
+    void theFunctionKeysF13ToF24AreAllowedAndNoOtherFunctionKey()
+    {
+        QSet<int> codes;
+        for (int n = 13; n <= 24; ++n) {
+            const auto code = keyCodeForName(QStringLiteral("f%1").arg(n));
+            QVERIFY2(code.has_value(), qPrintable(QStringLiteral("f%1").arg(n)));
+            QVERIFY(isAllowedKeyCode(code.value_or(0)));
+            codes.insert(code.value_or(0));
+        }
+        QCOMPARE(codes.size(), 12); // each name is its own key
+        for (const QString &name : {QStringLiteral("f1"), QStringLiteral("f12"), QStringLiteral("f25"), QStringLiteral("F13"), QStringLiteral("f013")})
+            QVERIFY2(!keyCodeForName(name), qPrintable(name));
+    }
+
+    void aFunctionKeyIsHeldAndReleasedLikeAnyOther()
+    {
+        std::vector<std::pair<KeyCode, bool>> events;
+        {
+            TrackedKeyboard keyboard([&events](KeyCode key, bool down) {
+                events.emplace_back(key, down);
+                return true;
+            });
+            QVERIFY(keyboard.key(static_cast<int>(KeyCode::F13), true));
+        }
+        QCOMPARE(events.size(), std::size_t{2}); // released on shutdown: never stuck down
+        QCOMPARE(events.back().first, KeyCode::F13);
+        QVERIFY(!events.back().second);
+    }
+
     void heldKeysReleasedOnShutdown()
     {
         std::vector<std::pair<KeyCode, bool>> events;

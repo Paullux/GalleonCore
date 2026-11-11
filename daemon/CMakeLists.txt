@@ -18,6 +18,11 @@ add_library(galleond_core STATIC
     KeyInjector.h PlatformBackends.h
     DesktopEntries.h
     PageOrder.h PageOrder.cpp
+    StoredZip.h StoredZip.cpp
+    ThemePackage.h ThemePackage.cpp
+    ThemeInstallPlan.h ThemeInstallPlan.cpp
+    ThemeInstaller.h ThemeInstaller.cpp
+    ThemeExporter.h ThemeExporter.cpp
     PagesConfig.h PagesConfig.cpp
     InitialPages.h InitialPages.cpp
     PagesEditor.h PagesEditor.cpp

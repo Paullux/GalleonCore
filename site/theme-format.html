@@ -1,0 +1,235 @@
+<!doctype html>
+<!-- SPDX-FileCopyrightText: 2026 Paul Woisard -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="en" data-lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-localized="text" data-en="Theme file format · GalleonCore" data-fr="Format des fichiers de thème · GalleonCore" data-de="Format der Themendateien · GalleonCore" data-es="Formato de los archivos de tema · GalleonCore">Theme file format · GalleonCore</title>
+  <meta name="description" content="Specification of the GalleonCore .gctheme file: archive layout, manifest fields, allowed actions and limits." data-localized="content" data-en="Specification of the GalleonCore .gctheme file: archive layout, manifest fields, allowed actions and limits." data-fr="Spécification du fichier .gctheme de GalleonCore : contenu de l’archive, champs du manifeste, actions autorisées et limites." data-de="Spezifikation der GalleonCore-Datei .gctheme: Archivaufbau, Manifestfelder, erlaubte Aktionen und Grenzen." data-es="Especificación del archivo .gctheme de GalleonCore: contenido del archivo, campos del manifiesto, acciones permitidas y límites.">
+  <link rel="canonical" href="https://galleoncore.xyz/theme-format.html">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+  <link rel="stylesheet" href="legal.css">
+  <script src="privacy-consent.js" defer></script>
+</head>
+<body class="legal-page">
+  <div class="legal-wrap">
+    <header class="legal-head">
+      <a href="index.html"><img src="logo.svg" alt=""> GalleonCore</a>
+      <select class="lang-toggle" data-legal-lang-select aria-label="Language / Langue / Sprache / Idioma"><option value="en">English</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="es">Español</option></select>
+    </header>
+    <main>
+      <article lang="en">
+        <h1>Theme file format (version 1)</h1>
+        <p>A theme is a page of keys for the Stream Deck module of the Corsair Galleon 100 SD, with a colour, optional dial settings and the pictures it needs. A <code>.gctheme</code> file carries it from one computer to another. Status: Bosun installs and exports this format; it has not been confirmed on the module yet. The same text is kept in the repository as <a href="https://github.com/Paullux/GalleonCore/blob/main/docs/THEME_FORMAT.md">docs/THEME_FORMAT.md</a>.</p>
+        <h2>The file</h2>
+        <p>A <code>.gctheme</code> file is a <strong>zip archive whose entries are stored, not compressed</strong> (for example <code>zip -0 -X my.gctheme theme.json icons/*</code>). Pictures are already compressed, and refusing compression removes any risk of a decompression bomb. To look inside, rename it to <code>.zip</code>.</p>
+        <table class="spec">
+          <thead><tr><th>Entry</th><th>Required</th><th>Content and limits</th></tr></thead>
+          <tbody>
+            <tr><td><code>theme.json</code></td><td>yes</td><td>The manifest, up to 128 KiB.</td></tr>
+            <tr><td><code>credits.txt</code></td><td>no</td><td>Plain UTF-8 text, up to 16 KiB.</td></tr>
+            <tr><td><code>icons/&lt;name&gt;.png</code></td><td>if used</td><td>A PNG key picture, up to 256 KiB and 512 × 512 pixels; at most 24. Every picture must be used by a key.</td></tr>
+            <tr><td><code>wallpapers/&lt;name&gt;.jpg</code></td><td>no</td><td>A JPEG screen picture, up to 2 MiB and 4096 × 4096 pixels; at most 4.</td></tr>
+          </tbody>
+        </table>
+        <p>Nothing else is accepted. File names use letters, digits, <code>.</code>, <code>_</code> and <code>-</code> only. The archive is at most 24 MiB with at most 64 entries. Pictures are checked by their content, not their extension.</p>
+        <h2>The manifest</h2>
+        <pre><code>{
+  "formatVersion": 1,
+  "id": "discord",
+  "name": "Discord",
+  "author": "A. Person",
+  "license": "CC-BY-SA-4.0",
+  "description": "Voice and chat keys for Discord",
+  "color": "#5865F2",
+  "keys": [
+    { "key": 0, "label": "Mute", "icon": "mute.png",
+      "action": { "type": "key", "key": "kp1" } },
+    { "key": 1, "label": "Discord", "icon": "discord",
+      "action": { "type": "app", "desktop": "discord.desktop",
+                  "alternatives": ["com.discordapp.Discord.desktop",
+                                   "discord_discord.desktop"] } }
+  ]
+}</code></pre>
+        <ul>
+          <li><code>formatVersion</code>: must be <code>1</code>. A reader that does not know the version refuses the file.</li>
+          <li><code>id</code>: 1 to 32 characters among <code>a-z</code>, <code>0-9</code>, <code>_</code>, <code>-</code>; it becomes the page name.</li>
+          <li><code>name</code> (up to 24 characters), <code>author</code> (64), <code>license</code> (an SPDX identifier such as <code>CC-BY-SA-4.0</code>) and <code>color</code> (<code>#RRGGBB</code>) are required. <code>description</code> is optional (300).</li>
+          <li><code>keys</code> and <code>dials</code> use the same fields as a page of GalleonCore's <code>pages.json</code>, and are checked by the same parser: a theme can never say what a page cannot. Unknown fields make the file invalid.</li>
+          <li>An <code>icon</code> with an extension (<code>mute.png</code>) is a file of <code>icons/</code>; one without (<code>discord</code>) is a name of the desktop's icon theme.</li>
+        </ul>
+        <h2>Allowed actions</h2>
+        <p>A downloaded theme must not be able to run anything by itself. A theme may use: media commands, <code>back</code>, <code>none</code>, <code>wallpaper-mode</code>, <code>page</code> pointing to its own page, <code>key</code> (a key of the fixed list: numeric keypad, Num Lock, Backspace, F13 to F24; prefer F14 to F18 for a shortcut: on most desktops they have no default action, whereas F13 opens System Settings on KDE and F20 toggles the microphone), <code>steam</code> (a game by its number) and <code>app</code>. An application is named by its <strong>desktop file ID</strong> (<code>firefox.desktop</code>), never by a path. Shell commands, URLs, other pages, theme switching and the page's automatic filling (Steam games, menu entries, sorting) are refused.</p>
+        <h2>One application, several installations</h2>
+        <p>The same program has a different desktop file ID depending on how it was installed (deb, Flatpak, Snap). An <code>app</code> action may list up to 6 <code>alternatives</code>. When the theme is installed, the first of <code>desktop</code> then <code>alternatives</code> that exists on the machine is used; if none does, the first is kept and the user is warned.</p>
+        <p>The first wallpaper of a theme becomes the wallpaper of its tab: the screen shows it while the tab is shown, and your own saved wallpaper is left alone. A tab without a wallpaper shows your own choice. When a tab is exported, its own wallpaper goes first.</p>
+        <h2>Installing and exporting</h2>
+        <p>Installing never replaces anything of the user's: the page and tab names get a number when taken, pictures are renamed after the page, the dial settings are copied only if the user asks, and nothing is written unless the whole theme is valid. Exporting shrinks pictures to what a key needs, re-encodes wallpapers as JPEG at 80 % quality or more, no larger than the screen, refuses actions a shared theme cannot hold, and checks its own output with the same validator.</p>
+        <h2>Writing a theme by hand</h2>
+        <p>You can build a theme without Bosun: write <code>theme.json</code>, add the pictures, and store them with <code>zip -0 -X</code>. Install it from the “+” tab of Bosun, which will list every problem it finds. Share only what you made or may redistribute; see <a href="themes.html">the themes page</a> for the content rules.</p>
+      </article>
+      <article lang="fr">
+        <h1>Format des fichiers de thème (version 1)</h1>
+        <p>Un thème est une page de touches pour le module Stream Deck du Corsair Galleon 100 SD, avec une couleur, des réglages de molettes facultatifs et les images nécessaires. Un fichier <code>.gctheme</code> le transporte d’un ordinateur à l’autre. État : Bosun installe et exporte ce format ; il n’est pas encore confirmé sur le module. Le même texte est dans le dépôt : <a href="https://github.com/Paullux/GalleonCore/blob/main/docs/THEME_FORMAT.md">docs/THEME_FORMAT.md</a>.</p>
+        <h2>Le fichier</h2>
+        <p>Un fichier <code>.gctheme</code> est une <strong>archive zip dont les entrées sont stockées, sans compression</strong> (par exemple <code>zip -0 -X mon.gctheme theme.json icons/*</code>). Les images sont déjà compressées, et refuser la compression écarte tout risque de bombe de décompression. Pour regarder dedans, renomme-le en <code>.zip</code>.</p>
+        <table class="spec">
+          <thead><tr><th>Entrée</th><th>Obligatoire</th><th>Contenu et limites</th></tr></thead>
+          <tbody>
+            <tr><td><code>theme.json</code></td><td>oui</td><td>Le manifeste, 128 Kio au plus.</td></tr>
+            <tr><td><code>credits.txt</code></td><td>non</td><td>Texte UTF-8 simple, 16 Kio au plus.</td></tr>
+            <tr><td><code>icons/&lt;nom&gt;.png</code></td><td>si utilisée</td><td>Une image PNG de touche, 256 Kio et 512 × 512 pixels au plus ; 24 au maximum. Chaque image doit servir à une touche.</td></tr>
+            <tr><td><code>wallpapers/&lt;nom&gt;.jpg</code></td><td>non</td><td>Une image JPEG pour l’écran, 2 Mio et 4096 × 4096 pixels au plus ; 4 au maximum.</td></tr>
+          </tbody>
+        </table>
+        <p>Rien d’autre n’est accepté. Les noms de fichiers n’utilisent que des lettres, des chiffres, <code>.</code>, <code>_</code> et <code>-</code>. L’archive fait 24 Mio au plus, avec 64 entrées au plus. Les images sont vérifiées d’après leur contenu, pas leur extension.</p>
+        <h2>Le manifeste</h2>
+        <pre><code>{
+  "formatVersion": 1,
+  "id": "discord",
+  "name": "Discord",
+  "author": "A. Person",
+  "license": "CC-BY-SA-4.0",
+  "description": "Voice and chat keys for Discord",
+  "color": "#5865F2",
+  "keys": [
+    { "key": 0, "label": "Mute", "icon": "mute.png",
+      "action": { "type": "key", "key": "kp1" } },
+    { "key": 1, "label": "Discord", "icon": "discord",
+      "action": { "type": "app", "desktop": "discord.desktop",
+                  "alternatives": ["com.discordapp.Discord.desktop",
+                                   "discord_discord.desktop"] } }
+  ]
+}</code></pre>
+        <ul>
+          <li><code>formatVersion</code> : doit valoir <code>1</code>. Un lecteur qui ne connaît pas la version refuse le fichier.</li>
+          <li><code>id</code> : 1 à 32 caractères parmi <code>a-z</code>, <code>0-9</code>, <code>_</code>, <code>-</code> ; il devient le nom de la page.</li>
+          <li><code>name</code> (24 caractères au plus), <code>author</code> (64), <code>license</code> (un identifiant SPDX comme <code>CC-BY-SA-4.0</code>) et <code>color</code> (<code>#RRGGBB</code>) sont obligatoires. <code>description</code> est facultative (300).</li>
+          <li><code>keys</code> et <code>dials</code> reprennent les champs d’une page du <code>pages.json</code> de GalleonCore et sont vérifiés par le même analyseur : un thème ne peut jamais dire ce qu’une page ne peut pas dire. Un champ inconnu rend le fichier invalide.</li>
+          <li>Une <code>icon</code> avec extension (<code>mute.png</code>) est un fichier de <code>icons/</code> ; sans extension (<code>discord</code>), c’est un nom du thème d’icônes du bureau.</li>
+        </ul>
+        <h2>Actions autorisées</h2>
+        <p>Un thème téléchargé ne doit pouvoir rien lancer par lui-même. Un thème peut utiliser : les commandes média, <code>back</code>, <code>none</code>, <code>wallpaper-mode</code>, <code>page</code> vers sa propre page, <code>key</code> (une touche de la liste fixe : pavé numérique, verrouillage numérique, Retour arrière, F13 à F24 ; privilégie F14 à F18 pour un raccourci : sur la plupart des bureaux elles n’ont aucune action par défaut, alors que F13 ouvre les paramètres système sous KDE et F20 coupe le micro), <code>steam</code> (un jeu par son numéro) et <code>app</code>. Une application est désignée par son <strong>identifiant de fichier .desktop</strong> (<code>firefox.desktop</code>), jamais par un chemin. Les commandes shell, les URL, les autres pages, le changement de thème et le remplissage automatique d’une page (jeux Steam, entrées du menu, tri) sont refusés.</p>
+        <h2>Une application, plusieurs installations</h2>
+        <p>Un même programme a un identifiant .desktop différent selon son installation (deb, Flatpak, Snap). Une action <code>app</code> peut lister jusqu’à 6 <code>alternatives</code>. À l’installation du thème, le premier identifiant qui existe sur la machine, en commençant par <code>desktop</code>, est utilisé ; s’il n’y en a aucun, le premier est gardé et l’utilisateur est prévenu.</p>
+        <p>Le premier fond d’écran d’un thème devient celui de son onglet : l’écran le montre tant que l’onglet est affiché, et ton propre fond d’écran enregistré n’est pas touché. Un onglet sans fond d’écran montre ton choix. À l’export d’un onglet, son fond d’écran passe en premier.</p>
+        <h2>Installer et exporter</h2>
+        <p>Installer ne remplace jamais rien de ce qui appartient à l’utilisateur : les noms de page et d’onglet reçoivent un numéro s’ils sont pris, les images sont renommées d’après la page, les réglages des molettes ne sont copiés que sur demande, et rien n’est écrit si le thème n’est pas entièrement valide. Exporter réduit les images à ce dont une touche a besoin, réencode les fonds d’écran en JPEG à 80 % de qualité au moins, pas plus grands que l’écran, refuse les actions qu’un thème partagé ne peut pas contenir et vérifie sa production avec le même validateur.</p>
+        <h2>Écrire un thème à la main</h2>
+        <p>Tu peux fabriquer un thème sans Bosun : écris <code>theme.json</code>, ajoute les images et range le tout avec <code>zip -0 -X</code>. Installe-le depuis l’onglet « + » de Bosun, qui liste tous les problèmes trouvés. Ne partage que ce que tu as créé ou peux redistribuer ; les règles de contenu sont sur <a href="themes.html">la page des thèmes</a>.</p>
+      </article>
+      <article lang="de">
+        <h1>Format der Themendateien (Version 1)</h1>
+        <p>Ein Thema ist eine Tastenseite für das Stream-Deck-Modul des Corsair Galleon 100 SD, mit einer Farbe, optionalen Drehregler-Einstellungen und den nötigen Bildern. Eine <code>.gctheme</code>-Datei überträgt es von einem Rechner zum anderen. Stand: Bosun installiert und exportiert dieses Format; auf dem Modul ist es noch nicht bestätigt. Derselbe Text liegt im Repository als <a href="https://github.com/Paullux/GalleonCore/blob/main/docs/THEME_FORMAT.md">docs/THEME_FORMAT.md</a>.</p>
+        <h2>Die Datei</h2>
+        <p>Eine <code>.gctheme</code>-Datei ist ein <strong>Zip-Archiv, dessen Einträge gespeichert, nicht komprimiert sind</strong> (zum Beispiel <code>zip -0 -X mein.gctheme theme.json icons/*</code>). Bilder sind bereits komprimiert, und der Verzicht auf Kompression schließt jede Dekompressionsbombe aus. Zum Hineinsehen benenne sie in <code>.zip</code> um.</p>
+        <table class="spec">
+          <thead><tr><th>Eintrag</th><th>Pflicht</th><th>Inhalt und Grenzen</th></tr></thead>
+          <tbody>
+            <tr><td><code>theme.json</code></td><td>ja</td><td>Das Manifest, höchstens 128 KiB.</td></tr>
+            <tr><td><code>credits.txt</code></td><td>nein</td><td>Einfacher UTF-8-Text, höchstens 16 KiB.</td></tr>
+            <tr><td><code>icons/&lt;Name&gt;.png</code></td><td>wenn verwendet</td><td>Ein PNG-Tastenbild, höchstens 256 KiB und 512 × 512 Pixel; höchstens 24. Jedes Bild muss von einer Taste verwendet werden.</td></tr>
+            <tr><td><code>wallpapers/&lt;Name&gt;.jpg</code></td><td>nein</td><td>Ein JPEG-Bild für den Bildschirm, höchstens 2 MiB und 4096 × 4096 Pixel; höchstens 4.</td></tr>
+          </tbody>
+        </table>
+        <p>Nichts anderes wird akzeptiert. Dateinamen bestehen nur aus Buchstaben, Ziffern, <code>.</code>, <code>_</code> und <code>-</code>. Das Archiv ist höchstens 24 MiB groß und hat höchstens 64 Einträge. Bilder werden anhand ihres Inhalts geprüft, nicht anhand der Endung.</p>
+        <h2>Das Manifest</h2>
+        <pre><code>{
+  "formatVersion": 1,
+  "id": "discord",
+  "name": "Discord",
+  "author": "A. Person",
+  "license": "CC-BY-SA-4.0",
+  "description": "Voice and chat keys for Discord",
+  "color": "#5865F2",
+  "keys": [
+    { "key": 0, "label": "Mute", "icon": "mute.png",
+      "action": { "type": "key", "key": "kp1" } },
+    { "key": 1, "label": "Discord", "icon": "discord",
+      "action": { "type": "app", "desktop": "discord.desktop",
+                  "alternatives": ["com.discordapp.Discord.desktop",
+                                   "discord_discord.desktop"] } }
+  ]
+}</code></pre>
+        <ul>
+          <li><code>formatVersion</code>: muss <code>1</code> sein. Ein Leser, der die Version nicht kennt, lehnt die Datei ab.</li>
+          <li><code>id</code>: 1 bis 32 Zeichen aus <code>a-z</code>, <code>0-9</code>, <code>_</code>, <code>-</code>; sie wird zum Seitennamen.</li>
+          <li><code>name</code> (höchstens 24 Zeichen), <code>author</code> (64), <code>license</code> (eine SPDX-Kennung wie <code>CC-BY-SA-4.0</code>) und <code>color</code> (<code>#RRGGBB</code>) sind Pflicht. <code>description</code> ist optional (300).</li>
+          <li><code>keys</code> und <code>dials</code> verwenden dieselben Felder wie eine Seite der <code>pages.json</code> von GalleonCore und werden vom selben Parser geprüft: Ein Thema kann nie sagen, was eine Seite nicht sagen kann. Unbekannte Felder machen die Datei ungültig.</li>
+          <li>Ein <code>icon</code> mit Endung (<code>mute.png</code>) ist eine Datei in <code>icons/</code>; ohne Endung (<code>discord</code>) ist es ein Name aus dem Symboldesign des Desktops.</li>
+        </ul>
+        <h2>Erlaubte Aktionen</h2>
+        <p>Ein heruntergeladenes Thema darf von sich aus nichts ausführen können. Ein Thema darf verwenden: Medienbefehle, <code>back</code>, <code>none</code>, <code>wallpaper-mode</code>, <code>page</code> auf die eigene Seite, <code>key</code> (eine Taste der festen Liste: Ziffernblock, Num-Taste, Rücktaste, F13 bis F24; nimm für ein Tastenkürzel F14 bis F18: Auf den meisten Desktops haben sie keine Standardaktion, während F13 unter KDE die Systemeinstellungen öffnet und F20 das Mikrofon umschaltet), <code>steam</code> (ein Spiel über seine Nummer) und <code>app</code>. Eine Anwendung wird über ihre <strong>Desktop-Datei-ID</strong> (<code>firefox.desktop</code>) benannt, nie über einen Pfad. Shell-Befehle, URLs, andere Seiten, Themenwechsel und das automatische Füllen einer Seite (Steam-Spiele, Menüeinträge, Sortierung) werden abgelehnt.</p>
+        <h2>Eine Anwendung, mehrere Installationsarten</h2>
+        <p>Dasselbe Programm hat je nach Installation (deb, Flatpak, Snap) eine andere Desktop-Datei-ID. Eine <code>app</code>-Aktion kann bis zu 6 <code>alternatives</code> auflisten. Bei der Installation des Themas wird die erste vorhandene ID verwendet, beginnend mit <code>desktop</code>; ist keine vorhanden, bleibt die erste erhalten und der Nutzer wird gewarnt.</p>
+        <p>Das erste Hintergrundbild eines Themas wird zum Hintergrundbild seines Tabs: Der Bildschirm zeigt es, solange der Tab angezeigt wird, und dein gespeichertes Hintergrundbild bleibt unberührt. Ein Tab ohne Hintergrundbild zeigt deine eigene Wahl. Beim Export eines Tabs steht sein eigenes Hintergrundbild an erster Stelle.</p>
+        <h2>Installieren und exportieren</h2>
+        <p>Das Installieren ersetzt nie etwas, das dem Nutzer gehört: Seiten- und Tabnamen erhalten eine Nummer, wenn sie vergeben sind, Bilder werden nach der Seite benannt, Drehregler-Einstellungen werden nur auf Wunsch übernommen, und nichts wird geschrieben, wenn das Thema nicht vollständig gültig ist. Das Exportieren verkleinert Bilder auf das, was eine Taste braucht, kodiert Hintergrundbilder als JPEG mit mindestens 80 % Qualität und nicht größer als der Bildschirm neu, lehnt Aktionen ab, die ein geteiltes Thema nicht enthalten darf, und prüft das Ergebnis mit demselben Validator.</p>
+        <h2>Ein Thema von Hand schreiben</h2>
+        <p>Du kannst ein Thema ohne Bosun bauen: <code>theme.json</code> schreiben, Bilder hinzufügen und alles mit <code>zip -0 -X</code> verpacken. Installiere es über den „+“-Tab von Bosun, der alle gefundenen Probleme auflistet. Teile nur, was du selbst erstellt hast oder weitergeben darfst; die Inhaltsregeln stehen auf <a href="themes.html">der Themenseite</a>.</p>
+      </article>
+      <article lang="es">
+        <h1>Formato de los archivos de tema (versión 1)</h1>
+        <p>Un tema es una página de teclas para el módulo Stream Deck del Corsair Galleon 100 SD, con un color, ajustes opcionales de los diales y las imágenes que necesita. Un archivo <code>.gctheme</code> lo lleva de un ordenador a otro. Estado: Bosun instala y exporta este formato; aún no está confirmado en el módulo. El mismo texto está en el repositorio como <a href="https://github.com/Paullux/GalleonCore/blob/main/docs/THEME_FORMAT.md">docs/THEME_FORMAT.md</a>.</p>
+        <h2>El archivo</h2>
+        <p>Un archivo <code>.gctheme</code> es un <strong>archivo zip cuyas entradas están almacenadas, sin comprimir</strong> (por ejemplo <code>zip -0 -X mi.gctheme theme.json icons/*</code>). Las imágenes ya están comprimidas, y rechazar la compresión elimina cualquier riesgo de bomba de descompresión. Para mirar dentro, cámbiale el nombre a <code>.zip</code>.</p>
+        <table class="spec">
+          <thead><tr><th>Entrada</th><th>Obligatoria</th><th>Contenido y límites</th></tr></thead>
+          <tbody>
+            <tr><td><code>theme.json</code></td><td>sí</td><td>El manifiesto, hasta 128 KiB.</td></tr>
+            <tr><td><code>credits.txt</code></td><td>no</td><td>Texto UTF-8 simple, hasta 16 KiB.</td></tr>
+            <tr><td><code>icons/&lt;nombre&gt;.png</code></td><td>si se usa</td><td>Una imagen PNG de tecla, hasta 256 KiB y 512 × 512 píxeles; como máximo 24. Cada imagen debe usarla una tecla.</td></tr>
+            <tr><td><code>wallpapers/&lt;nombre&gt;.jpg</code></td><td>no</td><td>Una imagen JPEG para la pantalla, hasta 2 MiB y 4096 × 4096 píxeles; como máximo 4.</td></tr>
+          </tbody>
+        </table>
+        <p>No se acepta nada más. Los nombres de archivo usan solo letras, dígitos, <code>.</code>, <code>_</code> y <code>-</code>. El archivo tiene como máximo 24 MiB y 64 entradas. Las imágenes se comprueban por su contenido, no por su extensión.</p>
+        <h2>El manifiesto</h2>
+        <pre><code>{
+  "formatVersion": 1,
+  "id": "discord",
+  "name": "Discord",
+  "author": "A. Person",
+  "license": "CC-BY-SA-4.0",
+  "description": "Voice and chat keys for Discord",
+  "color": "#5865F2",
+  "keys": [
+    { "key": 0, "label": "Mute", "icon": "mute.png",
+      "action": { "type": "key", "key": "kp1" } },
+    { "key": 1, "label": "Discord", "icon": "discord",
+      "action": { "type": "app", "desktop": "discord.desktop",
+                  "alternatives": ["com.discordapp.Discord.desktop",
+                                   "discord_discord.desktop"] } }
+  ]
+}</code></pre>
+        <ul>
+          <li><code>formatVersion</code>: debe ser <code>1</code>. Un lector que no conozca la versión rechaza el archivo.</li>
+          <li><code>id</code>: de 1 a 32 caracteres entre <code>a-z</code>, <code>0-9</code>, <code>_</code>, <code>-</code>; pasa a ser el nombre de la página.</li>
+          <li><code>name</code> (hasta 24 caracteres), <code>author</code> (64), <code>license</code> (un identificador SPDX como <code>CC-BY-SA-4.0</code>) y <code>color</code> (<code>#RRGGBB</code>) son obligatorios. <code>description</code> es opcional (300).</li>
+          <li><code>keys</code> y <code>dials</code> usan los mismos campos que una página del <code>pages.json</code> de GalleonCore y los comprueba el mismo analizador: un tema nunca puede decir lo que una página no puede. Un campo desconocido invalida el archivo.</li>
+          <li>Un <code>icon</code> con extensión (<code>mute.png</code>) es un archivo de <code>icons/</code>; sin extensión (<code>discord</code>) es un nombre del tema de iconos del escritorio.</li>
+        </ul>
+        <h2>Acciones permitidas</h2>
+        <p>Un tema descargado no debe poder ejecutar nada por sí mismo. Un tema puede usar: comandos multimedia, <code>back</code>, <code>none</code>, <code>wallpaper-mode</code>, <code>page</code> hacia su propia página, <code>key</code> (una tecla de la lista fija: teclado numérico, Bloq Num, Retroceso, F13 a F24; para un atajo usa mejor F14 a F18: en la mayoría de los escritorios no tienen acción por defecto, mientras que F13 abre la configuración del sistema en KDE y F20 conmuta el micrófono), <code>steam</code> (un juego por su número) y <code>app</code>. Una aplicación se designa por su <strong>identificador de archivo .desktop</strong> (<code>firefox.desktop</code>), nunca por una ruta. Se rechazan los comandos de shell, las URL, las otras páginas, el cambio de tema y el relleno automático de una página (juegos de Steam, entradas del menú, orden).</p>
+        <h2>Una aplicación, varias instalaciones</h2>
+        <p>El mismo programa tiene un identificador .desktop distinto según cómo se instaló (deb, Flatpak, Snap). Una acción <code>app</code> puede enumerar hasta 6 <code>alternatives</code>. Al instalar el tema se usa el primer identificador que exista en el equipo, empezando por <code>desktop</code>; si no existe ninguno, se conserva el primero y se avisa al usuario.</p>
+        <p>El primer fondo de pantalla de un tema pasa a ser el de su pestaña: la pantalla lo muestra mientras se ve la pestaña, y tu fondo guardado no se toca. Una pestaña sin fondo muestra tu elección. Al exportar una pestaña, su propio fondo va primero.</p>
+        <h2>Instalar y exportar</h2>
+        <p>Instalar nunca sustituye nada de lo que pertenece al usuario: los nombres de página y de pestaña reciben un número si ya existen, las imágenes se renombran según la página, los ajustes de los diales solo se copian si el usuario lo pide, y no se escribe nada si el tema no es totalmente válido. Exportar reduce las imágenes a lo que necesita una tecla, recodifica los fondos como JPEG con una calidad del 80 % o más, no mayores que la pantalla, rechaza las acciones que un tema compartido no puede contener y comprueba su resultado con el mismo validador.</p>
+        <h2>Escribir un tema a mano</h2>
+        <p>Puedes construir un tema sin Bosun: escribe <code>theme.json</code>, añade las imágenes y guárdalo todo con <code>zip -0 -X</code>. Instálalo desde la pestaña «+» de Bosun, que enumera todos los problemas que encuentre. Comparte solo lo que hayas creado o puedas redistribuir; las reglas de contenido están en <a href="themes.html">la página de temas</a>.</p>
+      </article>
+    </main>
+    <footer class="legal-links">
+      <a href="index.html"><span lang="en">Home</span><span lang="fr">Accueil</span><span lang="de">Startseite</span><span lang="es">Inicio</span></a>
+      <a href="themes.html"><span lang="en">Themes</span><span lang="fr">Thèmes</span><span lang="de">Themen</span><span lang="es">Temas</span></a>
+      <a href="theme-format.html"><span lang="en">Theme file format</span><span lang="fr">Format des thèmes</span><span lang="de">Themenformat</span><span lang="es">Formato de temas</span></a>
+      <a href="privacy.html"><span lang="en">Privacy</span><span lang="fr">Confidentialité</span><span lang="de">Datenschutz</span><span lang="es">Privacidad</span></a>
+      <a href="terms.html"><span lang="en">Terms of use</span><span lang="fr">CGU</span><span lang="de">Nutzungsbedingungen</span><span lang="es">Condiciones de uso</span></a>
+      <button type="button" data-open-privacy-choices><span lang="en">Privacy choices</span><span lang="fr">Choix de confidentialité</span><span lang="de">Datenschutzeinstellungen</span><span lang="es">Opciones de privacidad</span></button>
+    </footer>
+  </div>
+</body>
+</html>
