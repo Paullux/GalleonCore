@@ -9,6 +9,9 @@ Before the keys do anything, give your voice chat application these keyboard sho
   Turn camera on/off   F17
   Share screen         F18
 
-In Discord (Linux): Settings > Keybinds > Add a keybind, choose the action, then press the matching key on the module when it asks for the shortcut. Discord registers it with the desktop (on KDE it opens the system shortcut settings, where you press the module key). Close the Keybinds page afterwards: Discord switches its shortcuts off while that page is visible. Discord's own default shortcuts (for example Ctrl+Shift+M to mute) need modifier keys, which a theme cannot send.
-
-The "Discord" key starts the application if it is installed (deb, Flatpak or Snap). No logo of any application is included.
+In Discord (Linux, KDE):
+  1. Settings > Keybinds > Add a keybind, and choose the action (one per key above).
+  2. Open KDE System Settings > Shortcuts > Discord, click the shortcut of that action, choose "Custom" and press the matching key on the module. KDE records it as "Launch (5)" to "Launch (9)" for F14 to F18: those are the names Linux gives these keys, and the F14 that Discord proposes by itself does not match them. Do this in KDE even if Discord shows a key.
+  3. If you change the action of a Discord shortcut afterwards, record its key again in KDE.
+  4. Close Discord's Keybinds page: Discord switches its shortcuts off while it is visible.
+F19 and F24 have no name on Linux and cannot be used as shortcuts. Discord's own default shortcuts (for example Ctrl+Shift+M to mute) need modifier keys, which a theme cannot send.

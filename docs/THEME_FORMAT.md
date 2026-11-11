@@ -55,7 +55,7 @@ A downloaded theme must not be able to run anything by itself. Allowed actions:
 
 - media commands, `back`, `none`, `wallpaper-mode`;
 - `page` pointing to the theme's own page only;
-- `key`: a key of the fixed list (numeric keypad, Num Lock, Backspace, F13 to F24; prefer F14 to F18 for a shortcut: on most desktops they have no default action, whereas F13 opens System Settings on KDE and F20 toggles the microphone);
+- `key`: a key of the fixed list (numeric keypad, Num Lock, Backspace, F13 to F24; prefer F14 to F18 for a shortcut: on Linux they are the launch keys XF86Launch5 to 9, with no default action, whereas F13 opens System Settings on KDE, F20 toggles the microphone and F19 and F24 have no name at all, so an application cannot bind them. In KDE's shortcut settings they appear as "Launch (5)" to "Launch (9)": record the key there by pressing it);
 - `steam`: a Steam game by its number;
 - `app`: an application named by its **desktop file ID** (`firefox.desktop`), never by a path.
 
