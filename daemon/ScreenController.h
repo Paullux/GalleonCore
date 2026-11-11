@@ -92,6 +92,11 @@ public:
     void setGamingHandler(std::function<bool()> handler) { m_showGaming = std::move(handler); }
     void setThemeHandler(std::function<bool(const QString &)> handler) { m_showTheme = std::move(handler); }
 
+    // The wallpaper of the theme being shown (a catalog name), or empty for a theme that has none. While
+    // a theme has one, the screen shows it without touching the saved choice; a theme without one gives
+    // the saved choice back. Choosing a wallpaper with the dial still saves that choice as before.
+    void setThemeWallpaper(const QString &name);
+
     // Takes the last wallpaper chosen, if it is still in the catalog.
     void restore();
 
@@ -120,6 +125,9 @@ Q_SIGNALS:
 private:
     std::function<bool()> m_showGaming;
     std::function<bool(const QString &)> m_showTheme;
+    void applyThemeWallpaper();
+    QString m_themeWallpaper;       // what the current theme asks for (may be unknown to the catalog)
+    bool m_themeWallpaperShown = false; // the screen shows it now, in place of the saved choice
     [[nodiscard]] QVariantMap themeProperties();
     void tick();
     bool draw();

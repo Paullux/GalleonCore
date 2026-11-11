@@ -64,7 +64,7 @@ private:
 
 const QRegularExpression &namePartPattern()
 {
-    static const QRegularExpression pattern(QStringLiteral("^[A-Za-z0-9._-]+$"));
+    static const QRegularExpression pattern(QStringLiteral("^[A-Za-z0-9._-]+\\z"));
     return pattern;
 }
 

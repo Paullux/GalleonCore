@@ -21,31 +21,31 @@ namespace {
 
 const QRegularExpression &licensePattern()
 {
-    static const QRegularExpression pattern(QStringLiteral("^[A-Za-z0-9.+-]{1,40}$"));
+    static const QRegularExpression pattern(QStringLiteral("^[A-Za-z0-9.+-]{1,40}\\z"));
     return pattern;
 }
 
 const QRegularExpression &idPattern()
 {
-    static const QRegularExpression pattern(QStringLiteral("^[a-z0-9_-]{1,32}$"));
+    static const QRegularExpression pattern(QStringLiteral("^[a-z0-9_-]{1,32}\\z"));
     return pattern;
 }
 
 const QRegularExpression &iconFilePattern()
 {
-    static const QRegularExpression pattern(QStringLiteral("^[A-Za-z0-9._-]{1,64}\\.png$"));
+    static const QRegularExpression pattern(QStringLiteral("^[A-Za-z0-9._-]{1,64}\\.png\\z"));
     return pattern;
 }
 
 const QRegularExpression &wallpaperFilePattern()
 {
-    static const QRegularExpression pattern(QStringLiteral("^[A-Za-z0-9._-]{1,64}\\.(jpg|jpeg)$"));
+    static const QRegularExpression pattern(QStringLiteral("^[A-Za-z0-9._-]{1,64}\\.(jpg|jpeg)\\z"));
     return pattern;
 }
 
 const QRegularExpression &themeIconNamePattern()
 {
-    static const QRegularExpression pattern(QStringLiteral("^[A-Za-z0-9_-][A-Za-z0-9._-]{0,63}$"));
+    static const QRegularExpression pattern(QStringLiteral("^[A-Za-z0-9_-][A-Za-z0-9._-]{0,63}\\z"));
     return pattern;
 }
 

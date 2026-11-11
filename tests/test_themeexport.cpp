@@ -241,6 +241,58 @@ private Q_SLOTS:
         QVERIFY(joined(result.warnings).contains(QLatin1String("steam")));
     }
 
+    void theWallpaperOfTheTabGoesFirstInTheTheme()
+    {
+        const QTemporaryDir dir;
+        QDir().mkpath(dir.filePath(QStringLiteral("wall/mine")));
+        QVERIFY(savePicture(dir.filePath(QStringLiteral("wall/mine/mine-tab.jpg")), 720, 384, "JPG"));
+        QVERIFY(savePicture(dir.filePath(QStringLiteral("extra.png")), 900, 500, "PNG"));
+        const QJsonObject theme{{"name", "Mine"}, {"page", "mine"}, {"color", "#336699"}, {"wallpaper", "mine/mine-tab.jpg"}};
+        const QJsonObject root{{"version", 1}, {"home", "mine"}, {"pages", QJsonObject{{"mine", QJsonObject{{"keys", QJsonArray{}}}}}}, {"themes", QJsonArray{theme}}};
+        QFile out(dir.filePath(QStringLiteral("pages.json")));
+        QVERIFY(out.open(QIODevice::WriteOnly));
+        out.write(QJsonDocument(root).toJson());
+        out.close();
+        ThemeExportOptions o = options(dir.path());
+        o.wallpaperRoots = {dir.filePath(QStringLiteral("wall"))};
+        o.wallpaperFiles = {dir.filePath(QStringLiteral("extra.png"))};
+        const ThemeExportResult result = exportTheme(o);
+        QVERIFY2(result.file.has_value(), qPrintable(joined(result.errors)));
+        const ThemeParseResult parsed = parseThemePackage(required(result.file));
+        QVERIFY2(parsed.package.has_value(), qPrintable(joined(parsed.errors)));
+        QCOMPARE(required(parsed.package).wallpapers.size(), std::size_t{2});
+        QCOMPARE(required(parsed.package).wallpapers.front().name, QStringLiteral("wallpaper-01.jpg")); // the tab's own
+        // Installed again, the first one is the wallpaper of the new tab.
+        const QString themeFile = dir.filePath(QStringLiteral("t.gctheme"));
+        QFile file(themeFile);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(required(result.file));
+        file.close();
+        const QString target = dir.filePath(QStringLiteral("target/pages.json"));
+        const ThemeInstallResult installed = installTheme({themeFile, target, dir.filePath(QStringLiteral("installed")), false});
+        QVERIFY2(installed.ok, qPrintable(joined(installed.errors)));
+        QFile in(target);
+        QVERIFY(in.open(QIODevice::ReadOnly));
+        QCOMPARE(required(parsePagesConfig(in.readAll()).config).themes.back().wallpaper, QStringLiteral("mine/mine-01.jpg"));
+    }
+
+    void aTabWallpaperThatCannotBeFoundIsLeftOutWithAWarning()
+    {
+        const QTemporaryDir dir;
+        const QJsonObject theme{{"name", "Mine"}, {"page", "mine"}, {"color", "#336699"}, {"wallpaper", "mine/gone.jpg"}};
+        const QJsonObject root{{"version", 1}, {"home", "mine"}, {"pages", QJsonObject{{"mine", QJsonObject{{"keys", QJsonArray{}}}}}}, {"themes", QJsonArray{theme}}};
+        QFile out(dir.filePath(QStringLiteral("pages.json")));
+        QVERIFY(out.open(QIODevice::WriteOnly));
+        out.write(QJsonDocument(root).toJson());
+        out.close();
+        ThemeExportOptions o = options(dir.path());
+        o.wallpaperRoots = {dir.filePath(QStringLiteral("wall"))};
+        const ThemeExportResult result = exportTheme(o);
+        QVERIFY2(result.file.has_value(), qPrintable(joined(result.errors)));
+        QVERIFY(joined(result.warnings).contains(QLatin1String("gone.jpg")));
+        QVERIFY(required(parseThemePackage(required(result.file)).package).wallpapers.empty());
+    }
+
     void theDialsAreLeftOutUnlessAsked()
     {
         const QTemporaryDir dir;

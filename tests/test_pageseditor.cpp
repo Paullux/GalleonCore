@@ -603,6 +603,29 @@ private Q_SLOTS:
         QCOMPARE(readFile(env.pages()), before);
     }
 
+    void aThemeCanGetAWallpaperAndGiveItBack()
+    {
+        Environment const env;
+        QVERIFY(writeFile(env.pages(), themesFile()));
+        QVERIFY(PagesEditor::setThemeWallpaper(env.pages(), 1, "music/music-tab.jpg").ok);
+        QCOMPARE(configOf(env.pages()).themes[1].wallpaper, QStringLiteral("music/music-tab.jpg"));
+        QVERIFY(configOf(env.pages()).themes[0].wallpaper.isEmpty()); // the other tabs are not touched
+        QVERIFY(PagesEditor::setThemeWallpaper(env.pages(), 1, QString()).ok);
+        QVERIFY(configOf(env.pages()).themes[1].wallpaper.isEmpty());
+        QVERIFY(!readFile(env.pages()).contains("wallpaper"));
+    }
+
+    void aWallpaperThatIsNotACatalogNameIsRefusedAndNothingIsWritten()
+    {
+        Environment const env;
+        QVERIFY(writeFile(env.pages(), themesFile()));
+        const QByteArray before = readFile(env.pages());
+        QVERIFY(!PagesEditor::setThemeWallpaper(env.pages(), 1, "../../etc/passwd").ok);
+        QVERIFY(!PagesEditor::setThemeWallpaper(env.pages(), 1, "style/a.gif").ok);
+        QVERIFY(!PagesEditor::setThemeWallpaper(env.pages(), 9, "style/a.jpg").ok); // no such tab
+        QCOMPARE(readFile(env.pages()), before);
+    }
+
     void aThemeGoneTakesItsPageWithItUnlessSomethingLeadsThere()
     {
         Environment const env;

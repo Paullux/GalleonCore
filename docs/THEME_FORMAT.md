@@ -76,7 +76,7 @@ Installing a theme never replaces anything of the user's:
 - nothing is written unless the whole theme is valid, and if the pages file cannot be changed the pictures written for it are taken away again;
 - afterwards Bosun shows the new tab and asks `galleond` to show the theme on the module (D-Bus `ShowTheme` on Linux, a local command on Windows).
 
-Wallpapers are copied to the user's wallpaper folder, in a folder named after the page, where the wallpaper dial finds them.
+Wallpapers are copied to the user's wallpaper folder, in a folder named after the page, where the wallpaper dial finds them. **The first wallpaper of the theme becomes the wallpaper of its tab**: while that tab is shown, the screen shows it, and the user's own saved wallpaper is not touched. A tab without a wallpaper shows the user's own choice. When a tab is exported, its own wallpaper goes first.
 
 ## Exporting
 

@@ -43,6 +43,7 @@ struct ThemeInstallPlan
     std::vector<ZipEntry> iconFiles;      // the new names
     QString wallpaperStyle;               // the folder the wallpapers go in (empty: none)
     std::vector<ZipEntry> wallpaperFiles; // the new names
+    QString wallpaper;                    // the tab's own wallpaper: the first one, by catalog name ("style/file.jpg")
     QStringList warnings;                 // not an error: "discord.desktop is not installed"
     QStringList errors;                   // the plan is unusable when not empty
 

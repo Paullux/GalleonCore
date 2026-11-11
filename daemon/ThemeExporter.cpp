@@ -6,6 +6,7 @@
 #include "InitialPages.h"
 #include "PagesConfig.h"
 #include "ThemePackage.h"
+#include "WallpaperCatalog.h"
 
 #include <QBuffer>
 #include <QDir>
@@ -134,7 +135,7 @@ public:
         m_entries.insert(m_entries.begin(), {QStringLiteral("theme.json"), QJsonDocument(manifest).toJson(QJsonDocument::Indented)});
         if (!m_options.credits.isEmpty())
             m_entries.push_back({QStringLiteral("credits.txt"), m_options.credits.toUtf8()});
-        addWallpapers();
+        addWallpapers(theme);
         return finish();
     }
 
@@ -209,15 +210,34 @@ private:
             m_entries.push_back({QStringLiteral("icons/") + portable, *reencoded});
     }
 
-    void addWallpapers()
+    // The tab's own wallpaper first (when it can be found), then the files the author added.
+    QStringList wallpaperPaths(const Theme &theme)
     {
-        if (m_options.wallpaperFiles.size() > MaxThemeWallpapers) {
+        QStringList paths;
+        if (!theme.wallpaper.isEmpty() && !m_options.wallpaperRoots.isEmpty()) {
+            const WallpaperCatalog catalog(m_options.wallpaperRoots);
+            if (const WallpaperEntry *entry = catalog.find(theme.wallpaper))
+                paths.push_back(entry->path);
+            else
+                m_warnings.push_back(QStringLiteral("the wallpaper of this tab (%1) was not found and is not in the theme").arg(theme.wallpaper));
+        }
+        for (const QString &path : m_options.wallpaperFiles) {
+            if (!paths.contains(path))
+                paths.push_back(path);
+        }
+        return paths;
+    }
+
+    void addWallpapers(const Theme &theme)
+    {
+        const QStringList paths = wallpaperPaths(theme);
+        if (paths.size() > MaxThemeWallpapers) {
             m_errors.push_back(QStringLiteral("at most %1 wallpapers").arg(MaxThemeWallpapers));
             return;
         }
         const int quality = std::max(m_options.wallpaperQuality, MinWallpaperQuality);
         int n = 1;
-        for (const QString &path : m_options.wallpaperFiles) {
+        for (const QString &path : paths) {
             const QFileInfo info(path);
             QFile in(path);
             if (!info.isFile() || info.size() > MaxSourceBytes || !in.open(QIODevice::ReadOnly)) {

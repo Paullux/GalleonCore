@@ -36,6 +36,14 @@ const QRegularExpression &iconNamePattern()
     return pattern;
 }
 
+// "style/file.jpg": a folder name and a file name of the wallpaper catalog; no path can leave it.
+const QRegularExpression &wallpaperNamePattern()
+{
+    static const QRegularExpression pattern(QStringLiteral("^[^/\\\\\\x00-\\x1f]{1,64}/[^/\\\\\\x00-\\x1f]{1,90}\\.(?:jpe?g|png)\\z"),
+                                            QRegularExpression::CaseInsensitiveOption);
+    return pattern;
+}
+
 const QRegularExpression &themeColorPattern()
 {
     static const QRegularExpression pattern(QStringLiteral("^#[0-9A-Fa-f]{6}$"));
@@ -401,7 +409,7 @@ struct Parser
                 continue;
             }
             const QJsonObject object = array.at(i).toObject();
-            rejectUnknown(object, {QStringLiteral("name"), QStringLiteral("page"), QStringLiteral("color"), QStringLiteral("when")}, path);
+            rejectUnknown(object, {QStringLiteral("name"), QStringLiteral("page"), QStringLiteral("color"), QStringLiteral("when"), QStringLiteral("wallpaper")}, path);
             Theme theme;
             bool ok = text(object.value(QStringLiteral("name")), path + QStringLiteral(".name"), MaxLabelLength, theme.name);
             if (ok && theme.name.isEmpty()) {
@@ -432,6 +440,15 @@ struct Parser
                             break;
                         }
                     }
+                }
+            }
+            if (object.contains(QStringLiteral("wallpaper"))) {
+                const QString wallpaper = object.value(QStringLiteral("wallpaper")).toString();
+                if (!object.value(QStringLiteral("wallpaper")).isString() || !isWallpaperName(wallpaper)) {
+                    error(path + QStringLiteral(".wallpaper"), QStringLiteral("must be a wallpaper name such as style/picture.jpg"));
+                    ok = false;
+                } else {
+                    theme.wallpaper = wallpaper;
                 }
             }
             if (!ok)
@@ -633,6 +650,11 @@ struct Parser
 };
 
 } // namespace
+
+bool isWallpaperName(const QString &name)
+{
+    return name.size() <= MaxWallpaperNameLength && !name.contains(QStringLiteral("..")) && wallpaperNamePattern().match(name).hasMatch();
+}
 
 PagesParseResult parsePagesConfig(const QByteArray &json)
 {

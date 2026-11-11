@@ -465,6 +465,27 @@ private Q_SLOTS:
         QVERIFY(!withThemes({theme("A", "sometimes")}).config.has_value());
     }
 
+    void aThemeCanHaveAWallpaperOfItsOwn()
+    {
+        const auto withWallpaper = [](const QJsonValue &wallpaper) {
+            QJsonObject t{{"name", "A"}, {"page", "main"}, {"color", "#ffffff"}};
+            if (!wallpaper.isUndefined())
+                t.insert("wallpaper", wallpaper);
+            return parseEdited([&](QJsonObject &object) { object.insert("themes", QJsonArray{t}); });
+        };
+        const auto good = withWallpaper(QStringLiteral("voice-chat/voice-chat-01.jpg"));
+        QVERIFY2(good.config.has_value(), qPrintable(good.errors.join('\n')));
+        QCOMPARE(required(good.config).themes[0].wallpaper, QStringLiteral("voice-chat/voice-chat-01.jpg"));
+        QVERIFY(withWallpaper(QStringLiteral("mine/Elsa au restaurant.jpg")).config.has_value()); // spaces and accents are file names
+        QVERIFY(withWallpaper(QStringLiteral("mine/Création.PNG")).config.has_value());
+        QVERIFY(required(withWallpaper(QJsonValue::Undefined).config).themes[0].wallpaper.isEmpty());
+        for (const QString &bad : {QStringLiteral("../etc/passwd.jpg"), QStringLiteral("/abs/x.jpg"), QStringLiteral("a/b/c.jpg"),
+                                   QStringLiteral("only.jpg"), QStringLiteral("style/x.gif"), QStringLiteral("style/..jpg"),
+                                   QStringLiteral("style/a\\b.jpg"), QStringLiteral("style/x.jpg\n"), QString(), QString(200, 'a') + "/x.jpg"})
+            QVERIFY2(!withWallpaper(bad).config.has_value(), qPrintable(bad));
+        QVERIFY(!withWallpaper(12).config.has_value());
+    }
+
     void aPageCanSortByUsageAndFillWithSteamGames()
     {
         const auto withPage = [](const QJsonObject &extra) {

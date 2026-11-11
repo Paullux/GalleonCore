@@ -540,6 +540,91 @@ QtObject {
         QCOMPARE(editor->property("wallpapers").toList().size(), 0);
     }
 
+    void aTabCanHaveItsOwnWallpaperAndGiveItBack()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        QImage picture(1800, 900, QImage::Format_RGB32);
+        picture.fill(Qt::darkCyan);
+        const QString source = dir.filePath("my picture.png");
+        QVERIFY(picture.save(source));
+        bosun::BosunBackend backend(file, {.ffprobe = "/nonexistent", .ffmpeg = "/nonexistent", .thumbnailFolder = dir.filePath("thumbs"),
+                                           .wallpaperRoot = dir.filePath("wallpapers")});
+        QVERIFY(backend.themes().at(1).toMap().value("wallpaper").toString().isEmpty());
+
+        QCOMPARE(backend.setThemeWallpaper(1, source), QString());
+        QCOMPARE(backend.themes().at(1).toMap().value("wallpaper").toString(), QStringLiteral("music/music-tab.jpg"));
+        QVERIFY(backend.themes().at(0).toMap().value("wallpaper").toString().isEmpty()); // the other tab keeps the user's own
+        const QImage saved(dir.filePath("wallpapers/music/music-tab.jpg"));
+        QVERIFY(!saved.isNull());
+        QVERIFY(saved.width() <= 720 && saved.height() <= 384); // shrunk to the screen
+
+        QCOMPARE(backend.clearThemeWallpaper(1), QString());
+        QVERIFY(backend.themes().at(1).toMap().value("wallpaper").toString().isEmpty());
+    }
+
+    void somethingThatIsNotAPictureIsNotMadeAWallpaper()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const QString notAPicture = dir.filePath("notes.txt");
+        QVERIFY(writeFile(notAPicture, "just text"));
+        bosun::BosunBackend backend(file, {.ffprobe = "/nonexistent", .ffmpeg = "/nonexistent", .thumbnailFolder = dir.filePath("thumbs"),
+                                           .wallpaperRoot = dir.filePath("wallpapers")});
+        QVERIFY(!backend.setThemeWallpaper(1, notAPicture).isEmpty());
+        QVERIFY(!backend.setThemeWallpaper(1, dir.filePath("missing.png")).isEmpty());
+        QVERIFY(!backend.setThemeWallpaper(9, notAPicture).isEmpty()); // no such tab
+        QVERIFY(backend.themes().at(1).toMap().value("wallpaper").toString().isEmpty());
+        QVERIFY(!QDir(dir.filePath("wallpapers/music")).exists());
+    }
+
+    void thePictureChosenInTheEditorBecomesTheWallpaperOfTheTab()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        QImage picture(720, 384, QImage::Format_RGB32);
+        picture.fill(Qt::darkGreen);
+        const QString source = dir.filePath("bg.png");
+        QVERIFY(picture.save(source));
+        const auto backend = std::make_unique<bosun::BosunBackend>(file, bosun::BosunBackend::Tools{.ffprobe = "/nonexistent", .ffmpeg = "/nonexistent",
+                                                                                                .thumbnailFolder = dir.filePath("thumbs"),
+                                                                                                .wallpaperRoot = dir.filePath("wallpapers")});
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const auto library = std::make_unique<bosun::WallpaperLibrary>(bosun::WallpaperLibrary::Places{.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        FakeFilePicker picker;
+        picker.picturePath = source;
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(backend.get()));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(library.get()));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(library.get()));
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(backend.get())},
+                                     {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(library.get())},
+                                     {QStringLiteral("filePicker"), QVariant::fromValue(&picker)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto *root = engine.rootObjects().constFirst();
+        root->setProperty("currentTab", 1);
+        auto *choose = root->findChild<QQuickItem *>("chooseTabWallpaper");
+        auto *clear = root->findChild<QQuickItem *>("clearTabWallpaper");
+        QVERIFY(choose);
+        QVERIFY(clear);
+        QVERIFY(!clear->property("enabledLook").toBool()); // nothing to give back yet
+        QVERIFY(QMetaObject::invokeMethod(choose, "clicked"));
+        QCOMPARE(backend->themes().at(1).toMap().value("wallpaper").toString(), QStringLiteral("music/music-tab.jpg"));
+        QVERIFY(!root->property("messageIsError").toBool());
+        QTRY_VERIFY(clear->property("enabledLook").toBool());
+        QVERIFY(QMetaObject::invokeMethod(clear, "clicked"));
+        QVERIFY(backend->themes().at(1).toMap().value("wallpaper").toString().isEmpty());
+        picker.picturePath.clear(); // cancelled: nothing happens
+        QVERIFY(QMetaObject::invokeMethod(choose, "clicked"));
+        QVERIFY(backend->themes().at(1).toMap().value("wallpaper").toString().isEmpty());
+    }
+
     void themesAreTheTabs()
     {
         const QTemporaryDir dir;

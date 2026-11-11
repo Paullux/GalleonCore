@@ -165,6 +165,11 @@ public:
     // colour of the tab it is shown in.
     [[nodiscard]] QPixmap tile(const QString &page, int key, const QString &themePage = {}) const;
 
+    // The wallpaper of theme `index` (a tab): the picture is shrunk to the screen, saved as a JPEG in the
+    // user's wallpaper folder and named in the pages file. "" when done, else why not.
+    Q_INVOKABLE [[nodiscard]] QString setThemeWallpaper(int index, const QString &pathOrUrl);
+    // The tab goes back to the user's own wallpaper (the picture stays in the folder).
+    Q_INVOKABLE [[nodiscard]] QString clearThemeWallpaper(int index);
     // Installs a `.gctheme` file (a path or a file:// URL): {ok, errors, warnings, page, themeIndex}.
     // The dials are shared by every theme, so the theme's are used only when `applyDials` says so.
     // On success the window shows the new tab (themeInstalled) and the module is asked to show it.
@@ -181,6 +186,7 @@ private:
     galleond::RecordingController m_recording;
     galleond::HomeWidgets m_homeWidgets{nullptr, {}, true};
     void watchFile();
+    [[nodiscard]] QStringList wallpaperRoots() const; // where wallpapers are looked for, the folder of installed themes first
     [[nodiscard]] QString applied(const galleond::EditResult &result);
     void buildScreensaver();
     void buildCandidate();

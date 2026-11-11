@@ -152,6 +152,7 @@ ThemeInstallPlan planThemeInstall(const ThemePackage &package, const ThemeInstal
             plan.wallpaperFiles.push_back({QStringLiteral("%1-%2.jpg").arg(plan.wallpaperStyle).arg(n, 2, 10, QLatin1Char('0')), wallpaper.data});
             ++n;
         }
+        plan.wallpaper = plan.wallpaperStyle + QLatin1Char('/') + plan.wallpaperFiles.front().name;
     }
     return plan;
 }

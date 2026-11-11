@@ -68,6 +68,9 @@ public:
     // made, empty. A theme that is gone takes its page with it unless something still leads there.
     static EditResult addTheme(const QString &file, const QString &name, const QString &color, const QString &page);
     static EditResult setTheme(const QString &file, int index, const QString &name, const QString &color);
+    // The wallpaper of theme `index` (a catalog name such as "voice-chat/voice-chat-01.jpg"); empty takes it
+    // away, and the tab then shows the user's own choice. The picture is not looked at here.
+    static EditResult setThemeWallpaper(const QString &file, int index, const QString &wallpaper);
     // Adds the page and the theme of a planned installation (see ThemeInstallPlan.h) in one
     // validated write, and the dials when the plan has them. `themeIndex` gets the new tab's place.
     static EditResult installTheme(const QString &file, const ThemeInstallPlan &plan, int &themeIndex);

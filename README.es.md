@@ -303,6 +303,8 @@ Una pulsación de dial con `{ "type": "wallpaper-mode" }` cambia ese dial del co
 
 Una acción `{ "type": "key", "key": "kp7" }` pulsa una tecla del teclado a través de un teclado numérico virtual (`/dev/uinput`), mantenida mientras se mantenga la tecla. Solo se acepta una lista fija de nombres (`kp0` a `kp9`, `kpdot`, `kpenter`, `kpplus`, `kpminus`, `kpasterisk`, `kpslash`, `numlock`, `backspace`, `f13` a `f24`), y el dispositivo virtual no recibe ninguna otra tecla. Bloq Num debe estar activado para que los dígitos del teclado numérico escriban dígitos. El dispositivo virtual necesita acceso de escritura a `/dev/uinput` (`tools/udev/71-galleon-uinput.rules`).
 
+Un tema puede tener su propio fondo de pantalla, `"wallpaper": "estilo/imagen.jpg"` (un nombre de la lista de fondos): la pantalla lo muestra mientras se muestra el tema, sin cambiar tu elección guardada; un tema sin fondo propio muestra tu fondo de pantalla. En Bosun, «Fondo de pantalla de esta pestaña» lo ajusta.
+
 Un tema puede elegirse solo con `"when": "media"` (empieza un reproductor) o `"when": "no-media"` (no queda ninguno: detenido o ausente; un reproductor en pausa sigue contando como uno). Solo en esos momentos: tu propia elección con el dial se mantiene hasta el siguiente cambio. Como máximo un tema por disparador. Las teclas de la página de un tema se dibujan sobre un tono más oscuro del color del tema, más claro mientras se mantienen pulsadas.
 
 La sección `screen` también tiene `wallpaper_hold_seconds` (de 1 a 600, por defecto 4): cuánto tiempo permanece en la pantalla un fondo elegido con el dial derecho, o mostrado al inicio, antes de que una pista en reproducción lo recupere.

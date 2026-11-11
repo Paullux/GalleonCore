@@ -346,7 +346,10 @@ EditResult PagesEditor::installTheme(const QString &file, const ThemeInstallPlan
     pages.insert(plan.page, plan.pageObject);
     root.insert(QStringLiteral("pages"), pages);
     QJsonArray themes = root.value(QStringLiteral("themes")).toArray();
-    themes.append(QJsonObject{{QStringLiteral("name"), plan.themeName}, {QStringLiteral("page"), plan.page}, {QStringLiteral("color"), plan.color}});
+    QJsonObject theme{{QStringLiteral("name"), plan.themeName}, {QStringLiteral("page"), plan.page}, {QStringLiteral("color"), plan.color}};
+    if (!plan.wallpaper.isEmpty())
+        theme.insert(QStringLiteral("wallpaper"), plan.wallpaper);
+    themes.append(theme);
     root.insert(QStringLiteral("themes"), themes);
     if (!plan.dials.isEmpty())
         root.insert(QStringLiteral("dials"), plan.dials);
@@ -369,6 +372,29 @@ EditResult PagesEditor::setTheme(const QString &file, int index, const QString &
     QJsonObject theme = themes.at(index).toObject();
     theme.insert(QStringLiteral("name"), name.trimmed());
     theme.insert(QStringLiteral("color"), color.trimmed().toLower());
+    themes.replace(index, theme);
+    root.insert(QStringLiteral("themes"), themes);
+    return write(file, root, original);
+}
+
+EditResult PagesEditor::setThemeWallpaper(const QString &file, int index, const QString &wallpaper)
+{
+    QJsonObject root;
+    bool original = false;
+    EditResult error;
+    if (!load(file, root, original, error))
+        return error;
+    QJsonArray themes = root.value(QStringLiteral("themes")).toArray();
+    if (!validThemeIndex(themes, index, error))
+        return error;
+    QJsonObject theme = themes.at(index).toObject();
+    if (wallpaper.isEmpty()) {
+        theme.remove(QStringLiteral("wallpaper"));
+    } else if (!isWallpaperName(wallpaper)) {
+        return failure(QCoreApplication::translate("PagesEditor", "not a wallpaper name: %1").arg(wallpaper.left(80)));
+    } else {
+        theme.insert(QStringLiteral("wallpaper"), wallpaper);
+    }
     themes.replace(index, theme);
     root.insert(QStringLiteral("themes"), themes);
     return write(file, root, original);

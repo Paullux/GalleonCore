@@ -175,6 +175,7 @@ private Q_SLOTS:
         QTest::newRow("accent") << "icône.png";
         QTest::newRow("too long") << QString(101, QLatin1Char('a'));
         QTest::newRow("empty") << "";
+        QTest::newRow("trailing line break") << "icons/x.png\n";
     }
     void namesThatLeaveTheFolderAreRefused()
     {

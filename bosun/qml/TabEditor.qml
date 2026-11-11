@@ -122,6 +122,46 @@ Column {
         color: "white"
         font.pixelSize: 16
         font.bold: true
+        text: qsTr("Wallpaper of this tab")
+    }
+    Text {
+        objectName: "tabWallpaperState"
+        width: parent.width
+        wrapMode: Text.Wrap
+        color: "#9aa0a6"
+        font.pixelSize: 13
+        text: editor.theme.wallpaper === ""
+              ? qsTr("None: this tab shows your own wallpaper.")
+              : qsTr("This tab shows “%1” on the screen.").arg(editor.theme.wallpaper.split("/").pop())
+    }
+    Row {
+        spacing: 8
+        Pill {
+            objectName: "chooseTabWallpaper"
+            text: qsTr("Choose a picture…")
+            enabledLook: editor.filePicker !== null
+            onClicked: {
+                const path = editor.filePicker.picture()
+                if (path !== "")
+                    editor.answered(editor.backend.setThemeWallpaper(editor.index, path), qsTr("Wallpaper of the tab saved."))
+            }
+        }
+        Pill {
+            objectName: "clearTabWallpaper"
+            text: qsTr("Use my own wallpaper")
+            enabledLook: editor.theme.wallpaper !== ""
+            onClicked: editor.answered(editor.backend.clearThemeWallpaper(editor.index), qsTr("The tab uses your own wallpaper again."))
+        }
+    }
+    Rectangle {
+        width: parent.width
+        height: 1
+        color: "#33ffffff"
+    }
+    Text {
+        color: "white"
+        font.pixelSize: 16
+        font.bold: true
         text: qsTr("Share this tab")
     }
     Text {

@@ -17,6 +17,8 @@
 //   (no larger than a key needs) and gives them a name without the page prefix;
 // - re-encodes every wallpaper as JPEG, at a quality of at least 80 %, no larger
 //   than the screen, which keeps files small and removes embedded metadata;
+// - puts the tab's own wallpaper first, then those the author added (the first one becomes the
+//   wallpaper of the tab when the theme is installed);
 // - leaves the dials out unless asked (they are shared by every theme).
 
 #include <galleon/Protocol.h>
@@ -44,6 +46,7 @@ struct ThemeExportOptions
     QString description;
     QString credits;
     QStringList wallpaperFiles; // files chosen by the author (JPEG or PNG), at most MaxThemeWallpapers
+    QStringList wallpaperRoots; // the wallpaper folders, to find the tab's own wallpaper: it goes first
     int wallpaperQuality = DefaultWallpaperQuality; // never below MinWallpaperQuality
     bool includeDials = false;
 };

@@ -228,6 +228,27 @@ private Q_SLOTS:
         QCOMPARE(result.themeIndex, static_cast<int>(config.themes.size()) - 1);
         QVERIFY(QFile::exists(dir.filePath(QStringLiteral("cfg/discord-mute.png"))));
         QVERIFY(QFile::exists(dir.filePath(QStringLiteral("wall/discord/discord-01.jpg"))));
+        // The first wallpaper of the theme becomes the wallpaper of its tab.
+        QCOMPARE(config.themes.back().wallpaper, QStringLiteral("discord/discord-01.jpg"));
+    }
+
+    void aThemeWithoutWallpaperLeavesItsTabOnTheUsersOwn()
+    {
+        const QTemporaryDir dir;
+        const QString themeFile = dir.filePath(QStringLiteral("d.gctheme"));
+        QVERIFY(writeThemeFile(themeFile, package(), false));
+        const QString pagesFile = dir.filePath(QStringLiteral("pages.json"));
+        QVERIFY(installTheme({themeFile, pagesFile, dir.filePath(QStringLiteral("wall")), false}).ok);
+        QFile in(pagesFile);
+        QVERIFY(in.open(QIODevice::ReadOnly));
+        QVERIFY(required(parsePagesConfig(in.readAll()).config).themes.back().wallpaper.isEmpty());
+    }
+
+    void thePlanNamesTheWallpaperOfTheTab()
+    {
+        const ThemeInstallPlan plan = planThemeInstall(package(true), context());
+        QCOMPARE(plan.wallpaper, QStringLiteral("discord/discord-01.jpg"));
+        QVERIFY(planThemeInstall(package(false), context()).wallpaper.isEmpty());
     }
 
     void installingTwiceMakesTwoPagesAndKeepsTheFirstPictures()

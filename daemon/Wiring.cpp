@@ -23,6 +23,7 @@ void connectPagesToScreen(PagesController &pages, ScreenController &screen)
     const auto showState = [p, s] {
         const Theme *theme = p->currentTheme();
         s->setTheme(theme ? theme->name : QString(), theme ? theme->rgb : 0, p->themeMode());
+        s->setThemeWallpaper(theme ? theme->wallpaper : QString());
         std::uint32_t bar = 0xffffff;
         if (p->wallpaperMode())
             bar = 0xff00ff;
