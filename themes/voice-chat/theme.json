@@ -1,123 +1,124 @@
 {
-    "author": "Paul WOISARD",
-    "color": "#6c5ce7",
-    "description": "Contrôle d'une célèbre application de com",
-    "formatVersion": 1,
-    "id": "voice-chat",
-    "keys": [
-        {
-            "action": {
-                "key": "f14",
-                "type": "key"
-            },
-            "icon": "mute-6.png",
-            "key": 0,
-            "label": "Mute"
-        },
-        {
-            "action": {
-                "key": "f15",
-                "type": "key"
-            },
-            "icon": "deafen-6.png",
-            "key": 1,
-            "label": "Deafen"
-        },
-        {
-            "action": {
-                "key": "f16",
-                "type": "key"
-            },
-            "icon": "talk-6.png",
-            "key": 2,
-            "label": "Talk"
-        },
-        {
-            "action": {
-                "desktop": "com.discordapp.Discord.desktop",
-                "type": "app"
-            },
-            "key": 3,
-            "label": "Discord"
-        },
-        {
-            "action": {
-                "key": "f17",
-                "type": "key"
-            },
-            "icon": "camera-6.png",
-            "key": 4,
-            "label": "Camera"
-        },
-        {
-            "action": {
-                "key": "f18",
-                "type": "key"
-            },
-            "icon": "share-6.png",
-            "key": 5,
-            "label": "Share"
-        },
-        {
-            "action": {
-                "key": "f19",
-                "type": "key"
-            },
-            "icon": "media-skip-backward",
-            "key": 6,
-            "label": "Previous"
-        },
-        {
-            "action": {
-                "command": "play-pause",
-                "type": "media"
-            },
-            "icon": {
-                "paused": "media-playback-start",
-                "playing": "media-playback-pause",
-                "stopped": "media-playback-start"
-            },
-            "key": 7,
-            "label": "Play"
-        },
-        {
-            "action": {
-                "key": "f21",
-                "type": "key"
-            },
-            "icon": "audio-volume-low",
-            "key": 8,
-            "label": "Vol -"
-        },
-        {
-            "action": {
-                "command": "mute",
-                "type": "media"
-            },
-            "icon": "audio-volume-muted",
-            "key": 9,
-            "label": "Sound off"
-        },
-        {
-            "action": {
-                "command": "volume",
-                "step": 5,
-                "type": "media"
-            },
-            "icon": "audio-volume-high",
-            "key": 10,
-            "label": "Vol +"
-        },
-        {
-            "action": {
-                "key": "f24",
-                "type": "key"
-            },
-            "icon": "media-skip-forward",
-            "key": 11,
-            "label": "Next"
-        }
-    ],
-    "license": "CC-BY-SA-4.0",
-    "name": "Voice chat"
+  "author": "Paul WOISARD",
+  "color": "#6c5ce7",
+  "description": "Contrôle d'une célèbre application de com",
+  "formatVersion": 1,
+  "id": "voice-chat",
+  "keys": [
+    {
+      "action": {
+        "key": "f14",
+        "type": "key"
+      },
+      "icon": "mute-6.png",
+      "key": 0,
+      "label": "Mute"
+    },
+    {
+      "action": {
+        "key": "f15",
+        "type": "key"
+      },
+      "icon": "deafen-6.png",
+      "key": 1,
+      "label": "Deafen"
+    },
+    {
+      "action": {
+        "key": "f16",
+        "type": "key"
+      },
+      "icon": "talk-6.png",
+      "key": 2,
+      "label": "Talk"
+    },
+    {
+      "action": {
+        "desktop": "com.discordapp.Discord.desktop",
+        "type": "app"
+      },
+      "key": 3,
+      "label": "Discord"
+    },
+    {
+      "action": {
+        "key": "f17",
+        "type": "key"
+      },
+      "icon": "camera-6.png",
+      "key": 4,
+      "label": "Camera"
+    },
+    {
+      "action": {
+        "key": "f18",
+        "type": "key"
+      },
+      "icon": "share-6.png",
+      "key": 5,
+      "label": "Share"
+    },
+    {
+      "action": {
+        "command": "previous",
+        "type": "media"
+      },
+      "icon": "media-skip-backward",
+      "key": 6,
+      "label": "Previous"
+    },
+    {
+      "action": {
+        "command": "play-pause",
+        "type": "media"
+      },
+      "icon": {
+        "paused": "media-playback-start",
+        "playing": "media-playback-pause",
+        "stopped": "media-playback-start"
+      },
+      "key": 7,
+      "label": "Play"
+    },
+    {
+      "action": {
+        "command": "volume",
+        "step": -5,
+        "type": "media"
+      },
+      "icon": "audio-volume-low",
+      "key": 8,
+      "label": "Vol -"
+    },
+    {
+      "action": {
+        "command": "mute",
+        "type": "media"
+      },
+      "icon": "audio-volume-muted",
+      "key": 9,
+      "label": "Sound off"
+    },
+    {
+      "action": {
+        "command": "volume",
+        "step": 5,
+        "type": "media"
+      },
+      "icon": "audio-volume-high",
+      "key": 10,
+      "label": "Vol +"
+    },
+    {
+      "action": {
+        "command": "next",
+        "type": "media"
+      },
+      "icon": "media-skip-forward",
+      "key": 11,
+      "label": "Next"
+    }
+  ],
+  "license": "CC-BY-SA-4.0",
+  "name": "Voice chat"
 }

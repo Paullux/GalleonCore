@@ -84,7 +84,7 @@ Bosun writes a theme from one tab. It keeps that tab's page only (steam, menu an
 
 ## Wallpapers
 
-Wallpapers are JPEG only. When exporting, Bosun re-encodes every picture as JPEG at quality 80 or higher and no larger than the screen needs, which keeps files small. The reader does not trust that: it checks the sizes itself.
+Wallpapers are JPEG only. The module's screen is 720 × 384 pixels, so a wallpaper is never kept larger than that (smaller ones are not enlarged); a key picture is 160 × 160 pixels. When exporting, Bosun re-encodes every picture as JPEG at quality 80 or higher and no larger than the screen needs, which keeps files small. The reader does not trust that: it checks the sizes itself.
 
 ## Rights
 

@@ -19,6 +19,8 @@
 //   than the screen, which keeps files small and removes embedded metadata;
 // - leaves the dials out unless asked (they are shared by every theme).
 
+#include <galleon/Protocol.h>
+
 #include <QByteArray>
 #include <QString>
 #include <QStringList>
@@ -29,9 +31,9 @@ namespace galleond {
 
 inline constexpr int MinWallpaperQuality = 80;
 inline constexpr int DefaultWallpaperQuality = 85;
-inline constexpr int ThemeWallpaperMaxWidth = 720; // the screen's coordinate space (Protocol.h)
-inline constexpr int ThemeWallpaperMaxHeight = 384;
-inline constexpr int ThemeIconSize = 112; // a key picture is never kept larger than this
+inline constexpr int ThemeWallpaperMaxWidth = galleon::protocol::ScreenWidth;   // 720: the screen's coordinate space
+inline constexpr int ThemeWallpaperMaxHeight = galleon::protocol::ScreenHeight; // 384
+inline constexpr int ThemeIconSize = galleon::protocol::KeyImageSize;           // 160: a key picture is never kept larger than this
 
 struct ThemeExportOptions
 {
