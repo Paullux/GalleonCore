@@ -280,7 +280,7 @@ Chaque chantier doit rester une **PR de périmètre limité** avec ses tests de 
 
 #### RGB du clavier — chantier séparé de v0.2.3
 
-L'[issue #56](https://github.com/Paullux/GalleonCore/issues/56) reste **ouverte** pour suivre l'endurance de l'implémentation expérimentale C# d'Aaryush1 (tests jour après jour, plantages et watchdog, veille/réveil, reconnexions USB, coexistence Web Hub). Une collaboration pour un pilote **natif C++** est seulement une possibilité future, **sans engagement du contributeur**.
+L'[issue #56](https://github.com/Paullux/GalleonCore/issues/56) reste **ouverte** pour suivre l'endurance de l'implémentation expérimentale C# d'Aaryush1. **Premier retour d'usage quotidien (11 novembre 2026, rapporté par lui, non reproduit ici)** : environ 10 jours de fonctionnement sur 6 démarrages, la plus longue session de 8 jours 16 heures sans écriture ratée, gel ni reconnexion, et les 6 arrêts ont relâché les touches. Restent non exercés en usage : veille/réveil, rebranchements USB, plantage réel, coexistence Web Hub (voir [docs/WINDOWS_LIVE_LIGHTING_CSHARP.md](docs/WINDOWS_LIVE_LIGHTING_CSHARP.md#daily-use)). Une collaboration pour un pilote **natif C++** est seulement une possibilité future, **sans engagement du contributeur**.
 
 L'architecture et les protections de cette solution C# sont décrites (en anglais) dans [docs/WINDOWS_LIVE_LIGHTING_CSHARP.md](docs/WINDOWS_LIVE_LIGHTING_CSHARP.md) ; ce document ne change pas l'état du chantier.
 

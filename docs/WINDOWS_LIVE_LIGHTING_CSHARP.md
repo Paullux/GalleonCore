@@ -13,7 +13,7 @@ This page describes the **C# implementation by Aaryush1**, a contributor who for
 | Hardware | Keyboard part `1b1c:2b0c` of one Galleon 100 SD, firmware **2.3.88** |
 | System | Windows 11 only (raw Win32 HID, Raw Input, `SystemEvents`) |
 | Runtime | .NET 10 (`net10.0-windows`) |
-| Tested by | The contributor, at the desk, watching the keys |
+| Tested by | The contributor, at the desk, watching the keys, then in daily use (see [Daily use](#daily-use)) |
 | Not shown | Linux, other firmware (galleon-deck's earlier result was on 3.70.1), other units, iCUE |
 
 Every result below comes from the contributor's own result notes (`lab/G1-RESULTS.md` to `lab/G3-RESULTS.md`). This repository has not reproduced them on its own hardware.
@@ -137,12 +137,29 @@ These come out of the contributor's measurements and are worth keeping when Gall
 5. Keep the allowlist in the transport, in pure code with a test, so a mistake in a higher layer cannot reach the device.
 6. Never persist: only property 3 values 1 and 2, and only the volatile file `0x22`.
 
+## Daily use
+
+Reported by the contributor on 11 November 2026, from the helper's own logs since 26 October. One person, one keyboard, Windows 11, firmware 2.3.88.
+
+| | |
+|---|---|
+| Time running | About 10 days in total, over 6 boots |
+| Longest single run | 8 days 16 hours (28 October to 5 November), with no failed write, no freeze trip and no reconnect |
+| Shutdowns | All 6 released the keys and confirmed mode 1 before the process ended. On 2 of them a second release attempt (the normal stop path racing the shutdown handler) then logged "cannot access a closed file": log noise after a successful release, to be tidied |
+| Stream Deck plugin | Restarted a few times. The helper kept the base colour and the typing glow, fell back to its neutral scene after 30 s once, and picked the plugin back up each time |
+| Guard | No unplanned exit to catch |
+| Typing latency | In the typing test of 25 October, a key lit about 31 ms after the press (typical) and 94 ms at worst, over 455 presses. The Web Hub side was not measured |
+
+One lesson to keep for any watchdog: in the first packaged builds `Guard` itself crashed at start, because it tried to write its log inside the read-only application folder. For two builds there was no crash protection at all, and nothing visibly failed. **Test the watchdog in its deployed form, not only from the development build.**
+
+This is the contributor's own report, not something this repository has reproduced.
+
 ## What is not shown
 
 - **Strip map.** `0x81` is the Copilot key and `0x82` is the left end of the strip. From about `0x84` one index lights a whole section, so the strip is not one LED per index. The Web Hub's key table names `0x8B` to `0x91` as seven "Edge" zones. The exact per-index segments are not pinned down.
 - **Quiet period.** With the Web Hub left open but idle, the link resumes after 60 s while the Web Hub is still open. It yields again at the Web Hub's next command, but the Web Hub's preview may briefly show the helper's frame. The contributor decided to keep 60 s.
 - **Another host that sits in mode 2 with no traffic at all** for 60 s would be overridden. Not tested against iCUE (which does not list this keyboard).
-- **72-hour soak** with the helper: planned, not reported.
+- **Sleep and wake, USB replug, a real crash and the Web Hub in daily use.** The daily-use report below does not cover them: the PC is shut down at night, so no suspend or resume appears in the logs, and the Web Hub has not been opened since the yield test. They rest on the desk tests of 25 October.
 - **Dynamic Lighting for the dials** competes with OpenRGB's `Dynamic Light` device and other apps. Ownership between them is not resolved here.
 
 ## Path to GalleonCore
