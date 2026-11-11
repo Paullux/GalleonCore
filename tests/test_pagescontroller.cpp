@@ -1375,9 +1375,9 @@ private Q_SLOTS:
         f.controller->loadFile(pagesFile);
         QVERIFY(f.controller->showThemePage(installed.page));
 
-        f.pressKey(0, true); // Mute: F13, held while the key is
+        f.pressKey(0, true); // Mute: F14, held while the key is
         QCOMPARE(injector.events.size(), size_t(1));
-        QCOMPARE(injector.events[0].first, static_cast<int>(KeyCode::F13));
+        QCOMPARE(injector.events[0].first, static_cast<int>(KeyCode::F14));
         QVERIFY(injector.events[0].second);
         f.pressKey(0, false);
         QVERIFY(!injector.events.back().second);

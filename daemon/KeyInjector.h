@@ -16,7 +16,9 @@ namespace galleond {
 enum class KeyCode : std::uint8_t {
     Kp0 = 1, Kp1, Kp2, Kp3, Kp4, Kp5, Kp6, Kp7, Kp8, Kp9,
     KpDot, KpEnter, KpPlus, KpMinus, KpAsterisk, KpSlash, NumLock, Backspace,
-    // F13 to F24: no default meaning anywhere, the keys of macro pads, safe to bind in an application.
+    // F13 to F24: the keys of macro pads. Most have no default action, but under the usual X keyboard layout
+    // F13 is XF86Tools (System Settings on KDE), F20 the microphone mute and F21 to F23 the touchpad keys:
+    // a shortcut is best given F14 to F18 (XF86Launch5 to 9).
     F13, F14, F15, F16, F17, F18, F19, F20, F21, F22, F23, F24,
 };
 inline constexpr int AllowedKeyCount = 30;
