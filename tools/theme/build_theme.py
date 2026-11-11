@@ -38,6 +38,7 @@ def build(folder, output):
             info = zipfile.ZipInfo(name, FIXED_DATE)
             info.compress_type = zipfile.ZIP_STORED
             info.external_attr = 0o644 << 16
+            info.create_system = 3  # Unix: ZipInfo defaults to the packer's own OS otherwise
             archive.writestr(info, path.read_bytes())
     return [name for name, _ in files]
 

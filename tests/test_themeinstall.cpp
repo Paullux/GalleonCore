@@ -191,10 +191,11 @@ private Q_SLOTS:
         discordKey.insert(QStringLiteral("action"), QJsonObject{{QStringLiteral("type"), QStringLiteral("app")}, {QStringLiteral("desktop"), QStringLiteral("discord")}});
         keys[1] = discordKey;
         fixture.insert(QStringLiteral("keys"), keys);
-        std::vector<ZipEntry> entries{{QStringLiteral("theme.json"), QJsonDocument(fixture).toJson(QJsonDocument::Compact)},
-                                      {QStringLiteral("icons/mute.png"), pngHeader()}};
+        const std::vector<ZipEntry> entries{{QStringLiteral("theme.json"), QJsonDocument(fixture).toJson(QJsonDocument::Compact)},
+                                            {QStringLiteral("icons/mute.png"), pngHeader()}};
         const ThemeParseResult parsed = parseThemeEntries(entries);
-        QVERIFY2(parsed.package, qPrintable(parsed.errors.join(QLatin1Char(';'))));
+        if (!parsed.package)
+            qFatal("the fixture theme is not valid: %s", qPrintable(parsed.errors.join(QLatin1Char(';'))));
 
         ThemeInstallContext c = context();
         c.resolveDesktop = [](const QString &id) {

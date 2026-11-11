@@ -111,8 +111,8 @@ QString colorText(std::uint32_t rgb)
 // it as-is would make the theme installable here and nowhere else.
 void portableizeAppActions(QJsonArray &keys)
 {
-    for (int i = 0; i < keys.size(); ++i) {
-        QJsonObject key = keys.at(i).toObject();
+    for (auto entry : keys) {
+        QJsonObject key = entry.toObject();
         QJsonObject action = key.value(QStringLiteral("action")).toObject();
         if (action.value(QStringLiteral("type")).toString() != QLatin1String("app"))
             continue;
@@ -121,7 +121,7 @@ void portableizeAppActions(QJsonArray &keys)
             continue;
         action.insert(QStringLiteral("desktop"), id);
         key.insert(QStringLiteral("action"), action);
-        keys[i] = key;
+        entry = key;
     }
 }
 
