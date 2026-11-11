@@ -165,11 +165,11 @@ public:
     // colour of the tab it is shown in.
     [[nodiscard]] QPixmap tile(const QString &page, int key, const QString &themePage = {}) const;
 
-    // Installs a `.gc.theme` file (a path or a file:// URL): {ok, errors, warnings, page, themeIndex}.
+    // Installs a `.gctheme` file (a path or a file:// URL): {ok, errors, warnings, page, themeIndex}.
     // The dials are shared by every theme, so the theme's are used only when `applyDials` says so.
     // On success the window shows the new tab (themeInstalled) and the module is asked to show it.
     Q_INVOKABLE [[nodiscard]] QVariantMap importTheme(const QString &pathOrUrl, bool applyDials);
-    // Writes theme `themeIndex` to a `.gc.theme` file. `meta`: author, license (required), description,
+    // Writes theme `themeIndex` to a `.gctheme` file. `meta`: author, license (required), description,
     // credits, wallpapers (a list of picture files) and includeDials. {ok, errors, warnings, file}.
     Q_INVOKABLE [[nodiscard]] QVariantMap exportTheme(int themeIndex, const QString &pathOrUrl, const QVariantMap &meta);
 

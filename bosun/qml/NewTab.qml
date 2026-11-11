@@ -101,7 +101,7 @@ Column {
         wrapMode: Text.Wrap
         color: "#9aa0a6"
         font.pixelSize: 14
-        text: qsTr("A theme file (.gc.theme) adds a tab with its keys. It is checked completely first; nothing of yours is replaced. Only install themes from people you trust.")
+        text: qsTr("A theme file (.gctheme) adds a tab with its keys. It is checked completely first; nothing of yours is replaced. Only install themes from people you trust.")
     }
     Row {
         spacing: 10

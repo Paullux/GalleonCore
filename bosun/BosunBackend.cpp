@@ -733,8 +733,8 @@ QVariantMap BosunBackend::exportTheme(int themeIndex, const QString &pathOrUrl, 
         return failed(result.errors);
 
     QString path = localPath(pathOrUrl);
-    if (!path.endsWith(QLatin1String(".gc.theme")))
-        path += QStringLiteral(".gc.theme");
+    if (!path.endsWith(QLatin1String(".gctheme")))
+        path += QStringLiteral(".gctheme");
     QSaveFile out(path);
     if (!out.open(QIODevice::WriteOnly) || out.write(*result.file) != result.file->size() || !out.commit())
         return failed({tr("Cannot write %1: %2").arg(path, out.errorString())});

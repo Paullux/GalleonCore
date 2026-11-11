@@ -4,7 +4,7 @@
 #pragma once
 
 // A minimal reader and writer for ZIP archives whose entries are STORED (not
-// compressed). This is the container of a `.gc.theme` file: icons and
+// compressed). This is the container of a `.gctheme` file: icons and
 // wallpapers are already JPEG or PNG, so compressing them again gains nothing,
 // and refusing compression removes the whole class of decompression bombs and
 // the need for a decompressor. Any ordinary zip tool opens the result.

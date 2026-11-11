@@ -3,7 +3,7 @@
 
 #pragma once
 
-// Installs a `.gc.theme` file for the user: reads it, validates it completely
+// Installs a `.gctheme` file for the user: reads it, validates it completely
 // (ThemePackage), works out the changes (ThemeInstallPlan), writes the pictures
 // and then edits the pages file in one validated write (PagesEditor). The
 // order matters: if the pages file cannot be changed, the pictures written for

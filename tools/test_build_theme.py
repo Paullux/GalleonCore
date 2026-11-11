@@ -25,7 +25,7 @@ class BuildThemeTests(unittest.TestCase):
     def test_entries_are_stored_with_the_manifest_first_and_the_rest_sorted(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder = make_folder(Path(tmp) / 'theme')
-            output = Path(tmp) / 'out' / 'x.gc.theme'
+            output = Path(tmp) / 'out' / 'x.gctheme'
             names = build_theme.build(folder, output)
             self.assertEqual(names, ['theme.json', 'credits.txt', 'icons/a.png', 'icons/b.png'])
             with zipfile.ZipFile(output) as archive:
@@ -36,14 +36,14 @@ class BuildThemeTests(unittest.TestCase):
     def test_the_same_folder_gives_the_same_bytes(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder = make_folder(Path(tmp) / 'theme')
-            build_theme.build(folder, Path(tmp) / 'one.gc.theme')
-            build_theme.build(folder, Path(tmp) / 'two.gc.theme')
-            self.assertEqual((Path(tmp) / 'one.gc.theme').read_bytes(), (Path(tmp) / 'two.gc.theme').read_bytes())
+            build_theme.build(folder, Path(tmp) / 'one.gctheme')
+            build_theme.build(folder, Path(tmp) / 'two.gctheme')
+            self.assertEqual((Path(tmp) / 'one.gctheme').read_bytes(), (Path(tmp) / 'two.gctheme').read_bytes())
 
     def test_a_folder_without_a_manifest_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(SystemExit):
-                build_theme.build(Path(tmp), Path(tmp) / 'x.gc.theme')
+                build_theme.build(Path(tmp), Path(tmp) / 'x.gctheme')
 
     def test_the_shipped_theme_is_packed_and_named_after_its_folder(self):
         folder = ROOT / 'themes' / 'voice-chat'
@@ -53,11 +53,11 @@ class BuildThemeTests(unittest.TestCase):
         self.assertEqual(used, {p.name for p in (folder / 'icons').glob('*.png')})
 
     def test_the_packed_file_next_to_the_shipped_theme_is_up_to_date(self):
-        # themes/voice-chat.gc.theme is what people open; it must be what the folder packs to.
+        # themes/voice-chat.gctheme is what people open; it must be what the folder packs to.
         with tempfile.TemporaryDirectory() as tmp:
-            build_theme.build(ROOT / 'themes' / 'voice-chat', Path(tmp) / 'x.gc.theme')
-            self.assertEqual((ROOT / 'themes' / 'voice-chat.gc.theme').read_bytes(), (Path(tmp) / 'x.gc.theme').read_bytes(),
-                             'run: python3 tools/theme/build_theme.py themes/voice-chat themes/voice-chat.gc.theme')
+            build_theme.build(ROOT / 'themes' / 'voice-chat', Path(tmp) / 'x.gctheme')
+            self.assertEqual((ROOT / 'themes' / 'voice-chat.gctheme').read_bytes(), (Path(tmp) / 'x.gctheme').read_bytes(),
+                             'run: python3 tools/theme/build_theme.py themes/voice-chat themes/voice-chat.gctheme')
 
 
 if __name__ == '__main__':

@@ -37,14 +37,14 @@ QString FilePicker::theme() // NOLINT(readability-convert-member-functions-to-st
 {
     return QFileDialog::getOpenFileName(nullptr, tr("Choose a theme file"),
                                        QStandardPaths::writableLocation(QStandardPaths::DownloadLocation),
-                                       tr("GalleonCore themes (*.gc.theme);;All files (*)"));
+                                       tr("GalleonCore themes (*.gctheme);;All files (*)"));
 }
 
 QString FilePicker::themeSave(const QString &name) // NOLINT(readability-convert-member-functions-to-static): QML invokes this QObject method.
 {
     const QString folder = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    return QFileDialog::getSaveFileName(nullptr, tr("Save the theme"), folder + QLatin1Char('/') + name + QStringLiteral(".gc.theme"),
-                                        tr("GalleonCore themes (*.gc.theme)"));
+    return QFileDialog::getSaveFileName(nullptr, tr("Save the theme"), folder + QLatin1Char('/') + name + QStringLiteral(".gctheme"),
+                                        tr("GalleonCore themes (*.gctheme)"));
 }
 
 } // namespace bosun

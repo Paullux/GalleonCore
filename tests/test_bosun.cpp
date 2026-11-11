@@ -443,7 +443,7 @@ QtObject {
         QCOMPARE(root->property("currentTab").toInt(), 2); // the window shows the new tab
         QVERIFY(!root->property("messageIsError").toBool());
 
-        picker.themePath = dir.filePath("none.gc.theme"); // a file that is not there: said, nothing added
+        picker.themePath = dir.filePath("none.gctheme"); // a file that is not there: said, nothing added
         root->setProperty("currentTab", backend->themes().size());
         QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
         QCOMPARE(backend->themes().size(), 3);
@@ -486,7 +486,7 @@ QtObject {
         editor->setProperty("author", "A. Person");
         QVERIFY(button->property("enabledLook").toBool());
         QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
-        QVERIFY2(QFile::exists(dir.filePath("music.gc.theme")), "the file is made with its extension");
+        QVERIFY2(QFile::exists(dir.filePath("music.gctheme")), "the file is made with its extension");
         QVERIFY(!root->property("messageIsError").toBool());
     }
 
@@ -1350,7 +1350,7 @@ QtObject {
         QVERIFY(!quick->grabWindow().isNull());
     }
 
-    // ---- sharing themes (.gc.theme) ----
+    // ---- sharing themes (.gctheme) ----
 
     void aThemeExportedFromOneWindowCanBeInstalledInAnother()
     {
@@ -1364,7 +1364,7 @@ QtObject {
         bosun::BosunBackend from(source, {.ffprobe = "/nonexistent", .ffmpeg = "/nonexistent", .thumbnailFolder = dir.filePath("thumbs")});
         const QVariantMap exported = from.exportTheme(0, dir.filePath("mine"), {{"author", "A. Person"}, {"license", "CC-BY-SA-4.0"}});
         QVERIFY2(exported.value("ok").toBool(), qPrintable(exported.value("errors").toStringList().join(';')));
-        QCOMPARE(exported.value("file").toString(), dir.filePath("mine.gc.theme")); // the extension is added
+        QCOMPARE(exported.value("file").toString(), dir.filePath("mine.gctheme")); // the extension is added
 
         const QString target = dir.filePath("target/pages.json");
         QVERIFY(writeFile(target, twoThemes()));
@@ -1385,7 +1385,7 @@ QtObject {
         const QTemporaryDir dir;
         const QString file = dir.filePath("pages.json");
         QVERIFY(writeFile(file, twoThemes()));
-        const QString bad = dir.filePath("bad.gc.theme");
+        const QString bad = dir.filePath("bad.gctheme");
         QVERIFY(writeFile(bad, "this is not a theme"));
         bosun::BosunBackend backend(file, {.ffprobe = "/nonexistent", .ffmpeg = "/nonexistent", .thumbnailFolder = dir.filePath("thumbs")});
         const QSignalSpy installed(&backend, &bosun::BosunBackend::themeInstalled);
@@ -1404,7 +1404,7 @@ QtObject {
         bosun::BosunBackend backend(file, {.ffprobe = "/nonexistent", .ffmpeg = "/nonexistent", .thumbnailFolder = dir.filePath("thumbs")});
         const QVariantMap result = backend.exportTheme(1, dir.filePath("music"), {{"author", "A. Person"}});
         QVERIFY(!result.value("ok").toBool());
-        QVERIFY(!QFile::exists(dir.filePath("music.gc.theme")));
+        QVERIFY(!QFile::exists(dir.filePath("music.gctheme")));
     }
 };
 

@@ -6,7 +6,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title data-localized="text" data-en="Theme file format · GalleonCore" data-fr="Format des fichiers de thème · GalleonCore" data-de="Format der Themendateien · GalleonCore" data-es="Formato de los archivos de tema · GalleonCore">Theme file format · GalleonCore</title>
-  <meta name="description" content="Specification of the GalleonCore .gc.theme file: archive layout, manifest fields, allowed actions and limits." data-localized="content" data-en="Specification of the GalleonCore .gc.theme file: archive layout, manifest fields, allowed actions and limits." data-fr="Spécification du fichier .gc.theme de GalleonCore : contenu de l’archive, champs du manifeste, actions autorisées et limites." data-de="Spezifikation der GalleonCore-Datei .gc.theme: Archivaufbau, Manifestfelder, erlaubte Aktionen und Grenzen." data-es="Especificación del archivo .gc.theme de GalleonCore: contenido del archivo, campos del manifiesto, acciones permitidas y límites.">
+  <meta name="description" content="Specification of the GalleonCore .gctheme file: archive layout, manifest fields, allowed actions and limits." data-localized="content" data-en="Specification of the GalleonCore .gctheme file: archive layout, manifest fields, allowed actions and limits." data-fr="Spécification du fichier .gctheme de GalleonCore : contenu de l’archive, champs du manifeste, actions autorisées et limites." data-de="Spezifikation der GalleonCore-Datei .gctheme: Archivaufbau, Manifestfelder, erlaubte Aktionen und Grenzen." data-es="Especificación del archivo .gctheme de GalleonCore: contenido del archivo, campos del manifiesto, acciones permitidas y límites.">
   <link rel="canonical" href="https://galleoncore.xyz/theme-format.html">
   <link rel="icon" href="logo.svg" type="image/svg+xml">
   <link rel="icon" href="favicon.ico" sizes="any">
@@ -23,9 +23,9 @@
     <main>
       <article lang="en">
         <h1>Theme file format (version 1)</h1>
-        <p>A theme is a page of keys for the Stream Deck module of the Corsair Galleon 100 SD, with a colour, optional dial settings and the pictures it needs. A <code>.gc.theme</code> file carries it from one computer to another. Status: Bosun installs and exports this format; it has not been confirmed on the module yet. The same text is kept in the repository as <a href="https://github.com/Paullux/GalleonCore/blob/main/docs/THEME_FORMAT.md">docs/THEME_FORMAT.md</a>.</p>
+        <p>A theme is a page of keys for the Stream Deck module of the Corsair Galleon 100 SD, with a colour, optional dial settings and the pictures it needs. A <code>.gctheme</code> file carries it from one computer to another. Status: Bosun installs and exports this format; it has not been confirmed on the module yet. The same text is kept in the repository as <a href="https://github.com/Paullux/GalleonCore/blob/main/docs/THEME_FORMAT.md">docs/THEME_FORMAT.md</a>.</p>
         <h2>The file</h2>
-        <p>A <code>.gc.theme</code> file is a <strong>zip archive whose entries are stored, not compressed</strong> (for example <code>zip -0 -X my.gc.theme theme.json icons/*</code>). Pictures are already compressed, and refusing compression removes any risk of a decompression bomb. To look inside, rename it to <code>.zip</code>.</p>
+        <p>A <code>.gctheme</code> file is a <strong>zip archive whose entries are stored, not compressed</strong> (for example <code>zip -0 -X my.gctheme theme.json icons/*</code>). Pictures are already compressed, and refusing compression removes any risk of a decompression bomb. To look inside, rename it to <code>.zip</code>.</p>
         <table class="spec">
           <thead><tr><th>Entry</th><th>Required</th><th>Content and limits</th></tr></thead>
           <tbody>
@@ -72,9 +72,9 @@
       </article>
       <article lang="fr">
         <h1>Format des fichiers de thème (version 1)</h1>
-        <p>Un thème est une page de touches pour le module Stream Deck du Corsair Galleon 100 SD, avec une couleur, des réglages de molettes facultatifs et les images nécessaires. Un fichier <code>.gc.theme</code> le transporte d’un ordinateur à l’autre. État : Bosun installe et exporte ce format ; il n’est pas encore confirmé sur le module. Le même texte est dans le dépôt : <a href="https://github.com/Paullux/GalleonCore/blob/main/docs/THEME_FORMAT.md">docs/THEME_FORMAT.md</a>.</p>
+        <p>Un thème est une page de touches pour le module Stream Deck du Corsair Galleon 100 SD, avec une couleur, des réglages de molettes facultatifs et les images nécessaires. Un fichier <code>.gctheme</code> le transporte d’un ordinateur à l’autre. État : Bosun installe et exporte ce format ; il n’est pas encore confirmé sur le module. Le même texte est dans le dépôt : <a href="https://github.com/Paullux/GalleonCore/blob/main/docs/THEME_FORMAT.md">docs/THEME_FORMAT.md</a>.</p>
         <h2>Le fichier</h2>
-        <p>Un fichier <code>.gc.theme</code> est une <strong>archive zip dont les entrées sont stockées, sans compression</strong> (par exemple <code>zip -0 -X mon.gc.theme theme.json icons/*</code>). Les images sont déjà compressées, et refuser la compression écarte tout risque de bombe de décompression. Pour regarder dedans, renomme-le en <code>.zip</code>.</p>
+        <p>Un fichier <code>.gctheme</code> est une <strong>archive zip dont les entrées sont stockées, sans compression</strong> (par exemple <code>zip -0 -X mon.gctheme theme.json icons/*</code>). Les images sont déjà compressées, et refuser la compression écarte tout risque de bombe de décompression. Pour regarder dedans, renomme-le en <code>.zip</code>.</p>
         <table class="spec">
           <thead><tr><th>Entrée</th><th>Obligatoire</th><th>Contenu et limites</th></tr></thead>
           <tbody>
@@ -121,9 +121,9 @@
       </article>
       <article lang="de">
         <h1>Format der Themendateien (Version 1)</h1>
-        <p>Ein Thema ist eine Tastenseite für das Stream-Deck-Modul des Corsair Galleon 100 SD, mit einer Farbe, optionalen Drehregler-Einstellungen und den nötigen Bildern. Eine <code>.gc.theme</code>-Datei überträgt es von einem Rechner zum anderen. Stand: Bosun installiert und exportiert dieses Format; auf dem Modul ist es noch nicht bestätigt. Derselbe Text liegt im Repository als <a href="https://github.com/Paullux/GalleonCore/blob/main/docs/THEME_FORMAT.md">docs/THEME_FORMAT.md</a>.</p>
+        <p>Ein Thema ist eine Tastenseite für das Stream-Deck-Modul des Corsair Galleon 100 SD, mit einer Farbe, optionalen Drehregler-Einstellungen und den nötigen Bildern. Eine <code>.gctheme</code>-Datei überträgt es von einem Rechner zum anderen. Stand: Bosun installiert und exportiert dieses Format; auf dem Modul ist es noch nicht bestätigt. Derselbe Text liegt im Repository als <a href="https://github.com/Paullux/GalleonCore/blob/main/docs/THEME_FORMAT.md">docs/THEME_FORMAT.md</a>.</p>
         <h2>Die Datei</h2>
-        <p>Eine <code>.gc.theme</code>-Datei ist ein <strong>Zip-Archiv, dessen Einträge gespeichert, nicht komprimiert sind</strong> (zum Beispiel <code>zip -0 -X mein.gc.theme theme.json icons/*</code>). Bilder sind bereits komprimiert, und der Verzicht auf Kompression schließt jede Dekompressionsbombe aus. Zum Hineinsehen benenne sie in <code>.zip</code> um.</p>
+        <p>Eine <code>.gctheme</code>-Datei ist ein <strong>Zip-Archiv, dessen Einträge gespeichert, nicht komprimiert sind</strong> (zum Beispiel <code>zip -0 -X mein.gctheme theme.json icons/*</code>). Bilder sind bereits komprimiert, und der Verzicht auf Kompression schließt jede Dekompressionsbombe aus. Zum Hineinsehen benenne sie in <code>.zip</code> um.</p>
         <table class="spec">
           <thead><tr><th>Eintrag</th><th>Pflicht</th><th>Inhalt und Grenzen</th></tr></thead>
           <tbody>
@@ -170,9 +170,9 @@
       </article>
       <article lang="es">
         <h1>Formato de los archivos de tema (versión 1)</h1>
-        <p>Un tema es una página de teclas para el módulo Stream Deck del Corsair Galleon 100 SD, con un color, ajustes opcionales de los diales y las imágenes que necesita. Un archivo <code>.gc.theme</code> lo lleva de un ordenador a otro. Estado: Bosun instala y exporta este formato; aún no está confirmado en el módulo. El mismo texto está en el repositorio como <a href="https://github.com/Paullux/GalleonCore/blob/main/docs/THEME_FORMAT.md">docs/THEME_FORMAT.md</a>.</p>
+        <p>Un tema es una página de teclas para el módulo Stream Deck del Corsair Galleon 100 SD, con un color, ajustes opcionales de los diales y las imágenes que necesita. Un archivo <code>.gctheme</code> lo lleva de un ordenador a otro. Estado: Bosun instala y exporta este formato; aún no está confirmado en el módulo. El mismo texto está en el repositorio como <a href="https://github.com/Paullux/GalleonCore/blob/main/docs/THEME_FORMAT.md">docs/THEME_FORMAT.md</a>.</p>
         <h2>El archivo</h2>
-        <p>Un archivo <code>.gc.theme</code> es un <strong>archivo zip cuyas entradas están almacenadas, sin comprimir</strong> (por ejemplo <code>zip -0 -X mi.gc.theme theme.json icons/*</code>). Las imágenes ya están comprimidas, y rechazar la compresión elimina cualquier riesgo de bomba de descompresión. Para mirar dentro, cámbiale el nombre a <code>.zip</code>.</p>
+        <p>Un archivo <code>.gctheme</code> es un <strong>archivo zip cuyas entradas están almacenadas, sin comprimir</strong> (por ejemplo <code>zip -0 -X mi.gctheme theme.json icons/*</code>). Las imágenes ya están comprimidas, y rechazar la compresión elimina cualquier riesgo de bomba de descompresión. Para mirar dentro, cámbiale el nombre a <code>.zip</code>.</p>
         <table class="spec">
           <thead><tr><th>Entrada</th><th>Obligatoria</th><th>Contenido y límites</th></tr></thead>
           <tbody>

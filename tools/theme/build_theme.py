@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Paul Woisard
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Packs a theme folder into a `.gc.theme` file (see docs/THEME_FORMAT.md).
+"""Packs a theme folder into a `.gctheme` file (see docs/THEME_FORMAT.md).
 
 The folder holds theme.json and optionally credits.txt, icons/*.png and
 wallpapers/*.jpg. Entries are STORED, not compressed, with a fixed date, so the
@@ -9,7 +9,7 @@ same folder always gives the same bytes. The result is only a packing: the file
 is checked by GalleonCore when it is installed (or by the test that reads the
 shipped themes).
 
-    python3 tools/theme/build_theme.py themes/voice-chat themes/voice-chat.gc.theme
+    python3 tools/theme/build_theme.py themes/voice-chat themes/voice-chat.gctheme
 """
 import sys
 import zipfile

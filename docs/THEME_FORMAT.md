@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 Paul Woisard
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
-# GalleonCore theme file format (`.gc.theme`), version 1
+# GalleonCore theme file format (`.gctheme`), version 1
 
 A theme is a set of keys for the Stream Deck module, the colour that goes with it, what the two dials do, and the pictures it needs. A theme file is meant to be shared, so it is checked completely before anything is installed.
 
@@ -11,7 +11,7 @@ Status: the reader and validator (`daemon/StoredZip.*`, `daemon/ThemePackage.*`,
 
 ## The file
 
-A `.gc.theme` file is a **zip archive whose entries are stored, not compressed** (`zip -0`). Icons and wallpapers are already compressed, and refusing compression closes the door to decompression bombs. Any zip tool opens it; to inspect one, rename it to `.zip`.
+A `.gctheme` file is a **zip archive whose entries are stored, not compressed** (`zip -0`). Icons and wallpapers are already compressed, and refusing compression closes the door to decompression bombs. Any zip tool opens it; to inspect one, rename it to `.zip`.
 
 | Entry | Required | Content |
 |---|---|---|

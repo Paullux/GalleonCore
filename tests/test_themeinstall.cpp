@@ -211,7 +211,7 @@ private Q_SLOTS:
     {
         const QTemporaryDir dir;
         QVERIFY(dir.isValid());
-        const QString themeFile = dir.filePath(QStringLiteral("d.gc.theme"));
+        const QString themeFile = dir.filePath(QStringLiteral("d.gctheme"));
         QVERIFY(writeThemeFile(themeFile, package(), true));
         const QString pagesFile = dir.filePath(QStringLiteral("cfg/pages.json"));
         const ThemeInstallResult result = installTheme({themeFile, pagesFile, dir.filePath(QStringLiteral("wall")), false});
@@ -233,7 +233,7 @@ private Q_SLOTS:
     void installingTwiceMakesTwoPagesAndKeepsTheFirstPictures()
     {
         const QTemporaryDir dir;
-        const QString themeFile = dir.filePath(QStringLiteral("d.gc.theme"));
+        const QString themeFile = dir.filePath(QStringLiteral("d.gctheme"));
         QVERIFY(writeThemeFile(themeFile, package(), false));
         const QString pagesFile = dir.filePath(QStringLiteral("pages.json"));
         const ThemeInstallOptions options{themeFile, pagesFile, dir.filePath(QStringLiteral("wall")), false};
@@ -249,7 +249,7 @@ private Q_SLOTS:
     void aFailedInstallLeavesNoPictureBehind()
     {
         const QTemporaryDir dir;
-        const QString themeFile = dir.filePath(QStringLiteral("d.gc.theme"));
+        const QString themeFile = dir.filePath(QStringLiteral("d.gctheme"));
         QVERIFY(writeThemeFile(themeFile, package(), true));
         const QString pagesFile = dir.filePath(QStringLiteral("pages.json"));
         QFile broken(pagesFile);
@@ -268,7 +268,7 @@ private Q_SLOTS:
     void aFileThatIsNotAThemeChangesNothing()
     {
         const QTemporaryDir dir;
-        const QString themeFile = dir.filePath(QStringLiteral("x.gc.theme"));
+        const QString themeFile = dir.filePath(QStringLiteral("x.gctheme"));
         QFile out(themeFile);
         QVERIFY(out.open(QIODevice::WriteOnly));
         out.write("not a zip");
@@ -283,7 +283,7 @@ private Q_SLOTS:
     void aMissingFileIsRefused()
     {
         const QTemporaryDir dir;
-        QVERIFY(!installTheme({dir.filePath(QStringLiteral("none.gc.theme")), dir.filePath(QStringLiteral("pages.json")), dir.path(), false}).ok);
+        QVERIFY(!installTheme({dir.filePath(QStringLiteral("none.gctheme")), dir.filePath(QStringLiteral("pages.json")), dir.path(), false}).ok);
     }
 };
 

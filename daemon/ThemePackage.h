@@ -4,7 +4,7 @@
 #pragma once
 
 // A shareable theme: the keys of one page, the colour that goes with it, what
-// the two dials do, and the pictures it needs, in a `.gc.theme` file. The file
+// the two dials do, and the pictures it needs, in a `.gctheme` file. The file
 // is a zip archive of stored entries (see StoredZip.h):
 //
 //   theme.json           the manifest (required)
@@ -91,7 +91,7 @@ struct ThemeParseResult
     QStringList errors;                  // one line each, with the path of the field
 };
 
-// Reads and validates a `.gc.theme` file. Never throws; any problem refuses it whole.
+// Reads and validates a `.gctheme` file. Never throws; any problem refuses it whole.
 [[nodiscard]] ThemeParseResult parseThemePackage(const QByteArray &file);
 
 // The same, from entries already read from the archive.

@@ -9,7 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 
-// A .gc.theme file comes from someone else: no input may crash the zip reader or
+// A .gctheme file comes from someone else: no input may crash the zip reader or
 // the theme validator, and a result is either a package or errors, never both
 // nor neither. A package that was accepted must also survive being written back
 // as an archive and read again.

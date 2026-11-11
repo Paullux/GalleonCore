@@ -429,7 +429,7 @@ Le 20 octobre, le propriétaire confirme le fonctionnement du correctif des fond
 
 ## 2. En cours
 
-### Thèmes partageables `.gc.theme` — en cours (11 novembre 2026)
+### Thèmes partageables `.gctheme` — en cours (11 novembre 2026)
 
 Branche `feat/theme-package`. Fait et testé (tests, fuzzing, clang-tidy, validation complète) : conteneur zip « stored » (`StoredZip`), validateur de thème (`ThemePackage`), installation (`ThemeInstaller`, noms uniques, choix de l'application installée deb/Flatpak/Snap), export (`ThemeExporter`, JPEG qualité 80 minimum), basculement vers le nouveau thème dans Bosun et sur le Stream Deck (`ShowTheme`), boutons « Installer un fichier de thème » (onglet +) et « Exporter » (éditeur d'onglet) dans Bosun, spécification [docs/THEME_FORMAT.md](docs/THEME_FORMAT.md). Site : pages `themes.html` (installer, partager, proposer par e-mail, règles de contenu, liste des thèmes publiés — vide pour l'instant) et `theme-format.html` (spécification), en quatre langues, section « Propositions de thèmes » dans la confidentialité (durée de conservation de 30 jours à confirmer par le propriétaire), liens dans les pieds de page et le sitemap. **Pas encore** : choix des fonds d'écran à l'export dans l'interface, premiers thèmes publiés, boîte `themes@` dédiée (le bouton utilise `contact@`), mention dans les README. Rien de tout cela n'est confirmé sur le module.
 

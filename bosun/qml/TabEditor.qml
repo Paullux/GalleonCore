@@ -127,7 +127,7 @@ Column {
         wrapMode: Text.Wrap
         color: "#7d8591"
         font.pixelSize: 12
-        text: qsTr("Makes a .gc.theme file with this tab's keys and pictures. Share only what you made or may redistribute: no logos, characters or screenshots of others.")
+        text: qsTr("Makes a .gctheme file with this tab's keys and pictures. Share only what you made or may redistribute: no logos, characters or screenshots of others.")
     }
     Row {
         spacing: 8

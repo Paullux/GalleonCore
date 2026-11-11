@@ -1304,7 +1304,7 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(qGray(background(1)) <= qGray(offRepeat) + 6, 2000);
     }
 
-    // ---- showing a theme by its page (a theme just installed from a .gc.theme file) ----
+    // ---- showing a theme by its page (a theme just installed from a .gctheme file) ----
 
     static QByteArray twoThemes(bool withSecond)
     {
@@ -1365,7 +1365,7 @@ private Q_SLOTS:
         QTemporaryDir const dir;
         const QString pagesFile = dir.filePath("pages.json");
         QVERIFY(writeFile(pagesFile, twoThemes(false)));
-        const ThemeInstallResult installed = installTheme({QString::fromUtf8(GALLEON_SOURCE_THEMES) + "/voice-chat.gc.theme", pagesFile,
+        const ThemeInstallResult installed = installTheme({QString::fromUtf8(GALLEON_SOURCE_THEMES) + "/voice-chat.gctheme", pagesFile,
                                                            dir.filePath("wallpapers"), false});
         QVERIFY2(installed.ok, qPrintable(installed.errors.join('\n')));
 

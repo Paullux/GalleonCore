@@ -263,7 +263,7 @@ private Q_SLOTS:
         QVERIFY2(exported.file.has_value(), qPrintable(joined(exported.errors)));
 
         const QTemporaryDir target;
-        const QString themeFile = target.filePath(QStringLiteral("mine.gc.theme"));
+        const QString themeFile = target.filePath(QStringLiteral("mine.gctheme"));
         QFile out(themeFile);
         QVERIFY(out.open(QIODevice::WriteOnly));
         out.write(required(exported.file));

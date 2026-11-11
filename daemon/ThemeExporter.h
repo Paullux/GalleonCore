@@ -3,7 +3,7 @@
 
 #pragma once
 
-// Makes a `.gc.theme` file (see ThemePackage.h) from one theme of the user's
+// Makes a `.gctheme` file (see ThemePackage.h) from one theme of the user's
 // pages file. The file is never trusted to be well made just because we made
 // it: before anything is written, the result goes through the very validator
 // the importer uses, so GalleonCore never produces a file it would refuse.
@@ -48,7 +48,7 @@ struct ThemeExportOptions
 
 struct ThemeExportResult
 {
-    std::optional<QByteArray> file; // the .gc.theme content; empty when `errors` is not
+    std::optional<QByteArray> file; // the .gctheme content; empty when `errors` is not
     QStringList errors;
     QStringList warnings;
 };
