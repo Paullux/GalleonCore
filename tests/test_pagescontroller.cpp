@@ -1385,21 +1385,21 @@ private Q_SLOTS:
         f.pressKey(7, true); // Play
         f.pressKey(7, false);
         QCOMPARE(f.media.playPauseCount, 1);
-        f.pressKey(8, true); // Vol -
-        f.pressKey(8, false);
-        QCOMPARE(f.media.volumeTotal, -5);
         f.pressKey(10, true); // Vol +
         f.pressKey(10, false);
-        QCOMPARE(f.media.volumeTotal, 0);
+        QCOMPARE(f.media.volumeTotal, 5);
         f.pressKey(9, true); // Sound off
         f.pressKey(9, false);
         QCOMPARE(f.media.muteCount, 1);
-        f.pressKey(11, true); // Next
-        f.pressKey(11, false);
-        QCOMPARE(f.media.nextCount, 1);
-        f.pressKey(6, true); // Previous
-        f.pressKey(6, false);
-        QCOMPARE(f.media.previousCount, 1);
+
+        // Previous, Vol - and Next send F19, F21 and F24 in the author's own version of the theme.
+        injector.events.clear();
+        for (const auto &[key, code] : {std::pair{6, KeyCode::F19}, std::pair{8, KeyCode::F21}, std::pair{11, KeyCode::F24}}) {
+            f.pressKey(key, true);
+            QVERIFY(!injector.events.empty());
+            QCOMPARE(injector.events.back().first, static_cast<int>(code));
+            f.pressKey(key, false);
+        }
     }
 };
 

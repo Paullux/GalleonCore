@@ -1,27 +1,123 @@
 {
-  "formatVersion": 1,
-  "id": "voice-chat",
-  "name": "Voice chat",
-  "author": "Paul Woisard",
-  "license": "CC-BY-SA-4.0",
-  "description": "Mic, headphones, push-to-talk, camera and screen share keys for a voice chat application, with volume and media keys.",
-  "color": "#6c5ce7",
-  "keys": [
-    { "key": 0, "label": "Mute", "icon": "mute.png", "action": { "type": "key", "key": "f14" } },
-    { "key": 1, "label": "Deafen", "icon": "deafen.png", "action": { "type": "key", "key": "f15" } },
-    { "key": 2, "label": "Talk", "icon": "talk.png", "action": { "type": "key", "key": "f16" } },
-    { "key": 3, "label": "Discord",
-      "action": { "type": "app", "desktop": "discord.desktop",
-                  "alternatives": ["com.discordapp.Discord.desktop", "discord_discord.desktop"] } },
-    { "key": 4, "label": "Camera", "icon": "camera.png", "action": { "type": "key", "key": "f17" } },
-    { "key": 5, "label": "Share", "icon": "share.png", "action": { "type": "key", "key": "f18" } },
-    { "key": 6, "label": "Previous", "icon": "media-skip-backward", "action": { "type": "media", "command": "previous" } },
-    { "key": 7, "label": "Play",
-      "icon": { "playing": "media-playback-pause", "paused": "media-playback-start", "stopped": "media-playback-start" },
-      "action": { "type": "media", "command": "play-pause" } },
-    { "key": 8, "label": "Vol -", "icon": "audio-volume-low", "action": { "type": "media", "command": "volume", "step": -5 } },
-    { "key": 9, "label": "Sound off", "icon": "audio-volume-muted", "action": { "type": "media", "command": "mute" } },
-    { "key": 10, "label": "Vol +", "icon": "audio-volume-high", "action": { "type": "media", "command": "volume", "step": 5 } },
-    { "key": 11, "label": "Next", "icon": "media-skip-forward", "action": { "type": "media", "command": "next" } }
-  ]
+    "author": "Paul WOISARD",
+    "color": "#6c5ce7",
+    "description": "Contrôle d'une célèbre application de com",
+    "formatVersion": 1,
+    "id": "voice-chat",
+    "keys": [
+        {
+            "action": {
+                "key": "f14",
+                "type": "key"
+            },
+            "icon": "mute-6.png",
+            "key": 0,
+            "label": "Mute"
+        },
+        {
+            "action": {
+                "key": "f15",
+                "type": "key"
+            },
+            "icon": "deafen-6.png",
+            "key": 1,
+            "label": "Deafen"
+        },
+        {
+            "action": {
+                "key": "f16",
+                "type": "key"
+            },
+            "icon": "talk-6.png",
+            "key": 2,
+            "label": "Talk"
+        },
+        {
+            "action": {
+                "desktop": "com.discordapp.Discord.desktop",
+                "type": "app"
+            },
+            "key": 3,
+            "label": "Discord"
+        },
+        {
+            "action": {
+                "key": "f17",
+                "type": "key"
+            },
+            "icon": "camera-6.png",
+            "key": 4,
+            "label": "Camera"
+        },
+        {
+            "action": {
+                "key": "f18",
+                "type": "key"
+            },
+            "icon": "share-6.png",
+            "key": 5,
+            "label": "Share"
+        },
+        {
+            "action": {
+                "key": "f19",
+                "type": "key"
+            },
+            "icon": "media-skip-backward",
+            "key": 6,
+            "label": "Previous"
+        },
+        {
+            "action": {
+                "command": "play-pause",
+                "type": "media"
+            },
+            "icon": {
+                "paused": "media-playback-start",
+                "playing": "media-playback-pause",
+                "stopped": "media-playback-start"
+            },
+            "key": 7,
+            "label": "Play"
+        },
+        {
+            "action": {
+                "key": "f21",
+                "type": "key"
+            },
+            "icon": "audio-volume-low",
+            "key": 8,
+            "label": "Vol -"
+        },
+        {
+            "action": {
+                "command": "mute",
+                "type": "media"
+            },
+            "icon": "audio-volume-muted",
+            "key": 9,
+            "label": "Sound off"
+        },
+        {
+            "action": {
+                "command": "volume",
+                "step": 5,
+                "type": "media"
+            },
+            "icon": "audio-volume-high",
+            "key": 10,
+            "label": "Vol +"
+        },
+        {
+            "action": {
+                "key": "f24",
+                "type": "key"
+            },
+            "icon": "media-skip-forward",
+            "key": 11,
+            "label": "Next"
+        }
+    ],
+    "license": "CC-BY-SA-4.0",
+    "name": "Voice chat"
 }
