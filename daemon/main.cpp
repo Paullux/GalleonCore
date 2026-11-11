@@ -11,6 +11,7 @@
 #include "KeyInjector.h"
 #include "PageOrder.h"
 #include "PagesEditor.h"
+#include "MatrixRainController.h"
 #include "ScreensaverController.h"
 #include "ScreensaverSplitter.h"
 #include "VideoThumbnails.h"
@@ -843,6 +844,26 @@ int main(int argc, char *argv[])
         QObject::connect(pages.get(), &galleond::PagesController::screensaverConfigChanged, screensaver.get(), applySaver);
         applySaver();
         galleond::connectGameToScreensaver(controller, *screensaver);
+    }
+
+    // Easter egg: both dial buttons held for 5 seconds make green letters fall over the screen
+    // and the keys until anything is pressed or turned (widgets/MatrixRain.qml).
+    galleond::ScreenRenderer matrixRenderer(QFileInfo(widgetFile).absolutePath() + QStringLiteral("/MatrixRain.qml"));
+    std::unique_ptr<galleond::MatrixRainController> matrixRain;
+    if (pages && matrixRenderer.isValid()) {
+        matrixRain = std::make_unique<galleond::MatrixRainController>(&deck, &matrixRenderer);
+        QObject::connect(matrixRain.get(), &galleond::MatrixRainController::activeChanged, pages.get(),
+                         [&pages, &controller, &screensaver](bool active) {
+                             pages->setSuspended(active);
+                             controller.setSuspended(active);
+                             // The screensaver must not start over the letters.
+                             if (screensaver) screensaver->setInhibited(active || controller.gameActive());
+                         });
+        matrixRain->setInhibited(controller.gameActive());
+        QObject::connect(&controller, &galleond::ScreenController::gameActiveChanged, matrixRain.get(),
+                         [&matrixRain](bool active) { matrixRain->setInhibited(active); });
+    } else if (pages) {
+        qWarning() << "galleond: MatrixRain.qml could not be loaded: no easter egg";
     }
 
     const auto updateGamingPad = [&pages, &screensaver](bool active) {

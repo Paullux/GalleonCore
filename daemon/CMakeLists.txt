@@ -33,6 +33,8 @@ add_library(galleond_core STATIC
     Wiring.h Wiring.cpp
     ScreensaverSplitter.h ScreensaverSplitter.cpp
     ScreensaverController.h ScreensaverController.cpp
+    MatrixTrigger.h MatrixTrigger.cpp
+    MatrixRainController.h MatrixRainController.cpp
 )
 target_include_directories(galleond_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(galleond_core PUBLIC galleon galleon_media galleon_keys galleon_platform Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::Network Qt6::WebSockets PRIVATE galleon_warnings)
