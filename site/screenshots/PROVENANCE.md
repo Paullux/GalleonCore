@@ -24,3 +24,13 @@ inside its interface. Their marks and icon copyrights remain with their
 respective owners. These captures do not grant a license to reuse those icons
 separately. The Galleon Bosun interface and the screenshots as documentary
 compositions are credited to Paul Woisard in `REUSE.toml`.
+
+## voice-chat-discord.png
+
+Captured on 11 November 2026 by the author on his Linux (KDE Plasma, Wayland)
+desktop: the keyboard-shortcuts page of the Discord settings, with the five
+shortcuts of the Voice chat theme. It is an instructional screenshot of a
+third-party settings interface, kept only to show which control to set; the
+name and interface of Discord belong to its owner and no license to reuse them
+is granted. It shows no personal data. The matching KDE System Settings
+capture will be added in the same way.

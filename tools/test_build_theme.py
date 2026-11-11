@@ -59,6 +59,11 @@ class BuildThemeTests(unittest.TestCase):
             self.assertEqual((ROOT / 'themes' / 'voice-chat.gctheme').read_bytes(), (Path(tmp) / 'x.gctheme').read_bytes(),
                              'run: python3 tools/theme/build_theme.py themes/voice-chat themes/voice-chat.gctheme')
 
+    def test_the_copy_offered_on_the_website_is_the_packed_theme(self):
+        self.assertEqual((ROOT / 'site' / 'themes' / 'voice-chat.gctheme').read_bytes(),
+                         (ROOT / 'themes' / 'voice-chat.gctheme').read_bytes(),
+                         'run: cp themes/voice-chat.gctheme site/themes/')
+
 
 if __name__ == '__main__':
     unittest.main()
