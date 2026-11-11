@@ -3,6 +3,8 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://galleoncore.xyz/</loc></url>
+  <url><loc>https://galleoncore.xyz/themes.html</loc></url>
+  <url><loc>https://galleoncore.xyz/theme-format.html</loc></url>
   <url><loc>https://galleoncore.xyz/privacy.html</loc></url>
   <url><loc>https://galleoncore.xyz/terms.html</loc></url>
 </urlset>
