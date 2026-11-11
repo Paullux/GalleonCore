@@ -33,6 +33,18 @@ bool sendWindowsKey(KeyCode key, bool down)
     case KeyCode::KpSlash: virtualKey = VK_DIVIDE; break;
     case KeyCode::NumLock: virtualKey = VK_NUMLOCK; break;
     case KeyCode::Backspace: virtualKey = VK_BACK; break;
+    case KeyCode::F13: virtualKey = VK_F13; break;
+    case KeyCode::F14: virtualKey = VK_F14; break;
+    case KeyCode::F15: virtualKey = VK_F15; break;
+    case KeyCode::F16: virtualKey = VK_F16; break;
+    case KeyCode::F17: virtualKey = VK_F17; break;
+    case KeyCode::F18: virtualKey = VK_F18; break;
+    case KeyCode::F19: virtualKey = VK_F19; break;
+    case KeyCode::F20: virtualKey = VK_F20; break;
+    case KeyCode::F21: virtualKey = VK_F21; break;
+    case KeyCode::F22: virtualKey = VK_F22; break;
+    case KeyCode::F23: virtualKey = VK_F23; break;
+    case KeyCode::F24: virtualKey = VK_F24; break;
     }
     const UINT scan = MapVirtualKeyW(virtualKey, MAPVK_VK_TO_VSC_EX);
     if (virtualKey == 0 || scan == 0)

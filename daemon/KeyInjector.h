@@ -16,17 +16,19 @@ namespace galleond {
 enum class KeyCode : std::uint8_t {
     Kp0 = 1, Kp1, Kp2, Kp3, Kp4, Kp5, Kp6, Kp7, Kp8, Kp9,
     KpDot, KpEnter, KpPlus, KpMinus, KpAsterisk, KpSlash, NumLock, Backspace,
+    // F13 to F24: no default meaning anywhere, the keys of macro pads, safe to bind in an application.
+    F13, F14, F15, F16, F17, F18, F19, F20, F21, F22, F23, F24,
 };
-inline constexpr int AllowedKeyCount = 18;
+inline constexpr int AllowedKeyCount = 30;
 [[nodiscard]] bool isAllowedKeyCode(int code);
 
 // The keys a pages file may press, by name. A fixed list: the numeric keypad,
-// Num Lock and Backspace. A name outside it is refused when the file is read,
+// Num Lock, Backspace and F13 to F24. A name outside it is refused when the file is read,
 // and the virtual keyboard is only ever given these codes, so the pages file
 // cannot make galleond type anything else.
 //
 // Names: kp0..kp9, kpdot, kpenter, kpplus, kpminus, kpasterisk, kpslash,
-// numlock, backspace.
+// numlock, backspace, f13..f24.
 [[nodiscard]] std::optional<int> keyCodeForName(const QString &name);
 [[nodiscard]] QString allowedKeyNames();
 

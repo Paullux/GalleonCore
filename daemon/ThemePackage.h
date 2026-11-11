@@ -28,7 +28,7 @@
 // full. Beyond what the pages file parser checks (it is run on the manifest,
 // so a theme can never say what a page cannot), a package may only hold
 // actions that cannot do harm by themselves: media commands, its own page,
-// back, a keypad key from the fixed list, a Steam game, and an application
+// back, a key from the fixed list (keypad, F13 to F24), a Steam game, and an application
 // named by desktop file ID, never by path. Every file must be used, be the
 // kind it claims (checked by its content), and stay within its size.
 

@@ -301,7 +301,7 @@ Una pulsación de dial con `{ "type": "wallpaper-mode" }` cambia ese dial del co
 
 ### Tema de teclado numérico, temas automáticos y teclas tintadas
 
-Una acción `{ "type": "key", "key": "kp7" }` pulsa una tecla del teclado a través de un teclado numérico virtual (`/dev/uinput`), mantenida mientras se mantenga la tecla. Solo se acepta una lista fija de nombres (`kp0` a `kp9`, `kpdot`, `kpenter`, `kpplus`, `kpminus`, `kpasterisk`, `kpslash`, `numlock`, `backspace`), y el dispositivo virtual no recibe ninguna otra tecla. Bloq Num debe estar activado para que los dígitos del teclado numérico escriban dígitos. El dispositivo virtual necesita acceso de escritura a `/dev/uinput` (`tools/udev/71-galleon-uinput.rules`).
+Una acción `{ "type": "key", "key": "kp7" }` pulsa una tecla del teclado a través de un teclado numérico virtual (`/dev/uinput`), mantenida mientras se mantenga la tecla. Solo se acepta una lista fija de nombres (`kp0` a `kp9`, `kpdot`, `kpenter`, `kpplus`, `kpminus`, `kpasterisk`, `kpslash`, `numlock`, `backspace`, `f13` a `f24`), y el dispositivo virtual no recibe ninguna otra tecla. Bloq Num debe estar activado para que los dígitos del teclado numérico escriban dígitos. El dispositivo virtual necesita acceso de escritura a `/dev/uinput` (`tools/udev/71-galleon-uinput.rules`).
 
 Un tema puede elegirse solo con `"when": "media"` (empieza un reproductor) o `"when": "no-media"` (no queda ninguno: detenido o ausente; un reproductor en pausa sigue contando como uno). Solo en esos momentos: tu propia elección con el dial se mantiene hasta el siguiente cambio. Como máximo un tema por disparador. Las teclas de la página de un tema se dibujan sobre un tono más oscuro del color del tema, más claro mientras se mantienen pulsadas.
 

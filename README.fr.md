@@ -308,7 +308,7 @@ Un appui de molette avec `{ "type": "wallpaper-mode" }` fait passer cette molett
 
 ### Thème pavé numérique, thèmes automatiques et touches teintées
 
-Une action `{ "type": "key", "key": "kp7" }` appuie sur une touche de clavier par l'intermédiaire d'un clavier virtuel (`/dev/uinput`), maintenue tant que la touche est maintenue. Seule une liste fixe de noms est acceptée (`kp0` à `kp9`, `kpdot`, `kpenter`, `kpplus`, `kpminus`, `kpasterisk`, `kpslash`, `numlock`, `backspace`), et le périphérique virtuel ne reçoit aucune autre touche. Le verrouillage numérique doit être actif pour que les chiffres du pavé écrivent des chiffres. Le périphérique virtuel demande l'accès en écriture à `/dev/uinput` (`tools/udev/71-galleon-uinput.rules`).
+Une action `{ "type": "key", "key": "kp7" }` appuie sur une touche de clavier par l'intermédiaire d'un clavier virtuel (`/dev/uinput`), maintenue tant que la touche est maintenue. Seule une liste fixe de noms est acceptée (`kp0` à `kp9`, `kpdot`, `kpenter`, `kpplus`, `kpminus`, `kpasterisk`, `kpslash`, `numlock`, `backspace`, `f13` à `f24`), et le périphérique virtuel ne reçoit aucune autre touche. Le verrouillage numérique doit être actif pour que les chiffres du pavé écrivent des chiffres. Le périphérique virtuel demande l'accès en écriture à `/dev/uinput` (`tools/udev/71-galleon-uinput.rules`).
 
 Un thème peut se choisir tout seul avec `"when": "media"` (un lecteur démarre) ou `"when": "no-media"` (il n'y en a plus : arrêté ou absent ; un lecteur en pause compte encore). Seulement à ces moments : votre choix à la molette reste jusqu'au changement suivant. Un thème au plus par déclencheur. Les touches de la page d'un thème sont dessinées sur une teinte plus sombre de sa couleur, plus claire pendant l'appui.
 
