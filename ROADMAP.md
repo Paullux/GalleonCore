@@ -4,7 +4,7 @@ Référence pour reprendre le développement à tout moment, y compris dans une 
 
 ### Règles de séparation bibliothèque/démon du clavier — 10 novembre 2026
 
-Décision d'architecture avant tout code sur la luminosité (propriété `0xEA`) : une bibliothèque `lib/keyboard/` indépendante de `lib/` (Stream Deck), un composant `KeyboardController` séparé dans `galleond`, aucune dépendance croisée entre les deux parties USB du produit (clavier `1b1c:2b0c`, module Stream Deck `1b1c:2b18`). C'est `galleond` qui écrira la propriété, jamais un processus séparé ni le plugin OpenRGB — qui reste, lui, réservé au RVB par touche. Détails dans [docs/ROADMAP.md, section 3](docs/ROADMAP.md#3-contrôleur-rvb-pour-openrgb). **Règle d'architecture seulement, rien n'est encore implémenté.**
+Décision d'architecture avant tout code sur la luminosité (propriété `0xEA`) : une bibliothèque `lib/keyboard/` indépendante de `lib/` (Stream Deck), un composant `KeyboardController` séparé dans `galleond`, aucune dépendance croisée entre les deux parties USB du produit (clavier `1b1c:2b0c`, module Stream Deck `1b1c:2b18`). C'est `galleond` qui écrira la propriété, jamais un processus séparé ni le plugin OpenRGB — qui reste, lui, réservé au RVB par touche. Détails dans [docs/ROADMAP.md, section 3](docs/ROADMAP.md#3-contrôleur-rvb-pour-openrgb). **Règle d'architecture ; seul l'outil manuel `tools/keyboard-brightness` existe (voir « Implémenté et testé »), rien n'est branché dans `galleond`.**
 
 ### Relecture allemande et espagnole — 4 novembre 2026
 
@@ -321,6 +321,10 @@ Le mode `--simulate-update` teste la vraie release avec une version de comparais
 Voir [le fonctionnement et les limites](docs/UPDATES.md).
 
 ## 1. Implémenté et testé
+
+### Outil manuel de luminosité du clavier — 11 novembre 2026
+
+`tools/keyboard-brightness` (option CMake `GALLEON_BUILD_KEYBOARD_BRIGHTNESS_TOOL`, hors build par défaut) lit ou écrit la luminosité globale du clavier (propriété `0xEA`, 0 à 1000) via `lib/keyboard/` (`galleon_keyboard`) et `galleon::HidTransport`. Sans argument : lecture seule ; avec une valeur : écriture puis relecture de confirmation. Tests : `tests/test_keyboardlink.cpp` (faux transport). **Sur le module** : confirmé par le propriétaire sous **Windows** (10 novembre) et sous **Linux** (11 novembre : lecture, écriture 100 puis 1000, relecture identique), firmware clavier 2.3.88, une seule unité. Pas encore de mémorisation/restauration ni de cession de place au Web Hub : rien n'est branché dans `galleond`.
 
 ### Onglets Bosun à largeur adaptative — 31 octobre 2026
 
