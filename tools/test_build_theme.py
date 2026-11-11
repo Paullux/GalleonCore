@@ -52,6 +52,13 @@ class BuildThemeTests(unittest.TestCase):
         used = {k['icon'] for k in manifest['keys'] if isinstance(k.get('icon'), str) and '.' in k['icon']}
         self.assertEqual(used, {p.name for p in (folder / 'icons').glob('*.png')})
 
+    def test_the_packed_file_next_to_the_shipped_theme_is_up_to_date(self):
+        # themes/voice-chat.gc.theme is what people open; it must be what the folder packs to.
+        with tempfile.TemporaryDirectory() as tmp:
+            build_theme.build(ROOT / 'themes' / 'voice-chat', Path(tmp) / 'x.gc.theme')
+            self.assertEqual((ROOT / 'themes' / 'voice-chat.gc.theme').read_bytes(), (Path(tmp) / 'x.gc.theme').read_bytes(),
+                             'run: python3 tools/theme/build_theme.py themes/voice-chat themes/voice-chat.gc.theme')
+
 
 if __name__ == '__main__':
     unittest.main()

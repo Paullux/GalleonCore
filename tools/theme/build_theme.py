@@ -9,7 +9,7 @@ same folder always gives the same bytes. The result is only a packing: the file
 is checked by GalleonCore when it is installed (or by the test that reads the
 shipped themes).
 
-    python3 tools/theme/build_theme.py themes/voice-chat build/themes/voice-chat.gc.theme
+    python3 tools/theme/build_theme.py themes/voice-chat themes/voice-chat.gc.theme
 """
 import sys
 import zipfile
