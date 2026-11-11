@@ -877,10 +877,16 @@ int main(int argc, char *argv[])
         return pages && pages->showGaming();
     });
 
+    controller.setThemeHandler([&pages, &screensaver](const QString &page) {
+        if (screensaver) screensaver->notifyActivity();
+        return pages && pages->showThemePage(page);
+    });
+
     // org.galleoncore.Deck on the session bus (the name was claimed at the start):
     // SetWallpaper, ClearWallpaper, Wallpapers.
 #ifdef Q_OS_WIN
     QObject::connect(&localControl, &galleond::LocalControl::gamingRequested, &controller, [&controller] { controller.ShowGaming(); });
+    QObject::connect(&localControl, &galleond::LocalControl::themeRequested, &controller, [&controller](const QString &page) { controller.ShowTheme(page); });
     QObject::connect(&localControl, &galleond::LocalControl::wallpaperRequested,
                      &controller, &galleond::ScreenController::SetWallpaper);
     QObject::connect(&localControl, &galleond::LocalControl::stopRequested,

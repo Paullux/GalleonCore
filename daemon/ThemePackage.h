@@ -37,6 +37,8 @@
 
 #include <QByteArray>
 #include <QHash>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QString>
 #include <QStringList>
 
@@ -75,6 +77,10 @@ struct ThemePackage
     // Other desktop file IDs that start the same application on another kind of
     // installation (deb, Flatpak, Snap): by key number, in order of preference.
     QHash<int, QStringList> appAlternatives;
+    // The keys and the dials as the manifest wrote them (without `alternatives`), already
+    // checked: what installing copies into the pages file after renaming the pictures.
+    QJsonArray keysJson;
+    QJsonObject dialsJson;
     std::vector<ZipEntry> icons;      // names without the folder: "mute.png"
     std::vector<ZipEntry> wallpapers; // names without the folder: "background.jpg"
 };

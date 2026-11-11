@@ -1302,6 +1302,61 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(qGray(background(0)) <= qGray(offShuffle) + 6, 2000);
         QTRY_VERIFY_WITH_TIMEOUT(qGray(background(1)) <= qGray(offRepeat) + 6, 2000);
     }
+
+    // ---- showing a theme by its page (a theme just installed from a .gc.theme file) ----
+
+    static QByteArray twoThemes(bool withSecond)
+    {
+        QJsonArray themes{QJsonObject{{"name", "A"}, {"page", "a"}, {"color", "#ffffff"}}};
+        QJsonObject pages{{"a", page({keyJson(0, "Next", mediaAction("next"))})}};
+        if (withSecond) {
+            themes.append(QJsonObject{{"name", "B"}, {"page", "b"}, {"color", "#336699"}});
+            pages.insert("b", page({keyJson(0, "Stop", mediaAction("stop"))}));
+        }
+        return QJsonDocument(QJsonObject{{"version", 1}, {"home", "a"}, {"pages", pages}, {"themes", themes}}).toJson();
+    }
+
+    void aThemeCanBeShownByItsPage()
+    {
+        QTemporaryDir const dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes(true)));
+        Fixture f;
+        f.controller->loadFile(file);
+        QVERIFY(f.controller->showThemePage(QStringLiteral("b")));
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.media.stopCount, 1);
+        QCOMPARE(f.media.nextCount, 0);
+    }
+
+    void aPageThatIsNoThemeIsNotShown()
+    {
+        QTemporaryDir const dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes(true)));
+        Fixture f;
+        f.controller->loadFile(file);
+        QVERIFY(!f.controller->showThemePage(QStringLiteral("nothing")));
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.media.nextCount, 1); // still the first theme
+    }
+
+    void aThemeNotReadYetIsShownOnceThePagesFileIsRead()
+    {
+        QTemporaryDir const dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes(false)));
+        Fixture f;
+        f.controller->loadFile(file);
+        QVERIFY(!f.controller->showThemePage(QStringLiteral("b"))); // installed a moment ago, not read yet
+        QVERIFY(writeFile(file, twoThemes(true)));
+        f.controller->loadFile(file);
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.media.stopCount, 1);
+    }
 };
 
 QTEST_MAIN(TestPagesController)

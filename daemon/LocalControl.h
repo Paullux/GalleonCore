@@ -12,11 +12,12 @@
 
 namespace galleond {
 
-enum class LocalAction : unsigned char { Ping, Wallpaper, Stop, Gaming };
+enum class LocalAction : unsigned char { Ping, Wallpaper, Stop, Gaming, Theme };
 struct LocalCommand
 {
     LocalAction action = LocalAction::Ping;
     QString wallpaper;
+    QString page{}; // NOLINT(readability-redundant-member-init): braced initializers elsewhere leave it out. Theme: the name of the page of the theme to show
 };
 
 // One bounded JSON object per connection; the server accepts only this user.
@@ -35,6 +36,7 @@ Q_SIGNALS:
     void wallpaperRequested(const QString &name);
     void stopRequested();
     void gamingRequested();
+    void themeRequested(const QString &page);
 private:
     void acceptConnections();
     std::unique_ptr<QLockFile> m_lock;

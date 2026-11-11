@@ -50,6 +50,9 @@ public:
 
     void setRecordingController(RecordingController *recording);
     bool showGaming();
+    // Goes to the theme whose page is `page`. When the pages file has just been written and is not
+    // read yet (a theme was installed), the request is kept for a few seconds and done when it is.
+    bool showThemePage(const QString &page);
     void setGameActive(bool active);
 
     // Uses this configuration and goes back to its home page.
@@ -248,6 +251,8 @@ private:
     QString m_file;
     QFileSystemWatcher m_watcher;
     QTimer m_reloadTimer;
+    QString m_pendingThemePage;
+    QElapsedTimer m_pendingThemeAge;
 };
 
 } // namespace galleond

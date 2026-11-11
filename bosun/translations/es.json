@@ -332,6 +332,8 @@
   "up to %n application(s) of the “%1” menu category": "hasta %n aplicación(es) de la categoría «%1» del menú",
   "Start the daemon to display Gaming on the pad": "Inicie el servicio para mostrar Juegos en el pad",
   "Cannot show Gaming: restart the updated daemon (%1)": "No se puede mostrar Juegos: reinicie el servicio actualizado (%1)",
+  "Cannot write %1: %2": "No se puede escribir %1: %2",
+  "Cannot show the theme on the pad: restart the updated daemon (%1)": "No se puede mostrar el tema en el módulo: reinicie el servicio actualizado (%1)",
   "Gaming could not be shown: check the pad connection": "No se pudo mostrar Juegos: compruebe la conexión del pad",
   "Choose a picture": "Elegir una imagen",
   "Pictures (*.jpg *.jpeg *.png *.webp *.bmp);;All files (*)": "Imágenes (*.jpg *.jpeg *.png *.webp *.bmp);;Todos los archivos (*)",

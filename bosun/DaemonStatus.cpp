@@ -48,6 +48,21 @@ QString DaemonStatus::showGaming()
     return {};
 }
 
+QString DaemonStatus::showTheme(const QString &page)
+{
+    if (!running()) return {}; // the pad shows the pages file when the daemon starts
+    auto message = QDBusMessage::createMethodCall(QString::fromLatin1(BusName), QStringLiteral("/org/galleoncore/Deck"), QString::fromLatin1(BusName), QStringLiteral("ShowTheme"));
+    message << page;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
+        const QDBusPendingReply<bool> reply = *watcher;
+        // False is normal when the daemon has not read the new pages file yet: it keeps the request and does it then.
+        if (reply.isError()) Q_EMIT commandError(tr("Cannot show the theme on the pad: restart the updated daemon (%1)").arg(reply.error().message()));
+        watcher->deleteLater();
+    });
+    return {};
+}
+
 QStringList DaemonStatus::userCommand(const QString &verb)
 {
     return {QStringLiteral("--user"), verb, QString::fromLatin1(ServiceName)};

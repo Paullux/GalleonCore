@@ -332,6 +332,8 @@
   "up to %n application(s) of the “%1” menu category": "jusqu’à %n application(s) de la catégorie « %1 » du menu",
   "Start the daemon to display Gaming on the pad": "Démarrez le démon pour afficher Jeu sur le pad",
   "Cannot show Gaming: restart the updated daemon (%1)": "Impossible d’afficher Jeu : redémarrez le démon à jour (%1)",
+  "Cannot write %1: %2": "Impossible d’écrire %1 : %2",
+  "Cannot show the theme on the pad: restart the updated daemon (%1)": "Impossible d’afficher le thème sur le module : redémarrez le démon à jour (%1)",
   "Gaming could not be shown: check the pad connection": "Impossible d’afficher Jeu : vérifiez la connexion du pad",
   "Choose a picture": "Choisir une image",
   "Pictures (*.jpg *.jpeg *.png *.webp *.bmp);;All files (*)": "Images (*.jpg *.jpeg *.png *.webp *.bmp);;Tous les fichiers (*)",

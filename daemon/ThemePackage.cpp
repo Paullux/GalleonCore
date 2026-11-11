@@ -158,6 +158,8 @@ private:
             package.meta = m_meta;
             package.config = *m_config;
             package.appAlternatives = m_alternatives;
+            package.keysJson = m_keysJson;
+            package.dialsJson = m_dialsJson;
             package.icons = m_icons;
             package.wallpapers = m_wallpapers;
             result.package = std::move(package);
@@ -244,6 +246,8 @@ private:
 
         QJsonArray keys = root.value(QStringLiteral("keys")).toArray();
         stripAlternatives(keys);
+        m_keysJson = keys;
+        m_dialsJson = root.value(QStringLiteral("dials")).toObject();
         QJsonObject pages;
         pages.insert(m_meta.id, QJsonObject{{QStringLiteral("keys"), keys}});
         const QJsonObject theme{{QStringLiteral("name"), name}, {QStringLiteral("page"), m_meta.id}, {QStringLiteral("color"), color}};
@@ -456,6 +460,8 @@ private:
     ThemeMeta m_meta;
     std::optional<PagesConfig> m_config;
     QHash<int, QStringList> m_alternatives;
+    QJsonArray m_keysJson;
+    QJsonObject m_dialsJson;
     std::vector<ZipEntry> m_icons;
     std::vector<ZipEntry> m_wallpapers;
     QSet<QString> m_usedIcons;

@@ -7,6 +7,7 @@
 
 #include "DesktopEntries.h"
 #include "PagesConfig.h"
+#include "ThemeInstallPlan.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -330,6 +331,29 @@ EditResult PagesEditor::addTheme(const QString &file, const QString &name, const
     themes.append(QJsonObject{{QStringLiteral("name"), name.trimmed()}, {QStringLiteral("page"), page}, {QStringLiteral("color"), color.trimmed().toLower()}});
     root.insert(QStringLiteral("themes"), themes);
     return write(file, root, original);
+}
+
+EditResult PagesEditor::installTheme(const QString &file, const ThemeInstallPlan &plan, int &themeIndex)
+{
+    QJsonObject root;
+    bool original = false;
+    EditResult error;
+    if (!load(file, root, original, error))
+        return error;
+    QJsonObject pages = root.value(QStringLiteral("pages")).toObject();
+    if (pages.contains(plan.page))
+        return failure(QCoreApplication::translate("PagesEditor", "there is already a page named '%1'").arg(plan.page));
+    pages.insert(plan.page, plan.pageObject);
+    root.insert(QStringLiteral("pages"), pages);
+    QJsonArray themes = root.value(QStringLiteral("themes")).toArray();
+    themes.append(QJsonObject{{QStringLiteral("name"), plan.themeName}, {QStringLiteral("page"), plan.page}, {QStringLiteral("color"), plan.color}});
+    root.insert(QStringLiteral("themes"), themes);
+    if (!plan.dials.isEmpty())
+        root.insert(QStringLiteral("dials"), plan.dials);
+    const EditResult written = write(file, root, original);
+    if (written.ok)
+        themeIndex = static_cast<int>(themes.size()) - 1;
+    return written;
 }
 
 EditResult PagesEditor::setTheme(const QString &file, int index, const QString &name, const QString &color)

@@ -90,12 +90,16 @@ public:
     [[nodiscard]] QUrl widgetUrl() const { return QUrl::fromLocalFile(m_widgetFile); }
 
     void setGamingHandler(std::function<bool()> handler) { m_showGaming = std::move(handler); }
+    void setThemeHandler(std::function<bool(const QString &)> handler) { m_showTheme = std::move(handler); }
 
     // Takes the last wallpaper chosen, if it is still in the catalog.
     void restore();
 
 public Q_SLOTS:
     bool ShowGaming();
+    // Shows the theme whose page is named so on the module (and, if the pages file has just
+    // been changed, as soon as it is read). False when there is none.
+    bool ShowTheme(const QString &page);
     // Shows this wallpaper (a catalog name such as "manga-classic/manga-classic-01.jpg").
     // False if the name is unknown or the frame could not be drawn.
     bool SetWallpaper(const QString &name);
@@ -115,6 +119,7 @@ Q_SIGNALS:
 
 private:
     std::function<bool()> m_showGaming;
+    std::function<bool(const QString &)> m_showTheme;
     [[nodiscard]] QVariantMap themeProperties();
     void tick();
     bool draw();

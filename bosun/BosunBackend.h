@@ -68,6 +68,7 @@ public:
         QString ffmpeg = QStringLiteral("ffmpeg");
         QString thumbnailFolder; // empty: the user's cache folder, shared with galleond
         QString convertedFolder = defaultConvertedFolder(); // where the results are written
+        QString wallpaperRoot{}; // NOLINT(readability-redundant-member-init): the tests name members and GCC wants the rest initialized. Where the wallpapers of an installed theme go; empty: the user's own folder
     };
 
     explicit BosunBackend(QString pagesFile, QObject *parent = nullptr);
@@ -164,8 +165,17 @@ public:
     // colour of the tab it is shown in.
     [[nodiscard]] QPixmap tile(const QString &page, int key, const QString &themePage = {}) const;
 
+    // Installs a `.gc.theme` file (a path or a file:// URL): {ok, errors, warnings, page, themeIndex}.
+    // The dials are shared by every theme, so the theme's are used only when `applyDials` says so.
+    // On success the window shows the new tab (themeInstalled) and the module is asked to show it.
+    Q_INVOKABLE [[nodiscard]] QVariantMap importTheme(const QString &pathOrUrl, bool applyDials);
+    // Writes theme `themeIndex` to a `.gc.theme` file. `meta`: author, license (required), description,
+    // credits, wallpapers (a list of picture files) and includeDials. {ok, errors, warnings, file}.
+    Q_INVOKABLE [[nodiscard]] QVariantMap exportTheme(int themeIndex, const QString &pathOrUrl, const QVariantMap &meta);
+
 Q_SIGNALS:
     void changed();
+    void themeInstalled(int themeIndex, const QString &page);
 
 private:
     galleond::RecordingController m_recording;
@@ -184,6 +194,7 @@ private:
     [[nodiscard]] const galleond::Page *pageNamed(const QString &page) const;
 
     QString m_file;
+    QString m_wallpaperRoot;
     QString m_problem;
     QVariantList m_themes;
     QVariantList m_apps;

@@ -7,7 +7,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 A theme is a set of keys for the Stream Deck module, the colour that goes with it, what the two dials do, and the pictures it needs. A theme file is meant to be shared, so it is checked completely before anything is installed.
 
-Status: the file reader and validator exist and are tested (`daemon/StoredZip.*`, `daemon/ThemePackage.*`, fuzz target `fuzz_theme_package`). Installing and exporting from Bosun come next. Nothing here has been confirmed on the module yet.
+Status: the reader and validator (`daemon/StoredZip.*`, `daemon/ThemePackage.*`, fuzz target `fuzz_theme_package`), the installer (`daemon/ThemeInstallPlan.*`, `daemon/ThemeInstaller.*`), the exporter (`daemon/ThemeExporter.*`) and the Bosun backend calls (`importTheme`, `exportTheme`) exist and are tested. The buttons in Bosun, the store on the website and a trial on the module are still to do: nothing here has been confirmed on the module yet.
 
 ## The file
 
@@ -64,6 +64,23 @@ Refused: shell commands, URLs, absolute paths, other pages, switching themes, St
 ### One application, several installations
 
 The same program has a different desktop file ID depending on how it was installed (deb, Flatpak, Snap). An `app` action may list `alternatives` (up to 6 other IDs). Installing the theme picks the first ID, `desktop` then each alternative in order, that exists on the machine.
+
+## Installing
+
+Installing a theme never replaces anything of the user's:
+
+- the page gets the theme's `id` as its name, or `id-2`, `id-3`... when taken; the tab gets the theme's name, with a number when taken;
+- every picture is renamed `<page>-<name>.png` so it cannot overwrite another file in the icon folder (the folder of `pages.json`);
+- the dials are shared by all themes, so the theme's dials are copied only when the user asks;
+- at most 8 themes exist: installing a ninth is refused;
+- nothing is written unless the whole theme is valid, and if the pages file cannot be changed the pictures written for it are taken away again;
+- afterwards Bosun shows the new tab and asks `galleond` to show the theme on the module (D-Bus `ShowTheme` on Linux, a local command on Windows).
+
+Wallpapers are copied to the user's wallpaper folder, in a folder named after the page, where the wallpaper dial finds them.
+
+## Exporting
+
+Bosun writes a theme from one tab. It keeps that tab's page only (steam, menu and sort settings depend on the computer and are left out, with a warning), refuses the actions a shared theme cannot hold and names the keys, shrinks pictures, drops the page prefix from picture names, and checks the result with the same validator the importer uses before writing the file.
 
 ## Wallpapers
 

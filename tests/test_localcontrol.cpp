@@ -30,6 +30,23 @@ private slots:
         sendLocalCommand(name, {LocalAction::Gaming, {}}, &server);
         QTRY_COMPARE(requested.size(), 1);
     }
+    void themeCommandCarriesOnlyAPageName()
+    {
+        const auto command = parseLocalCommand(encodeLocalCommand({LocalAction::Theme, {}, QStringLiteral("discord-2")}));
+        QVERIFY(command.has_value());
+        QCOMPARE(command.value_or(LocalCommand{}).action, LocalAction::Theme);
+        QCOMPARE(command.value_or(LocalCommand{}).page, QStringLiteral("discord-2"));
+        for (const QByteArray &frame : {QByteArray(R"({"action":"theme"})"), QByteArray(R"({"action":"theme","page":1})"),
+                 QByteArray(R"({"action":"theme","page":"../etc"})"), QByteArray(R"({"action":"theme","page":"Upper"})"),
+                 QByteArray(R"({"action":"theme","page":""})"), QByteArray(R"({"action":"theme","page":"a","name":"b"})")})
+            QVERIFY(!parseLocalCommand(frame).has_value());
+        const QString name = QStringLiteral("galleon-theme-") + QUuid::createUuid().toString(QUuid::Id128);
+        LocalControl server; QVERIFY(server.listen(name));
+        const QSignalSpy requested(&server, &LocalControl::themeRequested);
+        sendLocalCommand(name, {LocalAction::Theme, {}, QStringLiteral("mine")}, &server);
+        QTRY_COMPARE(requested.size(), 1);
+        QCOMPARE(requested.constFirst().constFirst().toString(), QStringLiteral("mine"));
+    }
     void roundTripWallpaper()
     {
         const QString name = QString::fromUtf8("personal/caf\xc3\xa9.jpg");

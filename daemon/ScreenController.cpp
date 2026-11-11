@@ -22,6 +22,7 @@
 namespace galleond {
 
 bool ScreenController::ShowGaming() { return m_showGaming && m_showGaming(); }
+bool ScreenController::ShowTheme(const QString &page) { return m_showTheme && m_showTheme(page); }
 
 
 namespace {

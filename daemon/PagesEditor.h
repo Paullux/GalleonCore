@@ -8,6 +8,8 @@
 
 namespace galleond {
 
+struct ThemeInstallPlan;
+
 struct EditResult
 {
     bool ok = false;
@@ -66,6 +68,9 @@ public:
     // made, empty. A theme that is gone takes its page with it unless something still leads there.
     static EditResult addTheme(const QString &file, const QString &name, const QString &color, const QString &page);
     static EditResult setTheme(const QString &file, int index, const QString &name, const QString &color);
+    // Adds the page and the theme of a planned installation (see ThemeInstallPlan.h) in one
+    // validated write, and the dials when the plan has them. `themeIndex` gets the new tab's place.
+    static EditResult installTheme(const QString &file, const ThemeInstallPlan &plan, int &themeIndex);
     // The theme of the home page cannot be removed (it is where the module starts), nor can the last one.
     static EditResult removeTheme(const QString &file, int index);
     // Moves theme `index` by `delta` places in the list (the order of the tabs).
