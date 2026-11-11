@@ -16,16 +16,25 @@ import zipfile
 from pathlib import Path
 
 FIXED_DATE = (1980, 1, 1, 0, 0, 0)
+TEXT_NAMES = ('theme.json', 'credits.txt')
 
 
 def entries(folder):
     """The files of a theme folder as (archive name, path), manifest first, in a fixed order."""
     folder = Path(folder)
-    names = ['theme.json', 'credits.txt']
-    found = [(n, folder / n) for n in names if (folder / n).is_file()]
+    found = [(n, folder / n) for n in TEXT_NAMES if (folder / n).is_file()]
     for sub in ('icons', 'wallpapers'):
         found += [(f'{sub}/{p.name}', p) for p in sorted((folder / sub).glob('*')) if p.is_file()]
     return found
+
+
+def contents(name, path):
+    """A file's bytes for packing: text entries are read with universal
+    newlines and written back as LF, so a checkout's own line endings (CRLF on
+    Windows with core.autocrlf) never change the packed bytes."""
+    if name in TEXT_NAMES:
+        return path.read_text(encoding='utf-8', newline=None).encode('utf-8')
+    return path.read_bytes()
 
 
 def build(folder, output):
@@ -39,7 +48,7 @@ def build(folder, output):
             info.compress_type = zipfile.ZIP_STORED
             info.external_attr = 0o644 << 16
             info.create_system = 3  # Unix: ZipInfo defaults to the packer's own OS otherwise
-            archive.writestr(info, path.read_bytes())
+            archive.writestr(info, contents(name, path))
     return [name for name, _ in files]
 
 
