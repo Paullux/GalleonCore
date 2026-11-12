@@ -63,6 +63,21 @@ QString DaemonStatus::showTheme(const QString &page)
     return {};
 }
 
+QString DaemonStatus::setKeyboardBrightness(int value)
+{
+    if (!running()) return tr("Start galleond to change the keyboard brightness");
+    auto message = QDBusMessage::createMethodCall(QString::fromLatin1(BusName), QStringLiteral("/org/galleoncore/Keyboard"), QStringLiteral("org.galleoncore.Keyboard"), QStringLiteral("SetBrightness"));
+    message << value;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
+        const QDBusPendingReply<bool> reply = *watcher;
+        if (reply.isError()) Q_EMIT commandError(tr("Cannot set the keyboard brightness: restart the updated daemon (%1)").arg(reply.error().message()));
+        else if (!reply.value()) Q_EMIT commandError(tr("The keyboard brightness was refused (steps of 10 % from 0 to 100)"));
+        watcher->deleteLater();
+    });
+    return {};
+}
+
 QStringList DaemonStatus::userCommand(const QString &verb)
 {
     return {QStringLiteral("--user"), verb, QString::fromLatin1(ServiceName)};

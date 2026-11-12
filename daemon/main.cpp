@@ -15,6 +15,7 @@
 #include "ScreensaverController.h"
 #include "ScreensaverSplitter.h"
 #include "VideoThumbnails.h"
+#include "KeyboardController.h"
 #include "Wiring.h"
 #include "ScreenController.h"
 #include "ScreenRenderer.h"
@@ -882,9 +883,14 @@ int main(int argc, char *argv[])
         return pages && pages->showThemePage(page);
     });
 
+    // The keyboard half of the daemon: brightness only, on request, nothing opened until then. It shares nothing with
+    // `controller` and the pages: it is reached on its own D-Bus object (Linux) or local control action (Windows).
+    galleond::KeyboardController keyboard(galleond::KeyboardController::hidOpener());
+
     // org.galleoncore.Deck on the session bus (the name was claimed at the start):
     // SetWallpaper, ClearWallpaper, Wallpapers.
 #ifdef Q_OS_WIN
+    QObject::connect(&localControl, &galleond::LocalControl::keyboardBrightnessRequested, &keyboard, [&keyboard](int value) { keyboard.SetBrightness(value); });
     QObject::connect(&localControl, &galleond::LocalControl::gamingRequested, &controller, [&controller] { controller.ShowGaming(); });
     QObject::connect(&localControl, &galleond::LocalControl::themeRequested, &controller, [&controller](const QString &page) { controller.ShowTheme(page); });
     QObject::connect(&localControl, &galleond::LocalControl::wallpaperRequested,
@@ -894,6 +900,8 @@ int main(int argc, char *argv[])
 #else
     if (!bus.registerObject(QStringLiteral("/org/galleoncore/Deck"), &controller, QDBusConnection::ExportAllSlots))
         qWarning() << "galleond: cannot export the D-Bus object";
+    if (!bus.registerObject(QStringLiteral("/org/galleoncore/Keyboard"), &keyboard, QDBusConnection::ExportAllSlots))
+        qWarning() << "galleond: cannot export the keyboard D-Bus object";
 #endif
 
     if (parser.isSet(wallpaperOption)) {

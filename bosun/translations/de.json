@@ -337,6 +337,7 @@
   "Theme installed as a new tab.": "Thema als neuer Tab installiert.",
   "Or install a theme": "Oder ein Thema installieren",
   "A theme file (.gctheme) adds a tab with its keys. It is checked completely first; nothing of yours is replaced. Only install themes from people you trust.": "Eine Themendatei (.gctheme) fügt einen Tab mit seinen Tasten hinzu. Sie wird zuerst vollständig geprüft; nichts von Ihnen wird ersetzt. Installieren Sie nur Themen von vertrauenswürdigen Personen.",
+  "Find themes on the website": "Themen auf der Website finden",
   "Install a theme file…": "Themendatei installieren…",
   "✓ Use its dial settings too": "✓ Auch die Einstellungen der Drehregler verwenden",
   "Use its dial settings too": "Auch die Einstellungen der Drehregler verwenden",
@@ -618,5 +619,16 @@
   "this video is already in the list": "Dieses Video ist bereits in der Liste",
   "'%1' is not a desktop file name (such as firefox.desktop)": "„%1“ ist kein Desktop-Dateiname (wie firefox.desktop)",
   "no application named '%1'": "Keine Anwendung namens „%1“",
-  "a key does one of: %1": "Eine Taste erlaubt eine dieser Aktionen: %1"
+  "a key does one of: %1": "Eine Taste erlaubt eine dieser Aktionen: %1",
+  "Keyboard brightness": "Tastaturhelligkeit",
+  "not set from this window yet": "noch nicht von diesem Fenster aus eingestellt",
+  "%1 %": "%1 %",
+  "Corsair keyboard · brightness": "Corsair-Tastatur · Helligkeit",
+  "The brightness of the keyboard's own lighting, in steps of 10 %. galleond writes it when you let go of the slider.": "Die Helligkeit der Tastaturbeleuchtung selbst, in Schritten von 10 %. galleond schreibt sie, wenn Sie den Regler loslassen.",
+  "Keyboard brightness sent to galleond: %1 %": "Tastaturhelligkeit an galleond gesendet: %1 %",
+  "The keyboard keeps this value when it is unplugged, as it does for the Web Hub. The slider shows what was set from here: it cannot read the keyboard yet. Close the Web Hub first, or its own answers may hide this one.": "Die Tastatur behält diesen Wert auch nach dem Abziehen, wie beim Web Hub. Der Regler zeigt, was von hier aus eingestellt wurde: Er kann die Tastatur noch nicht auslesen. Schließen Sie zuerst den Web Hub, sonst können dessen eigene Antworten diese verdecken.",
+  "Start galleond (above) to change the brightness: this window never talks to the keyboard itself.": "Starten Sie galleond (oben), um die Helligkeit zu ändern: Dieses Fenster spricht nie selbst mit der Tastatur.",
+  "Start galleond to change the keyboard brightness": "Starten Sie galleond, um die Tastaturhelligkeit zu ändern",
+  "Cannot set the keyboard brightness: restart the updated daemon (%1)": "Tastaturhelligkeit lässt sich nicht einstellen: Starten Sie den aktualisierten Daemon neu (%1)",
+  "The keyboard brightness was refused (steps of 10 % from 0 to 100)": "Die Tastaturhelligkeit wurde abgelehnt (Schritte von 10 % von 0 bis 100)"
 }

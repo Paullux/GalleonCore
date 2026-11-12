@@ -47,6 +47,23 @@ private slots:
         QTRY_COMPARE(requested.size(), 1);
         QCOMPARE(requested.constFirst().constFirst().toString(), QStringLiteral("mine"));
     }
+    void keyboardBrightnessCommandCarriesOnlyAWholeNumberFromZeroToAThousand()
+    {
+        const auto command = parseLocalCommand(encodeLocalCommand({LocalAction::KeyboardBrightness, {}, {}, 600}));
+        QVERIFY(command.has_value());
+        QCOMPARE(command.value_or(LocalCommand{}).action, LocalAction::KeyboardBrightness);
+        QCOMPARE(command.value_or(LocalCommand{}).brightness, 600);
+        for (const QByteArray &frame : {QByteArray(R"({"action":"keyboard-brightness"})"), QByteArray(R"({"action":"keyboard-brightness","value":"5"})"),
+                 QByteArray(R"({"action":"keyboard-brightness","value":-1})"), QByteArray(R"({"action":"keyboard-brightness","value":1001})"),
+                 QByteArray(R"({"action":"keyboard-brightness","value":3.5})"), QByteArray(R"({"action":"keyboard-brightness","value":1,"x":2})")})
+            QVERIFY(!parseLocalCommand(frame).has_value());
+        const QString name = QStringLiteral("galleon-brightness-") + QUuid::createUuid().toString(QUuid::Id128);
+        LocalControl server; QVERIFY(server.listen(name));
+        const QSignalSpy requested(&server, &LocalControl::keyboardBrightnessRequested);
+        sendLocalCommand(name, {LocalAction::KeyboardBrightness, {}, {}, 300}, &server);
+        QTRY_COMPARE(requested.size(), 1);
+        QCOMPARE(requested.constFirst().constFirst().toInt(), 300);
+    }
     void roundTripWallpaper()
     {
         const QString name = QString::fromUtf8("personal/caf\xc3\xa9.jpg");

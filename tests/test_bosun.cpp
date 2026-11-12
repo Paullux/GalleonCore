@@ -1350,6 +1350,52 @@ QtObject {
         }
     }
 
+    void theKeyboardBrightnessSliderSendsOneStepOfTenPercentWhenLetGo()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        auto *slider = engine.rootObjects().constFirst()->findChild<QQuickItem *>("keyboardBrightness");
+        QVERIFY(slider);
+        QCOMPARE(slider->property("value").toInt(), -1); // unknown: it cannot read the keyboard
+        QVERIFY(!slider->property("enabledLook").toBool()); // galleond is not running: nothing to ask
+
+        QSignalSpy committed(slider, SIGNAL(committed(int)));
+        QVERIFY(QMetaObject::invokeMethod(slider, "choose", Q_ARG(QVariant, 3)));
+        QVERIFY(QMetaObject::invokeMethod(slider, "choose", Q_ARG(QVariant, 6)));
+        QCOMPARE(committed.size(), 0); // moving shows a value, sends nothing
+        QCOMPARE(slider->property("shown").toInt(), 600);
+        QVERIFY(QMetaObject::invokeMethod(slider, "commit"));
+        QCOMPARE(committed.size(), 1);
+        QCOMPARE(committed.constFirst().constFirst().toInt(), 600);
+        QCOMPARE(slider->property("value").toInt(), 600);
+
+        QVERIFY(QMetaObject::invokeMethod(slider, "choose", Q_ARG(QVariant, 6))); // let go where it already is: nothing to send
+        QVERIFY(QMetaObject::invokeMethod(slider, "commit"));
+        QCOMPARE(committed.size(), 1);
+
+        QVERIFY(QMetaObject::invokeMethod(slider, "choose", Q_ARG(QVariant, 0)));
+        QVERIFY(QMetaObject::invokeMethod(slider, "commit"));
+        QCOMPARE(committed.size(), 2);
+        QCOMPARE(committed.constLast().constFirst().toInt(), 0); // 0 % is a stop like any other
+
+        QVERIFY(QMetaObject::invokeMethod(slider, "choose", Q_ARG(QVariant, 10)));
+        QVERIFY(QMetaObject::invokeMethod(slider, "commit"));
+        QCOMPARE(committed.constLast().constFirst().toInt(), 1000);
+    }
+
     void theWindowHasATabPerThemeAndTheFixedOnes()
     {
         const QTemporaryDir dir;

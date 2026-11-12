@@ -126,6 +126,7 @@ galleon_add_test(test_updatechecker)
 target_link_libraries(test_updatechecker PRIVATE bosun_core)
 
 galleond_add_test(test_recording)
+galleond_add_test(test_keyboardcontroller)
 
 if(WIN32)
     # Native desktop smoke rendering; Linux service/launcher tests stay on Linux.

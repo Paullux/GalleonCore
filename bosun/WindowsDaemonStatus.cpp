@@ -75,6 +75,11 @@ QString DaemonStatus::showTheme(const QString &page) {
     galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::Theme, {}, page}, this);
     return {};
 }
+QString DaemonStatus::setKeyboardBrightness(int value) {
+    if (!running()) return tr("Start galleond to change the keyboard brightness");
+    galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::KeyboardBrightness, {}, {}, value}, this);
+    return {};
+}
 QString DaemonStatus::start() { return running() ? QString{} : ask(QStringLiteral("start")); }
 QString DaemonStatus::stop() { return running() ? ask(QStringLiteral("stop")) : QString{}; }
 } // namespace bosun

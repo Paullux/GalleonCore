@@ -103,6 +103,11 @@ Column {
         font.pixelSize: 14
         text: qsTr("A theme file (.gctheme) adds a tab with its keys. It is checked completely first; nothing of yours is replaced. Only install themes from people you trust.")
     }
+    Pill {
+        objectName: "openThemesPage"
+        text: qsTr("Find themes on the website")
+        onClicked: Qt.openUrlExternally("https://galleoncore.xyz/themes.html")
+    }
     Row {
         spacing: 10
         Pill {
