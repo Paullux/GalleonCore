@@ -75,6 +75,9 @@ private:
     void restartIdleTimer();
     void onReadyRead();
     void onFinished(int exitCode, QProcess::ExitStatus status);
+    void onStarted();
+    void onStartFailed(const QString &reason);
+    [[nodiscard]] bool isStarting() const { return m_process && !m_active; }
     void showFrame(const QByteArray &rgb);
     [[nodiscard]] QString resolveVideo(const QString &configured) const { return resolveVideoPath(configured, m_baseFolder); }
     void wake();
@@ -86,6 +89,10 @@ private:
     QString m_program = QStringLiteral("ffmpeg");
     std::unique_ptr<ScreensaverSplitter> m_splitter;
     QTimer m_idle;
+    // Ownership: m_process is a child of this controller. It is "starting" from start() until
+    // QProcess::started (then m_active), a failure, this timer or an input cancels it. Nothing
+    // waits for it: the device loop also runs the host keep-alive.
+    QTimer m_startTimeout;
     int m_idleOverrideMs = 0;
     QProcess *m_process = nullptr;
     QByteArray m_buffer;

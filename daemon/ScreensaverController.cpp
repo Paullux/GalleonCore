@@ -21,6 +21,7 @@ constexpr int MaxRestarts = 3;      // a video that ends on its own (a failed lo
 constexpr int MaxSendFailures = 30; // consecutive frames the module did not take
 constexpr int MaxBufferedFrames = 4;
 constexpr int StopWaitMs = 1500;
+constexpr int StartTimeoutMs = 3000; // a decoder that has not started by then is given up
 
 } // namespace
 
@@ -31,6 +32,9 @@ ScreensaverController::ScreensaverController(galleon::StreamDeck *deck, MediaCon
 {
     m_idle.setSingleShot(true);
     connect(&m_idle, &QTimer::timeout, this, &ScreensaverController::onIdle);
+    m_startTimeout.setSingleShot(true);
+    m_startTimeout.setInterval(StartTimeoutMs);
+    connect(&m_startTimeout, &QTimer::timeout, this, [this] { onStartFailed(QStringLiteral("it did not start in time")); });
 
     connect(m_deck, &galleon::StreamDeck::keyPressed, this, [this] { notifyActivity(); });
     connect(m_deck, &galleon::StreamDeck::keyReleased, this, [this] { notifyActivity(); });
@@ -92,7 +96,7 @@ void ScreensaverController::setInhibited(bool inhibited)
 void ScreensaverController::notifyActivity()
 {
     m_giveUp = false;
-    if (m_active) {
+    if (m_active || isStarting()) {
         // Deferred, so that the other handlers of this same input (which run
         // after this one) still see the screensaver and ignore it: the press
         // that wakes the module does not also act.
@@ -104,7 +108,7 @@ void ScreensaverController::notifyActivity()
 
 void ScreensaverController::onIdle()
 {
-    if (m_inhibited || m_active || !m_splitter || m_giveUp || !m_deck->isOpen())
+    if (m_inhibited || m_active || m_process || !m_splitter || m_giveUp || !m_deck->isOpen())
         return;
     if (!m_config.whilePlaying && m_media && m_media->state() == MediaController::State::Playing) {
         restartIdleTimer(); // look again later
@@ -190,21 +194,38 @@ void ScreensaverController::start()
     connect(m_process, &QProcess::readyReadStandardError, this, [this] {
         qWarning().noquote() << "ffmpeg:" << QString::fromUtf8(m_process->readAllStandardError()).trimmed().left(300);
     });
+    connect(m_process, &QProcess::started, this, &ScreensaverController::onStarted);
+    connect(m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+        if (error == QProcess::FailedToStart && isStarting())
+            onStartFailed(m_process->errorString());
+    });
+    m_startTimeout.start();
     m_process->start(executable, arguments, QIODevice::ReadOnly);
-    if (!m_process->waitForStarted(3000)) {
-        qWarning() << "galleond: FFmpeg did not start: the screensaver stays off";
-        m_process->deleteLater();
-        m_process = nullptr;
-        m_giveUp = true;
+}
+
+void ScreensaverController::onStarted()
+{
+    if (!isStarting())
         return;
-    }
+    m_startTimeout.stop();
     m_active = true;
     qInfo() << "galleond: screensaver on";
     Q_EMIT activeChanged(true);
 }
 
+void ScreensaverController::onStartFailed(const QString &reason)
+{
+    if (!isStarting())
+        return;
+    qWarning().noquote() << "galleond: FFmpeg did not start (" << reason << "): the screensaver stays off";
+    stop(false);
+    m_giveUp = true;
+    restartIdleTimer();
+}
+
 void ScreensaverController::stop(bool wait)
 {
+    m_startTimeout.stop();
     if (!m_process)
         return;
     QProcess *process = m_process;
@@ -236,6 +257,11 @@ void ScreensaverController::stop(bool wait)
 
 void ScreensaverController::wake()
 {
+    if (isStarting()) { // an input before the decoder is up: no screensaver this time
+        stop(false);
+        restartIdleTimer();
+        return;
+    }
     if (!m_active)
         return;
     m_active = false;
@@ -305,9 +331,9 @@ void ScreensaverController::onFinished(int exitCode, QProcess::ExitStatus status
     // With -stream_loop the video does not end: a stop is a failure. Try a few
     // times, then give up until the next use.
     if (m_active && ++m_restarts <= MaxRestarts && !m_playing.isEmpty()) {
-        m_active = false; // start() sets it and announces it again
+        m_active = false; // onStarted() sets it and announces it again
         start();
-        if (m_active)
+        if (isStarting())
             return;
     }
     const bool wasActive = m_active;
