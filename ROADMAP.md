@@ -326,6 +326,18 @@ Voir [le fonctionnement et les limites](docs/UPDATES.md).
 
 `tools/keyboard-brightness` (option CMake `GALLEON_BUILD_KEYBOARD_BRIGHTNESS_TOOL`, hors build par défaut) lit ou écrit la luminosité globale du clavier (propriété `0xEA`, 0 à 1000) via `lib/keyboard/` (`galleon_keyboard`) et `galleon::HidTransport`. Sans argument : lecture seule ; avec une valeur : écriture puis relecture de confirmation. Tests : `tests/test_keyboardlink.cpp` (faux transport). **Sur le module** : confirmé par le propriétaire sous **Windows** (10 novembre) et sous **Linux** (11 novembre : lecture, écriture 100 puis 1000, relecture identique), firmware clavier 2.3.88, une seule unité. Pas encore de mémorisation/restauration ni de cession de place au Web Hub : rien n'est branché dans `galleond`.
 
+### Correctifs issus d'un audit de `main` (57eeb11) — PR #96, 12 novembre 2026
+
+Cinq défauts relevés par un audit externe, vérifiés dans le code avant correction, chacun avec son test et son commit :
+
+- **Veille vidéo** : `ScreensaverController::setConfig` laissait `m_active` à vrai après l'arrêt du décodeur, donc la nouvelle veille ne démarrait pas sans interaction (`test_screensaver`).
+- **Démarrage de FFmpeg** : `waitForStarted(3000)` bloquait la boucle qui envoie aussi le keep-alive de 500 ms. Le démarrage est maintenant asynchrone (`started`, erreur de démarrage, minuteur de 3 s, annulation par une interaction). **Pas de test dédié** : sous Linux le lancement est confirmé presque aussitôt, aucun test fiable n'échoue sans le correctif.
+- **Molette à l'import d'un thème** : les actions `page` de `turn`/`press` suivent le nouveau nom de page, comme celles des touches (`test_themeinstall`).
+- **Import sur volume insensible à la casse (Windows)** : noms d'icônes et de dossiers de fonds comparés sans tenir compte de la casse, et un fichier existant n'est jamais remplacé, donc un échec d'écriture de `pages.json` ne supprime plus un fichier de l'utilisateur (`test_themeinstall` pour le choix des noms ; pas de test d'écriture réelle sur volume Windows).
+- **Outil de luminosité** : une file jamais vidée pendant la purge (`StaleReports`, rien n'est envoyé) et une réponse hors 0..1000 (`InvalidReply`, au lieu d'une troncature à 16 bits : 65 578 se lisait 42) sont refusées (`test_keyboardlink`).
+
+Validation : CI GitHub verte et `tools/check.py full` réussi (Docker, Ubuntu 24.04) sur l'arbre fusionné. **Non vérifié** : sous Windows (démarrage de FFmpeg, import sur volume NTFS) et sur le module / le clavier réels (outil de luminosité) ; à confirmer par le propriétaire avant de classer ces points « sur le module ».
+
 ### Onglets Bosun à largeur adaptative — 31 octobre 2026
 
 Le titre actif conserve sa largeur complète, mesurée avec la police affichée.
@@ -452,6 +464,7 @@ Branche `feat/theme-package`. Fait et testé (tests, fuzzing, clang-tidy, valida
 - **Conflits entre instances** : deux `galleond` sont maintenant exclus (le second quitte). OpenRGB (plugin) et `galleond` écrivent tous deux les anneaux : à ne pas lancer ensemble sans règle (non résolu).
 - **Isolation des tests** : les tests écrasaient `galleond.conf` (corrigé : `XDG_CONFIG_HOME` isolé, dans le code des tests et par ctest) et leurs faux lecteurs MPRIS apparaissaient sur le bus de l'utilisateur, ce qui perturbait un `galleond` en marche (corrigé : ctest lance chaque test sous `dbus-run-session`). Ne lancer les tests que par `ctest`. Vérifier qu'aucun autre test n'écrit dans le vrai `~/.config` ou `~/.cache`.
 - Ligne fantôme sous les étiquettes des touches sur les photos : probablement optique, jamais confirmé.
+- Correctifs de la PR #96 : démarrage asynchrone de FFmpeg et import de thème (collision de casse) à essayer sous Windows ; outil de luminosité à ré-essayer sur le clavier (lecture et écriture 100 puis 1000).
 - Vignette vidéo FFmpeg, anti-rebond et lancement Kdenlive/Steam : construits et testés, pas rapportés sur le module.
 - Fuzzing sur le matériel réel (le sandbox de libFuzzer bloque ~90 s ici).
 - Clavier : RVB par touche **bloqué** (voir `docs/protocol/README.md`). Ne jamais rejouer les écritures du Web Hub (profil en flash) ; les valeurs 3 et 5 de la propriété 3 sont des bootloaders ; la commande 0x0f est une remise à zéro d'usine.
