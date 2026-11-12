@@ -80,7 +80,7 @@ bool near(QRgb a, QRgb b, int tolerance = 12)
 class FakeMedia : public MediaController
 {
 public:
-    [[nodiscard]] State state() const override { return m_state; }
+    [[nodiscard]] State state() const override { return m_staleReads-- > 0 ? State::Stopped : m_state; }
     [[nodiscard]] NowPlaying nowPlaying() const override { return {}; }
     void playPause() override {}
     void next() override {}
@@ -94,8 +94,16 @@ public:
         Q_EMIT stateChanged();
     }
 
+    // A track that starts without a stateChanged: the first `reads` readings still say Stopped.
+    void startPlayingSilentlyAfter(int reads)
+    {
+        m_state = State::Playing;
+        m_staleReads = reads;
+    }
+
 private:
     State m_state = State::Stopped;
+    mutable int m_staleReads = 0;
 };
 
 struct Fixture
@@ -394,6 +402,19 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
         f.media.setState(MediaController::State::Playing);
         QTRY_VERIFY_WITH_TIMEOUT(!f.controller->isActive(), 3000);
+    }
+
+    void aTrackStartingWhileTheDecoderLaunchesKeepsTheScreensaverOff()
+    {
+        Fixture f;
+        QSignalSpy active(f.controller.get(), &ScreensaverController::activeChanged);
+        f.configure(f.config);
+        f.media.startPlayingSilentlyAfter(1); // the idle check sees Stopped, the check at the start sees Playing
+        f.controller->setIdleTimeoutMs(100);
+        QTest::qWait(1000);
+        QVERIFY(!f.controller->isActive());
+        for (const QList<QVariant> &signal : std::as_const(active))
+            QVERIFY2(!signal.at(0).toBool(), "the screensaver was lit over a playing track");
     }
 
     void aMissingOrWrongVideoLeavesTheScreensaverOff()

@@ -209,6 +209,12 @@ void ScreensaverController::onStarted()
 {
     if (!isStarting())
         return;
+    // A track may have started while the decoder was launching: stateChanged is ignored until the
+    // screensaver is active, so look again here instead of lighting it over the music.
+    if (!m_config.whilePlaying && m_media && m_media->state() == MediaController::State::Playing) {
+        abandonStart(false);
+        return;
+    }
     m_startTimeout.stop();
     m_active = true;
     m_restarting = false;
@@ -221,12 +227,19 @@ void ScreensaverController::onStartFailed(const QString &reason)
     if (!isStarting())
         return;
     qWarning().noquote() << "galleond: FFmpeg did not start (" << reason << "): the screensaver stays off";
+    abandonStart(true);
+}
+
+// Ends a launch that will not become the screensaver (failed, late, cancelled by an input or a track).
+// A restart was already announced as "on": its end is announced here, once the state is consistent.
+void ScreensaverController::abandonStart(bool giveUp)
+{
     const bool wasAnnounced = announcedActive();
     stop(false);
     m_restarting = false;
-    m_giveUp = true;
+    m_giveUp = giveUp;
     if (wasAnnounced)
-        Q_EMIT activeChanged(false); // a failed restart ends the screensaver the others were told about
+        Q_EMIT activeChanged(false);
     restartIdleTimer();
 }
 
@@ -265,12 +278,7 @@ void ScreensaverController::stop(bool wait)
 void ScreensaverController::wake()
 {
     if (isStarting()) { // an input before the decoder is up: no screensaver this time
-        const bool wasAnnounced = announcedActive();
-        stop(false);
-        m_restarting = false;
-        if (wasAnnounced)
-            Q_EMIT activeChanged(false); // an input during a restart
-        restartIdleTimer();
+        abandonStart(m_giveUp);
         return;
     }
     if (!m_active)
