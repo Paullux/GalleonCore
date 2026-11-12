@@ -74,7 +74,9 @@ Les passages historiques ci-dessous décrivent les hypothèses et choix **à leu
 
 ## 3. Contrôleur RVB pour OpenRGB
 
-Développé dans un fork d'OpenRGB, pas dans ce dépôt. OpenRGB contient déjà `Controllers/CorsairPeripheralV2Controller/`. Ajouter un appareil revient à :
+**Décision du 12 novembre 2026 : ce plan est abandonné.** Le RVB (anneaux des molettes, puis clavier par touche) est écrit dans ce dépôt avec notre propre code, sans reprise de code d'OpenRGB et sans fork : voir [ROADMAP.md, section 4, point 6](../ROADMAP.md). Le texte ci-dessous est conservé comme historique de l'étude du 16 au 18 octobre.
+
+Historique : Développé dans un fork d'OpenRGB, pas dans ce dépôt. OpenRGB contient déjà `Controllers/CorsairPeripheralV2Controller/`. Ajouter un appareil revient à :
 1. ajouter le PID dans `CorsairPeripheralV2Devices.h/.cpp` ;
 2. déclarer le format d'envoi : `CORSAIR_V2_TYPE_SW_COLOUR_BLOCK`, `HW_COLOUR_BLOCK`, `SW_TRIPLETS` ou `HW_TRIPLETS` ;
 3. ajouter la disposition (KeyboardLayoutManager, `CORSAIR_V2_KB_LAYOUT_ISO` pour l'AZERTY) ;
@@ -150,7 +152,7 @@ Avant d'écrire la moindre ligne de `KeyboardLink`, les deux points laissés ouv
 **Démon.** `galleond` reste **un seul processus**, qui tient les deux parties USB (règle d'instance unique inchangée), mais par un composant séparé :
 - Nouveau composant (nom provisoire `KeyboardController`) dans `daemon/`, propriétaire de son propre `Transport` ouvert sur l'interface fabricant (`MI_01`) de la partie clavier. La politique de sécurité déjà décrite (lire avant d'écrire, mémoriser, restaurer, céder la place) reste entièrement dans `KeyboardLink` ; `KeyboardController` ne fait que la brancher au reste du démon (D-Bus, configuration), exactement comme `ScreenController` le fait pour `StreamDeck`.
 - Ni `ScreenController`, `PagesController`, `TileRenderer` ni `MprisController` n'appellent `KeyboardController`, et l'inverse non plus. Câblage à part dans `Wiring.cpp`.
-- Cette fonction (luminosité, propriété `0xEA`) reste dans GalleonCore / `galleond` : ce n'est pas le pilote RVB par touche, qui reste bloqué et dont le code resterait, lui, dans le fork d'OpenRGB (section 3 ci-dessus). Si ce pilote RVB par touche finit par être écrit, il reste hors de `galleond` et hors de cette bibliothèque clavier.
+- Cette fonction (luminosité, propriété `0xEA`) reste dans GalleonCore / `galleond` : ce n'est pas le pilote RVB par touche, qui reste bloqué. Mise à jour du 12 novembre 2026 : ce pilote ne ira plus dans un fork d'OpenRGB (section 3, abandonnée) ; s'il est écrit, ce sera avec notre propre code dans ce dépôt, dans un composant `galleond` à part, sans écrire ni lire dans les composants Stream Deck, ni dans `KeyboardController` pour la luminosité sans décision explicite.
 
 Répond aux deux points laissés ouverts les 16 octobre et 8 novembre : c'est `galleond` qui écrit, dans une bibliothèque et un composant propres au clavier, jamais mêlés à ceux du Stream Deck. **Règle, rien d'implémenté.**
 

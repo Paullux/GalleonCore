@@ -143,7 +143,7 @@ openrgb-plugin/    Plugin OpenRGB pour les anneaux des molettes
 
 Garder le protocole sans entrées/sorties permet de tester unitairement et de fuzzer chaque format de trame sans le clavier.
 
-Le contrôleur RVB lui-même ne vit pas ici : il sera développé dans un fork d'OpenRGB et proposé en merge request au `CorsairPeripheralV2Controller`, pour que tous les utilisateurs d'OpenRGB en profitent.
+Le support RVB propre à GalleonCore (anneaux des molettes, puis RVB par touche) sera écrit ici avec notre propre code, d'après la spécification publique HID LampArray et nos propres captures, et non dans un fork d'OpenRGB. Le plugin OpenRGB reste une intégration séparée et existante.
 
 ## Compilation
 

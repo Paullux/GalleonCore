@@ -137,7 +137,7 @@ openrgb-plugin/    OpenRGB plugin for the dial rings
 
 Keeping the protocol free of I/O means every byte format can be unit-tested and fuzzed without the keyboard.
 
-The RGB controller itself does not live here: it will be developed in a fork of OpenRGB and proposed as a merge request to the `CorsairPeripheralV2Controller`, so every OpenRGB user benefits from it.
+GalleonCore's own RGB support (dial rings, then per-key lighting) will be written here with our own code, from the public HID LampArray specification and our own captures, not as an OpenRGB fork. The OpenRGB plugin stays a separate, existing integration.
 
 ## Building
 
