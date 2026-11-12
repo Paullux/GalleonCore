@@ -1355,7 +1355,7 @@ QtObject {
         const QTemporaryDir dir;
         const QString file = dir.filePath("pages.json");
         QVERIFY(writeFile(file, twoThemes()));
-        bosun::BosunBackend backend(file);
+        const bosun::BosunBackend backend(file);
         QQmlApplicationEngine engine;
         engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
         const bosun::DaemonStatus daemon("/nonexistent/systemctl");
@@ -1372,7 +1372,7 @@ QtObject {
         QCOMPARE(slider->property("value").toInt(), -1); // unknown: it cannot read the keyboard
         QVERIFY(!slider->property("enabledLook").toBool()); // galleond is not running: nothing to ask
 
-        QSignalSpy committed(slider, SIGNAL(committed(int)));
+        const QSignalSpy committed(slider, SIGNAL(committed(int)));
         QVERIFY(QMetaObject::invokeMethod(slider, "choose", Q_ARG(QVariant, 3)));
         QVERIFY(QMetaObject::invokeMethod(slider, "choose", Q_ARG(QVariant, 6)));
         QCOMPARE(committed.size(), 0); // moving shows a value, sends nothing
