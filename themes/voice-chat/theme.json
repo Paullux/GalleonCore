@@ -34,7 +34,7 @@
     },
     {
       "action": {
-        "desktop": "com.discordapp.Discord.desktop",
+        "desktop": "discord",
         "type": "app"
       },
       "key": 3,

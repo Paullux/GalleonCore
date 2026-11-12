@@ -259,6 +259,10 @@ private Q_SLOTS:
         QCOMPARE(required(required(ok.config).pages.value("p").keys[0]).action.desktop, QStringLiteral("firefox.desktop"));
         QVERIFY(withAction({{"type", "app"}, {"desktop", "/usr/share/applications/vlc.desktop"}}).config.has_value());
 
+        // A portable application id (see WellKnownApps.h): valid on every system,
+        // unlike a bare word that names nothing (still rejected below).
+        QVERIFY(withAction({{"type", "app"}, {"desktop", "discord"}}).config.has_value());
+
         // No command can be written here: only the name of a .desktop file.
         QVERIFY(!withAction({{"type", "app"}, {"command", "rm -rf ~"}}).config.has_value());
         QVERIFY(!withAction({{"type", "app"}, {"desktop", "firefox.desktop"}, {"command", "x"}}).config.has_value());

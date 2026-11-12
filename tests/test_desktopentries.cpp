@@ -79,6 +79,8 @@ private Q_SLOTS:
         QTest::newRow("absolute path") << "/usr/share/applications/vlc.desktop" << true;
         QTest::newRow("path with spaces") << "/home/me/My Apps/tool.desktop" << true;
         QTest::newRow("no suffix") << "firefox" << false;
+        QTest::newRow("portable app id") << "discord" << true;
+        QTest::newRow("unknown bare word") << "not-a-known-app" << false;
         QTest::newRow("wrong suffix") << "firefox.sh" << false;
         QTest::newRow("relative path") << "applications/firefox.desktop" << false;
         QTest::newRow("dotdot") << "/usr/share/../../etc/x.desktop" << false;
@@ -111,6 +113,20 @@ private Q_SLOTS:
         QVERIFY(!DesktopEntries::lookup("absent.desktop").isValid());
         QVERIFY(!DesktopEntries::lookup("/nonexistent/x.desktop").isValid());
         QVERIFY(!DesktopEntries::lookup("../x.desktop").isValid());
+    }
+
+    void aPortableAppIdResolvesToWhicheverCandidateIsInstalled()
+    {
+        Environment const env;
+        QVERIFY(!DesktopEntries::lookup("discord").isValid()); // none of its candidates exist yet
+        QVERIFY(writeFile(env.systemApp("com.discordapp.Discord.desktop"), entry("Discord")));
+        const DesktopApp app = DesktopEntries::lookup("discord");
+        QVERIFY(app.isValid());
+        // What gets stored back (see ThemeInstallPlan.cpp) is the literal ID found,
+        // never the portable id itself: this machine's Discord is a Flatpak here.
+        QCOMPARE(app.id, QStringLiteral("com.discordapp.Discord.desktop"));
+        QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("com.discordapp.Discord.desktop")), QStringLiteral("discord"));
+        QVERIFY(DesktopEntries::wellKnownIdFor(QStringLiteral("tool.desktop")).isEmpty());
     }
 
     void theUsersFileHidesTheSystemOne()

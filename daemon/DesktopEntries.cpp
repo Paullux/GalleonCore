@@ -3,6 +3,8 @@
 
 #include "DesktopEntries.h"
 
+#include "WellKnownApps.h"
+
 #include <QDebug>
 #include <QDir>
 #include <QDirIterator>
@@ -46,6 +48,8 @@ bool DesktopEntries::isValidReference(const QString &desktop)
     if (desktop.size() > 200)
         return false;
     if (idPattern().match(desktop).hasMatch())
+        return true;
+    if (WellKnownApps::find(desktop))
         return true;
     // An absolute path: a .desktop file, no ".." part, no control character.
     if (!desktop.startsWith(QLatin1Char('/')) || !desktop.endsWith(QStringLiteral(".desktop")))
@@ -141,6 +145,13 @@ DesktopApp DesktopEntries::lookup(const QString &desktop)
 {
     if (!isValidReference(desktop))
         return {};
+    if (const WellKnownApp *known = WellKnownApps::find(desktop)) {
+        for (const QString &candidate : known->linuxDesktopIds) {
+            if (DesktopApp app = lookup(candidate); app.isValid())
+                return app;
+        }
+        return {};
+    }
     if (desktop.startsWith(QLatin1Char('/')))
         return read(desktop, QString());
 
@@ -192,6 +203,16 @@ QList<DesktopApp> DesktopEntries::list()
         return a.name.compare(b.name, Qt::CaseInsensitive) < 0;
     });
     return apps;
+}
+
+QString DesktopEntries::wellKnownIdFor(const QString &desktop)
+{
+    for (const QString &id : WellKnownApps::knownIds()) {
+        const WellKnownApp *app = WellKnownApps::find(id);
+        if (app && app->linuxDesktopIds.contains(desktop))
+            return id;
+    }
+    return {};
 }
 
 QList<DesktopApp> DesktopEntries::listCategory(const QString &category)

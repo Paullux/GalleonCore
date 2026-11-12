@@ -50,6 +50,12 @@ public:
     // The names accepted in a pages file.
     [[nodiscard]] static bool isValidReference(const QString &desktop);
 
+    // The portable id (see WellKnownApps.h) this literal reference is one of
+    // the known candidates of, or empty if it names none. Used only when
+    // exporting a theme, so a shared file never carries a path and stays
+    // installable on another system.
+    [[nodiscard]] static QString wellKnownIdFor(const QString &desktop);
+
     // Starts the application through the desktop's launcher (gio launch, else
     // gtk-launch, else kioclient). Returns false if none could be started. The
     // program gets the file as ONE argument; no shell is involved.

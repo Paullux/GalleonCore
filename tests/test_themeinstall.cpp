@@ -77,7 +77,7 @@ ThemeInstallContext context()
     c.existingPages = {QStringLiteral("main")};
     c.existingThemeNames = {QStringLiteral("Music")};
     c.existingThemeCount = 1;
-    c.desktopExists = [](const QString &) { return false; };
+    c.resolveDesktop = [](const QString &) { return QString(); };
     return c;
 }
 
@@ -162,7 +162,7 @@ private Q_SLOTS:
     void theInstalledAlternativeIsChosen()
     {
         ThemeInstallContext c = context();
-        c.desktopExists = [](const QString &id) { return id == QLatin1String("com.discordapp.Discord.desktop"); };
+        c.resolveDesktop = [](const QString &id) { return id == QLatin1String("com.discordapp.Discord.desktop") ? id : QString(); };
         const ThemeInstallPlan plan = planThemeInstall(package(), c);
         QCOMPARE(keyDesktop(plan, 1), QStringLiteral("com.discordapp.Discord.desktop"));
         QVERIFY(plan.warnings.isEmpty());
@@ -171,7 +171,7 @@ private Q_SLOTS:
     void theFirstNameWinsWhenSeveralAreInstalled()
     {
         ThemeInstallContext c = context();
-        c.desktopExists = [](const QString &) { return true; };
+        c.resolveDesktop = [](const QString &id) { return id; };
         QCOMPARE(keyDesktop(planThemeInstall(package(), c), 1), QStringLiteral("discord.desktop"));
     }
 
@@ -181,6 +181,30 @@ private Q_SLOTS:
         QVERIFY(plan.ok());
         QCOMPARE(keyDesktop(plan, 1), QStringLiteral("discord.desktop"));
         QCOMPARE(plan.warnings.size(), 1);
+    }
+
+    void aWellKnownAppIsStoredAsWhatThisMachineActuallyHas()
+    {
+        QJsonObject fixture = manifest();
+        QJsonArray keys = fixture.value(QStringLiteral("keys")).toArray();
+        QJsonObject discordKey = keys.at(1).toObject();
+        discordKey.insert(QStringLiteral("action"), QJsonObject{{QStringLiteral("type"), QStringLiteral("app")}, {QStringLiteral("desktop"), QStringLiteral("discord")}});
+        keys[1] = discordKey;
+        fixture.insert(QStringLiteral("keys"), keys);
+        const std::vector<ZipEntry> entries{{QStringLiteral("theme.json"), QJsonDocument(fixture).toJson(QJsonDocument::Compact)},
+                                            {QStringLiteral("icons/mute.png"), pngHeader()}};
+        const ThemeParseResult parsed = parseThemeEntries(entries);
+        if (!parsed.package)
+            qFatal("the fixture theme is not valid: %s", qPrintable(parsed.errors.join(QLatin1Char(';'))));
+
+        ThemeInstallContext c = context();
+        c.resolveDesktop = [](const QString &id) {
+            return id == QLatin1String("discord") ? QStringLiteral("C:/Users/test/Discord.lnk") : QString();
+        };
+        const ThemeInstallPlan plan = planThemeInstall(*parsed.package, c);
+        QVERIFY(plan.ok());
+        QCOMPARE(keyDesktop(plan, 1), QStringLiteral("C:/Users/test/Discord.lnk"));
+        QVERIFY(plan.warnings.isEmpty());
     }
 
     void theDialsAreCopiedOnlyWhenAsked()

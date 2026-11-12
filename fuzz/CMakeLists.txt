@@ -26,6 +26,7 @@ add_executable(fuzz_pages_config
     ${PROJECT_SOURCE_DIR}/daemon/PagesConfig.cpp
     ${PROJECT_SOURCE_DIR}/daemon/KeyInjector.cpp
     ${PROJECT_SOURCE_DIR}/daemon/DesktopEntries.cpp
+    ${PROJECT_SOURCE_DIR}/daemon/WellKnownApps.cpp
 )
 target_include_directories(fuzz_pages_config PRIVATE ${PROJECT_SOURCE_DIR}/lib/include ${PROJECT_SOURCE_DIR}/daemon)
 target_link_libraries(fuzz_pages_config PRIVATE Qt6::Core)
@@ -41,6 +42,7 @@ add_executable(fuzz_theme_package
     ${PROJECT_SOURCE_DIR}/daemon/PagesConfig.cpp
     ${PROJECT_SOURCE_DIR}/daemon/KeyInjector.cpp
     ${PROJECT_SOURCE_DIR}/daemon/DesktopEntries.cpp
+    ${PROJECT_SOURCE_DIR}/daemon/WellKnownApps.cpp
 )
 target_include_directories(fuzz_theme_package PRIVATE ${PROJECT_SOURCE_DIR}/lib/include ${PROJECT_SOURCE_DIR}/daemon)
 target_link_libraries(fuzz_theme_package PRIVATE Qt6::Core)

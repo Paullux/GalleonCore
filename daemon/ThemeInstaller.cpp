@@ -69,7 +69,10 @@ ThemeInstallContext contextFor(const ThemeInstallOptions &options)
     context.existingThemeCount = static_cast<int>(config.themes.size());
     context.existingIconFiles = QDir(QFileInfo(options.pagesFile).absolutePath()).entryList(QDir::Files);
     context.existingWallpaperStyles = QDir(options.wallpaperRoot).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-    context.desktopExists = [](const QString &id) { return DesktopEntries::lookup(id).isValid(); };
+    context.resolveDesktop = [](const QString &id) -> QString {
+        const DesktopApp app = DesktopEntries::lookup(id);
+        return app.isValid() ? app.id : QString();
+    };
     context.applyDials = options.applyDials;
     return context;
 }
