@@ -143,6 +143,21 @@ private Q_SLOTS:
         QVERIFY(!c.existingIconFiles.contains(plan.iconFiles.front().name));
     }
 
+    void aPictureFileThatDiffersOnlyByCaseIsNotReplaced()
+    {
+        ThemeInstallContext c = context();
+        c.existingIconFiles = {QStringLiteral("Discord-Mute.PNG")}; // the same file on a Windows volume
+        const ThemeInstallPlan plan = planThemeInstall(package(), c);
+        QCOMPARE(plan.iconFiles.front().name, QStringLiteral("discord-mute-2.png"));
+    }
+
+    void aWallpaperFolderThatDiffersOnlyByCaseIsNotReused()
+    {
+        ThemeInstallContext c = context();
+        c.existingWallpaperStyles = {QStringLiteral("DISCORD")};
+        QCOMPARE(planThemeInstall(package(true), c).wallpaperStyle, QStringLiteral("discord-2"));
+    }
+
     void aThemeNameThatIsTakenGetsANumber()
     {
         ThemeInstallContext c = context();
