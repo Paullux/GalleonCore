@@ -198,6 +198,7 @@ private Q_SLOTS:
         QTest::addColumn<QString>("actionJson");
         QTest::addColumn<QString>("expected");
         QTest::newRow("app by path") << R"({"type":"app","desktop":"/home/x/evil.desktop"})" << "desktop file name";
+        QTest::newRow("app by an unknown bare word") << R"({"type":"app","desktop":"not-a-known-app"})" << "desktop file name";
         QTest::newRow("another page") << R"({"type":"page","page":"main"})" << "main";
         QTest::newRow("switch theme") << R"({"type":"theme"})" << "switch themes";
         QTest::newRow("unknown type") << R"({"type":"shell","command":"id"})" << "type";
@@ -221,6 +222,15 @@ private Q_SLOTS:
         QJsonObject manifest = validManifest();
         manifest["keys"] = QJsonArray{
             QJsonObject{{"key", 0}, {"label", "Here"}, {"action", QJsonObject{{"type", "page"}, {"page", "discord"}}}},
+        };
+        QVERIFY(parseThemeEntries({manifestEntry(manifest)}).package.has_value());
+    }
+
+    void aPortableAppIdIsAccepted()
+    {
+        QJsonObject manifest = validManifest();
+        manifest["keys"] = QJsonArray{
+            QJsonObject{{"key", 0}, {"label", "Discord"}, {"action", QJsonObject{{"type", "app"}, {"desktop", "discord"}}}},
         };
         QVERIFY(parseThemeEntries({manifestEntry(manifest)}).package.has_value());
     }

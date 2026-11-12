@@ -148,6 +148,26 @@ private Q_SLOTS:
         QCOMPARE(result.value, std::uint16_t{800});
     }
 
+    void aReplyOutsideZeroToAThousandIsInvalidInsteadOfTruncated()
+    {
+        FakeTransport transport;
+        QVERIFY(transport.open());
+        transport.beforeWrite = [&] { transport.pendingReads.push_back(getAnswer(0, 65578)); }; // 0x10032 would read as 50
+        const auto result = readBrightness(transport, 200ms);
+        QCOMPARE(result.error, LinkError::InvalidReply);
+    }
+
+    void aQueueThatNeverEmptiesSendsNothingAndIsReported()
+    {
+        FakeTransport transport;
+        QVERIFY(transport.open());
+        for (int i = 0; i < 100; ++i)
+            transport.pendingReads.push_back(getAnswer(0, 100));
+        const auto result = readBrightness(transport, 200ms);
+        QCOMPARE(result.error, LinkError::StaleReports);
+        QVERIFY(transport.writes.empty());
+    }
+
     void writeBrightnessConfirmsByReadingTheValueBack()
     {
         FakeTransport transport;

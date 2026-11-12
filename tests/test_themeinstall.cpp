@@ -10,6 +10,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -57,9 +58,9 @@ QJsonObject manifest()
     };
 }
 
-ThemePackage package(bool wallpaper = false)
+ThemePackage package(bool wallpaper = false, const QJsonObject &base = manifest())
 {
-    std::vector<ZipEntry> entries{{QStringLiteral("theme.json"), QJsonDocument(manifest()).toJson(QJsonDocument::Compact)},
+    std::vector<ZipEntry> entries{{QStringLiteral("theme.json"), QJsonDocument(base).toJson(QJsonDocument::Compact)},
                                   {QStringLiteral("icons/mute.png"), pngHeader()}};
     if (wallpaper) {
         entries.push_back({QStringLiteral("wallpapers/a.jpg"), jpegHeader()});
@@ -77,7 +78,7 @@ ThemeInstallContext context()
     c.existingPages = {QStringLiteral("main")};
     c.existingThemeNames = {QStringLiteral("Music")};
     c.existingThemeCount = 1;
-    c.desktopExists = [](const QString &) { return false; };
+    c.resolveDesktop = [](const QString &) { return QString(); };
     return c;
 }
 
@@ -143,6 +144,37 @@ private Q_SLOTS:
         QVERIFY(!c.existingIconFiles.contains(plan.iconFiles.front().name));
     }
 
+    void aPictureFileThatDiffersOnlyByCaseIsNotReplaced()
+    {
+        ThemeInstallContext c = context();
+        c.existingIconFiles = {QStringLiteral("Discord-Mute.PNG")}; // the same file on a Windows volume
+        const ThemeInstallPlan plan = planThemeInstall(package(), c);
+        QCOMPARE(plan.iconFiles.front().name, QStringLiteral("discord-mute-2.png"));
+    }
+
+    void aWallpaperFolderThatDiffersOnlyByCaseIsNotReused()
+    {
+        ThemeInstallContext c = context();
+        c.existingWallpaperStyles = {QStringLiteral("DISCORD")};
+        QCOMPARE(planThemeInstall(package(true), c).wallpaperStyle, QStringLiteral("discord-2"));
+    }
+
+    void aPathTakenByAnEntryThePlanCannotSeeIsNotReplaced()
+    {
+        // A dangling link is not listed as a file, so the plan picks its name; creating the picture must still fail.
+        const QTemporaryDir dir;
+        const QString themeFile = dir.filePath(QStringLiteral("d.gctheme"));
+        QVERIFY(writeThemeFile(themeFile, package(), false));
+        const QString link = dir.filePath(QStringLiteral("discord-mute.png"));
+        if (!QFile::link(dir.filePath(QStringLiteral("nowhere")), link))
+            QSKIP("this system cannot make a link");
+        const QString pagesFile = dir.filePath(QStringLiteral("pages.json"));
+        const ThemeInstallResult result = installTheme({themeFile, pagesFile, dir.filePath(QStringLiteral("wall")), false});
+        QVERIFY(!result.ok);
+        QVERIFY(!QFile::exists(dir.filePath(QStringLiteral("nowhere")))); // nothing was written through the link
+        QVERIFY(QFileInfo(link).isSymLink());                              // and the entry is still there
+    }
+
     void aThemeNameThatIsTakenGetsANumber()
     {
         ThemeInstallContext c = context();
@@ -159,10 +191,22 @@ private Q_SLOTS:
         QCOMPARE(action.value(QStringLiteral("page")).toString(), QStringLiteral("discord-2"));
     }
 
+    void aDialActionOpeningTheOwnPageFollowsTheNewPageName()
+    {
+        QJsonObject m = manifest();
+        m["dials"] = QJsonObject{{"0", QJsonObject{{"press", QJsonObject{{"type", "page"}, {"page", "discord"}}}}}};
+        ThemeInstallContext c = context();
+        c.applyDials = true;
+        c.existingPages.push_back(QStringLiteral("discord"));
+        const ThemeInstallPlan plan = planThemeInstall(package(false, m), c);
+        const QJsonObject press = plan.dials.value("0").toObject().value("press").toObject();
+        QCOMPARE(press.value("page").toString(), QStringLiteral("discord-2"));
+    }
+
     void theInstalledAlternativeIsChosen()
     {
         ThemeInstallContext c = context();
-        c.desktopExists = [](const QString &id) { return id == QLatin1String("com.discordapp.Discord.desktop"); };
+        c.resolveDesktop = [](const QString &id) { return id == QLatin1String("com.discordapp.Discord.desktop") ? id : QString(); };
         const ThemeInstallPlan plan = planThemeInstall(package(), c);
         QCOMPARE(keyDesktop(plan, 1), QStringLiteral("com.discordapp.Discord.desktop"));
         QVERIFY(plan.warnings.isEmpty());
@@ -171,7 +215,7 @@ private Q_SLOTS:
     void theFirstNameWinsWhenSeveralAreInstalled()
     {
         ThemeInstallContext c = context();
-        c.desktopExists = [](const QString &) { return true; };
+        c.resolveDesktop = [](const QString &id) { return id; };
         QCOMPARE(keyDesktop(planThemeInstall(package(), c), 1), QStringLiteral("discord.desktop"));
     }
 
@@ -181,6 +225,30 @@ private Q_SLOTS:
         QVERIFY(plan.ok());
         QCOMPARE(keyDesktop(plan, 1), QStringLiteral("discord.desktop"));
         QCOMPARE(plan.warnings.size(), 1);
+    }
+
+    void aWellKnownAppIsStoredAsWhatThisMachineActuallyHas()
+    {
+        QJsonObject fixture = manifest();
+        QJsonArray keys = fixture.value(QStringLiteral("keys")).toArray();
+        QJsonObject discordKey = keys.at(1).toObject();
+        discordKey.insert(QStringLiteral("action"), QJsonObject{{QStringLiteral("type"), QStringLiteral("app")}, {QStringLiteral("desktop"), QStringLiteral("discord")}});
+        keys[1] = discordKey;
+        fixture.insert(QStringLiteral("keys"), keys);
+        const std::vector<ZipEntry> entries{{QStringLiteral("theme.json"), QJsonDocument(fixture).toJson(QJsonDocument::Compact)},
+                                            {QStringLiteral("icons/mute.png"), pngHeader()}};
+        const ThemeParseResult parsed = parseThemeEntries(entries);
+        if (!parsed.package)
+            qFatal("the fixture theme is not valid: %s", qPrintable(parsed.errors.join(QLatin1Char(';'))));
+
+        ThemeInstallContext c = context();
+        c.resolveDesktop = [](const QString &id) {
+            return id == QLatin1String("discord") ? QStringLiteral("C:/Users/test/Discord.lnk") : QString();
+        };
+        const ThemeInstallPlan plan = planThemeInstall(*parsed.package, c);
+        QVERIFY(plan.ok());
+        QCOMPARE(keyDesktop(plan, 1), QStringLiteral("C:/Users/test/Discord.lnk"));
+        QVERIFY(plan.warnings.isEmpty());
     }
 
     void theDialsAreCopiedOnlyWhenAsked()

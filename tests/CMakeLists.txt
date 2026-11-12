@@ -80,6 +80,7 @@ function(galleond_add_test name)
 endfunction()
 
 galleond_add_test(test_initialpages)
+galleond_add_test(test_wellknownapps)
 
 add_executable(galleon_test_decoder FakeDecoder.cpp)
 target_link_libraries(galleon_test_decoder PRIVATE Qt6::Core galleon_warnings)

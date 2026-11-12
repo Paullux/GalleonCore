@@ -19,7 +19,10 @@
 // writing is safe to attempt right now.
 namespace galleon::keyboard {
 
-enum class LinkError { None, InvalidValue, WriteFailed, Disconnected, Timeout, Unconfirmed };
+enum class LinkError { None, InvalidValue, WriteFailed, Disconnected, Timeout, Unconfirmed,
+                       StaleReports, // the queue never emptied within the purge limit: an answer could belong to someone else
+                       InvalidReply  // the answer carries a brightness outside 0..1000
+};
 
 struct ReadResult
 {

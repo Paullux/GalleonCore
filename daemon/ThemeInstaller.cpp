@@ -13,7 +13,6 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QSaveFile>
 
 namespace galleond {
 
@@ -69,21 +68,31 @@ ThemeInstallContext contextFor(const ThemeInstallOptions &options)
     context.existingThemeCount = static_cast<int>(config.themes.size());
     context.existingIconFiles = QDir(QFileInfo(options.pagesFile).absolutePath()).entryList(QDir::Files);
     context.existingWallpaperStyles = QDir(options.wallpaperRoot).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-    context.desktopExists = [](const QString &id) { return DesktopEntries::lookup(id).isValid(); };
+    context.resolveDesktop = [](const QString &id) -> QString {
+        const DesktopApp app = DesktopEntries::lookup(id);
+        return app.isValid() ? app.id : QString();
+    };
     context.applyDials = options.applyDials;
     return context;
 }
 
+// Creates a new file and never replaces one: NewOnly makes the open itself fail when the path exists
+// (whatever the case on a case-insensitive volume), with no gap between a check and the write in which
+// another process could create it. A file that is only partly written is removed, so a failed install
+// takes away only what it made.
 bool writeFile(const QString &path, const QByteArray &data, QString &problem)
 {
-    QSaveFile out(path);
-    if (!out.open(QIODevice::WriteOnly)) {
-        problem = QStringLiteral("cannot write %1: %2").arg(path, out.errorString());
+    QFile out(path);
+    if (!out.open(QIODevice::WriteOnly | QIODevice::NewOnly)) {
+        problem = out.exists() ? QStringLiteral("%1 already exists: it is not replaced").arg(path)
+                               : QStringLiteral("cannot write %1: %2").arg(path, out.errorString());
         return false;
     }
-    out.write(data);
-    out.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ReadGroup | QFile::ReadOther);
-    if (!out.commit()) {
+    const bool written = out.write(data) == data.size()
+        && out.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ReadGroup | QFile::ReadOther) && out.flush();
+    out.close();
+    if (!written || out.error() != QFileDevice::NoError) {
+        QFile::remove(path); // ours: the open created it
         problem = QStringLiteral("cannot write %1: %2").arg(path, out.errorString());
         return false;
     }

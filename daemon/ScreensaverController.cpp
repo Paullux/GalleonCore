@@ -21,6 +21,7 @@ constexpr int MaxRestarts = 3;      // a video that ends on its own (a failed lo
 constexpr int MaxSendFailures = 30; // consecutive frames the module did not take
 constexpr int MaxBufferedFrames = 4;
 constexpr int StopWaitMs = 1500;
+constexpr int StartTimeoutMs = 3000; // a decoder that has not started by then is given up
 
 } // namespace
 
@@ -31,6 +32,9 @@ ScreensaverController::ScreensaverController(galleon::StreamDeck *deck, MediaCon
 {
     m_idle.setSingleShot(true);
     connect(&m_idle, &QTimer::timeout, this, &ScreensaverController::onIdle);
+    m_startTimeout.setSingleShot(true);
+    m_startTimeout.setInterval(StartTimeoutMs);
+    connect(&m_startTimeout, &QTimer::timeout, this, [this] { onStartFailed(QStringLiteral("it did not start in time")); });
 
     connect(m_deck, &galleon::StreamDeck::keyPressed, this, [this] { notifyActivity(); });
     connect(m_deck, &galleon::StreamDeck::keyReleased, this, [this] { notifyActivity(); });
@@ -55,8 +59,10 @@ void ScreensaverController::setConfig(const ScreensaverConfig &config, const QSt
 {
     if (config == m_config && baseFolder == m_baseFolder)
         return;
-    const bool wasActive = m_active;
+    const bool wasActive = announcedActive();
     stop();
+    m_active = false;
+    m_restarting = false; // stop() only ends the decoder: the idle timer must be able to start the new screensaver
     m_config = config;
     m_baseFolder = baseFolder;
     m_giveUp = false;
@@ -91,7 +97,7 @@ void ScreensaverController::setInhibited(bool inhibited)
 void ScreensaverController::notifyActivity()
 {
     m_giveUp = false;
-    if (m_active) {
+    if (m_active || isStarting()) {
         // Deferred, so that the other handlers of this same input (which run
         // after this one) still see the screensaver and ignore it: the press
         // that wakes the module does not also act.
@@ -103,7 +109,7 @@ void ScreensaverController::notifyActivity()
 
 void ScreensaverController::onIdle()
 {
-    if (m_inhibited || m_active || !m_splitter || m_giveUp || !m_deck->isOpen())
+    if (m_inhibited || m_active || m_process || !m_splitter || m_giveUp || !m_deck->isOpen())
         return;
     if (!m_config.whilePlaying && m_media && m_media->state() == MediaController::State::Playing) {
         restartIdleTimer(); // look again later
@@ -125,7 +131,7 @@ QString ScreensaverController::resolveVideoPath(const QString &configured, const
     return info.absoluteFilePath();
 }
 
-void ScreensaverController::start()
+bool ScreensaverController::start()
 {
     // The next readable video of the list; the others are skipped with a warning.
     QString video;
@@ -143,7 +149,7 @@ void ScreensaverController::start()
     if (video.isEmpty()) {
         qWarning() << "galleond: no usable screensaver video: the screensaver stays off";
         m_giveUp = true;
-        return;
+        return false;
     }
     m_playing = video;
     qInfo().noquote() << "galleond: screensaver video" << (title.isEmpty() ? video : QStringLiteral("\"%1\" (%2)").arg(title, video));
@@ -151,7 +157,7 @@ void ScreensaverController::start()
     if (program.isEmpty() && !QFileInfo(m_program).isExecutable()) {
         qWarning() << "galleond: FFmpeg not found: the screensaver stays off";
         m_giveUp = true;
-        return;
+        return false;
     }
 
     const QSize canvas = m_splitter->canvasSize();
@@ -189,21 +195,57 @@ void ScreensaverController::start()
     connect(m_process, &QProcess::readyReadStandardError, this, [this] {
         qWarning().noquote() << "ffmpeg:" << QString::fromUtf8(m_process->readAllStandardError()).trimmed().left(300);
     });
+    connect(m_process, &QProcess::started, this, &ScreensaverController::onStarted);
+    connect(m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+        if (error == QProcess::FailedToStart && isStarting())
+            onStartFailed(m_process->errorString());
+    });
+    m_startTimeout.start();
     m_process->start(executable, arguments, QIODevice::ReadOnly);
-    if (!m_process->waitForStarted(3000)) {
-        qWarning() << "galleond: FFmpeg did not start: the screensaver stays off";
-        m_process->deleteLater();
-        m_process = nullptr;
-        m_giveUp = true;
+    return true; // started() or errorOccurred() may already have run, here or later
+}
+
+void ScreensaverController::onStarted()
+{
+    if (!isStarting())
+        return;
+    // A track may have started while the decoder was launching: stateChanged is ignored until the
+    // screensaver is active, so look again here instead of lighting it over the music.
+    if (!m_config.whilePlaying && m_media && m_media->state() == MediaController::State::Playing) {
+        abandonStart(false);
         return;
     }
+    m_startTimeout.stop();
     m_active = true;
+    m_restarting = false;
     qInfo() << "galleond: screensaver on";
     Q_EMIT activeChanged(true);
 }
 
+void ScreensaverController::onStartFailed(const QString &reason)
+{
+    if (!isStarting())
+        return;
+    qWarning().noquote() << "galleond: FFmpeg did not start (" << reason << "): the screensaver stays off";
+    abandonStart(true);
+}
+
+// Ends a launch that will not become the screensaver (failed, late, cancelled by an input or a track).
+// A restart was already announced as "on": its end is announced here, once the state is consistent.
+void ScreensaverController::abandonStart(bool giveUp)
+{
+    const bool wasAnnounced = announcedActive();
+    stop(false);
+    m_restarting = false;
+    m_giveUp = giveUp;
+    if (wasAnnounced)
+        Q_EMIT activeChanged(false);
+    restartIdleTimer();
+}
+
 void ScreensaverController::stop(bool wait)
 {
+    m_startTimeout.stop();
     if (!m_process)
         return;
     QProcess *process = m_process;
@@ -235,6 +277,10 @@ void ScreensaverController::stop(bool wait)
 
 void ScreensaverController::wake()
 {
+    if (isStarting()) { // an input before the decoder is up: no screensaver this time
+        abandonStart(m_giveUp);
+        return;
+    }
     if (!m_active)
         return;
     m_active = false;
@@ -303,16 +349,18 @@ void ScreensaverController::onFinished(int exitCode, QProcess::ExitStatus status
     process->deleteLater();
     // With -stream_loop the video does not end: a stop is a failure. Try a few
     // times, then give up until the next use.
-    if (m_active && ++m_restarts <= MaxRestarts && !m_playing.isEmpty()) {
-        m_active = false; // start() sets it and announces it again
-        start();
-        if (m_active)
-            return;
+    const bool wasAnnounced = announcedActive();
+    if (wasAnnounced && ++m_restarts <= MaxRestarts && !m_playing.isEmpty()) {
+        m_active = false; // onStarted() sets it again; until then the others still see it as on
+        m_restarting = true;
+        if (start())
+            return; // launched: its own started()/failure signal ends the restart, even if it already came
+        m_restarting = false;
     }
-    const bool wasActive = m_active;
     m_active = false;
+    m_restarting = false;
     m_giveUp = true;
-    if (wasActive || m_restarts > 0)
+    if (wasAnnounced || m_restarts > 0)
         Q_EMIT activeChanged(false);
     restartIdleTimer();
 }

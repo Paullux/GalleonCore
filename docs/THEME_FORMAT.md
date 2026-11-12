@@ -57,13 +57,19 @@ A downloaded theme must not be able to run anything by itself. Allowed actions:
 - `page` pointing to the theme's own page only;
 - `key`: a key of the fixed list (numeric keypad, Num Lock, Backspace, F13 to F24; prefer F14 to F18 for a shortcut: on Linux they are the launch keys XF86Launch5 to 9, with no default action, whereas F13 opens System Settings on KDE, F20 toggles the microphone and F19 and F24 have no name at all, so an application cannot bind them. In KDE's shortcut settings they appear as "Launch (5)" to "Launch (9)": record the key there by pressing it);
 - `steam`: a Steam game by its number;
-- `app`: an application named by its **desktop file ID** (`firefox.desktop`), never by a path.
+- `app`: an application named by its **desktop file ID** (`firefox.desktop`), never by a path, or by a **portable application id** (see below).
 
 Refused: shell commands, URLs, absolute paths, other pages, switching themes, Steam or menu auto-fill, any field the format does not list.
 
 ### One application, several installations
 
 The same program has a different desktop file ID depending on how it was installed (deb, Flatpak, Snap). An `app` action may list `alternatives` (up to 6 other IDs). Installing the theme picks the first ID, `desktop` then each alternative in order, that exists on the machine.
+
+### Naming an application across Linux and Windows
+
+A desktop file ID only means anything on Linux: Windows has no equivalent a theme author could write down, since an installed application is a Start Menu shortcut or registry entry whose path is specific to one machine. For the handful of applications worth naming portably (`daemon/WellKnownApps.h`), `desktop` (or an entry of `alternatives`) may instead be a short lowercase id such as `discord` — never ending in `.desktop`, so the two forms can never be confused.
+
+At install time this id is resolved locally and replaced by whatever the installing machine actually has: a literal desktop file ID on Linux (through the same mechanism as `alternatives`), or, on Windows, a Start Menu shortcut found by matching the target's own vendor-set `ProductName`/`CompanyName` (from its version information) and executable name — never by guessing from a display name, which a user's language or a renamed shortcut would change. An id the installing machine cannot find behaves like an uninstalled `alternatives` entry: the key is kept, inert, with a warning, never a reason to refuse the whole theme. Exporting a theme does the reverse: an `app` key whose application is recognized this way is written back as the portable id, so the same exported file installs on both systems.
 
 ## Installing
 

@@ -23,21 +23,25 @@ constexpr auto PollInterval = std::chrono::milliseconds(1);
 // the request and waits for a reply whose echoed command matches. Never matches a stale answer.
 std::optional<PropertyReply> exchange(Transport &transport, std::span<const std::uint8_t> request,
                                        std::uint8_t expectedCommand, std::chrono::milliseconds timeout,
-                                       bool *disconnected, bool *writeFailed)
+                                       LinkError *failure)
 {
     std::array<std::uint8_t, ReadBufferSize> buffer{};
-    for (int i = 0; i < MaxStaleReports; ++i) {
+    bool drained = false;
+    for (int i = 0; i < MaxStaleReports && !drained; ++i) {
         const int n = transport.read(buffer);
         if (n < 0) {
-            *disconnected = true;
+            *failure = LinkError::Disconnected;
             return std::nullopt;
         }
-        if (n == 0)
-            break;
+        drained = n == 0;
+    }
+    if (!drained) { // never saw an empty queue: the next report could be an old answer, so send nothing
+        *failure = LinkError::StaleReports;
+        return std::nullopt;
     }
 
     if (!transport.write(request)) {
-        *writeFailed = true;
+        *failure = LinkError::WriteFailed;
         return std::nullopt;
     }
 
@@ -45,7 +49,7 @@ std::optional<PropertyReply> exchange(Transport &transport, std::span<const std:
     while (std::chrono::steady_clock::now() < deadline) {
         const int n = transport.read(buffer);
         if (n < 0) {
-            *disconnected = true;
+            *failure = LinkError::Disconnected;
             return std::nullopt;
         }
         if (n == 0) {
@@ -64,23 +68,17 @@ std::optional<PropertyReply> exchange(Transport &transport, std::span<const std:
 ReadResult readBrightness(Transport &transport, std::chrono::milliseconds timeout)
 {
     ReadResult result;
-    bool disconnected = false;
-    bool writeFailed = false;
-    const auto reply = exchange(transport, getPropertyRequest(PropertyBrightness), CommandGet, timeout, &disconnected,
-                                 &writeFailed);
-    if (writeFailed) {
-        result.error = LinkError::WriteFailed;
-        return result;
-    }
-    if (disconnected) {
-        result.error = LinkError::Disconnected;
-        return result;
-    }
+    LinkError failure = LinkError::Timeout;
+    const auto reply = exchange(transport, getPropertyRequest(PropertyBrightness), CommandGet, timeout, &failure);
     if (!reply) {
-        result.error = LinkError::Timeout;
+        result.error = failure;
         return result;
     }
     result.status = reply->status;
+    if (reply->value > BrightnessMax) { // checked on the 32-bit value, before it is narrowed
+        result.error = LinkError::InvalidReply;
+        return result;
+    }
     result.value = static_cast<std::uint16_t>(reply->value);
     return result;
 }
@@ -93,20 +91,10 @@ WriteResult writeBrightness(Transport &transport, std::uint16_t value, std::chro
         return result;
     }
 
-    bool disconnected = false;
-    bool writeFailed = false;
-    const auto echo = exchange(transport, setPropertyRequest(PropertyBrightness, value), CommandSet, timeout,
-                                &disconnected, &writeFailed);
-    if (writeFailed) {
-        result.error = LinkError::WriteFailed;
-        return result;
-    }
-    if (disconnected) {
-        result.error = LinkError::Disconnected;
-        return result;
-    }
+    LinkError failure = LinkError::Timeout;
+    const auto echo = exchange(transport, setPropertyRequest(PropertyBrightness, value), CommandSet, timeout, &failure);
     if (!echo) {
-        result.error = LinkError::Timeout;
+        result.error = failure;
         return result;
     }
     // The echo's status is kept for diagnostics but does not by itself decide success: the
@@ -136,6 +124,8 @@ const char *describe(LinkError error)
     case LinkError::Disconnected: return "device gone";
     case LinkError::Timeout: return "no answer in time";
     case LinkError::Unconfirmed: return "the read-back value does not match what was written";
+    case LinkError::StaleReports: return "the keyboard kept sending old reports: nothing was sent";
+    case LinkError::InvalidReply: return "the keyboard answered a brightness outside 0..1000";
     }
     return "unknown";
 }

@@ -52,6 +52,15 @@ function Wait-ApplicationsReady([int]$TimeoutSeconds = 60, [scriptblock]$Probe =
 # console and in setup-app-daemons.log (uploaded with the other setup logs). It never
 # changes whether the test passes; it tells apart a daemon started twice from a second
 # daemon that is still exiting when the processes are counted.
+# galleond also runs a short, isolated "--launcher-info" child to read launcher
+# metadata before taking its instance lock or opening HID (GameInstallations::scanMetadata,
+# see daemon/main.cpp); it shares the same executable path as the real daemon, so a
+# path-only filter can count it as a second daemon while it is still exiting.
+function Get-RunningDaemons {
+    $candidates = @(Get-CimInstance Win32_Process -Filter "Name = 'galleond.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.ExecutablePath -eq (Join-Path $root 'bin/galleond.exe') -and $_.CommandLine -notlike '*--launcher-info*' })
+    @($candidates | ForEach-Object { Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue } | Where-Object { $_ })
+}
 function Write-DaemonReport([string]$When, $Bosun) {
     $lines = @("galleond processes $When (Bosun pid $($Bosun.Id)):")
     $found = @(Get-CimInstance Win32_Process -Filter "Name = 'galleond.exe'" -ErrorAction SilentlyContinue)
@@ -110,10 +119,10 @@ try {
     $bosun = Start-LoggedApplication 'galleon-bosun' '--minimized'
     $script:processes = @($bosun)
     $ready = Wait-ApplicationsReady
-    $daemon = @(Get-Process galleond -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq (Join-Path $root 'bin/galleond.exe') })
-    $script:processes += $daemon
+    $daemon = Get-RunningDaemons
     Write-DaemonReport 'when counted' $bosun
-    if ($daemon.Count -ne 1) { Start-Sleep -Seconds 3; Write-DaemonReport '3 seconds later' $bosun }
+    if ($daemon.Count -ne 1) { Start-Sleep -Seconds 3; Write-DaemonReport '3 seconds later' $bosun; $daemon = Get-RunningDaemons }
+    $script:processes += $daemon
     if (-not $ready -or $daemon.Count -ne 1) {
         throw "Bosun did not automatically start one installed daemon (ready: $ready, installed daemons: $($daemon.Count))."
     }
