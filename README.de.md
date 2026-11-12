@@ -138,7 +138,7 @@ openrgb-plugin/    OpenRGB-Plugin für die Drehregler-Ringe
 
 Weil das Protokoll frei von E/A ist, lässt sich jedes Byteformat ohne die Tastatur per Unit-Test prüfen und fuzzen.
 
-Der RGB-Controller selbst liegt nicht hier: Er wird in einem Fork von OpenRGB entwickelt und als Merge Request für den `CorsairPeripheralV2Controller` vorgeschlagen, damit jeder OpenRGB-Nutzer davon profitiert.
+Die eigene RGB-Unterstützung von GalleonCore (Drehregler-Ringe, danach RGB pro Taste) wird hier mit eigenem Code geschrieben, nach der öffentlichen HID-LampArray-Spezifikation und eigenen Aufzeichnungen, nicht als OpenRGB-Fork. Das OpenRGB-Plugin bleibt eine separate, bestehende Integration.
 
 ## Bauen
 

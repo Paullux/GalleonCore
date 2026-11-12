@@ -19,7 +19,7 @@ Project status and next steps: `ROADMAP.md` at the root (French). Read it at the
 - `tests/` Qt Test, `fuzz/` libFuzzer targets for the protocol layer.
 - `docs/protocol/` protocol notes and USB captures.
 - `data/devices/` device descriptions (screen size, key size and gaps in mm, measured throughput). `null` until measured: never fill a value without a measurement or a cited source.
-- RGB controller is NOT developed here: it goes to a fork of OpenRGB (`Controllers/CorsairPeripheralV2Controller/`).
+- All RGB work (dial rings, keyboard lighting) is developed here with GalleonCore's own code, from the public HID LampArray specification and our own captures. No OpenRGB code is reused, and no RGB driver goes to an OpenRGB fork (decision of 2026-11-12). `openrgb-plugin/` stays as an existing, separate integration, not the path forward. The safety rules below still apply to every RGB write.
 
 ## Rules
 - **All external data is untrusted until fully validated**: HID reports from the device, image and video files imported by the user, configuration files. Validate the length, then the values (report ID, key index 0..11, plausible dial steps), then the sequence (no release without a press, no unexpected report in the middle of a transfer). A device claiming `1b1c:2b18` is not proof the reports are well formed. Invalid input is dropped and logged, never trusted, never a crash.

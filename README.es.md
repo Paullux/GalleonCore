@@ -138,7 +138,7 @@ openrgb-plugin/    Complemento de OpenRGB para los anillos de los diales
 
 Al mantener el protocolo libre de E/S, cada formato de bytes se puede probar con pruebas unitarias y fuzzing sin el teclado.
 
-El controlador RGB en sí no vive aquí: se desarrollará en un fork de OpenRGB y se propondrá como merge request al `CorsairPeripheralV2Controller`, para que todos los usuarios de OpenRGB se beneficien.
+El soporte RGB propio de GalleonCore (anillos de los diales, luego RGB por tecla) se escribirá aquí con código propio, a partir de la especificación pública HID LampArray y de nuestras propias capturas, no como un fork de OpenRGB. El complemento de OpenRGB sigue siendo una integración aparte y existente.
 
 ## Compilación
 

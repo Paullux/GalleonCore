@@ -41,9 +41,10 @@ add_library(galleond_core STATIC
     ScreensaverController.h ScreensaverController.cpp
     MatrixTrigger.h MatrixTrigger.cpp
     MatrixRainController.h MatrixRainController.cpp
+    KeyboardController.h KeyboardController.cpp
 )
 target_include_directories(galleond_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(galleond_core PUBLIC galleon galleon_media galleon_keys galleon_platform Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::Network Qt6::WebSockets PRIVATE galleon_warnings)
+target_link_libraries(galleond_core PUBLIC galleon galleon_keyboard galleon_media galleon_keys galleon_platform Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::Network Qt6::WebSockets PRIVATE galleon_warnings)
 if(WIN32)
     target_sources(galleond_core PRIVATE WindowsDesktopEntries.cpp)
     target_link_libraries(galleond_core PUBLIC galleon_smtc PRIVATE shell32 ole32 uuid advapi32 user32 version)

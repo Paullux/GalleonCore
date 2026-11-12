@@ -337,6 +337,7 @@
   "Theme installed as a new tab.": "Thème installé dans un nouvel onglet.",
   "Or install a theme": "Ou installer un thème",
   "A theme file (.gctheme) adds a tab with its keys. It is checked completely first; nothing of yours is replaced. Only install themes from people you trust.": "Un fichier de thème (.gctheme) ajoute un onglet avec ses touches. Il est d’abord vérifié en entier ; rien de ce qui est à vous n’est remplacé. N’installez que des thèmes de personnes de confiance.",
+  "Find themes on the website": "Trouver des thèmes sur le site",
   "Install a theme file…": "Installer un fichier de thème…",
   "✓ Use its dial settings too": "✓ Utiliser aussi ses réglages des molettes",
   "Use its dial settings too": "Utiliser aussi ses réglages des molettes",
@@ -618,5 +619,16 @@
   "this video is already in the list": "Cette vidéo est déjà dans la liste",
   "'%1' is not a desktop file name (such as firefox.desktop)": "« %1 » n’est pas un nom de fichier desktop (comme firefox.desktop)",
   "no application named '%1'": "Aucune application nommée « %1 »",
-  "a key does one of: %1": "Une touche accepte l’une des actions : %1"
+  "a key does one of: %1": "Une touche accepte l’une des actions : %1",
+  "Keyboard brightness": "Luminosité du clavier",
+  "not set from this window yet": "pas encore réglée depuis cette fenêtre",
+  "%1 %": "%1 %",
+  "Corsair keyboard · brightness": "Clavier Corsair · luminosité",
+  "The brightness of the keyboard's own lighting, in steps of 10 %. galleond writes it when you let go of the slider.": "La luminosité de l’éclairage du clavier lui-même, par pas de 10 %. galleond l’écrit quand vous relâchez le curseur.",
+  "Keyboard brightness sent to galleond: %1 %": "Luminosité du clavier envoyée à galleond : %1 %",
+  "The keyboard keeps this value when it is unplugged, as it does for the Web Hub. The slider shows what was set from here: it cannot read the keyboard yet. Close the Web Hub first, or its own answers may hide this one.": "Le clavier garde cette valeur une fois débranché, comme avec le Web Hub. Le curseur montre ce qui a été réglé d’ici : il ne sait pas encore lire le clavier. Fermez d’abord le Web Hub, sinon ses propres réponses peuvent masquer celle-ci.",
+  "Start galleond (above) to change the brightness: this window never talks to the keyboard itself.": "Démarrez galleond (ci-dessus) pour changer la luminosité : cette fenêtre ne parle jamais au clavier elle-même.",
+  "Start galleond to change the keyboard brightness": "Démarrez galleond pour changer la luminosité du clavier",
+  "Cannot set the keyboard brightness: restart the updated daemon (%1)": "Impossible de régler la luminosité du clavier : redémarrez le démon à jour (%1)",
+  "The keyboard brightness was refused (steps of 10 % from 0 to 100)": "La luminosité du clavier a été refusée (pas de 10 % de 0 à 100)"
 }

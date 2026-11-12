@@ -411,6 +411,36 @@ Window {
             color: "white"
             font.pixelSize: 16
             font.bold: true
+            text: qsTr("Corsair keyboard · brightness")
+        }
+        Text {
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: "#c9ced6"
+            font.pixelSize: 14
+            text: qsTr("The brightness of the keyboard's own lighting, in steps of 10 %. galleond writes it when you let go of the slider.")
+        }
+        BrightnessSlider {
+            objectName: "keyboardBrightness"
+            width: Math.min(parent.width, 560)
+            enabledLook: win.daemon.running
+            onCommitted: value => win.answered(win.daemon.setKeyboardBrightness(value),
+                                               qsTr("Keyboard brightness sent to galleond: %1 %").arg(value / 10))
+        }
+        Text {
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: "#9aa0a6"
+            font.pixelSize: 13
+            text: win.daemon.running
+                  ? qsTr("The keyboard keeps this value when it is unplugged, as it does for the Web Hub. The slider shows what was set from here: it cannot read the keyboard yet. Close the Web Hub first, or its own answers may hide this one.")
+                  : qsTr("Start galleond (above) to change the brightness: this window never talks to the keyboard itself.")
+        }
+        Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+        Text {
+            color: "white"
+            font.pixelSize: 16
+            font.bold: true
             text: qsTr("Corsair keyboard · lighting and keys")
         }
         Text {

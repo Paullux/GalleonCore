@@ -50,6 +50,16 @@ std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
             return std::nullopt;
         return LocalCommand{LocalAction::Theme, {}, page.toString()};
     }
+    if (object.size() == 2 && action == QStringLiteral("keyboard-brightness")) {
+        // A whole number from 0 to 1000 (a JSON 3.5 or "3" is refused); the keyboard component applies its own policy.
+        const QJsonValue value = object.value(QStringLiteral("value"));
+        if (!value.isDouble())
+            return std::nullopt;
+        const double number = value.toDouble();
+        if (number < 0.0 || number > 1000.0 || number != static_cast<int>(number))
+            return std::nullopt;
+        return LocalCommand{LocalAction::KeyboardBrightness, {}, {}, static_cast<int>(number)};
+    }
     if (object.size() == 1 && action == QStringLiteral("stop"))
         return LocalCommand{LocalAction::Stop, {}, {}};
     if (object.size() != 2 || action != QStringLiteral("wallpaper"))
@@ -73,6 +83,10 @@ QByteArray encodeLocalCommand(const LocalCommand &command)
     case LocalAction::Theme:
         object.insert(QStringLiteral("action"), QStringLiteral("theme"));
         object.insert(QStringLiteral("page"), command.page);
+        break;
+    case LocalAction::KeyboardBrightness:
+        object.insert(QStringLiteral("action"), QStringLiteral("keyboard-brightness"));
+        object.insert(QStringLiteral("value"), command.brightness);
         break;
     case LocalAction::Stop: object.insert(QStringLiteral("action"), QStringLiteral("stop")); break;
     case LocalAction::Wallpaper:
@@ -194,6 +208,7 @@ void LocalControl::acceptConnections()
             case LocalAction::Ping: break;
             case LocalAction::Wallpaper: Q_EMIT wallpaperRequested(command->wallpaper); break;
             case LocalAction::Theme: Q_EMIT themeRequested(command->page); break;
+            case LocalAction::KeyboardBrightness: Q_EMIT keyboardBrightnessRequested(command->brightness); break;
             case LocalAction::Stop: Q_EMIT stopRequested(); break;
             }
         };

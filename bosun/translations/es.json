@@ -337,6 +337,7 @@
   "Theme installed as a new tab.": "Tema instalado en una pestaña nueva.",
   "Or install a theme": "O instalar un tema",
   "A theme file (.gctheme) adds a tab with its keys. It is checked completely first; nothing of yours is replaced. Only install themes from people you trust.": "Un archivo de tema (.gctheme) añade una pestaña con sus teclas. Primero se comprueba por completo; nada de lo suyo se sustituye. Instale solo temas de personas de confianza.",
+  "Find themes on the website": "Buscar temas en el sitio web",
   "Install a theme file…": "Instalar un archivo de tema…",
   "✓ Use its dial settings too": "✓ Usar también sus ajustes de los diales",
   "Use its dial settings too": "Usar también sus ajustes de los diales",
@@ -618,5 +619,16 @@
   "this video is already in the list": "Este vídeo ya está en la lista",
   "'%1' is not a desktop file name (such as firefox.desktop)": "«%1» no es un nombre de archivo desktop (como firefox.desktop)",
   "no application named '%1'": "No hay ninguna aplicación llamada «%1»",
-  "a key does one of: %1": "Una tecla admite una de estas acciones: %1"
+  "a key does one of: %1": "Una tecla admite una de estas acciones: %1",
+  "Keyboard brightness": "Brillo del teclado",
+  "not set from this window yet": "aún no ajustado desde esta ventana",
+  "%1 %": "%1 %",
+  "Corsair keyboard · brightness": "Teclado Corsair · brillo",
+  "The brightness of the keyboard's own lighting, in steps of 10 %. galleond writes it when you let go of the slider.": "El brillo de la iluminación del propio teclado, en pasos del 10 %. galleond lo escribe al soltar el control deslizante.",
+  "Keyboard brightness sent to galleond: %1 %": "Brillo del teclado enviado a galleond: %1 %",
+  "The keyboard keeps this value when it is unplugged, as it does for the Web Hub. The slider shows what was set from here: it cannot read the keyboard yet. Close the Web Hub first, or its own answers may hide this one.": "El teclado conserva este valor al desenchufarlo, como con el Web Hub. El control muestra lo que se ajustó desde aquí: aún no sabe leer el teclado. Cierre antes el Web Hub, o sus propias respuestas pueden ocultar esta.",
+  "Start galleond (above) to change the brightness: this window never talks to the keyboard itself.": "Inicie galleond (arriba) para cambiar el brillo: esta ventana nunca habla con el teclado por sí misma.",
+  "Start galleond to change the keyboard brightness": "Inicie galleond para cambiar el brillo del teclado",
+  "Cannot set the keyboard brightness: restart the updated daemon (%1)": "No se puede ajustar el brillo del teclado: reinicie el daemon actualizado (%1)",
+  "The keyboard brightness was refused (steps of 10 % from 0 to 100)": "Se rechazó el brillo del teclado (pasos del 10 % de 0 a 100)"
 }
