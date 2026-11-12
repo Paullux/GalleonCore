@@ -470,6 +470,30 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
     }
 
+    void aDecoderThatStopsIsRestartedWithoutLeavingTheScreensaver()
+    {
+        Fixture f;
+        // The first run writes one frame and exits (a crash); the next ones loop like the normal stand-in.
+        QFile script(f.dir.filePath("dying-ffmpeg"));
+        QVERIFY(script.open(QIODevice::WriteOnly));
+        script.write("#!/bin/sh\necho x >> '" + f.dir.filePath("runs.log").toUtf8() + "'\n"
+                     "if [ \"$(wc -l < '" + f.dir.filePath("runs.log").toUtf8() + "')\" -le 1 ]; then cat '"
+                     + f.dir.filePath("frame.raw").toUtf8() + "'; sleep 0.3; exit 1; fi\n"
+                     "while :; do cat '" + f.dir.filePath("frame.raw").toUtf8() + "'; sleep 0.05; done\n");
+        script.setPermissions(script.permissions() | QFileDevice::ExeOwner | QFileDevice::ExeUser);
+        script.close();
+        f.controller->setFfmpegProgram(f.dir.filePath("dying-ffmpeg"));
+        QSignalSpy active(f.controller.get(), &ScreensaverController::activeChanged);
+        f.configure(f.config);
+        f.controller->setIdleTimeoutMs(100);
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(QFile(f.dir.filePath("runs.log")).size() >= 4, 5000); // it ran twice: the restart happened
+        QTest::qWait(300);
+        QVERIFY(f.controller->isActive()); // still on with the new decoder
+        for (const QList<QVariant> &signal : std::as_const(active))
+            QVERIFY2(signal.at(0).toBool(), "the module was told the screensaver ended during a restart");
+    }
+
     void aFailingFfmpegGivesUpAndLeavesTheNormalScreen()
     {
         Fixture f;
