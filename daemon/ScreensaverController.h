@@ -78,6 +78,7 @@ private:
     void onFinished(int exitCode, QProcess::ExitStatus status);
     void onStarted();
     void onStartFailed(const QString &reason);
+    void abandonStart(bool giveUp);
     [[nodiscard]] bool isStarting() const { return m_process && !m_active; }
     // What the other controllers were last told: active, or a restart that has not announced its end.
     [[nodiscard]] bool announcedActive() const { return m_active || m_restarting; }
