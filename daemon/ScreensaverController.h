@@ -70,7 +70,8 @@ Q_SIGNALS:
 
 private:
     void onIdle();
-    void start();
+    // True when a decoder was launched (it may already be running, or still starting).
+    bool start();
     void stop(bool wait = true);
     void restartIdleTimer();
     void onReadyRead();
@@ -78,6 +79,8 @@ private:
     void onStarted();
     void onStartFailed(const QString &reason);
     [[nodiscard]] bool isStarting() const { return m_process && !m_active; }
+    // What the other controllers were last told: active, or a restart that has not announced its end.
+    [[nodiscard]] bool announcedActive() const { return m_active || m_restarting; }
     void showFrame(const QByteArray &rgb);
     [[nodiscard]] QString resolveVideo(const QString &configured) const { return resolveVideoPath(configured, m_baseFolder); }
     void wake();
@@ -98,6 +101,7 @@ private:
     QByteArray m_buffer;
     qint64 m_frameBytes = 0;
     bool m_active = false;
+    bool m_restarting = false; // the decoder stopped while active and a new one is starting: still "on" for the others
     bool m_inhibited = false;
     QElapsedTimer m_sinceShown; // since the last frame was sent
     qint64 m_lastCostMs = 0;    // what sending it took

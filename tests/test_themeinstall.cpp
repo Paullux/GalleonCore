@@ -10,6 +10,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -156,6 +157,22 @@ private Q_SLOTS:
         ThemeInstallContext c = context();
         c.existingWallpaperStyles = {QStringLiteral("DISCORD")};
         QCOMPARE(planThemeInstall(package(true), c).wallpaperStyle, QStringLiteral("discord-2"));
+    }
+
+    void aPathTakenByAnEntryThePlanCannotSeeIsNotReplaced()
+    {
+        // A dangling link is not listed as a file, so the plan picks its name; creating the picture must still fail.
+        const QTemporaryDir dir;
+        const QString themeFile = dir.filePath(QStringLiteral("d.gctheme"));
+        QVERIFY(writeThemeFile(themeFile, package(), false));
+        const QString link = dir.filePath(QStringLiteral("discord-mute.png"));
+        if (!QFile::link(dir.filePath(QStringLiteral("nowhere")), link))
+            QSKIP("this system cannot make a link");
+        const QString pagesFile = dir.filePath(QStringLiteral("pages.json"));
+        const ThemeInstallResult result = installTheme({themeFile, pagesFile, dir.filePath(QStringLiteral("wall")), false});
+        QVERIFY(!result.ok);
+        QVERIFY(!QFile::exists(dir.filePath(QStringLiteral("nowhere")))); // nothing was written through the link
+        QVERIFY(QFileInfo(link).isSymLink());                              // and the entry is still there
     }
 
     void aThemeNameThatIsTakenGetsANumber()
