@@ -336,6 +336,12 @@ Cinq défauts relevés par un audit externe, vérifiés dans le code avant corre
 - **Import sur volume insensible à la casse (Windows)** : noms d'icônes et de dossiers de fonds comparés sans tenir compte de la casse, et un fichier existant n'est jamais remplacé, donc un échec d'écriture de `pages.json` ne supprime plus un fichier de l'utilisateur (`test_themeinstall` pour le choix des noms ; pas de test d'écriture réelle sur volume Windows).
 - **Outil de luminosité** : une file jamais vidée pendant la purge (`StaleReports`, rien n'est envoyé) et une réponse hors 0..1000 (`InvalidReply`, au lieu d'une troncature à 16 bits : 65 578 se lisait 42) sont refusées (`test_keyboardlink`).
 
+**Suites de la relecture (PR #98 fusionnée, PR #99 en brouillon)** :
+
+- Relance de FFmpeg : `start()` indique si un décodeur a été lancé et la relance a son propre drapeau (`m_restarting`), donc le résultat ne dépend plus de l'ordre de `started()` (Qt sous Windows peut l'émettre avant le retour de `start()`). Une relance qui échoue, expire ou est annulée par une touche annonce maintenant la fin de la veille (`activeChanged(false)`). Le test de relance passait déjà avant le correctif : l'ordre des signaux sous Windows n'a pas pu être reproduit sous Linux, et aucun test ne couvre une relance qui échoue en asynchrone.
+- Création des images d'un thème avec `QIODevice::NewOnly` (plus de trou entre la vérification et l'écriture ; un lien symbolique pendant n'est pas suivi). Test : `aPathTakenByAnEntryThePlanCannotSeeIsNotReplaced`.
+- PR #99 : une piste qui démarre pendant le lancement du décodeur n'allume plus la veille quand `whilePlaying` est faux (`onStarted()` relit l'état du média ; nettoyage commun `abandonStart()`). Test avec un faux lecteur, vu en échec sans le correctif.
+
 Validation : CI GitHub verte et `tools/check.py full` réussi (Docker, Ubuntu 24.04) sur l'arbre fusionné. **Non vérifié** : sous Windows (démarrage de FFmpeg, import sur volume NTFS) et sur le module / le clavier réels (outil de luminosité) ; à confirmer par le propriétaire avant de classer ces points « sur le module ».
 
 ### Onglets Bosun à largeur adaptative — 31 octobre 2026
