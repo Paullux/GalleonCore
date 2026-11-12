@@ -456,6 +456,20 @@ private Q_SLOTS:
         QVERIFY(f.controller->isActive());
     }
 
+    void reconfiguringWhileActiveLetsTheNewScreensaverStartByItself()
+    {
+        Fixture f;
+        f.configure(f.config);
+        f.controller->setIdleTimeoutMs(100);
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        ScreensaverConfig other = f.config;
+        other.idleMinutes = f.config.idleMinutes + 1;
+        f.configure(other);
+        QVERIFY(!f.controller->isActive()); // the decoder is stopped: the state must say so
+        f.controller->setIdleTimeoutMs(100);
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+    }
+
     void aFailingFfmpegGivesUpAndLeavesTheNormalScreen()
     {
         Fixture f;

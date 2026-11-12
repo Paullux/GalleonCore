@@ -57,6 +57,7 @@ void ScreensaverController::setConfig(const ScreensaverConfig &config, const QSt
         return;
     const bool wasActive = m_active;
     stop();
+    m_active = false; // stop() only ends the decoder: the idle timer must be able to start the new screensaver
     m_config = config;
     m_baseFolder = baseFolder;
     m_giveUp = false;

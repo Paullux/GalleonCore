@@ -84,6 +84,25 @@ QString chooseDesktop(const QString &first, const QStringList &alternatives, con
     return first;
 }
 
+// A dial's turn or press that opens the package's own page follows the page's new name, like a key does.
+QJsonObject remappedDials(const QJsonObject &dials, const QString &ownId, const QString &newPage)
+{
+    QJsonObject result = dials;
+    for (auto dial = result.begin(); dial != result.end(); ++dial) {
+        QJsonObject config = dial.value().toObject();
+        for (const QString &gesture : {QStringLiteral("turn"), QStringLiteral("press")}) {
+            QJsonObject action = config.value(gesture).toObject();
+            if (action.value(QStringLiteral("type")).toString() == QLatin1String("page")
+                && action.value(QStringLiteral("page")).toString() == ownId) {
+                action.insert(QStringLiteral("page"), newPage);
+                config.insert(gesture, action);
+            }
+        }
+        dial.value() = config;
+    }
+    return result;
+}
+
 QString hex(std::uint32_t rgb)
 {
     return QStringLiteral("#%1").arg(rgb & 0xFFFFFFU, 6, 16, QLatin1Char('0'));
@@ -144,7 +163,7 @@ ThemeInstallPlan planThemeInstall(const ThemePackage &package, const ThemeInstal
     plan.pageObject = QJsonObject{{QStringLiteral("keys"), keys}};
     plan.iconFiles = renamer.files;
     if (context.applyDials)
-        plan.dials = package.dialsJson;
+        plan.dials = remappedDials(package.dialsJson, package.meta.id, plan.page);
 
     if (!package.wallpapers.empty()) {
         plan.wallpaperStyle = uniqueName(plan.page, context.existingWallpaperStyles, 40, QStringLiteral("-"));
