@@ -77,8 +77,14 @@ ThemeInstallContext contextFor(const ThemeInstallOptions &options)
     return context;
 }
 
+// Creates a new file: an existing one (whatever the case on a case-insensitive volume) is never replaced,
+// so a failed install can take away only what it made.
 bool writeFile(const QString &path, const QByteArray &data, QString &problem)
 {
+    if (QFileInfo::exists(path)) {
+        problem = QStringLiteral("%1 already exists: it is not replaced").arg(path);
+        return false;
+    }
     QSaveFile out(path);
     if (!out.open(QIODevice::WriteOnly)) {
         problem = QStringLiteral("cannot write %1: %2").arg(path, out.errorString());

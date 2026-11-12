@@ -57,6 +57,7 @@ struct ThemeInstallPlan
 [[nodiscard]] ThemeInstallPlan planThemeInstall(const ThemePackage &package, const ThemeInstallContext &context);
 
 // `base` made unique among `taken` by a number at the end, keeping to `maxLength`.
-[[nodiscard]] QString uniqueName(const QString &base, const QStringList &taken, int maxLength, const QString &separator);
+[[nodiscard]] QString uniqueName(const QString &base, const QStringList &taken, int maxLength, const QString &separator,
+                                     Qt::CaseSensitivity sensitivity = Qt::CaseSensitive);
 
 } // namespace galleond

@@ -57,9 +57,9 @@ QJsonObject manifest()
     };
 }
 
-ThemePackage package(bool wallpaper = false)
+ThemePackage package(bool wallpaper = false, const QJsonObject &base = manifest())
 {
-    std::vector<ZipEntry> entries{{QStringLiteral("theme.json"), QJsonDocument(manifest()).toJson(QJsonDocument::Compact)},
+    std::vector<ZipEntry> entries{{QStringLiteral("theme.json"), QJsonDocument(base).toJson(QJsonDocument::Compact)},
                                   {QStringLiteral("icons/mute.png"), pngHeader()}};
     if (wallpaper) {
         entries.push_back({QStringLiteral("wallpapers/a.jpg"), jpegHeader()});
@@ -143,6 +143,21 @@ private Q_SLOTS:
         QVERIFY(!c.existingIconFiles.contains(plan.iconFiles.front().name));
     }
 
+    void aPictureFileThatDiffersOnlyByCaseIsNotReplaced()
+    {
+        ThemeInstallContext c = context();
+        c.existingIconFiles = {QStringLiteral("Discord-Mute.PNG")}; // the same file on a Windows volume
+        const ThemeInstallPlan plan = planThemeInstall(package(), c);
+        QCOMPARE(plan.iconFiles.front().name, QStringLiteral("discord-mute-2.png"));
+    }
+
+    void aWallpaperFolderThatDiffersOnlyByCaseIsNotReused()
+    {
+        ThemeInstallContext c = context();
+        c.existingWallpaperStyles = {QStringLiteral("DISCORD")};
+        QCOMPARE(planThemeInstall(package(true), c).wallpaperStyle, QStringLiteral("discord-2"));
+    }
+
     void aThemeNameThatIsTakenGetsANumber()
     {
         ThemeInstallContext c = context();
@@ -157,6 +172,18 @@ private Q_SLOTS:
         const ThemeInstallPlan plan = planThemeInstall(package(), c);
         const QJsonObject action = plan.pageObject.value(QStringLiteral("keys")).toArray().at(2).toObject().value(QStringLiteral("action")).toObject();
         QCOMPARE(action.value(QStringLiteral("page")).toString(), QStringLiteral("discord-2"));
+    }
+
+    void aDialActionOpeningTheOwnPageFollowsTheNewPageName()
+    {
+        QJsonObject m = manifest();
+        m["dials"] = QJsonObject{{"0", QJsonObject{{"press", QJsonObject{{"type", "page"}, {"page", "discord"}}}}}};
+        ThemeInstallContext c = context();
+        c.applyDials = true;
+        c.existingPages.push_back(QStringLiteral("discord"));
+        const ThemeInstallPlan plan = planThemeInstall(package(false, m), c);
+        const QJsonObject press = plan.dials.value("0").toObject().value("press").toObject();
+        QCOMPARE(press.value("page").toString(), QStringLiteral("discord-2"));
     }
 
     void theInstalledAlternativeIsChosen()

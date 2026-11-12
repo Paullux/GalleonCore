@@ -24,7 +24,7 @@ QString uniqueFileName(const QString &name, const QStringList &taken, int maxLen
         const QString suffix = n == 1 ? QString() : QLatin1Char('-') + QString::number(n);
         const int room = maxLength - static_cast<int>(extension.size()) - static_cast<int>(suffix.size());
         const QString candidate = stem.left(room) + suffix + extension;
-        if (!taken.contains(candidate))
+        if (!taken.contains(candidate, Qt::CaseInsensitive)) // Windows volumes ignore case: A.png is a.png
             return candidate;
     }
     return name.left(maxLength);
@@ -84,6 +84,25 @@ QString chooseDesktop(const QString &first, const QStringList &alternatives, con
     return first;
 }
 
+// A dial's turn or press that opens the package's own page follows the page's new name, like a key does.
+QJsonObject remappedDials(const QJsonObject &dials, const QString &ownId, const QString &newPage)
+{
+    QJsonObject result = dials;
+    for (auto dial = result.begin(); dial != result.end(); ++dial) {
+        QJsonObject config = dial.value().toObject();
+        for (const QString &gesture : {QStringLiteral("turn"), QStringLiteral("press")}) {
+            QJsonObject action = config.value(gesture).toObject();
+            if (action.value(QStringLiteral("type")).toString() == QLatin1String("page")
+                && action.value(QStringLiteral("page")).toString() == ownId) {
+                action.insert(QStringLiteral("page"), newPage);
+                config.insert(gesture, action);
+            }
+        }
+        dial.value() = config;
+    }
+    return result;
+}
+
 QString hex(std::uint32_t rgb)
 {
     return QStringLiteral("#%1").arg(rgb & 0xFFFFFFU, 6, 16, QLatin1Char('0'));
@@ -91,14 +110,15 @@ QString hex(std::uint32_t rgb)
 
 } // namespace
 
-QString uniqueName(const QString &base, const QStringList &taken, int maxLength, const QString &separator)
+QString uniqueName(const QString &base, const QStringList &taken, int maxLength, const QString &separator,
+                   Qt::CaseSensitivity sensitivity)
 {
-    if (!taken.contains(base.left(maxLength)))
+    if (!taken.contains(base.left(maxLength), sensitivity))
         return base.left(maxLength);
     for (int n = 2; n < 1000; ++n) {
         const QString suffix = separator + QString::number(n);
         const QString candidate = base.left(maxLength - static_cast<int>(suffix.size())) + suffix;
-        if (!taken.contains(candidate))
+        if (!taken.contains(candidate, sensitivity))
             return candidate;
     }
     return base.left(maxLength); // unreachable in practice: the caller checks the result against `taken` again
@@ -144,10 +164,10 @@ ThemeInstallPlan planThemeInstall(const ThemePackage &package, const ThemeInstal
     plan.pageObject = QJsonObject{{QStringLiteral("keys"), keys}};
     plan.iconFiles = renamer.files;
     if (context.applyDials)
-        plan.dials = package.dialsJson;
+        plan.dials = remappedDials(package.dialsJson, package.meta.id, plan.page);
 
     if (!package.wallpapers.empty()) {
-        plan.wallpaperStyle = uniqueName(plan.page, context.existingWallpaperStyles, 40, QStringLiteral("-"));
+        plan.wallpaperStyle = uniqueName(plan.page, context.existingWallpaperStyles, 40, QStringLiteral("-"), Qt::CaseInsensitive);
         int n = 1;
         for (const ZipEntry &wallpaper : package.wallpapers) {
             plan.wallpaperFiles.push_back({QStringLiteral("%1-%2.jpg").arg(plan.wallpaperStyle).arg(n, 2, 10, QLatin1Char('0')), wallpaper.data});
