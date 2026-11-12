@@ -342,7 +342,18 @@ Cinq défauts relevés par un audit externe, vérifiés dans le code avant corre
 - Création des images d'un thème avec `QIODevice::NewOnly` (plus de trou entre la vérification et l'écriture ; un lien symbolique pendant n'est pas suivi). Test : `aPathTakenByAnEntryThePlanCannotSeeIsNotReplaced`.
 - PR #99 : une piste qui démarre pendant le lancement du décodeur n'allume plus la veille quand `whilePlaying` est faux (`onStarted()` relit l'état du média ; nettoyage commun `abandonStart()`). Test avec un faux lecteur, vu en échec sans le correctif.
 
-Validation : CI GitHub verte et `tools/check.py full` réussi (Docker, Ubuntu 24.04) sur l'arbre fusionné. **Non vérifié** : sous Windows (démarrage de FFmpeg, import sur volume NTFS) et sur le module / le clavier réels (outil de luminosité) ; à confirmer par le propriétaire avant de classer ces points « sur le module ».
+Validation : CI GitHub verte et `tools/check.py full` réussi (Docker, Ubuntu 24.04) sur l'arbre fusionné. L'import de thème en général est maintenant confirmé sur le module sous Windows (voir l'entrée suivante). **Non vérifié** : le cas précis d'un nom de fichier en casse différente dans un thème (la correction d'insensibilité à la casse elle-même), la relance de FFmpeg sous Windows, et sur le module / le clavier réel (outil de luminosité) ; à confirmer par le propriétaire avant de classer ces points « sur le module ».
+
+### Thème « voice-chat » et intégration Discord confirmés sur Windows — 12 novembre 2026
+
+Après l'échec attendu de l'import d'un ancien thème entièrement Linux (une touche référence une appli par un identifiant `.desktop` littéral, portable seulement via la table `WellKnownApps` — voir [docs/protocol/README.md](docs/protocol/README.md), ce n'est pas un plantage : `galleon-bosun.exe` reste actif, le rejet est le comportement voulu), le thème [`voice-chat.gctheme`](site/themes.html) (déjà publié, construit avec des touches clavier F14-F18 portables) a été importé et utilisé en conditions réelles sous Windows, avec le build complet déployé par la CI de la PR #99 (`galleon-presentmon-probe.exe` et `galleon-gpu-probe.exe` inclus, contrairement à un build de développement partiel compilé à la main plus tôt dans la journée, qui en manquait et affichait « Assistant FPS absent »).
+
+Constaté par le propriétaire :
+- Les cinq touches Discord (micro, sourdine, parler, caméra, partage d'écran) fonctionnent avec les raccourcis F14-F18 configurés directement dans les paramètres de Discord. **Sous Windows, aucun réglage supplémentaire dans les paramètres système n'est nécessaire** (Discord y reconnaît F14-F18 nativement), à la différence de Linux/KDE Plasma où l'injection arrive comme « Lancer (5)-(9) » et doit être réassociée dans les raccourcis clavier de KDE — voir les étapes mises à jour sur [site/themes.html](site/themes.html).
+- Le widget Accueil (FPS/CPU/GPU) a affiché Counter Strike 2 à 136 FPS sur l'écran du module pendant cet essai.
+- Le Mode Jeu de Windows, qui ne fonctionnait plus sur CS2 et RDR2 après un essai précédent avec le build de développement partiel ci-dessus (sans les deux outils FPS/GPU, donc sans l'assistant que le widget Accueil lance), fonctionne normalement avec ce build complet — confirmé par le propriétaire sur les deux jeux. Aucune preuve (journal d'événements Windows, session ETW restée active) n'a été trouvée reliant le souci précédent au code de ce dépôt ; le plus probable reste le build de développement incomplet, sans certitude absolue faute de journal de plantage de `galleond` à ce moment-là.
+
+Un thème de raccourcis clavier peut donc être combiné avec le widget FPS/CPU/GPU pour un usage de streaming : les commandes d'appel côté Discord, les performances en direct sur l'écran du module — mention ajoutée sur [site/themes.html](site/themes.html).
 
 ### Onglets Bosun à largeur adaptative — 31 octobre 2026
 
