@@ -418,6 +418,10 @@ Suite du point 1 : le composant `galleond` qui emploie `LiveLink`. **Expériment
 - Tests : `test_lightingcontroller` (18 : éteint par défaut, refus sans veille ni surveillance, surveillance avant ouverture, 3 s d'écoute, couleur, arrêt, destruction, mort de la surveillance, veille puis réveil, clavier illisible, cession, gel), `test_processwatchdog` (9, avec de petits scripts), `test_quitonsignals` (5), `test_keyboardcontroller` (pause, 14).
 - **Pas encore fait** : (activation par Bosun faite, voir plus bas ; avant, seulement par D-Bus : `busctl --user call org.galleoncore.Deck /org/galleoncore/Lighting org.galleoncore.Lighting Enable b true`), installation de l'outil de surveillance avec les paquets et son test **dans sa forme installée**, les effets (fond selon l'heure, frappe réactive), le sélecteur de modes de Bosun.
 
+### Éclairage en direct — testé sur le clavier du propriétaire (Linux) — 13 novembre 2026
+- Retour du propriétaire, avec deux photos : l'activation depuis Bosun allume bien les touches, et la couleur choisie dans les pastilles (vert) est appliquée à tout le clavier. **Le contrôle des LED fonctionne sur le matériel, sous Linux.**
+- Testé : activation, couleur unique. **Pas encore testé** : arrêt (rendu des touches), cession à un autre programme (Web Hub), veille/réveil, plantage de `galleond` avec le programme de surveillance, Windows. À faire avant de parler de fonction stable ; l'issue #102 (Aaryush1) doit en être informée.
+
 ### Barres de défilement dans tous les onglets de Bosun — 13 novembre 2026
 - Les onglets thème, Fonds d'écran, Widgets, Gaming et Économiseurs ont leur barre verticale (la même `ScrollRail` que l'onglet Clavier : elle n'apparaît que si quelque chose dépasse). La barre d'un onglet masqué n'est jamais affichée.
 - Test : `everyTabHasItsScrollBarAndOnlyTheShownTabShowsOne`. Une barre placée *dans* la page du thème provoquait une boucle de mise en page : elle est posée à côté, comme les autres. À regarder sur ton écran : l'onglet « + » et les fenêtres très petites.
