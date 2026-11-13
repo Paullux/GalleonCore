@@ -51,6 +51,10 @@ target_include_directories(test_keyboardreadprobe PRIVATE ../tools/keyboard-read
 galleon_add_test(test_keyboardlink FakeTransport.h)
 target_link_libraries(test_keyboardlink PRIVATE galleon_keyboard)
 
+# Live lighting safety layer of lib/keyboard/: pure code, nothing is sent anywhere.
+galleon_add_test(test_keyboardlive)
+target_link_libraries(test_keyboardlive PRIVATE galleon_keyboard)
+
 # Compile the real adapter against a fake C API: never enumerate real hardware.
 add_executable(test_hidtransport test_hidtransport.cpp ../lib/src/HidTransport.cpp)
 target_include_directories(test_hidtransport PRIVATE hidapi-stub ../lib/include)

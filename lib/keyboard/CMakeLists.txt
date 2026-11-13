@@ -11,10 +11,16 @@ add_library(galleon_keyboard STATIC
     include/galleon/keyboard/BragiReply.h
     include/galleon/keyboard/Brightness.h
     include/galleon/keyboard/KeyboardLink.h
+    include/galleon/keyboard/LiveCommandGuard.h
+    include/galleon/keyboard/LiveFrame.h
+    include/galleon/keyboard/LivePolicy.h
     src/BragiFrame.cpp
     src/BragiReply.cpp
     src/Brightness.cpp
     src/KeyboardLink.cpp
+    src/LiveCommandGuard.cpp
+    src/LiveFrame.cpp
+    src/LivePolicy.cpp
 )
 
 target_include_directories(galleon_keyboard PUBLIC

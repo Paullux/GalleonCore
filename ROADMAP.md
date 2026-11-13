@@ -347,6 +347,22 @@ Première étape de la branche `origin/keyboard` (fonctions du clavier développ
 - **Windows** : le point d'accès local n'a pas de canal de réponse, le curseur y reste inconnu. Reste à concevoir (fichier d'état ou canal bidirectionnel).
 - **Reste dans cette branche** : détecter un contrôleur étranger pour lui céder la place ; puis la couche de sécurité RVB (étape 2) ; idée du propriétaire, plus tard : une courbe de luminosité sur 24 h (heure en X, 0 à 1000 en Y), qui demande un minuteur dans `galleond` avec garde-fou sur le nombre d'écritures.
 
+### Branche `keyboard` — couche de sécurité du RVB par touche (étape 2, première tranche) — 13 novembre 2026
+
+Premières briques **pures** de la couche de sécurité, dans `lib/keyboard/` (aucune écriture possible : rien n'est envoyé, rien n'est branché dans `galleond`) :
+
+- `LiveCommandGuard` : liste d'autorisation vérifiée **avant** tout transport. Seuls passent : ouverture de session, lecture de propriété, écriture de la propriété 3 à **1 ou 2** (jamais 3, 4, 5 ; jamais la luminosité `0xEA`, qui est stockée), ping sans charge, ouverture du fichier **0x0022** dans le tampon 0, `unbind` tel que dans la capture, et l'écriture d'**une** trame de 440 octets (`06` annonçant 440, puis `07` ; pas de `07` sans `06`, pas d'octet de remplissage non nul). Le garde ne change d'état que sur ce que le clavier a **confirmé** (statut 0).
+- `LiveFrame` : trame `12 00` + 146 triplets RVB et découpe en quatre rapports de 129 octets ; l'exemple détaillé de `docs/protocol/README.md` (F1 vert, octet 177) sert de vecteur de test. Un indice de LED hors 0..145 refuse toute la trame ; session 0 refusée.
+- `LivePolicy` : `RateLimiter` (20 images/s en moyenne, rafale de 2, une image trop rapide est abandonnée, temps passé en argument) et `FreezePolicy` (deux échecs de suite déclenchent le gel, levé seulement par un rebranchement).
+- Sources : `docs/protocol/README.md` (captures d'Aaryush1, firmware 2.3.88) et `docs/WINDOWS_LIVE_LIGHTING_CSHARP.md` (qu'il autorise à réutiliser ou réécrire, issue #56). Écrit à neuf, d'après les notes.
+- Tests : `test_keyboardlive` (30 cas) et la cible de fuzzing `fuzz_live_guard` (5 millions d'exécutions sans erreur). **La cible de fuzzing n'est pas encore dans la CI** (`ci.yml` et `tools/check.py` ne lancent que `fuzz_input_report`) : à décider avec le propriétaire, car cela touche la CI.
+- **Reste pour l'étape 2** : politique de cession (`YieldPolicy` : mode changé, réponse non demandée, silence de 60 s), décision de libération au démarrage, sous-processus de surveillance (`Guard`), puis l'issue demandant la relecture d'Aaryush1 **avant** tout effet. Rien de cela n'écrit au clavier avant son retour.
+
+### Décisions du propriétaire — 13 novembre 2026
+
+- **Retour de la valeur sous Windows** : `galleond` écrit, après chaque lecture ou écriture de la luminosité, un petit fichier d'état (`keyboard-state.json`) que Bosun surveille ; même mécanisme sous Linux et Windows. À faire après l'étape 2.
+- **Courbe de luminosité sur 24 h** (heure en X, 0 à 1000 en Y) : la courbe vit dans un **fichier JSON à part**. Deux mécanismes d'écriture sur le calendrier sont voulus ; lesquels exactement reste à préciser avec le propriétaire avant de coder.
+
 ### Correctifs issus d'un audit de `main` (57eeb11) — PR #96, 12 novembre 2026
 
 Cinq défauts relevés par un audit externe, vérifiés dans le code avant correction, chacun avec son test et son commit :

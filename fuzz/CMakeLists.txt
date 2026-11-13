@@ -15,6 +15,15 @@ target_include_directories(fuzz_input_report PRIVATE ${PROJECT_SOURCE_DIR}/lib/i
 target_compile_options(fuzz_input_report PRIVATE -fsanitize=fuzzer,address,undefined)
 target_link_options(fuzz_input_report PRIVATE -fsanitize=fuzzer,address,undefined)
 
+# The keyboard's live-lighting allowlist: pure code, compiled directly into the fuzzer.
+add_executable(fuzz_live_guard
+    fuzz_live_guard.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/LiveCommandGuard.cpp
+)
+target_include_directories(fuzz_live_guard PRIVATE ${PROJECT_SOURCE_DIR}/lib/keyboard/include)
+target_compile_options(fuzz_live_guard PRIVATE -fsanitize=fuzzer,address,undefined)
+target_link_options(fuzz_live_guard PRIVATE -fsanitize=fuzzer,address,undefined)
+
 if(NOT GALLEON_BUILD_DESKTOP)
     return()
 endif()
