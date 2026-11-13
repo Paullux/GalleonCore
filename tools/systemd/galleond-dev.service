@@ -15,6 +15,11 @@ Type=simple
 ExecStart=%h/Documents/GalleonCore/build/daemon/galleond
 Restart=on-failure
 RestartSec=5
+# Only galleond itself is stopped with the service. The live lighting starts a watchdog next to it (galleon-keyboard-watchdog)
+# that must OUTLIVE a crash or a stop of galleond: it is the one that gives the keyboard's keys back. With the default
+# KillMode=control-group systemd would kill it together with galleond, at the very moment it is needed. It ends by itself
+# once it has looked at the keyboard, so nothing is left running (systemd may log that a process remained after the stop).
+KillMode=process
 
 [Install]
 WantedBy=graphical-session.target

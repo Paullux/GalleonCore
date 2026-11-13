@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Paul Woisard
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# The watchdog of the keyboard's live lighting, not built by default
-# (-DGALLEON_BUILD_KEYBOARD_WATCHDOG=ON). Its logic (galleon_keyboard: LiveRelease) is compiled and tested with a
+# The watchdog of the keyboard's live lighting. Built with the desktop (-DGALLEON_BUILD_KEYBOARD_WATCHDOG=OFF to leave it out)
+# and installed in the same folder as galleond, which looks for it there (daemon/ProcessWatchdog.cpp). Its logic (galleon_keyboard: LiveRelease) is compiled and tested with a
 # fake keyboard by tests/ on every build; the argument parser and the process wait are tested too. Only main.cpp
 # here talks to real hardware.
 add_library(keyboard_watchdog_core STATIC WatchdogArgs.cpp ProcessWait.cpp)
@@ -12,3 +12,5 @@ set_target_properties(keyboard_watchdog_core PROPERTIES POSITION_INDEPENDENT_COD
 
 add_executable(galleon-keyboard-watchdog main.cpp)
 target_link_libraries(galleon-keyboard-watchdog PRIVATE keyboard_watchdog_core galleon galleon_keyboard galleon_warnings)
+
+install(TARGETS galleon-keyboard-watchdog RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

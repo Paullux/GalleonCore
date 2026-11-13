@@ -65,6 +65,13 @@ target_link_libraries(test_keyboardlivelink PRIVATE galleon_keyboard)
 galleon_add_test(test_keyboardwatchdog ../tools/keyboard-watchdog/WatchdogArgs.cpp ../tools/keyboard-watchdog/ProcessWait.cpp)
 target_include_directories(test_keyboardwatchdog PRIVATE ../tools/keyboard-watchdog)
 
+# The installed program, run from a read-only copy with --dry-run (it opens no keyboard). Not on Windows: see test-setup.ps1.
+if(TARGET galleon-keyboard-watchdog AND NOT WIN32)
+    galleon_add_test(test_keyboardwatchdogtool)
+    add_dependencies(test_keyboardwatchdogtool galleon-keyboard-watchdog)
+    target_compile_definitions(test_keyboardwatchdogtool PRIVATE WATCHDOG_TOOL="$<TARGET_FILE:galleon-keyboard-watchdog>")
+endif()
+
 # Compile the real adapter against a fake C API: never enumerate real hardware.
 add_executable(test_hidtransport test_hidtransport.cpp ../lib/src/HidTransport.cpp)
 target_include_directories(test_hidtransport PRIVATE hidapi-stub ../lib/include)

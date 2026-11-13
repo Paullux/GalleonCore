@@ -18,7 +18,6 @@ set(GALLEON_PACKAGE_FORMAT "" CACHE STRING "Native package format for repository
 option(GALLEON_FUZZ "Build the libFuzzer targets (Clang only)" OFF)
 option(GALLEON_BUILD_KEYBOARD_PROBE "Build the read-only keyboard probe (firmware and brightness through HidTransport)" OFF)
 option(GALLEON_BUILD_KEYBOARD_BRIGHTNESS_TOOL "Build the manual brightness read/write test tool (lib/keyboard/)" OFF)
-option(GALLEON_BUILD_KEYBOARD_WATCHDOG "Build the live-lighting watchdog (releases a keyboard left in host mode; lib/keyboard/)" OFF)
 
 # Linux desktop integration remains the default. Windows desktop builds are
 # explicit while native integration and deployment are being validated.
@@ -28,6 +27,8 @@ else()
     set(galleon_desktop_default OFF)
 endif()
 option(GALLEON_BUILD_DESKTOP "Build galleond and Bosun (Linux and Windows)" ${galleon_desktop_default})
+# galleond refuses the live lighting unless this program is installed beside it, so it comes with the desktop build.
+option(GALLEON_BUILD_KEYBOARD_WATCHDOG "Build the live-lighting watchdog (gives back a keyboard left in host mode; lib/keyboard/)" ${GALLEON_BUILD_DESKTOP})
 if(GALLEON_BUILD_DESKTOP AND NOT (WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux"))
     message(FATAL_ERROR "Desktop backends support Linux and Windows; use -DGALLEON_BUILD_DESKTOP=OFF for the portable library")
 endif()
@@ -66,6 +67,13 @@ else()
 endif()
 
 include(GNUInstallDirs)
+
+# A program installed outside the system folders (a prefix such as ~/.local or /opt/galleoncore) has to find libgalleon
+# without LD_LIBRARY_PATH: its RUNPATH says "the lib folder of my own prefix", relative to where the program is. The
+# packages install under /usr, where the system finds the library, and carry no RUNPATH (Debian policy).
+if(UNIX AND NOT CMAKE_INSTALL_PREFIX STREQUAL "/usr")
+    set(CMAKE_INSTALL_RPATH "\$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+endif()
 
 add_subdirectory(lib)
 add_subdirectory(lib/keyboard)

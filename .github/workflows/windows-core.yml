@@ -103,6 +103,18 @@ jobs:
           Invoke-Preview "$pwd/staging/bin/galleond.exe" "--render-to `"$pwd/daemon-preview.png`" --wallpaper `"$name`""
           Invoke-Preview "$pwd/staging/bin/galleon-bosun.exe" "--pages `"$env:RUNNER_TEMP/galleon-smoke-pages.json`" --screenshot `"$pwd/bosun-preview.png`""
           if (-not (Test-Path daemon-preview.png) -or -not (Test-Path bosun-preview.png)) { throw "Missing previews" }
+          # The watchdog of the live lighting, as installed beside galleond: it must start from the staged folder (its DLLs
+          # are found there), wait for the process it is given, and with --dry-run open no keyboard.
+          $watchdog = "$pwd/staging/bin/galleon-keyboard-watchdog.exe"
+          if (-not (Test-Path $watchdog)) { throw "The watchdog is not installed beside galleond" }
+          $usage = Start-Process -FilePath $watchdog -PassThru -Wait -NoNewWindow
+          if ($usage.ExitCode -ne 1) { throw "Watchdog without arguments exited with $($usage.ExitCode), not 1" }
+          $writer = Start-Process -FilePath "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -ArgumentList '-NoProfile','-Command','Start-Sleep -Seconds 3' -PassThru
+          $guard = Start-Process -FilePath $watchdog -ArgumentList "--pid $($writer.Id) --dry-run" -PassThru -NoNewWindow
+          Start-Sleep -Milliseconds 800
+          if ($guard.HasExited) { throw "The watchdog ended while the process it watches was still running" }
+          if (-not $guard.WaitForExit(30000)) { $guard.Kill(); throw "The watchdog did not end after the process it watches" }
+          if ($guard.ExitCode -ne 0) { throw "Watchdog dry run exited with $($guard.ExitCode)" }
       - uses: actions/upload-artifact@v4
         if: always()
         with:

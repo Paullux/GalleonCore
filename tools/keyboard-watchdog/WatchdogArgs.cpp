@@ -11,9 +11,12 @@
 
 namespace watchdog {
 
-std::optional<std::uint32_t> parseArguments(std::span<const std::string_view> arguments)
+std::optional<Arguments> parseArguments(std::span<const std::string_view> arguments)
 {
-    if (arguments.size() != 2 || arguments[0] != "--pid")
+    if ((arguments.size() != 2 && arguments.size() != 3) || arguments[0] != "--pid")
+        return std::nullopt;
+    const bool dryRun = arguments.size() == 3;
+    if (dryRun && arguments[2] != "--dry-run")
         return std::nullopt;
     const std::string_view text = arguments[1];
     if (text.empty() || text.front() < '0' || text.front() > '9') // no sign, no space
@@ -22,7 +25,7 @@ std::optional<std::uint32_t> parseArguments(std::span<const std::string_view> ar
     const auto result = std::from_chars(text.data(), text.data() + text.size(), value);
     if (result.ec != std::errc{} || result.ptr != text.data() + text.size() || value == 0 || value > 0xffffffffULL)
         return std::nullopt;
-    return static_cast<std::uint32_t>(value);
+    return Arguments{.pid = static_cast<std::uint32_t>(value), .dryRun = dryRun};
 }
 
 } // namespace watchdog

@@ -5,10 +5,13 @@
 // process's ID. It waits for it to end, for any reason, then opens a fresh session and, ONLY if the keyboard is
 // still in host mode (property 3 = 2), gives the keys back (unbind, mode 1, read back). If the writer had released
 // already it finds mode 1 and changes nothing. All the logic is in lib/keyboard (LiveRelease), tested with a fake
-// keyboard; this file only waits and opens the real device. Nothing in this repository starts it yet: there is no
-// live writer. Running it against real hardware is for the owner to do (see AGENTS.md).
+// keyboard; this file only waits and opens the real device. galleond starts it (daemon/ProcessWatchdog.cpp) before the live
+// lighting touches the keyboard, and the packages install it beside galleond. It writes no file anywhere (the first Guard of
+// the C# solution crashed at start by logging inside its read-only application folder, unnoticed for two builds): its one
+// line goes to the standard output. `--dry-run` waits and then stops WITHOUT opening the keyboard, so the installed program
+// can be tested without one. Running it against real hardware is for the owner to do (see AGENTS.md).
 //
-// Exit status: 0 nothing to do or released, 1 bad arguments, 2 the release could not be confirmed, 3 the
+// Exit status: 0 nothing to do or released (or a dry run), 1 bad arguments, 2 the release could not be confirmed, 3 the
 // keyboard could not be opened, 4 the process could not be watched (then nothing was sent).
 
 #include "ProcessWait.h"
@@ -40,13 +43,13 @@ int main(int argc, char **argv)
     std::vector<std::string_view> arguments;
     for (const char *argument : all.subspan(std::min<std::size_t>(1, all.size())))
         arguments.emplace_back(argument);
-    const auto pid = watchdog::parseArguments(arguments);
-    if (!pid) {
-        static_cast<void>(std::fprintf(stderr, "usage: %s --pid <process id of the writer>\n", all.empty() ? "watchdog" : all.front()));
+    const auto parsed = watchdog::parseArguments(arguments);
+    if (!parsed) {
+        static_cast<void>(std::fprintf(stderr, "usage: %s --pid <process id of the writer> [--dry-run]\n", all.empty() ? "watchdog" : all.front()));
         return 1;
     }
 
-    switch (watchdog::waitForExit(*pid)) {
+    switch (watchdog::waitForExit(parsed->pid)) {
     case watchdog::WaitResult::CannotWatch:
         static_cast<void>(std::fputs("cannot watch that process: nothing was sent to the keyboard\n", stderr));
         return 4;
@@ -55,6 +58,10 @@ int main(int argc, char **argv)
         break;
     }
 
+    if (parsed->dryRun) { // for the tests of the installed program: nothing is opened, nothing is sent
+        static_cast<void>(std::puts("dry run: the process has ended; the keyboard would be looked at now"));
+        return 0;
+    }
     auto transport = galleon::keyboard::openVendorInterface();
     if (!transport) {
         static_cast<void>(std::puts("keyboard 1b1c:2b0c, interface 1: cannot open it (unplugged? another program?)"));

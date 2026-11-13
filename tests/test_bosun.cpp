@@ -1503,7 +1503,7 @@ QtObject {
         QVERIFY(!horizontalRail->property("needed").toBool());
 
         // A window tall enough for everything needs no bar.
-        QVERIFY(root->setProperty("height", 1600));
+        QVERIFY(root->setProperty("height", 2600));
         QTRY_VERIFY(!rail->property("needed").toBool());
     }
 

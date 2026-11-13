@@ -14,6 +14,8 @@ cmake -S "$root" -B "$work/build" -DCMAKE_BUILD_TYPE=Release \
 cmake --build "$work/build" -j "${JOBS:-4}"
 DESTDIR="$work/AppDir" cmake --install "$work/build"
 sh "$root/tools/packaging/install-extras.sh" "$root" "$work/AppDir"
+# galleond refuses the live lighting without the watchdog, which it looks for in its own folder.
+test -x "$work/AppDir/usr/bin/galleon-keyboard-watchdog"
 export APPIMAGE_EXTRACT_AND_RUN=1
 export QMAKE=/usr/bin/qmake6
 mkdir -p "$work/qml"

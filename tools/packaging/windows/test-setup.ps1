@@ -103,6 +103,16 @@ function Assert-ThemeFileType {
     if (-not (Test-Path -LiteralPath $icon)) { throw 'The .gctheme icon file is not installed.' }
     if (Test-Path "$classesKey\GalleonCore.Theme\shell") { throw 'The theme file type must not have an open verb.' }
 }
+# The watchdog of the live lighting is installed beside galleond.exe (that is where galleond looks for it), and runs.
+function Assert-Watchdog {
+    $exe = Join-Path $root 'bin/galleon-keyboard-watchdog.exe'
+    if (-not (Test-Path -LiteralPath $exe)) { throw 'The watchdog is not installed beside galleond.' }
+    $usage = Start-Process -FilePath $exe -PassThru -Wait -NoNewWindow
+    if ($usage.ExitCode -ne 1) { throw "The installed watchdog exited with $($usage.ExitCode) without arguments, not 1." }
+    # A process that has already ended is the case it exists for; --dry-run opens no keyboard.
+    $gone = Start-Process -FilePath $exe -ArgumentList '--pid 4194999 --dry-run' -PassThru -Wait -NoNewWindow
+    if ($gone.ExitCode -ne 0) { throw "The installed watchdog dry run exited with $($gone.ExitCode)." }
+}
 function Assert-ThemeFileTypeRemoved {
     foreach ($key in @("$classesKey\.gctheme", "$classesKey\GalleonCore.Theme")) {
         if (Test-Path $key) { throw "Uninstall left $key." }
@@ -131,6 +141,7 @@ try {
     if ((Get-ItemPropertyValue $runKey GalleonCore) -ne $daemonCommand) { throw 'Daemon sign-in command missing or incorrectly quoted.' }
     if ((Get-ItemPropertyValue $runKey GalleonBosun) -ne $bosunCommand) { throw 'Bosun tray sign-in command missing or incorrectly quoted.' }
     Assert-ThemeFileType
+    Assert-Watchdog
     # Launch Bosun alone, as from the Start menu: it must start its missing daemon.
     $bosun = Start-LoggedApplication 'galleon-bosun' '--minimized'
     $script:processes = @($bosun)
@@ -148,12 +159,13 @@ try {
     Assert-Closed
     if (-not (Test-Path $sentinel)) { throw 'Upgrade removed personal data.' }
     Assert-ThemeFileType
+    Assert-Watchdog
     # Uninstall has the same lifecycle guarantee and keeps personal data.
     Start-Applications
     Run-Installer (Join-Path $root 'Uninstall.exe') '/S'
     Assert-Closed
     # NSIS launches a temporary uninstaller copy; its launcher can exit before cleanup ends.
-    $markers = @((Join-Path $root 'bin/galleond.exe'), (Join-Path $root 'Uninstall.exe'),
+    $markers = @((Join-Path $root 'bin/galleond.exe'), (Join-Path $root 'bin/galleon-keyboard-watchdog.exe'), (Join-Path $root 'Uninstall.exe'),
         (Join-Path $root 'gctheme.ico'), (Join-Path $startup 'GalleonCore.lnk'), (Join-Path $startup 'Galleon Bosun.lnk'))
     $deadline = [System.DateTime]::UtcNow.AddSeconds(20)
     do {
