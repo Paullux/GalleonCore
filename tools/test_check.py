@@ -7,6 +7,7 @@ files are looked at, when a cached result may be reused, and what a report may c
 Run with: python3 -m unittest discover -s tools -p 'test_*.py'"""
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -305,6 +306,14 @@ class Trees(unittest.TestCase):
         self.assertEqual(checks.stale_tests("gcc")[0], {"test_screen"})
         checks.use_cache = False
         self.assertEqual(checks.stale_tests("gcc")[0], {"test_screen", "test_plain"})
+
+
+class FuzzTargets(unittest.TestCase):
+    def test_the_full_run_fuzzes_exactly_what_the_ci_fuzzes(self) -> None:
+        root = Path(__file__).resolve().parent.parent
+        ci = (root / check.CI_FILE).read_text()
+        in_ci = re.findall(r"\./build/fuzz/(\w+) -max_total_time=", ci)
+        self.assertEqual(sorted(in_ci), sorted(check.FUZZ_TARGETS))
 
 
 if __name__ == "__main__":
