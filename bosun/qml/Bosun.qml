@@ -422,8 +422,18 @@ Window {
         }
         BrightnessSlider {
             objectName: "keyboardBrightness"
+            id: keyboardBrightnessSlider
             width: Math.min(parent.width, 560)
             enabledLook: win.daemon.running
+            // What galleond read from the keyboard (or what was just set), unless a stop is being picked now.
+            Connections {
+                target: win.daemon
+                function onKeyboardBrightnessChanged() {
+                    if (win.daemon.keyboardBrightness >= 0 && keyboardBrightnessSlider.preview < 0)
+                        keyboardBrightnessSlider.value = win.daemon.keyboardBrightness
+                }
+            }
+            Component.onCompleted: if (win.daemon.keyboardBrightness >= 0) value = win.daemon.keyboardBrightness
             onCommitted: value => win.answered(win.daemon.setKeyboardBrightness(value),
                                                qsTr("Keyboard brightness sent to galleond: %1 %").arg(value / 10))
         }
@@ -433,7 +443,7 @@ Window {
             color: "#9aa0a6"
             font.pixelSize: 13
             text: win.daemon.running
-                  ? qsTr("The keyboard keeps this value when it is unplugged, as it does for the Web Hub. The slider shows what was set from here: it cannot read the keyboard yet. Close the Web Hub first, or its own answers may hide this one.")
+                  ? qsTr("The keyboard keeps this value when it is unplugged, as it does for the Web Hub. The slider shows the value galleond read from the keyboard when it started, and what you set since. Close the Web Hub first, or its own answers may hide this one.")
                   : qsTr("Start galleond (above) to change the brightness: this window never talks to the keyboard itself.")
         }
         Rectangle { width: parent.width; height: 1; color: "#33ffffff" }

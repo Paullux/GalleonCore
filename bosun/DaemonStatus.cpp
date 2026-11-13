@@ -21,7 +21,49 @@ DaemonStatus::DaemonStatus(QString systemctl, QObject *parent)
     , m_watcher(QString::fromLatin1(BusName), QDBusConnection::sessionBus(), QDBusServiceWatcher::WatchForOwnerChange)
 {
     connect(&m_watcher, &QDBusServiceWatcher::serviceOwnerChanged, this, [this] { look(); });
+    auto bus = QDBusConnection::sessionBus();
+    const QString keyboardPath = QStringLiteral("/org/galleoncore/Keyboard");
+    const QString keyboardInterface = QStringLiteral("org.galleoncore.Keyboard");
+    bus.connect(QString::fromLatin1(BusName), keyboardPath, keyboardInterface, QStringLiteral("brightnessRead"), this, SLOT(onBrightnessRead(int,bool,QString)));
+    bus.connect(QString::fromLatin1(BusName), keyboardPath, keyboardInterface, QStringLiteral("brightnessWritten"), this, SLOT(onBrightnessWritten(int,bool,QString)));
     look();
+}
+
+int DaemonStatus::nearestBrightnessStop(int value)
+{
+    if (value < 0 || value > 1000)
+        return -1;
+    return (value + 50) / 100 * 100;
+}
+
+void DaemonStatus::setKeyboardBrightnessKnown(int value)
+{
+    if (value == m_keyboardBrightness)
+        return;
+    m_keyboardBrightness = value;
+    Q_EMIT keyboardBrightnessChanged();
+}
+
+void DaemonStatus::onBrightnessRead(int value, bool ok, const QString & /*reason*/)
+{
+    // A failed read leaves what was known: the slider is never moved by a guess.
+    if (ok)
+        setKeyboardBrightnessKnown(nearestBrightnessStop(value));
+}
+
+void DaemonStatus::onBrightnessWritten(int value, bool ok, const QString & /*reason*/)
+{
+    if (ok)
+        setKeyboardBrightnessKnown(nearestBrightnessStop(value));
+}
+
+QString DaemonStatus::readKeyboardBrightness()
+{
+    if (!running()) return {};
+    // The answer is the brightnessRead signal; a daemon without this method just never answers, which is not an error to show.
+    const auto message = QDBusMessage::createMethodCall(QString::fromLatin1(BusName), QStringLiteral("/org/galleoncore/Keyboard"), QStringLiteral("org.galleoncore.Keyboard"), QStringLiteral("ReadBrightness"));
+    QDBusConnection::sessionBus().asyncCall(message, 1500);
+    return {};
 }
 
 void DaemonStatus::look()
@@ -32,6 +74,8 @@ void DaemonStatus::look()
         return;
     m_running = running;
     Q_EMIT changed();
+    if (m_running)
+        static_cast<void>(readKeyboardBrightness());
 }
 
 QString DaemonStatus::showGaming()

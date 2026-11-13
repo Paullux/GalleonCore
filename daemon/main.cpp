@@ -900,7 +900,7 @@ int main(int argc, char *argv[])
 #else
     if (!bus.registerObject(QStringLiteral("/org/galleoncore/Deck"), &controller, QDBusConnection::ExportAllSlots))
         qWarning() << "galleond: cannot export the D-Bus object";
-    if (!bus.registerObject(QStringLiteral("/org/galleoncore/Keyboard"), &keyboard, QDBusConnection::ExportAllSlots))
+    if (!bus.registerObject(QStringLiteral("/org/galleoncore/Keyboard"), &keyboard, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals))
         qWarning() << "galleond: cannot export the keyboard D-Bus object";
 #endif
 

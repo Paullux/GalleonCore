@@ -70,9 +70,16 @@ bool KeyboardController::SetBrightness(int value)
     return true;
 }
 
+bool KeyboardController::ReadBrightness()
+{
+    m_readPending = true;
+    startNext();
+    return true;
+}
+
 void KeyboardController::startNext()
 {
-    if (m_busy || !m_pending)
+    if (m_busy || (!m_pending && !m_readPending))
         return;
     if (m_started) {
         const qint64 remaining = MinIntervalMs - m_sinceStart.elapsed();
@@ -81,11 +88,22 @@ void KeyboardController::startNext()
             return;
         }
     }
-    const int value = *m_pending;
-    m_pending.reset();
     m_busy = true;
     m_started = true;
     m_sinceStart.restart();
+    // A write waiting goes before a read: the read would only show a value that is about to change.
+    if (m_pending) {
+        const int value = *m_pending;
+        m_pending.reset();
+        startWrite(value);
+    } else {
+        m_readPending = false;
+        startRead();
+    }
+}
+
+void KeyboardController::startWrite(int value)
+{
     const Opener opener = m_opener;
     m_pool.start(QRunnable::create([this, opener, value] {
         bool ok = false;
@@ -104,6 +122,29 @@ void KeyboardController::startNext()
     }));
 }
 
+void KeyboardController::startRead()
+{
+    const Opener opener = m_opener;
+    m_pool.start(QRunnable::create([this, opener] {
+        int value = 0;
+        bool ok = false;
+        QString reason;
+        std::unique_ptr<galleon::Transport> transport = opener();
+        if (!transport) {
+            reason = QStringLiteral("the keyboard could not be opened (plugged in? rights? another program?)");
+        } else {
+            const auto result = galleon::keyboard::readBrightness(*transport, ReportTimeout);
+            ok = result.error == galleon::keyboard::LinkError::None;
+            if (ok)
+                value = result.value;
+            else
+                reason = QString::fromLatin1(galleon::keyboard::describe(result.error));
+            transport->close();
+        }
+        QMetaObject::invokeMethod(this, [this, value, ok, reason] { readFinished(value, ok, reason); }, Qt::QueuedConnection);
+    }));
+}
+
 void KeyboardController::finished(int value, bool ok, const QString &reason)
 {
     m_busy = false;
@@ -112,6 +153,17 @@ void KeyboardController::finished(int value, bool ok, const QString &reason)
     else
         qWarning() << "galleond: keyboard brightness" << value << "not set:" << reason;
     Q_EMIT brightnessWritten(value, ok, reason);
+    startNext();
+}
+
+void KeyboardController::readFinished(int value, bool ok, const QString &reason)
+{
+    m_busy = false;
+    if (ok)
+        qInfo() << "galleond: keyboard brightness is" << value / 10.0 << "%";
+    else
+        qWarning() << "galleond: keyboard brightness not read:" << reason;
+    Q_EMIT brightnessRead(value, ok, reason);
     startNext();
 }
 

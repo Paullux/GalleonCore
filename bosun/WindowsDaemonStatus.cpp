@@ -75,6 +75,19 @@ QString DaemonStatus::showTheme(const QString &page) {
     galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::Theme, {}, page}, this);
     return {};
 }
+int DaemonStatus::nearestBrightnessStop(int value) {
+    if (value < 0 || value > 1000) return -1;
+    return (value + 50) / 100 * 100;
+}
+// The local endpoint only takes commands and has no reply: the keyboard's value cannot come back here yet.
+QString DaemonStatus::readKeyboardBrightness() { return {}; }
+void DaemonStatus::onBrightnessRead(int, bool, const QString &) {}
+void DaemonStatus::onBrightnessWritten(int, bool, const QString &) {}
+void DaemonStatus::setKeyboardBrightnessKnown(int value) {
+    if (value == m_keyboardBrightness) return;
+    m_keyboardBrightness = value;
+    Q_EMIT keyboardBrightnessChanged();
+}
 QString DaemonStatus::setKeyboardBrightness(int value) {
     if (!running()) return tr("Start galleond to change the keyboard brightness");
     galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::KeyboardBrightness, {}, {}, value}, this);

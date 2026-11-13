@@ -193,6 +193,47 @@ private Q_SLOTS:
         QCOMPARE(state->setValues, (std::vector<int>{100, 400}));
         QVERIFY2(clock.elapsed() >= KeyboardController::MinIntervalMs, "two writes must be at least MinIntervalMs apart");
     }
+    void aReadReportsTheValueTheKeyboardHoldsAndWritesNothing()
+    {
+        const auto state = std::make_shared<Keyboard>();
+        state->shownValue = 450; // set by another program: not a step of 100, reported as it is
+        KeyboardController controller(openerFor(state));
+        const QSignalSpy read(&controller, &KeyboardController::brightnessRead);
+        QVERIFY(controller.ReadBrightness());
+        QTRY_COMPARE(read.size(), 1);
+        QCOMPARE(read.constFirst().at(0).toInt(), 450);
+        QVERIFY(read.constFirst().at(1).toBool());
+        QVERIFY(state->setValues.empty());
+        QCOMPARE(state->opens, 1);
+        QCOMPARE(state->closes, 1);
+    }
+
+    void aReadOfAKeyboardThatCannotBeOpenedReportsWhy()
+    {
+        const auto state = std::make_shared<Keyboard>();
+        state->available = false;
+        KeyboardController controller(openerFor(state));
+        const QSignalSpy read(&controller, &KeyboardController::brightnessRead);
+        QVERIFY(controller.ReadBrightness());
+        QTRY_COMPARE(read.size(), 1);
+        QVERIFY(!read.constFirst().at(1).toBool());
+        QVERIFY(!read.constFirst().at(2).toString().isEmpty());
+    }
+
+    void aWriteWaitingGoesBeforeAReadAndNeitherIsLost()
+    {
+        const auto state = std::make_shared<Keyboard>();
+        KeyboardController controller(openerFor(state));
+        const QSignalSpy written(&controller, &KeyboardController::brightnessWritten);
+        const QSignalSpy read(&controller, &KeyboardController::brightnessRead);
+        QVERIFY(controller.SetBrightness(100)); // served at once
+        QVERIFY(controller.ReadBrightness());   // waits
+        QVERIFY(controller.SetBrightness(800)); // waits too, and must go before the read
+        QTRY_COMPARE_WITH_TIMEOUT(read.size(), 1, 5000);
+        QCOMPARE(written.size(), 2);
+        QCOMPARE(read.constFirst().at(0).toInt(), 800); // read after the last write: it sees it
+        QCOMPARE(state->setValues, (std::vector<int>{100, 800}));
+    }
 };
 
 QTEST_GUILESS_MAIN(TestKeyboardController)
