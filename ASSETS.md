@@ -34,8 +34,7 @@ Styles are free to use: manga, cyberpunk, space western, cinematic lighting. Cha
 
 `bosun/icons/theme-file/` (the `.gctheme` icon: PNG sizes and `gctheme.ico`) is built by `tools/theme-icon/build_icons.py` from `tools/theme-icon/source/galleoncore-theme.png`. CC-BY-SA-4.0, author Paul Woisard.
 
-- **Provisional icon (13 November 2026)**: drawn by hand as SVG (`tools/theme-icon/source/galleoncore-theme.svg`: a document with a folded corner, a reduced rainbow bar, a 3 × 4 grid for the 12 keys, no text), rendered to the 1024 × 1024 master with Chromium. Original work, no AI tool, no existing character, mark or logo.
-- **Final icon**: to be made by the owner with an image tool from the Bosun icon; when it replaces the master, record here the tool, the date, the exact prompt and the licence (see "AI-generated assets" below), and remove the line above.
+- **Icon (13 November 2026)**: SVG supplied by the owner (`tools/theme-icon/source/galleoncore-theme.svg`, title "GalleonCore themes"): a ship's wheel with a continuous rainbow gradient around three stacked pictures and a brush, derived from the owner's own application icon. Rendered to the 1024 × 1024 master with Chromium. No text, no existing character, mark or logo. **To record by the owner**: the tool that produced it (ChatGPT or other), its date and exact prompt if it was generated, and the licence if not CC-BY-SA-4.0 (the default applied here). An earlier provisional document-shaped icon, hand drawn for the project, was replaced by it.
 
 ## Where they go
 
