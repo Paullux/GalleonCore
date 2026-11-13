@@ -60,6 +60,8 @@ if command -v udevadm >/dev/null 2>&1; then udevadm control --reload-rules || :;
 %{_datadir}/galleoncore/
 %{_datadir}/applications/galleon-bosun.desktop
 %{_datadir}/icons/hicolor/scalable/apps/galleon-bosun.svg
+%{_datadir}/mime/packages/galleoncore-theme.xml
+%{_datadir}/icons/hicolor/*/mimetypes/application-x-galleoncore-theme.png
 %{_prefix}/lib/udev/rules.d/*galleon*.rules
 %{_prefix}/lib/systemd/user/galleond.service
 %{_prefix}/lib/modules-load.d/galleoncore.conf
