@@ -30,7 +30,7 @@ Report report(std::initializer_list<std::uint8_t> bytes)
     r[2] = 0x01;
     std::size_t at = 3;
     for (const std::uint8_t b : bytes)
-        r[at++] = b;
+        r.at(at++) = b;
     return r;
 }
 
@@ -39,10 +39,14 @@ Report setMode(std::uint8_t mode) { return report({0x01, 0x01, 0x03, 0x00, mode,
 Report openLive() { return report({0x01, 0x0d, 0x00, 0x22, 0x00}); }
 Report unbind() { return report({0x01, 0x05, 0x01, 0x00}); }
 
+LiveFrame frameOf(const std::vector<LedColor> &leds)
+{
+    return buildLiveFrame(leds).value_or(LiveFrame{});
+}
+
 LiveReports f1Green()
 {
-    const std::vector<LedColor> leds{{0x3a, 0, 255, 0}};
-    return *liveFrameReports(*buildLiveFrame(leds), 1);
+    return liveFrameReports(frameOf({{0x3a, 0, 255, 0}}), 1).value_or(LiveReports{});
 }
 
 // Confirms every report of a frame after checking it.
@@ -88,13 +92,13 @@ private Q_SLOTS:
         std::vector<LedColor> leds;
         for (std::uint16_t i = 0; i < LiveLedCount; ++i)
             leds.push_back({i, static_cast<std::uint8_t>(i + 1), static_cast<std::uint8_t>(i + 2), static_cast<std::uint8_t>(i + 3)});
-        const auto frame = buildLiveFrame(leds);
-        QVERIFY(frame);
-        const auto reports = liveFrameReports(*frame, 7);
-        QVERIFY(reports);
+        QVERIFY(buildLiveFrame(leds));
+        const LiveFrame frame = frameOf(leds);
+        QVERIFY(liveFrameReports(frame, 7));
+        const LiveReports reports = liveFrameReports(frame, 7).value_or(LiveReports{});
         std::vector<std::uint8_t> joined;
-        for (std::size_t i = 0; i < reports->size(); ++i) {
-            const auto &one = (*reports)[i];
+        for (std::size_t i = 0; i < reports.size(); ++i) {
+            const auto &one = reports.at(i);
             QCOMPARE(one[3], 7); // the session
             const std::size_t from = i == 0 ? 10 : 6;
             const std::size_t count = i == 0 ? WriteBeginData : WriteMoreData;
@@ -103,8 +107,8 @@ private Q_SLOTS:
         // 119 + 123 + 123 + the last 75 bytes; what follows in the last report is padding.
         QCOMPARE(joined.size(), std::size_t{119 + 123 + 123 + 123});
         joined.resize(LiveFrameSize);
-        QVERIFY(std::equal(joined.begin(), joined.end(), frame->begin()));
-        const auto &last = reports->back();
+        QVERIFY(std::equal(joined.begin(), joined.end(), frame.begin()));
+        const auto &last = reports.back();
         QVERIFY(std::all_of(last.begin() + 6 + 75, last.end(), [](std::uint8_t b) { return b == 0; }));
     }
 
@@ -120,7 +124,7 @@ private Q_SLOTS:
     void aLaterEntryForTheSameLedReplacesTheEarlierOne()
     {
         const std::vector<LedColor> leds{{5, 1, 2, 3}, {5, 9, 8, 7}};
-        const auto frame = *buildLiveFrame(leds);
+        const LiveFrame frame = frameOf(leds);
         QCOMPARE(frame[2 + 15], 9);
         QCOMPARE(frame[2 + 16], 8);
         QCOMPARE(frame[2 + 17], 7);
@@ -128,8 +132,7 @@ private Q_SLOTS:
 
     void aFrameIsNeverWrittenOutsideASession()
     {
-        const auto frame = *buildLiveFrame(std::vector<LedColor>{{1, 1, 1, 1}});
-        QVERIFY(!liveFrameReports(frame, 0));
+        QVERIFY(!liveFrameReports(frameOf({{1, 1, 1, 1}}), 0));
     }
 
     // ---- allowlist ----------------------------------------------------------------------------------
@@ -252,8 +255,8 @@ private Q_SLOTS:
         QCOMPARE(guard.check(frame[1]), Refusal::OutOfSequence); // no 06 yet
         guard.confirmed(frame[0]);
         QCOMPARE(guard.check(frame[0]), Refusal::OutOfSequence); // a 06 inside a frame
-        for (std::size_t i = 1; i < frame.size(); ++i)
-            guard.confirmed(frame[i]);
+        for (const Report &rest : std::span(frame).subspan(1))
+            guard.confirmed(rest);
         QCOMPARE(guard.bytesExpected(), std::size_t{0});
         QCOMPARE(guard.check(frame[1]), Refusal::OutOfSequence); // one 07 too many
         QCOMPARE(guard.check(frame[0]), Refusal::None);          // the next frame may begin
