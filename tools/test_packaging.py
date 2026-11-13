@@ -69,5 +69,47 @@ class DistributionSources(unittest.TestCase):
             self.assertFalse(any('build-deb' in path.parts for path in paths))
 
 
+
+class LiveLightingWatchdogIsShipped(unittest.TestCase):
+    """galleond refuses the live lighting unless galleon-keyboard-watchdog is installed beside it, so every package
+    must carry it, and nothing may kill it together with galleond."""
+
+    def read(self, path):
+        return (ROOT / path).read_text(encoding='utf-8-sig')
+
+    def test_cmake_builds_it_with_the_desktop_and_installs_it_in_the_folder_of_galleond(self):
+        top = self.read('CMakeLists.txt')
+        self.assertIn('option(GALLEON_BUILD_KEYBOARD_WATCHDOG', top)
+        self.assertIn('${GALLEON_BUILD_DESKTOP})', top.split('option(GALLEON_BUILD_KEYBOARD_WATCHDOG', 1)[1].split('\n', 1)[0])
+        tool = self.read('tools/keyboard-watchdog/CMakeLists.txt')
+        self.assertIn('install(TARGETS galleon-keyboard-watchdog RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})', tool)
+        self.assertIn('install(TARGETS galleond RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})', self.read('daemon/CMakeLists.txt'))
+
+    def test_galleond_looks_for_it_beside_its_own_executable(self):
+        self.assertIn('applicationDirPath()', self.read('daemon/ProcessWatchdog.cpp'))
+
+    def test_the_rpm_lists_it(self):
+        self.assertIn('%{_bindir}/galleon-keyboard-watchdog', self.read('tools/packaging/copr/galleoncore.spec'))
+
+    def test_the_appimage_build_fails_if_it_is_missing(self):
+        self.assertIn('test -x "$work/AppDir/usr/bin/galleon-keyboard-watchdog"', self.read('tools/packaging/appimage/build.sh'))
+
+    def test_the_windows_setup_test_checks_it_after_install_and_after_upgrade_and_that_uninstall_removes_it(self):
+        setup = self.read('tools/packaging/windows/test-setup.ps1')
+        self.assertEqual(setup.count('Assert-Watchdog\n'), 2)  # after the install, after the upgrade
+        self.assertIn("bin/galleon-keyboard-watchdog.exe", setup.split('$markers = ', 1)[1].split('\n', 1)[0])
+
+    def test_the_watchdog_outlives_galleond_in_every_user_service(self):
+        # With the default KillMode=control-group systemd kills every process of the service when galleond stops or
+        # crashes, the watchdog included, at the very moment it is needed.
+        for path in ('tools/systemd/galleond.service', 'tools/systemd/galleond-dev.service', 'tools/packaging/appimage/install-user-service.sh'):
+            with self.subTest(path=path):
+                text = self.read(path)
+                lines = [line.strip() for line in text.splitlines() if not line.lstrip().startswith('#')]
+                self.assertIn('KillMode=process', lines)
+                self.assertNotIn('KillMode=control-group', lines)
+                self.assertNotIn('KillMode=mixed', lines)
+
+
 if __name__ == '__main__':
     unittest.main()

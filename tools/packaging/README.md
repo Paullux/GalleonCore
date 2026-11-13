@@ -213,3 +213,20 @@ GitHub normalizes release asset filenames: the locally built Debian files use
 `-1~noble` / `-1~resolute`, while published download URLs use `-1.noble` /
 `-1.resolute` (as observed on v0.2.2). Website links and the publication guard
 therefore refer to the published filenames, not the local dpkg filenames.
+
+## The live-lighting watchdog
+
+`galleon-keyboard-watchdog` is built with the desktop (`GALLEON_BUILD_KEYBOARD_WATCHDOG`, on by default there) and installed
+in the same folder as `galleond` (`bin/`), because `galleond` looks for it next to its own executable and **refuses the
+experimental live lighting without it**. Every recipe must carry it: Debian, AUR and AppImage get it from `cmake --install`
+(the AppImage build fails if it is missing), the RPM lists it in `%files`, the Windows Setup installs the staged `bin/`.
+
+Two things a packager must not undo:
+
+- **It must outlive `galleond`.** It is the process that gives the keyboard's keys back after a crash. The user service
+  therefore says `KillMode=process`: with systemd's default (`control-group`) the watchdog would be killed with `galleond`, at
+  the very moment it is needed. (`tools/systemd/galleond.service`, the dev unit and the unit written for the AppImage.)
+- **It writes nothing.** Not a log, not a state file: the first Guard of the C# solution it descends from crashed at start by
+  writing its log inside the read-only application folder, and for two builds nothing showed it. It is tested from a
+  read-only copy (`tests/test_keyboardwatchdogtool.cpp`) and, installed, by `--dry-run` (no keyboard is opened).
+

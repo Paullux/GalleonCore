@@ -22,7 +22,7 @@ using namespace watchdog;
 
 namespace {
 
-std::optional<std::uint32_t> parse(std::initializer_list<std::string_view> arguments)
+std::optional<Arguments> parse(std::initializer_list<std::string_view> arguments)
 {
     const std::vector<std::string_view> list(arguments);
     return parseArguments(list);
@@ -37,9 +37,22 @@ class TestKeyboardWatchdog : public QObject
 private Q_SLOTS:
     void aProcessIdIsAcceptedAfterPid()
     {
-        QCOMPARE(parse({"--pid", "1234"}), std::optional<std::uint32_t>(1234));
-        QCOMPARE(parse({"--pid", "1"}), std::optional<std::uint32_t>(1));
-        QCOMPARE(parse({"--pid", "4294967295"}), std::optional<std::uint32_t>(4294967295U));
+        QCOMPARE(parse({"--pid", "1234"}).value_or(Arguments{}).pid, std::uint32_t{1234});
+        QCOMPARE(parse({"--pid", "1"}).value_or(Arguments{}).pid, std::uint32_t{1});
+        QCOMPARE(parse({"--pid", "4294967295"}).value_or(Arguments{}).pid, std::uint32_t{4294967295U});
+        QVERIFY(!parse({"--pid", "1234"}).value_or(Arguments{}).dryRun);
+    }
+
+    void aDryRunIsAskedForOnlyByTheExactWordAfterThePid()
+    {
+        const auto dry = parse({"--pid", "77", "--dry-run"});
+        QVERIFY(dry.has_value());
+        QCOMPARE(dry.value_or(Arguments{}).pid, std::uint32_t{77});
+        QVERIFY(dry.value_or(Arguments{}).dryRun);
+        QVERIFY(!parse({"--pid", "77", "--dry"}));
+        QVERIFY(!parse({"--pid", "77", "--dry-run", "extra"}));
+        QVERIFY(!parse({"--dry-run", "--pid", "77"}));
+        QVERIFY(!parse({"--pid", "77", "--Dry-Run"}));
     }
 
     void anythingElseIsRefusedSoNothingIsSentOnArgumentsItDoesNotUnderstand()

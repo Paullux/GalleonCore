@@ -23,6 +23,8 @@ ExecStart="$escaped" --galleond
 Environment=APPIMAGE_EXTRACT_AND_RUN=1
 Restart=on-failure
 RestartSec=5
+# The watchdog of the live lighting must outlive galleond (see tools/systemd/galleond.service).
+KillMode=process
 [Install]
 WantedBy=graphical-session.target
 UNIT

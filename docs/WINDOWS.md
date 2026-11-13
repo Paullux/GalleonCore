@@ -206,6 +206,12 @@ keeps the tray icon. Without a tray the window remains accessible. Clearing the
 component during an upgrade removes previous sign-in commands. Uninstall removes
 both. These are interactive user-session processes, not Session 0 services.
 
+Setup installs `galleon-keyboard-watchdog.exe` beside `galleond.exe`. galleond starts it, for its own process ID, before
+the experimental live lighting touches the keyboard, and refuses the lighting if it cannot (the program is also refused on
+Windows for now because sleep notifications are not wired). It gives the keyboard's keys back if galleond dies; it writes
+no file. `test-setup.ps1` checks that it is installed beside galleond, that it runs and that its `--dry-run` opens no
+keyboard, after install and after upgrade, and that Uninstall removes it.
+
 Setup also registers the `.gctheme` file type for the current user only
 (`HKCU\Software\Classes\.gctheme` and ProgID `GalleonCore.Theme`, label
 "GalleonCore theme" / "Thème GalleonCore", `DefaultIcon` = `gctheme.ico` in the
