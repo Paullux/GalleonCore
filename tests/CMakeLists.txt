@@ -139,6 +139,7 @@ target_link_libraries(test_updatechecker PRIVATE bosun_core)
 
 galleond_add_test(test_recording)
 galleond_add_test(test_keyboardcontroller)
+galleond_add_test(test_keyboardstate)
 
 if(WIN32)
     # Native desktop smoke rendering; Linux service/launcher tests stay on Linux.
@@ -193,6 +194,8 @@ galleon_add_test(test_wallpaperlibrary)
 target_link_libraries(test_wallpaperlibrary PRIVATE bosun_core)
 galleon_add_test(test_daemonstatus)
 target_link_libraries(test_daemonstatus PRIVATE bosun_core)
+galleon_add_test(test_keyboardstatewatcher)
+target_link_libraries(test_keyboardstatewatcher PRIVATE bosun_core)
 galleon_add_test(test_pagename)
 target_link_libraries(test_pagename PRIVATE bosun_core)
 galleon_add_test(test_cropmath)

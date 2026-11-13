@@ -11,6 +11,7 @@ add_library(bosun_core STATIC
     CropMath.h CropMath.cpp
     FileNames.h FileNames.cpp
     DaemonStatus.h
+    KeyboardStateWatcher.h KeyboardStateWatcher.cpp
     PageName.h PageName.cpp
     TrayMenu.h TrayMenu.cpp
     VideoAdvice.h VideoAdvice.cpp

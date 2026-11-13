@@ -8,6 +8,7 @@
 #ifdef Q_OS_WIN
 #include <QTimer>
 #include <QLocalSocket>
+#include "KeyboardStateWatcher.h"
 #else
 #include <QDBusServiceWatcher>
 #endif
@@ -57,7 +58,8 @@ public:
     // daemon, never here; "" when the request was sent, else why not. The result of the write comes later.
     Q_INVOKABLE [[nodiscard]] QString setKeyboardBrightness(int value);
     // Asks galleond to read the value the keyboard holds now; the answer arrives as keyboardBrightnessChanged.
-    // Linux only: the Windows local endpoint has no way to answer, so the value stays unknown there.
+    // Linux: the answer is a D-Bus signal. Windows: the endpoint has no reply, so galleond publishes the value in
+    // keyboard-state.json, which this object watches.
     Q_INVOKABLE [[nodiscard]] QString readKeyboardBrightness();
 
 Q_SIGNALS:
@@ -81,6 +83,7 @@ private:
     QString m_endpoint;
     QTimer m_poll;
     QLocalSocket m_probe;
+    KeyboardStateWatcher *m_keyboardState = nullptr; // child of this: the way the keyboard's value comes back
 #else
     QDBusServiceWatcher m_watcher;
 #endif

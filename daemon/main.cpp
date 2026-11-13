@@ -16,6 +16,8 @@
 #include "ScreensaverSplitter.h"
 #include "VideoThumbnails.h"
 #include "KeyboardController.h"
+#include "KeyboardState.h"
+#include "KeyboardStatePublisher.h"
 #include "Wiring.h"
 #include "ScreenController.h"
 #include "ScreenRenderer.h"
@@ -886,11 +888,15 @@ int main(int argc, char *argv[])
     // The keyboard half of the daemon: brightness only, on request, nothing opened until then. It shares nothing with
     // `controller` and the pages: it is reached on its own D-Bus object (Linux) or local control action (Windows).
     galleond::KeyboardController keyboard(galleond::KeyboardController::hidOpener());
+    // What the keyboard held when last read or written, published for Bosun (the way back on Windows). It only
+    // listens to `keyboard`; a failed read or write publishes nothing.
+    galleond::KeyboardStatePublisher keyboardState(keyboard, galleond::keyboardStatePath(), [] { return QDateTime::currentSecsSinceEpoch(); });
 
     // org.galleoncore.Deck on the session bus (the name was claimed at the start):
     // SetWallpaper, ClearWallpaper, Wallpapers.
 #ifdef Q_OS_WIN
     QObject::connect(&localControl, &galleond::LocalControl::keyboardBrightnessRequested, &keyboard, [&keyboard](int value) { keyboard.SetBrightness(value); });
+    QObject::connect(&localControl, &galleond::LocalControl::keyboardBrightnessReadRequested, &keyboard, [&keyboard] { keyboard.ReadBrightness(); });
     QObject::connect(&localControl, &galleond::LocalControl::gamingRequested, &controller, [&controller] { controller.ShowGaming(); });
     QObject::connect(&localControl, &galleond::LocalControl::themeRequested, &controller, [&controller](const QString &page) { controller.ShowTheme(page); });
     QObject::connect(&localControl, &galleond::LocalControl::wallpaperRequested,
