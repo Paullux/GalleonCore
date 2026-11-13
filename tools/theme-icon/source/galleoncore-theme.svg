@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Provisional file icon for .gctheme files: a document with a folded corner, a reduced rainbow bar and a 3 x 4 grid for the 12 keys of the module. Drawn by hand for this project; no text, no third-party mark. See ASSETS.md. -->
+  <path d="M52 14 H168 L220 66 V228 a14 14 0 0 1 -14 14 H52 a14 14 0 0 1 -14 -14 V28 a14 14 0 0 1 14 -14 Z" fill="#F4F1EA" stroke="#2A2F36" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M168 14 V52 a14 14 0 0 0 14 14 H220 Z" fill="#D9D3C4" stroke="#2A2F36" stroke-width="8" stroke-linejoin="round"/>
+  <g>
+    <rect x="54" y="40" width="14" height="22" fill="#E53935"/>
+    <rect x="68" y="40" width="14" height="22" fill="#FF9800"/>
+    <rect x="82" y="40" width="14" height="22" fill="#FFD600"/>
+    <rect x="96" y="40" width="14" height="22" fill="#43A047"/>
+    <rect x="110" y="40" width="14" height="22" fill="#00ACC1"/>
+    <rect x="124" y="40" width="14" height="22" fill="#3949AB"/>
+    <rect x="138" y="40" width="14" height="22" fill="#B388FF"/>
+  </g>
+  <rect x="54" y="40" width="98" height="22" rx="4" fill="none" stroke="#2A2F36" stroke-width="4"/>
+  <rect x="52" y="86" width="152" height="140" rx="10" fill="#1B1E23"/>
+  <rect x="64" y="97" width="40" height="24" rx="5" fill="#FFD600"/>
+  <rect x="110" y="97" width="40" height="24" rx="5" fill="#00ACC1"/>
+  <rect x="156" y="97" width="40" height="24" rx="5" fill="#E53935"/>
+  <rect x="64" y="129" width="40" height="24" rx="5" fill="#3949AB"/>
+  <rect x="110" y="129" width="40" height="24" rx="5" fill="#43A047"/>
+  <rect x="156" y="129" width="40" height="24" rx="5" fill="#F5F5F5"/>
+  <rect x="64" y="161" width="40" height="24" rx="5" fill="#FF00FF"/>
+  <rect x="110" y="161" width="40" height="24" rx="5" fill="#B388FF"/>
+  <rect x="156" y="161" width="40" height="24" rx="5" fill="#FF9800"/>
+  <rect x="64" y="193" width="40" height="24" rx="5" fill="#26C6DA"/>
+  <rect x="110" y="193" width="40" height="24" rx="5" fill="#EC407A"/>
+  <rect x="156" y="193" width="40" height="24" rx="5" fill="#9CCC65"/>
+</svg>

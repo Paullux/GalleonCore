@@ -30,6 +30,13 @@ third-party icon and trademark rights remain with their respective owners.
 
 Styles are free to use: manga, cyberpunk, space western, cinematic lighting. Characters, logos and footage are not.
 
+## Theme file icon
+
+`bosun/icons/theme-file/` (the `.gctheme` icon: PNG sizes and `gctheme.ico`) is built by `tools/theme-icon/build_icons.py` from `tools/theme-icon/source/galleoncore-theme.png`. CC-BY-SA-4.0, author Paul Woisard.
+
+- **Provisional icon (13 November 2026)**: drawn by hand as SVG (`tools/theme-icon/source/galleoncore-theme.svg`: a document with a folded corner, a reduced rainbow bar, a 3 × 4 grid for the 12 keys, no text), rendered to the 1024 × 1024 master with Chromium. Original work, no AI tool, no existing character, mark or logo.
+- **Final icon**: to be made by the owner with an image tool from the Bosun icon; when it replaces the master, record here the tool, the date, the exact prompt and the licence (see "AI-generated assets" below), and remove the line above.
+
 ## Where they go
 
 Wallpapers go in [`public/wallpaper/`](public/wallpaper/), one folder per style, with a `PROVENANCE.md` listing each file. That folder is CC-BY-SA-4.0 as a whole.
