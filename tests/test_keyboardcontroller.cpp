@@ -4,6 +4,7 @@
 // KeyboardController with a fake keyboard that answers like the real one (a set echo, then the value on a get).
 // Never opens real hardware: every opener here returns a fake.
 
+#include "FakeKeyboard.h"
 #include "KeyboardController.h"
 
 #include <galleon/Transport.h>
@@ -20,91 +21,8 @@
 using namespace galleond;
 using namespace galleon::keyboard;
 
-namespace {
-
-// State shared with the worker thread, which owns the transport for one job.
-struct Keyboard
-{
-    std::mutex mutex;
-    std::vector<int> setValues; // every value written, in order
-    int opens = 0;
-    int closes = 0;
-    int shownValue = 500;       // what the keyboard currently holds
-    bool answersSet = true;
-    bool available = true;
-};
-
-class FakeKeyboard final : public galleon::Transport
-{
-public:
-    explicit FakeKeyboard(std::shared_ptr<Keyboard> state) : m_state(std::move(state)) {}
-
-    bool open() override { m_open = true; return true; }
-    void close() override
-    {
-        if (m_open) {
-            const std::scoped_lock lock(m_state->mutex);
-            ++m_state->closes;
-        }
-        m_open = false;
-    }
-    [[nodiscard]] bool isOpen() const override { return m_open; }
-    [[nodiscard]] QString serialNumber() const override { return QStringLiteral("FAKE"); }
-    bool sendFeatureReport(std::span<const std::uint8_t> /*report*/) override { return false; }
-
-    bool write(std::span<const std::uint8_t> report) override
-    {
-        const std::scoped_lock lock(m_state->mutex);
-        std::vector<std::uint8_t> answer(PayloadSize, 0);
-        if (report.size() != WriteSize)
-            return false;
-        answer[3] = report[4];
-        if (report[4] == CommandSet) {
-            m_state->shownValue = report[7] | (report[8] << 8);
-            m_state->setValues.push_back(m_state->shownValue);
-            answer[4] = 0;
-        } else {
-            answer[4] = 0;
-            for (std::size_t i = 0; i < 4; ++i)
-                answer[5 + i] = static_cast<std::uint8_t>((m_state->shownValue >> (8U * i)) & 0xff);
-        }
-        if (report[4] != CommandSet || m_state->answersSet)
-            m_answers.push_back(answer);
-        return true;
-    }
-
-    int read(std::span<std::uint8_t> buffer) override
-    {
-        if (m_answers.empty())
-            return 0;
-        const auto answer = m_answers.front();
-        m_answers.pop_front();
-        std::copy_n(answer.begin(), std::min(answer.size(), buffer.size()), buffer.begin());
-        return static_cast<int>(answer.size());
-    }
-
-private:
-    std::shared_ptr<Keyboard> m_state;
-    std::deque<std::vector<std::uint8_t>> m_answers;
-    bool m_open = false;
-};
-
-KeyboardController::Opener openerFor(const std::shared_ptr<Keyboard> &state)
-{
-    return [state]() -> std::unique_ptr<galleon::Transport> {
-        {
-            const std::scoped_lock lock(state->mutex);
-            if (!state->available)
-                return nullptr;
-            ++state->opens;
-        }
-        auto fake = std::make_unique<FakeKeyboard>(state);
-        fake->open();
-        return fake;
-    };
-}
-
-} // namespace
+using fakekeyboard::Keyboard;
+using fakekeyboard::openerFor;
 
 class TestKeyboardController : public QObject
 {
@@ -192,6 +110,83 @@ private Q_SLOTS:
         // The first request goes at once, then only the newest of the others: 200 and 300 were replaced.
         QCOMPARE(state->setValues, (std::vector<int>{100, 400}));
         QVERIFY2(clock.elapsed() >= KeyboardController::MinIntervalMs, "two writes must be at least MinIntervalMs apart");
+    }
+    void whilePausedNothingIsOpenedAndTheAnswerSaysWhy()
+    {
+        const auto state = std::make_shared<Keyboard>();
+        KeyboardController controller(openerFor(state));
+        const QSignalSpy written(&controller, &KeyboardController::brightnessWritten);
+        const QSignalSpy read(&controller, &KeyboardController::brightnessRead);
+        controller.setPaused(true, QStringLiteral("the lighting holds the keyboard"));
+        QVERIFY(controller.paused());
+        QVERIFY(!controller.SetBrightness(300));
+        QVERIFY(controller.ReadBrightness());
+        QTest::qWait(50);
+        QCOMPARE(state->opens, 0); // the keyboard was not touched
+        QCOMPARE(written.size(), 1);
+        QVERIFY(!written.constFirst().at(1).toBool());
+        QCOMPARE(written.constFirst().at(2).toString(), QStringLiteral("the lighting holds the keyboard"));
+        QCOMPARE(read.size(), 1);
+        QVERIFY(!read.constFirst().at(1).toBool());
+    }
+
+    void aRequestWaitingWhenThePauseBeginsIsNotSentAfterwards()
+    {
+        const auto state = std::make_shared<Keyboard>();
+        KeyboardController controller(openerFor(state));
+        const QSignalSpy written(&controller, &KeyboardController::brightnessWritten);
+        QVERIFY(controller.SetBrightness(100)); // served at once
+        QTRY_COMPARE(written.size(), 1);
+        QVERIFY(controller.SetBrightness(200)); // waits for the minimum interval
+        controller.setPaused(true, QStringLiteral("held"));
+        QTest::qWait(500);
+        QCOMPARE(state->setValues, std::vector<int>{100}); // the 200 was dropped, not sent
+        controller.setPaused(false);
+        QVERIFY(!controller.paused());
+        QVERIFY(controller.SetBrightness(300)); // works again
+        QTRY_COMPARE(state->setValues.size(), std::size_t{2});
+    }
+
+    void aReadReportsTheValueTheKeyboardHoldsAndWritesNothing()
+    {
+        const auto state = std::make_shared<Keyboard>();
+        state->shownValue = 450; // set by another program: not a step of 100, reported as it is
+        KeyboardController controller(openerFor(state));
+        const QSignalSpy read(&controller, &KeyboardController::brightnessRead);
+        QVERIFY(controller.ReadBrightness());
+        QTRY_COMPARE(read.size(), 1);
+        QCOMPARE(read.constFirst().at(0).toInt(), 450);
+        QVERIFY(read.constFirst().at(1).toBool());
+        QVERIFY(state->setValues.empty());
+        QCOMPARE(state->opens, 1);
+        QCOMPARE(state->closes, 1);
+    }
+
+    void aReadOfAKeyboardThatCannotBeOpenedReportsWhy()
+    {
+        const auto state = std::make_shared<Keyboard>();
+        state->available = false;
+        KeyboardController controller(openerFor(state));
+        const QSignalSpy read(&controller, &KeyboardController::brightnessRead);
+        QVERIFY(controller.ReadBrightness());
+        QTRY_COMPARE(read.size(), 1);
+        QVERIFY(!read.constFirst().at(1).toBool());
+        QVERIFY(!read.constFirst().at(2).toString().isEmpty());
+    }
+
+    void aWriteWaitingGoesBeforeAReadAndNeitherIsLost()
+    {
+        const auto state = std::make_shared<Keyboard>();
+        KeyboardController controller(openerFor(state));
+        const QSignalSpy written(&controller, &KeyboardController::brightnessWritten);
+        const QSignalSpy read(&controller, &KeyboardController::brightnessRead);
+        QVERIFY(controller.SetBrightness(100)); // served at once
+        QVERIFY(controller.ReadBrightness());   // waits
+        QVERIFY(controller.SetBrightness(800)); // waits too, and must go before the read
+        QTRY_COMPARE_WITH_TIMEOUT(read.size(), 1, 5000);
+        QCOMPARE(written.size(), 2);
+        QCOMPARE(read.constFirst().at(0).toInt(), 800); // read after the last write: it sees it
+        QCOMPARE(state->setValues, (std::vector<int>{100, 800}));
     }
 };
 

@@ -39,6 +39,11 @@ Window {
     property bool messageIsError: false
     // The last theme looked at: its colour is the keyboard tab's (the left dial of the module shows it).
     property int lastTheme: 0
+    // The preview of the lamps of the keyboard (KeyboardMap): lamp id -> colour; only drawn, never sent anywhere.
+    property var lampColors: ({})
+    property int selectedCap: -1
+    property var selectedLamps: []
+    readonly property var lastThemeEntry: backend.themes.length > 0 ? backend.themes[Math.min(lastTheme, backend.themes.length - 1)] : null
 
     onClosing: close => {
         if (win.hideOnClose) {
@@ -358,116 +363,284 @@ Window {
         }
     }
 
-    // ---- the keyboard
-    Column {
+    // ---- the keyboard: taller than the window once the curve editor is there, so it scrolls (wheel, bar, drag)
+    Item {
+        id: keyboardPage
+        objectName: "keyboardPage"
         visible: win.tab.kind === "keyboard" && win.backend.problem === ""
         x: 30
-        y: 90
-        width: Math.min(win.width - 60, 760)
-        spacing: 12
+        y: 84
+        width: win.width - 60
+        height: win.height - 104 - statusBar.height
 
-        Text {
-            color: "white"
-            font.pixelSize: 18
-            font.bold: true
-            text: qsTr("Keyboard and Stream Deck module")
+        Flickable {
+            id: keyboardScroll
+            objectName: "keyboardScroll"
+            anchors.fill: parent
+            anchors.rightMargin: 18  // room for the bars, always: a bar that comes and goes would move the content
+            anchors.bottomMargin: 18
+            // What does not fit in width is reached by the bar at the bottom: a keyboard drawn for per-key settings
+            // or theme demos will need room that a narrow window does not have.
+            contentWidth: Math.max(width, keyboardColumn.childrenRect.width)
+            contentHeight: keyboardColumn.height + 24
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+
+            Column {
+                id: keyboardColumn
+                y: 6
+                width: Math.min(keyboardScroll.width, 760)
+                spacing: 12
+
+                Text {
+                    color: "white"
+                    font.pixelSize: 18
+                    font.bold: true
+                    text: qsTr("Keyboard and Stream Deck module")
+                }
+                Text {
+                    objectName: "firmwareVersion"
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    textFormat: Text.PlainText
+                    color: win.backend.homeWidgets.firmwareWarning ? "#ffb74d" : "#c9ced6"
+                    text: win.backend.homeWidgets.firmwareVersion
+                          ? (win.backend.homeWidgets.firmwareSimulation ? qsTr("Simulation — ") : "") + qsTr("Stream Deck firmware: %1").arg(win.backend.homeWidgets.firmwareVersion)
+                          : qsTr("Stream Deck firmware: unknown — connect the module and start the updated daemon.")
+                }
+                Text {
+                    objectName: "firmwareWarning"
+                    visible: win.backend.homeWidgets.firmwareWarning
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    textFormat: Text.PlainText
+                    color: "#ffb74d"
+                    text: qsTr("An older Stream Deck firmware was detected. Version 3.06.005 has caused a Windows freeze on the owner's device. Update to 3.06.006 or later using the official Elgato Stream Deck app. Fully stop Bosun and galleond first; keep the keyboard connected during the update. Then close Elgato and disable its automatic startup (or uninstall it if unused) before restarting GalleonCore. This is separate from the keyboard firmware managed by Corsair Web Hub.")
+                }
+                Pill {
+                    objectName: "downloadElgatoStreamDeck"
+                    visible: win.backend.homeWidgets.windowsCapture || win.backend.homeWidgets.firmwareSimulation
+                    selected: win.backend.homeWidgets.firmwareWarning
+                    text: qsTr("Download Elgato Stream Deck 7.6.0 for Windows (.msi)")
+                    onClicked: Qt.openUrlExternally("https://edge.elgato.com/egc/windows/sd/Stream_Deck_7.6.0.23012.msi")
+                }
+                Text {
+                    visible: win.backend.homeWidgets.windowsCapture || win.backend.homeWidgets.firmwareSimulation
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: qsTr("7.6.0 is the Elgato application version, not the Stream Deck firmware version. Firmware updates are performed inside the Elgato app after fully stopping Bosun and galleond.")
+                }
+                Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+                Text {
+                    color: "white"
+                    font.pixelSize: 16
+                    font.bold: true
+                    text: qsTr("Corsair keyboard · brightness")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#c9ced6"
+                    font.pixelSize: 14
+                    text: qsTr("The brightness of the keyboard's own lighting, in steps of 10 %. galleond writes it when you let go of the slider.")
+                }
+                BrightnessSlider {
+                    objectName: "keyboardBrightness"
+                    id: keyboardBrightnessSlider
+                    width: Math.min(parent.width, 560)
+                    // In curve mode the curve is in charge, not this slider.
+                    enabledLook: win.daemon.running && win.backend.brightnessCurve.mode === "slider"
+                    // What galleond read from the keyboard (or what was just set), unless a stop is being picked now.
+                    Connections {
+                        target: win.daemon
+                        function onKeyboardBrightnessChanged() {
+                            if (win.daemon.keyboardBrightness >= 0 && keyboardBrightnessSlider.preview < 0)
+                                keyboardBrightnessSlider.value = win.daemon.keyboardBrightness
+                        }
+                    }
+                    Component.onCompleted: if (win.daemon.keyboardBrightness >= 0) value = win.daemon.keyboardBrightness
+                    onCommitted: value => win.answered(win.daemon.setKeyboardBrightness(value),
+                                                       qsTr("Keyboard brightness sent to galleond: %1 %").arg(value / 10))
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: win.daemon.running
+                          ? qsTr("The keyboard keeps this value when it is unplugged, as it does for the Web Hub. The slider shows the value galleond read from the keyboard when it started, and what you set since. Close the Web Hub first, or its own answers may hide this one.")
+                          : qsTr("Start galleond (above) to change the brightness: this window never talks to the keyboard itself.")
+                }
+                Row {
+                    spacing: 28
+                    RadioOption {
+                        objectName: "brightnessModeSlider"
+                        text: qsTr("Manual slider")
+                        checked: win.backend.brightnessCurve.mode === "slider"
+                        onChosen: win.answered(win.backend.brightnessCurve.setMode("slider"),
+                                               qsTr("The slider is in charge of the keyboard brightness."))
+                    }
+                    RadioOption {
+                        objectName: "brightnessModeCurve"
+                        text: qsTr("Curve over 24 hours")
+                        checked: win.backend.brightnessCurve.mode === "curve"
+                        onChosen: win.answered(win.backend.brightnessCurve.setMode("curve"),
+                                               qsTr("The curve is in charge of the keyboard brightness."))
+                    }
+                }
+                Text {
+                    objectName: "brightnessCurveProblem"
+                    visible: win.backend.brightnessCurve.problem !== ""
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#ffb74d"
+                    font.pixelSize: 13
+                    text: win.backend.brightnessCurve.problem
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#c9ced6"
+                    font.pixelSize: 14
+                    text: qsTr("In curve mode galleond sets the keyboard to the point nearest to the time of day, at most once an hour, and the slider above is not used. Drag the points up and down: the keyboard receives the nearest step of 10 % for each hour. The curve is saved as you go, whichever mode is chosen.")
+                }
+                BrightnessCurveEditor {
+                    objectName: "brightnessCurveEditor"
+                    width: Math.min(parent.width, 720)
+                    curveModel: win.backend.brightnessCurve
+                    onCommitted: (hour, value) => win.answered(win.backend.brightnessCurve.setHour(hour, value),
+                                                               qsTr("Brightness at %1 h: %2 %").arg(hour).arg(value / 10))
+                }
+                Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+                Text {
+                    color: "white"
+                    font.pixelSize: 16
+                    font.bold: true
+                    text: qsTr("Corsair keyboard · lighting and keys")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#c9ced6"
+                    font.pixelSize: 14
+                    text: qsTr("Corsair's own page, the Web Hub, sets the keyboard's lighting and keys in your browser. It needs a Chromium-based browser (Chrome, Chromium, Edge, Opera).")
+                }
+                Pill {
+                    selected: true
+                    text: qsTr("Open the Corsair Web Hub in your browser")
+                    onClicked: Qt.openUrlExternally("https://www.corsair.com/web-hub")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: qsTr("It opens in your browser, not in this window. Careful: what the Web Hub saves into the keyboard's own memory is the keyboard's business, and this application never writes there. The screen, the 12 keys and the dials of the module are set from the other tabs.")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#7d8591"
+                    font.pixelSize: 13
+                    text: qsTr("The lighting can also be driven from Linux with OpenRGB (the dials' rings already are, through this project's plugin); the per-key lighting of the keyboard is not available there yet.")
+                }
+                Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+                Text {
+                    color: "white"
+                    font.pixelSize: 16
+                    font.bold: true
+                    text: qsTr("Keyboard and module · preview")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#c9ced6"
+                    font.pixelSize: 14
+                    text: qsTr("As on the keyboard, the legend and the outline of each key are see-through: the light of the lamps under it shows through. Click a key and pick a colour to see how a lighting would look. The module shows the keys of the theme tab you looked at last.")
+                }
+                KeyboardMap {
+                    id: keyboardMap
+                    objectName: "keyboardMap"
+                    width: Math.min(parent.width, 740)
+                    colors: win.lampColors
+                    selected: win.selectedCap
+                    themeName: win.lastThemeEntry ? win.lastThemeEntry.name : ""
+                    themeColor: win.lastThemeEntry ? win.lastThemeEntry.color : "#9aa0a6"
+                    tileSource: index => win.lastThemeEntry
+                        ? "image://tiles/" + win.lastThemeEntry.page + "/" + index + "?r=" + win.backend.revision + "&theme=" + win.lastThemeEntry.page
+                        : ""
+                    onCapClicked: (index, lamps) => { win.selectedCap = index; win.selectedLamps = lamps }
+                }
+                Text {
+                    objectName: "keySelection"
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: win.selectedCap < 0 ? qsTr("No key chosen: click a key.")
+                                              : qsTr("Key chosen (lamps: %1).").arg(win.selectedLamps.join(", "))
+                }
+                Swatches {
+                    objectName: "lampSwatches"
+                    visible: win.selectedCap >= 0
+                    onPicked: color => {
+                        const next = Object.assign({}, win.lampColors)
+                        for (const lamp of win.selectedLamps)
+                            next[lamp] = color
+                        win.lampColors = next
+                    }
+                }
+                Row {
+                    spacing: 8
+                    Pill {
+                        objectName: "lampsColourAll"
+                        enabledLook: win.selectedCap >= 0 && win.selectedLamps.length > 0 && win.lampColors[win.selectedLamps[0]] !== undefined
+                        text: qsTr("Give this colour to every key")
+                        onClicked: {
+                            const colour = win.lampColors[win.selectedLamps[0]]
+                            const next = {}
+                            for (const lamp of keyboardMap.allLamps)
+                                next[lamp] = colour
+                            win.lampColors = next
+                        }
+                    }
+                    Pill {
+                        objectName: "lampsRainbow"
+                        text: qsTr("Rainbow")
+                        onClicked: win.lampColors = keyboardMap.rainbow()
+                    }
+                    Pill {
+                        objectName: "lampsClear"
+                        text: qsTr("Clear the colours")
+                        onClicked: { win.lampColors = ({}); win.selectedCap = -1; win.selectedLamps = [] }
+                    }
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#7d8591"
+                    font.pixelSize: 13
+                    text: qsTr("This is a preview: nothing is sent to the keyboard, because the per-key lighting is not available yet. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
+                }
+    
+            }
         }
-        Text {
-            objectName: "firmwareVersion"
-            width: parent.width
-            wrapMode: Text.Wrap
-            textFormat: Text.PlainText
-            color: win.backend.homeWidgets.firmwareWarning ? "#ffb74d" : "#c9ced6"
-            text: win.backend.homeWidgets.firmwareVersion
-                  ? (win.backend.homeWidgets.firmwareSimulation ? qsTr("Simulation — ") : "") + qsTr("Stream Deck firmware: %1").arg(win.backend.homeWidgets.firmwareVersion)
-                  : qsTr("Stream Deck firmware: unknown — connect the module and start the updated daemon.")
+        ScrollRail {
+            objectName: "keyboardScrollRail"
+            flickable: keyboardScroll
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 18
         }
-        Text {
-            objectName: "firmwareWarning"
-            visible: win.backend.homeWidgets.firmwareWarning
-            width: parent.width
-            wrapMode: Text.Wrap
-            textFormat: Text.PlainText
-            color: "#ffb74d"
-            text: qsTr("An older Stream Deck firmware was detected. Version 3.06.005 has caused a Windows freeze on the owner's device. Update to 3.06.006 or later using the official Elgato Stream Deck app. Fully stop Bosun and galleond first; keep the keyboard connected during the update. Then close Elgato and disable its automatic startup (or uninstall it if unused) before restarting GalleonCore. This is separate from the keyboard firmware managed by Corsair Web Hub.")
-        }
-        Pill {
-            objectName: "downloadElgatoStreamDeck"
-            visible: win.backend.homeWidgets.windowsCapture || win.backend.homeWidgets.firmwareSimulation
-            selected: win.backend.homeWidgets.firmwareWarning
-            text: qsTr("Download Elgato Stream Deck 7.6.0 for Windows (.msi)")
-            onClicked: Qt.openUrlExternally("https://edge.elgato.com/egc/windows/sd/Stream_Deck_7.6.0.23012.msi")
-        }
-        Text {
-            visible: win.backend.homeWidgets.windowsCapture || win.backend.homeWidgets.firmwareSimulation
-            width: parent.width
-            wrapMode: Text.Wrap
-            color: "#9aa0a6"
-            font.pixelSize: 13
-            text: qsTr("7.6.0 is the Elgato application version, not the Stream Deck firmware version. Firmware updates are performed inside the Elgato app after fully stopping Bosun and galleond.")
-        }
-        Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
-        Text {
-            color: "white"
-            font.pixelSize: 16
-            font.bold: true
-            text: qsTr("Corsair keyboard · brightness")
-        }
-        Text {
-            width: parent.width
-            wrapMode: Text.Wrap
-            color: "#c9ced6"
-            font.pixelSize: 14
-            text: qsTr("The brightness of the keyboard's own lighting, in steps of 10 %. galleond writes it when you let go of the slider.")
-        }
-        BrightnessSlider {
-            objectName: "keyboardBrightness"
-            width: Math.min(parent.width, 560)
-            enabledLook: win.daemon.running
-            onCommitted: value => win.answered(win.daemon.setKeyboardBrightness(value),
-                                               qsTr("Keyboard brightness sent to galleond: %1 %").arg(value / 10))
-        }
-        Text {
-            width: parent.width
-            wrapMode: Text.Wrap
-            color: "#9aa0a6"
-            font.pixelSize: 13
-            text: win.daemon.running
-                  ? qsTr("The keyboard keeps this value when it is unplugged, as it does for the Web Hub. The slider shows what was set from here: it cannot read the keyboard yet. Close the Web Hub first, or its own answers may hide this one.")
-                  : qsTr("Start galleond (above) to change the brightness: this window never talks to the keyboard itself.")
-        }
-        Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
-        Text {
-            color: "white"
-            font.pixelSize: 16
-            font.bold: true
-            text: qsTr("Corsair keyboard · lighting and keys")
-        }
-        Text {
-            width: parent.width
-            wrapMode: Text.Wrap
-            color: "#c9ced6"
-            font.pixelSize: 14
-            text: qsTr("Corsair's own page, the Web Hub, sets the keyboard's lighting and keys in your browser. It needs a Chromium-based browser (Chrome, Chromium, Edge, Opera).")
-        }
-        Pill {
-            selected: true
-            text: qsTr("Open the Corsair Web Hub in your browser")
-            onClicked: Qt.openUrlExternally("https://www.corsair.com/web-hub")
-        }
-        Text {
-            width: parent.width
-            wrapMode: Text.Wrap
-            color: "#9aa0a6"
-            font.pixelSize: 13
-            text: qsTr("It opens in your browser, not in this window. Careful: what the Web Hub saves into the keyboard's own memory is the keyboard's business, and this application never writes there. The screen, the 12 keys and the dials of the module are set from the other tabs.")
-        }
-        Text {
-            width: parent.width
-            wrapMode: Text.Wrap
-            color: "#7d8591"
-            font.pixelSize: 13
-            text: qsTr("The lighting can also be driven from Linux with OpenRGB (the dials' rings already are, through this project's plugin); the per-key lighting of the keyboard is not available there yet.")
+        ScrollRail {
+            objectName: "keyboardScrollRailHorizontal"
+            orientation: Qt.Horizontal
+            flickable: keyboardScroll
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.rightMargin: 18
         }
     }
 

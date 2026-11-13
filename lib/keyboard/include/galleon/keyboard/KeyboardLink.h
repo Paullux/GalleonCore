@@ -21,7 +21,8 @@ namespace galleon::keyboard {
 
 enum class LinkError { None, InvalidValue, WriteFailed, Disconnected, Timeout, Unconfirmed,
                        StaleReports, // the queue never emptied within the purge limit: an answer could belong to someone else
-                       InvalidReply  // the answer carries a brightness outside 0..1000
+                       InvalidReply, // the answer carries a brightness outside 0..1000
+                       SessionExpired // the keyboard says the session ended (byte 1 of its answer is 15): start another
 };
 
 struct ReadResult

@@ -51,6 +51,17 @@ class TestDaemonStatus : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void aBrightnessReadFromTheKeyboardBecomesTheNearestStopOfTheSlider()
+    {
+        QCOMPARE(DaemonStatus::nearestBrightnessStop(0), 0);
+        QCOMPARE(DaemonStatus::nearestBrightnessStop(1000), 1000);
+        QCOMPARE(DaemonStatus::nearestBrightnessStop(700), 700);
+        QCOMPARE(DaemonStatus::nearestBrightnessStop(449), 400); // set by another program: nearest stop
+        QCOMPARE(DaemonStatus::nearestBrightnessStop(450), 500);
+        QCOMPARE(DaemonStatus::nearestBrightnessStop(-1), -1);
+        QCOMPARE(DaemonStatus::nearestBrightnessStop(1001), -1);
+    }
+
     void showingGamingCallsTheDaemonWithoutStartingAnotherProcess()
     {
         QDBusConnection bus = QDBusConnection::sessionBus();

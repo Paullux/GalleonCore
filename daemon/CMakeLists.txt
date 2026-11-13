@@ -41,7 +41,15 @@ add_library(galleond_core STATIC
     ScreensaverController.h ScreensaverController.cpp
     MatrixTrigger.h MatrixTrigger.cpp
     MatrixRainController.h MatrixRainController.cpp
+    BrightnessCurve.h BrightnessCurve.cpp
     KeyboardController.h KeyboardController.cpp
+    KeyboardState.h KeyboardState.cpp
+    ReplacedFileWatcher.h ReplacedFileWatcher.cpp
+    BrightnessScheduler.h BrightnessScheduler.cpp
+    LightingEnvironment.h UnavailablePowerEvents.h
+    LightingController.h LightingController.cpp LightingWorker.h
+    ProcessWatchdog.h ProcessWatchdog.cpp
+    KeyboardStatePublisher.h KeyboardStatePublisher.cpp
 )
 target_include_directories(galleond_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(galleond_core PUBLIC galleon galleon_keyboard galleon_media galleon_keys galleon_platform Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::Network Qt6::WebSockets PRIVATE galleon_warnings)
@@ -50,7 +58,7 @@ if(WIN32)
     target_link_libraries(galleond_core PUBLIC galleon_smtc PRIVATE shell32 ole32 uuid advapi32 user32 version)
     target_compile_definitions(galleond_core PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 else()
-    target_sources(galleond_core PRIVATE LinuxKeyInjector.h LinuxKeyInjector.cpp LinuxPlatformBackends.cpp
+    target_sources(galleond_core PRIVATE QuitOnSignals.h QuitOnSignals.cpp LogindPowerEvents.h LogindPowerEvents.cpp LinuxKeyInjector.h LinuxKeyInjector.cpp LinuxPlatformBackends.cpp
         MprisController.h MprisController.cpp DesktopEntries.cpp)
     target_link_libraries(galleond_core PUBLIC Qt6::DBus)
 endif()

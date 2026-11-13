@@ -4,6 +4,7 @@
 #include "LocalControl.h"
 #include <QCoreApplication>
 #include <QFileInfo>
+#include <QDateTime>
 #include <QProcess>
 
 namespace bosun {
@@ -21,6 +22,10 @@ DaemonStatus::DaemonStatus(QString program, QString endpoint, QObject *parent)
         m_probe.abort();
     });
     connect(&m_probe, &QLocalSocket::errorOccurred, this, [this] { setRunning(false); });
+    // The keyboard's brightness comes back through the file galleond writes (the endpoint has no reply). Only a value
+    // written after this window started is taken: an older one describes an earlier session.
+    m_keyboardState = new KeyboardStateWatcher(galleond::keyboardStatePath(), QDateTime::currentSecsSinceEpoch(), this);
+    connect(m_keyboardState, &KeyboardStateWatcher::brightnessChanged, this, [this](int value) { setKeyboardBrightnessKnown(nearestBrightnessStop(value)); });
     m_poll.start();
     look();
 }
@@ -30,6 +35,8 @@ void DaemonStatus::setRunning(bool running)
     if (m_running != running) {
         m_running = running;
         Q_EMIT changed();
+        if (m_running)
+            static_cast<void>(readKeyboardBrightness());
     }
 }
 
@@ -74,6 +81,24 @@ QString DaemonStatus::showTheme(const QString &page) {
     if (!running()) return {};
     galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::Theme, {}, page}, this);
     return {};
+}
+int DaemonStatus::nearestBrightnessStop(int value) {
+    if (value < 0 || value > 1000) return -1;
+    return (value + 50) / 100 * 100;
+}
+// The local endpoint has no reply: galleond reads the keyboard and publishes the value in keyboard-state.json,
+// which m_keyboardState watches.
+QString DaemonStatus::readKeyboardBrightness() {
+    if (!running()) return {};
+    galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::KeyboardBrightnessRead, {}, {}}, this);
+    return {};
+}
+void DaemonStatus::onBrightnessRead(int, bool, const QString &) {}
+void DaemonStatus::onBrightnessWritten(int, bool, const QString &) {}
+void DaemonStatus::setKeyboardBrightnessKnown(int value) {
+    if (value == m_keyboardBrightness) return;
+    m_keyboardBrightness = value;
+    Q_EMIT keyboardBrightnessChanged();
 }
 QString DaemonStatus::setKeyboardBrightness(int value) {
     if (!running()) return tr("Start galleond to change the keyboard brightness");

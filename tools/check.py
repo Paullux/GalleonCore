@@ -46,6 +46,7 @@ from pathlib import Path
 IMAGE = "galleoncore-ci:24.04"
 TIDY_DIRS = ("lib/src/", "daemon/", "bosun/", "tests/", "media/")
 LONG_FUZZ_SECONDS = 60
+FUZZ_TARGETS = ("fuzz_input_report", "fuzz_live_guard", "fuzz_live_link")
 CI_FILE = ".github/workflows/ci.yml"
 # The steps of the CI lint job that need no build: replayed as the CI writes them, in a clean
 # copy of the tree, so that what one step leaves behind (a cache folder...) is seen by the next.
@@ -404,9 +405,11 @@ class Checks:
         self.replay_ci_steps()
 
     def fuzz(self) -> None:
-        target = self.build / "asan" / "fuzz" / "fuzz_input_report"
-        ok = run([str(target), f"-max_total_time={LONG_FUZZ_SECONDS}"], quiet=True).returncode == 0
-        self.step("fuzz fuzz_input_report", ok, f"({LONG_FUZZ_SECONDS} s)")
+        # The same targets as the CI's fuzzing steps, each for the same time.
+        for name in FUZZ_TARGETS:
+            target = self.build / "asan" / "fuzz" / name
+            ok = run([str(target), f"-max_total_time={LONG_FUZZ_SECONDS}"], quiet=True).returncode == 0
+            self.step(f"fuzz {name}", ok, f"({LONG_FUZZ_SECONDS} s)")
 
 
 ASAN_FLAGS = ["-DCMAKE_CXX_COMPILER=clang++", "-DGALLEON_SANITIZE=ON", "-DGALLEON_FUZZ=ON"]

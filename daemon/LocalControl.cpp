@@ -60,6 +60,9 @@ std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
             return std::nullopt;
         return LocalCommand{LocalAction::KeyboardBrightness, {}, {}, static_cast<int>(number)};
     }
+    // Asks galleond to read the keyboard's brightness and publish it (keyboard-state.json): there is no reply here.
+    if (object.size() == 1 && action == QStringLiteral("keyboard-brightness-read"))
+        return LocalCommand{LocalAction::KeyboardBrightnessRead, {}, {}};
     if (object.size() == 1 && action == QStringLiteral("stop"))
         return LocalCommand{LocalAction::Stop, {}, {}};
     if (object.size() != 2 || action != QStringLiteral("wallpaper"))
@@ -88,6 +91,7 @@ QByteArray encodeLocalCommand(const LocalCommand &command)
         object.insert(QStringLiteral("action"), QStringLiteral("keyboard-brightness"));
         object.insert(QStringLiteral("value"), command.brightness);
         break;
+    case LocalAction::KeyboardBrightnessRead: object.insert(QStringLiteral("action"), QStringLiteral("keyboard-brightness-read")); break;
     case LocalAction::Stop: object.insert(QStringLiteral("action"), QStringLiteral("stop")); break;
     case LocalAction::Wallpaper:
         object.insert(QStringLiteral("action"), QStringLiteral("wallpaper"));
@@ -209,6 +213,7 @@ void LocalControl::acceptConnections()
             case LocalAction::Wallpaper: Q_EMIT wallpaperRequested(command->wallpaper); break;
             case LocalAction::Theme: Q_EMIT themeRequested(command->page); break;
             case LocalAction::KeyboardBrightness: Q_EMIT keyboardBrightnessRequested(command->brightness); break;
+            case LocalAction::KeyboardBrightnessRead: Q_EMIT keyboardBrightnessReadRequested(); break;
             case LocalAction::Stop: Q_EMIT stopRequested(); break;
             }
         };

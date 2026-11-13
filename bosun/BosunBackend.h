@@ -6,6 +6,7 @@
 #include <PagesConfig.h>
 #include <HomeWidgets.h>
 #include <RecordingController.h>
+#include "BrightnessCurveModel.h"
 #include "VideoConverter.h"
 
 #include <PagesEditor.h>
@@ -13,6 +14,7 @@
 #include <VideoProbe.h>
 #include <VideoThumbnails.h>
 
+#include <QFileInfo>
 #include <QFileSystemWatcher>
 #include <QHash>
 #include <QObject>
@@ -35,6 +37,8 @@ class BosunBackend : public QObject
     Q_OBJECT
     Q_PROPERTY(QObject* recording READ recording CONSTANT)
     Q_PROPERTY(QObject* homeWidgets READ homeWidgets CONSTANT)
+    // The brightness curve of the day, saved next to the pages file (BrightnessCurveModel.h).
+    Q_PROPERTY(QObject* brightnessCurve READ brightnessCurve CONSTANT)
     Q_PROPERTY(QString file READ file CONSTANT)
     // Empty when all is well; else why the pages cannot be shown.
     Q_PROPERTY(QString problem READ problem NOTIFY changed)
@@ -58,6 +62,7 @@ class BosunBackend : public QObject
 public:
     QObject *recording() { return &m_recording; }
     QObject *homeWidgets() { return &m_homeWidgets; }
+    QObject *brightnessCurve() { return &m_brightnessCurve; }
     // The user's own folder for converted videos: ~/.local/share/galleoncore/screensavers.
     [[nodiscard]] static QString defaultConvertedFolder();
 
@@ -200,6 +205,7 @@ private:
     [[nodiscard]] const galleond::Page *pageNamed(const QString &page) const;
 
     QString m_file;
+    BrightnessCurveModel m_brightnessCurve{QFileInfo(m_file).absolutePath() + QStringLiteral("/brightness-curve.json")};
     QString m_wallpaperRoot;
     QString m_problem;
     QVariantList m_themes;

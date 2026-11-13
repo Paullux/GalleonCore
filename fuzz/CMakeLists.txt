@@ -15,9 +15,41 @@ target_include_directories(fuzz_input_report PRIVATE ${PROJECT_SOURCE_DIR}/lib/i
 target_compile_options(fuzz_input_report PRIVATE -fsanitize=fuzzer,address,undefined)
 target_link_options(fuzz_input_report PRIVATE -fsanitize=fuzzer,address,undefined)
 
+# The keyboard's live-lighting allowlist: pure code, compiled directly into the fuzzer.
+add_executable(fuzz_live_guard
+    fuzz_live_guard.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/LiveCommandGuard.cpp
+)
+target_include_directories(fuzz_live_guard PRIVATE ${PROJECT_SOURCE_DIR}/lib/keyboard/include)
+target_compile_options(fuzz_live_guard PRIVATE -fsanitize=fuzzer,address,undefined)
+target_link_options(fuzz_live_guard PRIVATE -fsanitize=fuzzer,address,undefined)
+
 if(NOT GALLEON_BUILD_DESKTOP)
     return()
 endif()
+
+# The live lighting link: it reads what the keyboard says, so it is fed random answers. It needs Qt Core only for
+# the QString of the transport interface.
+add_executable(fuzz_live_link
+    fuzz_live_link.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/LiveLink.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/CheckedLink.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/Exchange.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/LiveCommandGuard.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/LiveFrame.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/LivePolicy.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/LiveRelease.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/LiveRequests.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/LiveYield.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/BragiReply.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/KeyboardLink.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/BragiFrame.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/Brightness.cpp
+)
+target_include_directories(fuzz_live_link PRIVATE ${PROJECT_SOURCE_DIR}/lib/keyboard/include ${PROJECT_SOURCE_DIR}/lib/keyboard/src ${PROJECT_SOURCE_DIR}/lib/include)
+target_link_libraries(fuzz_live_link PRIVATE Qt6::Core)
+target_compile_options(fuzz_live_link PRIVATE -fsanitize=fuzzer,address,undefined)
+target_link_options(fuzz_live_link PRIVATE -fsanitize=fuzzer,address,undefined)
 
 # The pages file parser needs Qt Core (JSON), and the protocol header for the
 # key and dial counts.

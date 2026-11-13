@@ -7,60 +7,31 @@
 #include "galleon/keyboard/BragiReply.h"
 #include "galleon/keyboard/Brightness.h"
 
-#include <array>
+#include "Exchange.h"
+
 #include <optional>
-#include <thread>
 
 namespace galleon::keyboard {
 
 namespace {
 
-constexpr std::size_t ReadBufferSize = 256;
-constexpr int MaxStaleReports = 64; // bounded: a device that never stops talking cannot hold the caller
-constexpr auto PollInterval = std::chrono::milliseconds(1);
-
-// Reads and discards whatever is already waiting (an answer meant for someone else), then writes
-// the request and waits for a reply whose echoed command matches. Never matches a stale answer.
+// One request and its answer, through the shared exchange (Exchange.h): the answer is the first report that parses
+// and echoes the expected command, so a stale answer or a malformed one is never taken for it.
 std::optional<PropertyReply> exchange(Transport &transport, std::span<const std::uint8_t> request,
                                        std::uint8_t expectedCommand, std::chrono::milliseconds timeout,
                                        LinkError *failure)
 {
-    std::array<std::uint8_t, ReadBufferSize> buffer{};
-    bool drained = false;
-    for (int i = 0; i < MaxStaleReports && !drained; ++i) {
-        const int n = transport.read(buffer);
-        if (n < 0) {
-            *failure = LinkError::Disconnected;
-            return std::nullopt;
-        }
-        drained = n == 0;
-    }
-    if (!drained) { // never saw an empty queue: the next report could be an old answer, so send nothing
-        *failure = LinkError::StaleReports;
+    std::optional<PropertyReply> reply;
+    const auto accept = [&reply, expectedCommand](std::span<const std::uint8_t> received) {
+        const auto parsed = parsePropertyReply(received);
+        if (!parsed || parsed->command != expectedCommand)
+            return false;
+        reply = parsed;
+        return true;
+    };
+    if (!detail::exchange(transport, request, accept, timeout, failure))
         return std::nullopt;
-    }
-
-    if (!transport.write(request)) {
-        *failure = LinkError::WriteFailed;
-        return std::nullopt;
-    }
-
-    const auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (std::chrono::steady_clock::now() < deadline) {
-        const int n = transport.read(buffer);
-        if (n < 0) {
-            *failure = LinkError::Disconnected;
-            return std::nullopt;
-        }
-        if (n == 0) {
-            std::this_thread::sleep_for(PollInterval);
-            continue;
-        }
-        const auto received = std::span<const std::uint8_t>(buffer).first(static_cast<std::size_t>(n));
-        if (const auto reply = parsePropertyReply(received); reply && reply->command == expectedCommand)
-            return reply;
-    }
-    return std::nullopt;
+    return reply;
 }
 
 } // namespace
@@ -126,6 +97,7 @@ const char *describe(LinkError error)
     case LinkError::Unconfirmed: return "the read-back value does not match what was written";
     case LinkError::StaleReports: return "the keyboard kept sending old reports: nothing was sent";
     case LinkError::InvalidReply: return "the keyboard answered a brightness outside 0..1000";
+    case LinkError::SessionExpired: return "the keyboard ended the session";
     }
     return "unknown";
 }

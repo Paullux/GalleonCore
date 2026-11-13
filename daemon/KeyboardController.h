@@ -30,8 +30,10 @@ namespace galleond {
 // - The value is kept by the keyboard itself (it survives a power cycle, like a change made in the Web Hub),
 //   so no restore on exit is wanted: the user chose it.
 // - Only whole steps of 100 (0 to 1000) are accepted, one request is served at a time, the newest request
-//   replaces one still waiting, and two writes are never closer than MinIntervalMs: each write may reach
+//   replaces one still waiting, and two requests are never closer than MinIntervalMs: each write may reach
 //   the keyboard's own memory, so a script or a dragged slider cannot hammer it.
+// - Reading the current value (ReadBrightness) only ever reads: it opens the interface for one request like a
+//   write does, never writes, and a write waiting always goes first.
 // - Writing blocks for up to a few reports' timeout: it runs on one worker thread, never in the device loop
 //   that also sends the Stream Deck keep-alive. The worker owns its transport for the length of one job.
 //   The destructor waits for a running job; the answer of a job is delivered on this object's thread.
@@ -57,25 +59,43 @@ public:
     // Pure: the value to write, or nothing when it is not a step of 100 from 0 to 1000.
     [[nodiscard]] static std::optional<std::uint16_t> acceptedBrightness(int value);
 
+    // While the live lighting holds the keyboard, brightness requests are refused with a reason instead of being
+    // sent: two programs reading the same answers would take each other's for a foreign host. Set by whoever
+    // wires the two keyboard-side components (main.cpp); this component does not know the other one.
+    void setPaused(bool paused, const QString &reason = {});
+    [[nodiscard]] bool paused() const { return m_paused; }
+
 public Q_SLOTS:
     // True when the request was accepted (it is served soon, newest first); false when the value is refused.
     bool SetBrightness(int value);
+    // Asks for the value the keyboard holds now (it may have been changed by the Web Hub): always accepted,
+    // the answer comes with brightnessRead. Nothing is written.
+    bool ReadBrightness();
 
 Q_SIGNALS:
     // The result of one write: `value` as asked, `ok` once the keyboard read it back identical.
     void brightnessWritten(int value, bool ok, const QString &reason);
+    // The result of one read: the value as the keyboard holds it (0 to 1000, not necessarily a step of 100
+    // when another program set it), or `ok` false with the reason.
+    void brightnessRead(int value, bool ok, const QString &reason);
 
 private:
     void startNext();
     void finished(int value, bool ok, const QString &reason);
+    void readFinished(int value, bool ok, const QString &reason);
+    void startWrite(int value);
+    void startRead();
 
     Opener m_opener;
     QThreadPool m_pool;
     QTimer m_retry;
     QElapsedTimer m_sinceStart;
     std::optional<int> m_pending;
+    bool m_readPending = false;
     bool m_busy = false;
     bool m_started = false;
+    bool m_paused = false;
+    QString m_pausedReason;
 };
 
 } // namespace galleond

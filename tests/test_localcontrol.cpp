@@ -64,6 +64,18 @@ private slots:
         QTRY_COMPARE(requested.size(), 1);
         QCOMPARE(requested.constFirst().constFirst().toInt(), 300);
     }
+    void aKeyboardBrightnessReadCarriesNothingElse()
+    {
+        const auto command = parseLocalCommand(encodeLocalCommand({LocalAction::KeyboardBrightnessRead, {}, {}}));
+        QVERIFY(command.has_value());
+        QCOMPARE(command.value_or(LocalCommand{}).action, LocalAction::KeyboardBrightnessRead);
+        QVERIFY(!parseLocalCommand(QByteArray(R"({"action":"keyboard-brightness-read","value":5})")).has_value());
+        const QString name = QStringLiteral("galleon-brightness-read-") + QUuid::createUuid().toString(QUuid::Id128);
+        LocalControl server; QVERIFY(server.listen(name));
+        const QSignalSpy requested(&server, &LocalControl::keyboardBrightnessReadRequested);
+        sendLocalCommand(name, {LocalAction::KeyboardBrightnessRead, {}, {}}, &server);
+        QTRY_COMPARE(requested.size(), 1);
+    }
     void roundTripWallpaper()
     {
         const QString name = QString::fromUtf8("personal/caf\xc3\xa9.jpg");

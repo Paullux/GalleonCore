@@ -46,6 +46,12 @@ jobs:
       - name: Fuzz (60 s)
         if: contains(matrix.flags, 'GALLEON_FUZZ')
         run: ./build/fuzz/fuzz_input_report -max_total_time=60
+      - name: Fuzz the keyboard live-lighting allowlist (60 s)
+        if: contains(matrix.flags, 'GALLEON_FUZZ')
+        run: ./build/fuzz/fuzz_live_guard -max_total_time=60
+      - name: Fuzz the keyboard live-lighting link (60 s)
+        if: contains(matrix.flags, 'GALLEON_FUZZ')
+        run: ./build/fuzz/fuzz_live_link -max_total_time=60
 
   lint:
     runs-on: ubuntu-24.04

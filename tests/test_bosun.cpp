@@ -8,6 +8,7 @@
 #include "Required.h"
 
 #include <AppsBackend.h>
+#include <BrightnessCurve.h>
 
 #include <QDir>
 #include <QFile>
@@ -21,6 +22,7 @@
 #include <QQmlPropertyMap>
 #include <QQuickWindow>
 #include <QPointer>
+#include <QScopedPointer>
 #include <QQuickItem>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -1394,6 +1396,206 @@ QtObject {
         QVERIFY(QMetaObject::invokeMethod(slider, "choose", Q_ARG(QVariant, 10)));
         QVERIFY(QMetaObject::invokeMethod(slider, "commit"));
         QCOMPARE(committed.constLast().constFirst().toInt(), 1000);
+    }
+
+    void theBrightnessCurveEditorSavesEachPointItsHandleIsLetGoAtAndTheRadiosChooseWhoIsInCharge()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        auto *editor = root->findChild<QQuickItem *>("brightnessCurveEditor");
+        auto *sliderRadio = root->findChild<QQuickItem *>("brightnessModeSlider");
+        auto *curveRadio = root->findChild<QQuickItem *>("brightnessModeCurve");
+        auto *slider = root->findChild<QQuickItem *>("keyboardBrightness");
+        QVERIFY(editor);
+        QVERIFY(sliderRadio);
+        QVERIFY(curveRadio);
+        QVERIFY(slider);
+        const QString curveFile = dir.filePath("brightness-curve.json"); // next to the pages file
+        QVERIFY(!QFile::exists(curveFile)); // opening the window writes nothing
+        QVERIFY(sliderRadio->property("checked").toBool());
+        QVERIFY(!curveRadio->property("checked").toBool());
+
+        // Dragging shows a value and sends nothing; letting go commits one point, brought to a step of 10 %.
+        const QSignalSpy committed(editor, SIGNAL(committed(int, int)));
+        QVERIFY(QMetaObject::invokeMethod(editor, "choose", Q_ARG(QVariant, 3), Q_ARG(QVariant, 640)));
+        QCOMPARE(editor->property("previewHour").toInt(), 3);
+        QCOMPARE(editor->property("previewValue").toInt(), 600);
+        QCOMPARE(committed.size(), 0);
+        QVERIFY(!QFile::exists(curveFile));
+        QVERIFY(QMetaObject::invokeMethod(editor, "commit"));
+        QCOMPARE(committed.size(), 1);
+        QCOMPARE(committed.constFirst().at(0).toInt(), 3);
+        QCOMPARE(committed.constFirst().at(1).toInt(), 600);
+        QCOMPARE(galleond::readBrightnessCurve(curveFile).value_or(galleond::BrightnessCurve{}).hours.at(3), 600);
+        QCOMPARE(editor->property("previewHour").toInt(), -1);
+
+        // Letting go where the point already is sends nothing.
+        QVERIFY(QMetaObject::invokeMethod(editor, "choose", Q_ARG(QVariant, 3), Q_ARG(QVariant, 604)));
+        QVERIFY(QMetaObject::invokeMethod(editor, "commit"));
+        QCOMPARE(committed.size(), 1);
+
+        // The radio buttons choose who is in charge; the slider gives way to the curve.
+        QVERIFY(QMetaObject::invokeMethod(curveRadio, "chosen"));
+        QTRY_VERIFY(curveRadio->property("checked").toBool());
+        QVERIFY(!sliderRadio->property("checked").toBool());
+        QCOMPARE(galleond::readBrightnessCurve(curveFile).value_or(galleond::BrightnessCurve{}).mode, galleond::BrightnessCurve::Mode::Curve);
+        QVERIFY(!slider->property("enabledLook").toBool());
+        QVERIFY(QMetaObject::invokeMethod(sliderRadio, "chosen"));
+        QTRY_VERIFY(sliderRadio->property("checked").toBool());
+        QCOMPARE(galleond::readBrightnessCurve(curveFile).value_or(galleond::BrightnessCurve{}).mode, galleond::BrightnessCurve::Mode::Slider);
+    }
+
+    void theKeyboardTabScrollsWhenItIsTallerThanTheWindowSoNothingIsOutOfReach()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        auto *scroll = root->findChild<QQuickItem *>("keyboardScroll");
+        auto *rail = root->findChild<QQuickItem *>("keyboardScrollRail");
+        auto *editor = root->findChild<QQuickItem *>("brightnessCurveEditor");
+        QVERIFY(scroll);
+        QVERIFY(rail);
+        QVERIFY(editor);
+
+        // The Keyboard tab is after the two themes and the "+" tab.
+        QVERIFY(root->setProperty("currentTab", 3));
+        // A short window: more is below than fits, and the bar is there to reach it.
+        QVERIFY(root->setProperty("height", 520));
+        QTRY_VERIFY(scroll->property("contentHeight").toDouble() > scroll->height() + 1);
+        QVERIFY(rail->property("needed").toBool());
+        QTRY_VERIFY(rail->isVisible());
+
+        // At the end of its travel the bottom of the curve editor is in view.
+        const double travel = scroll->property("contentHeight").toDouble() - scroll->height();
+        QVERIFY(scroll->setProperty("contentY", travel));
+        QTRY_VERIFY(editor->mapToItem(scroll, QPointF(0, editor->height())).y() <= scroll->height() + 1);
+
+        // The window is wide enough for everything: no bar at the bottom (it is there for wider content to come).
+        auto *horizontalRail = root->findChild<QQuickItem *>("keyboardScrollRailHorizontal");
+        QVERIFY(horizontalRail);
+        QVERIFY(!horizontalRail->property("needed").toBool());
+
+        // A window tall enough for everything needs no bar.
+        QVERIFY(root->setProperty("height", 1600));
+        QTRY_VERIFY(!rail->property("needed").toBool());
+    }
+
+    void aScrollRailFollowsItsFlickableInBothDirectionsAndOnlyShowsWhenSomethingIsOutOfView()
+    {
+        QQmlEngine engine;
+        QQmlComponent flickableComponent(&engine);
+        flickableComponent.setData("import QtQuick\nFlickable { width: 300; height: 200; contentWidth: 900; contentHeight: 100 }", QUrl());
+        const QScopedPointer<QObject> flickable(flickableComponent.create());
+        QVERIFY(flickable);
+        QQmlComponent railComponent(&engine, QUrl(QStringLiteral("qrc:/bosun/qml/ScrollRail.qml")));
+        QVERIFY2(railComponent.status() == QQmlComponent::Ready, qPrintable(railComponent.errorString()));
+        const QScopedPointer<QObject> horizontal(railComponent.createWithInitialProperties(
+            {{QStringLiteral("flickable"), QVariant::fromValue(flickable.data())}, {QStringLiteral("orientation"), Qt::Horizontal},
+             {QStringLiteral("width"), 300}, {QStringLiteral("height"), 10}}));
+        const QScopedPointer<QObject> vertical(railComponent.createWithInitialProperties(
+            {{QStringLiteral("flickable"), QVariant::fromValue(flickable.data())}, {QStringLiteral("width"), 10}, {QStringLiteral("height"), 200}}));
+        QVERIFY(horizontal);
+        QVERIFY(vertical);
+
+        // 900 wide in 300: the bar is needed, its handle is a third of the track, at the start.
+        QVERIFY(horizontal->property("needed").toBool());
+        QCOMPARE(horizontal->property("handleLength").toDouble(), 100.0);
+        QCOMPARE(horizontal->property("handleOffset").toDouble(), 0.0);
+        // 100 high in 200: nothing is out of view vertically, so no vertical bar.
+        QVERIFY(!vertical->property("needed").toBool());
+
+        // At the end of the travel the handle is at the end of the track.
+        QVERIFY(flickable->setProperty("contentX", 600.0));
+        QCOMPARE(horizontal->property("handleOffset").toDouble(), 200.0);
+        QVERIFY(QMetaObject::invokeMethod(horizontal.data(), "moveTo", Q_ARG(QVariant, 150.0)));
+        QCOMPARE(flickable->property("contentX").toDouble(), 150.0);
+
+        // Content that fits needs no bar.
+        QVERIFY(flickable->setProperty("contentWidth", 250.0));
+        QVERIFY(!horizontal->property("needed").toBool());
+    }
+
+    void aKeyOfTheKeyboardDrawingTakesTheColourPickedForItAndNothingIsSent()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        auto *board = root->findChild<QQuickItem *>("keyboardMap");
+        QVERIFY(board);
+
+        // The drawing knows the 94 key lamps, and the caps that carry them.
+        QCOMPARE(board->property("allLamps").toList().size(), 94);
+        QVERIFY(board->property("map").toMap().value("caps").toList().size() > 80);
+        QVERIFY(root->property("lampColors").toMap().isEmpty());
+        QCOMPARE(root->property("selectedCap").toInt(), -1);
+
+        // Clicking a cap chooses it, with the lamps under it.
+        const QVariantList lamps{QVariant(23)};
+        QVERIFY(QMetaObject::invokeMethod(board, "capClicked", Q_ARG(int, 40), Q_ARG(QVariant, QVariant(lamps))));
+        QCOMPARE(root->property("selectedCap").toInt(), 40);
+        QCOMPARE(root->property("selectedLamps").toList(), lamps);
+
+        // A colour picked for it goes to its lamps and to no other.
+        auto *swatches = root->findChild<QQuickItem *>("lampSwatches");
+        QVERIFY(swatches);
+        QVERIFY(QMetaObject::invokeMethod(swatches, "picked", Q_ARG(QString, QStringLiteral("#e53935"))));
+        const QVariantMap colours = root->property("lampColors").toMap();
+        QCOMPARE(colours.size(), 1);
+        QCOMPARE(colours.value("23").toString(), QStringLiteral("#e53935"));
+
+        // The rainbow gives every lamp a colour, a different one at each end of the keyboard.
+        QVariant rainbow;
+        QVERIFY(QMetaObject::invokeMethod(board, "rainbow", Q_RETURN_ARG(QVariant, rainbow)));
+        const QVariantMap all = rainbow.toMap();
+        QCOMPARE(all.size(), 94);
+        QVERIFY(all.value("0").toString() != all.value("85").toString());
+
+        // Clearing forgets the colours and the choice.
+        auto *clear = root->findChild<QQuickItem *>("lampsClear");
+        QVERIFY(clear);
+        QVERIFY(QMetaObject::invokeMethod(clear, "clicked"));
+        QVERIFY(root->property("lampColors").toMap().isEmpty());
+        QCOMPARE(root->property("selectedCap").toInt(), -1);
     }
 
     void theWindowHasATabPerThemeAndTheFixedOnes()
