@@ -206,6 +206,14 @@ keeps the tray icon. Without a tray the window remains accessible. Clearing the
 component during an upgrade removes previous sign-in commands. Uninstall removes
 both. These are interactive user-session processes, not Session 0 services.
 
+Setup also registers the `.gctheme` file type for the current user only
+(`HKCU\Software\Classes\.gctheme` and ProgID `GalleonCore.Theme`, label
+"GalleonCore theme" / "Thème GalleonCore", `DefaultIcon` = `gctheme.ico` in the
+install folder), then calls `SHChangeNotify`. There is no open verb and nothing
+in HKLM. An upgrade rewrites the same values; Uninstall removes exactly these
+keys (`.gctheme` only while it still points to `GalleonCore.Theme`) and the icon
+file. `test-setup.ps1` checks the keys after install, upgrade and uninstall.
+
 Waking a screensaver now releases the display without synchronously waiting for
 FFmpeg to terminate. An unresponsive decoder is killed asynchronously after its
 grace period. The wake gesture is still consumed. Interactive immediate and long

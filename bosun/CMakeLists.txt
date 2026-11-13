@@ -53,6 +53,15 @@ install(FILES icons/galleon-bosun.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons
 if(NOT WIN32)
 install(FILES galleon-bosun.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 
+# File type of .gctheme theme files: MIME definition and its icon (hicolor, mimetypes). Bosun opens no file
+# given on its command line, so the desktop entry has no MimeType: this is an icon and a name only.
+install(FILES mime/galleoncore-theme.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/mime/packages)
+foreach(size 16 22 24 32 48 64 128 256 512)
+    install(FILES icons/theme-file/gctheme-${size}.png
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${size}x${size}/mimetypes
+            RENAME application-x-galleoncore-theme.png)
+endforeach()
+
 endif()
 
 if(WIN32)
