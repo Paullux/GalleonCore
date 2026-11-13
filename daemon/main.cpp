@@ -17,6 +17,15 @@
 #include "VideoThumbnails.h"
 #include "BrightnessScheduler.h"
 #include "KeyboardController.h"
+#include "LightingController.h"
+#include "ProcessWatchdog.h"
+#ifdef Q_OS_WIN
+#include "UnavailablePowerEvents.h"
+#else
+#include "LogindPowerEvents.h"
+#include "QuitOnSignals.h"
+#include <csignal>
+#endif
 #include "KeyboardState.h"
 #include "KeyboardStatePublisher.h"
 #include "Wiring.h"
@@ -897,6 +906,22 @@ int main(int argc, char *argv[])
     const galleond::BrightnessScheduler brightnessCurve(keyboard, galleond::brightnessCurvePath(), [] { return QTime::currentTime(); });
     const galleond::KeyboardStatePublisher keyboardState(keyboard, galleond::keyboardStatePath(), [] { return QDateTime::currentSecsSinceEpoch(); });
 
+    // The live per-key lighting: EXPERIMENTAL and OFF until someone asks (org.galleoncore.Lighting.Enable). It is refused
+    // unless the watchdog process is running and the system tells us about sleep; it gives the keys back at exit. While it
+    // is on, the brightness requests of `keyboard` are paused: both would read the same answers.
+    galleond::ProcessWatchdog lightingWatchdog;
+#ifdef Q_OS_WIN
+    galleond::UnavailablePowerEvents lightingPower;
+#else
+    galleond::LogindPowerEvents lightingPower;
+    // SIGTERM (systemctl stop), SIGINT, SIGHUP: leave through the event loop so that the lighting is switched off properly.
+    const galleond::QuitOnSignals quitOnSignals({SIGTERM, SIGINT, SIGHUP});
+#endif
+    galleond::LightingController lighting(galleond::KeyboardController::hidOpener(), lightingWatchdog, lightingPower);
+    QObject::connect(&lighting, &galleond::LightingController::activeChanged, &keyboard, [&keyboard](bool active) {
+        keyboard.setPaused(active, QCoreApplication::translate("main", "The lighting holds the keyboard: switch it off to change the brightness."));
+    });
+
     // org.galleoncore.Deck on the session bus (the name was claimed at the start):
     // SetWallpaper, ClearWallpaper, Wallpapers.
 #ifdef Q_OS_WIN
@@ -913,6 +938,8 @@ int main(int argc, char *argv[])
         qWarning() << "galleond: cannot export the D-Bus object";
     if (!bus.registerObject(QStringLiteral("/org/galleoncore/Keyboard"), &keyboard, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals))
         qWarning() << "galleond: cannot export the keyboard D-Bus object";
+    if (!bus.registerObject(QStringLiteral("/org/galleoncore/Lighting"), &lighting, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals))
+        qWarning() << "galleond: cannot export the lighting D-Bus object";
 #endif
 
     if (parser.isSet(wallpaperOption)) {

@@ -59,6 +59,12 @@ public:
     // Pure: the value to write, or nothing when it is not a step of 100 from 0 to 1000.
     [[nodiscard]] static std::optional<std::uint16_t> acceptedBrightness(int value);
 
+    // While the live lighting holds the keyboard, brightness requests are refused with a reason instead of being
+    // sent: two programs reading the same answers would take each other's for a foreign host. Set by whoever
+    // wires the two keyboard-side components (main.cpp); this component does not know the other one.
+    void setPaused(bool paused, const QString &reason = {});
+    [[nodiscard]] bool paused() const { return m_paused; }
+
 public Q_SLOTS:
     // True when the request was accepted (it is served soon, newest first); false when the value is refused.
     bool SetBrightness(int value);
@@ -88,6 +94,8 @@ private:
     bool m_readPending = false;
     bool m_busy = false;
     bool m_started = false;
+    bool m_paused = false;
+    QString m_pausedReason;
 };
 
 } // namespace galleond

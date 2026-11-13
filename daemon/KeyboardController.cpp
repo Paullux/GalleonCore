@@ -46,8 +46,22 @@ std::optional<std::uint16_t> KeyboardController::acceptedBrightness(int value)
     return static_cast<std::uint16_t>(value);
 }
 
+void KeyboardController::setPaused(bool paused, const QString &reason)
+{
+    m_paused = paused;
+    m_pausedReason = paused ? reason : QString();
+    if (paused) { // what was waiting is not sent
+        m_pending.reset();
+        m_readPending = false;
+    }
+}
+
 bool KeyboardController::SetBrightness(int value)
 {
+    if (m_paused) {
+        Q_EMIT brightnessWritten(value, false, m_pausedReason);
+        return false;
+    }
     if (!acceptedBrightness(value)) {
         qWarning() << "galleond: keyboard brightness" << value << "refused (steps of 100 from 0 to 1000)";
         return false;
@@ -59,6 +73,10 @@ bool KeyboardController::SetBrightness(int value)
 
 bool KeyboardController::ReadBrightness()
 {
+    if (m_paused) {
+        Q_EMIT brightnessRead(0, false, m_pausedReason);
+        return true; // accepted, and answered at once: it failed
+    }
     m_readPending = true;
     startNext();
     return true;

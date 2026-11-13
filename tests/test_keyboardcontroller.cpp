@@ -111,6 +111,42 @@ private Q_SLOTS:
         QCOMPARE(state->setValues, (std::vector<int>{100, 400}));
         QVERIFY2(clock.elapsed() >= KeyboardController::MinIntervalMs, "two writes must be at least MinIntervalMs apart");
     }
+    void whilePausedNothingIsOpenedAndTheAnswerSaysWhy()
+    {
+        const auto state = std::make_shared<Keyboard>();
+        KeyboardController controller(openerFor(state));
+        const QSignalSpy written(&controller, &KeyboardController::brightnessWritten);
+        const QSignalSpy read(&controller, &KeyboardController::brightnessRead);
+        controller.setPaused(true, QStringLiteral("the lighting holds the keyboard"));
+        QVERIFY(controller.paused());
+        QVERIFY(!controller.SetBrightness(300));
+        QVERIFY(controller.ReadBrightness());
+        QTest::qWait(50);
+        QCOMPARE(state->opens, 0); // the keyboard was not touched
+        QCOMPARE(written.size(), 1);
+        QVERIFY(!written.constFirst().at(1).toBool());
+        QCOMPARE(written.constFirst().at(2).toString(), QStringLiteral("the lighting holds the keyboard"));
+        QCOMPARE(read.size(), 1);
+        QVERIFY(!read.constFirst().at(1).toBool());
+    }
+
+    void aRequestWaitingWhenThePauseBeginsIsNotSentAfterwards()
+    {
+        const auto state = std::make_shared<Keyboard>();
+        KeyboardController controller(openerFor(state));
+        const QSignalSpy written(&controller, &KeyboardController::brightnessWritten);
+        QVERIFY(controller.SetBrightness(100)); // served at once
+        QTRY_COMPARE(written.size(), 1);
+        QVERIFY(controller.SetBrightness(200)); // waits for the minimum interval
+        controller.setPaused(true, QStringLiteral("held"));
+        QTest::qWait(500);
+        QCOMPARE(state->setValues, std::vector<int>{100}); // the 200 was dropped, not sent
+        controller.setPaused(false);
+        QVERIFY(!controller.paused());
+        QVERIFY(controller.SetBrightness(300)); // works again
+        QTRY_COMPARE(state->setValues.size(), std::size_t{2});
+    }
+
     void aReadReportsTheValueTheKeyboardHoldsAndWritesNothing()
     {
         const auto state = std::make_shared<Keyboard>();
