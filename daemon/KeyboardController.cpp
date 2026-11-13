@@ -3,9 +3,9 @@
 
 #include "KeyboardController.h"
 
-#include <galleon/HidTransport.h>
 #include <galleon/keyboard/Brightness.h>
 #include <galleon/keyboard/KeyboardLink.h>
+#include <galleon/keyboard/VendorInterface.h>
 
 #include <QDebug>
 #include <QMetaObject>
@@ -16,9 +16,6 @@
 namespace galleond {
 namespace {
 
-constexpr std::uint16_t VendorId = 0x1b1c;
-constexpr std::uint16_t KeyboardProductId = 0x2b0c;
-constexpr int VendorInterface = 1; // MI_01, usage page 0xFF42 usage 1 (docs/protocol/README.md)
 constexpr auto ReportTimeout = std::chrono::milliseconds(500);
 
 } // namespace
@@ -38,18 +35,8 @@ KeyboardController::~KeyboardController()
 
 KeyboardController::Opener KeyboardController::hidOpener()
 {
-    return [] () -> std::unique_ptr<galleon::Transport> {
-        auto transport = std::make_unique<galleon::HidTransport>(VendorId, KeyboardProductId, VendorInterface);
-        if (!transport->open())
-            return nullptr;
-        const QString collection = transport->openedCollection();
-        // Interface 1 must be the vendor one: never talk to anything else.
-        if (!collection.contains(QStringLiteral("usagePage=0xff42")) || !collection.contains(QStringLiteral("usage=0x0001"))) {
-            transport->close();
-            return nullptr;
-        }
-        return transport;
-    };
+    // The vendor interface and its collection check live in lib/keyboard (shared with the watchdog tool).
+    return [] () -> std::unique_ptr<galleon::Transport> { return galleon::keyboard::openVendorInterface(); };
 }
 
 std::optional<std::uint16_t> KeyboardController::acceptedBrightness(int value)

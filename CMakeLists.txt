@@ -18,6 +18,7 @@ set(GALLEON_PACKAGE_FORMAT "" CACHE STRING "Native package format for repository
 option(GALLEON_FUZZ "Build the libFuzzer targets (Clang only)" OFF)
 option(GALLEON_BUILD_KEYBOARD_PROBE "Build the read-only keyboard probe (firmware and brightness through HidTransport)" OFF)
 option(GALLEON_BUILD_KEYBOARD_BRIGHTNESS_TOOL "Build the manual brightness read/write test tool (lib/keyboard/)" OFF)
+option(GALLEON_BUILD_KEYBOARD_WATCHDOG "Build the live-lighting watchdog (releases a keyboard left in host mode; lib/keyboard/)" OFF)
 
 # Linux desktop integration remains the default. Windows desktop builds are
 # explicit while native integration and deployment are being validated.
@@ -74,6 +75,9 @@ if(GALLEON_BUILD_KEYBOARD_PROBE)
 endif()
 if(GALLEON_BUILD_KEYBOARD_BRIGHTNESS_TOOL)
     add_subdirectory(tools/keyboard-brightness)
+endif()
+if(GALLEON_BUILD_KEYBOARD_WATCHDOG)
+    add_subdirectory(tools/keyboard-watchdog)
 endif()
 if(GALLEON_BUILD_DESKTOP)
     add_subdirectory(daemon)

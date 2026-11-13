@@ -12,12 +12,12 @@ std::optional<LiveFrame> buildLiveFrame(std::span<const LedColor> leds)
     if (leds.empty() || std::ranges::any_of(leds, [](const LedColor &led) { return led.led >= LiveLedCount; }))
         return std::nullopt;
     LiveFrame frame{};
-    frame[0] = 0x12; // frame header `12 00`, from the capture in docs/protocol/README.md
+    frame.at(0) = 0x12; // frame header `12 00`, from the capture in docs/protocol/README.md
     for (const LedColor &led : leds) {
         const std::size_t at = 2 + 3 * static_cast<std::size_t>(led.led);
-        frame[at] = led.red;
-        frame[at + 1] = led.green;
-        frame[at + 2] = led.blue;
+        frame.at(at) = led.red;
+        frame.at(at + 1) = led.green;
+        frame.at(at + 2) = led.blue;
     }
     return frame;
 }
@@ -29,7 +29,7 @@ std::optional<LiveReports> liveFrameReports(const LiveFrame &frame, std::uint8_t
     LiveReports reports{};
     std::size_t sent = 0;
     for (std::size_t i = 0; i < LiveReportCount; ++i) {
-        auto &report = reports[i];
+        auto &report = reports.at(i);
         report[2] = 0x01; // request
         report[3] = session;
         const bool first = i == 0;
@@ -38,7 +38,7 @@ std::optional<LiveReports> liveFrameReports(const LiveFrame &frame, std::uint8_t
         std::size_t dataAt = 6;
         if (first) {
             for (std::size_t b = 0; b < 4; ++b)
-                report[6 + b] = static_cast<std::uint8_t>((LiveFrameSize >> (8U * b)) & 0xffU);
+                report.at(6 + b) = static_cast<std::uint8_t>((LiveFrameSize >> (8U * b)) & 0xffU);
             dataAt = 10;
         }
         const std::size_t room = first ? WriteBeginData : WriteMoreData;

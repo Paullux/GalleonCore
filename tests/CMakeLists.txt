@@ -56,6 +56,12 @@ galleon_add_test(test_keyboardlive)
 target_link_libraries(test_keyboardlive PRIVATE galleon_keyboard)
 galleon_add_test(test_keyboardyield)
 target_link_libraries(test_keyboardyield PRIVATE galleon_keyboard)
+galleon_add_test(test_keyboardrelease)
+target_link_libraries(test_keyboardrelease PRIVATE galleon_keyboard)
+
+# The argument parser and the process wait of tools/keyboard-watchdog (the tool itself is not built by default).
+galleon_add_test(test_keyboardwatchdog ../tools/keyboard-watchdog/WatchdogArgs.cpp ../tools/keyboard-watchdog/ProcessWait.cpp)
+target_include_directories(test_keyboardwatchdog PRIVATE ../tools/keyboard-watchdog)
 
 # Compile the real adapter against a fake C API: never enumerate real hardware.
 add_executable(test_hidtransport test_hidtransport.cpp ../lib/src/HidTransport.cpp)

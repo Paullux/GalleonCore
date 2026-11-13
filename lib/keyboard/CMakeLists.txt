@@ -14,7 +14,10 @@ add_library(galleon_keyboard STATIC
     include/galleon/keyboard/LiveCommandGuard.h
     include/galleon/keyboard/LiveFrame.h
     include/galleon/keyboard/LivePolicy.h
+    include/galleon/keyboard/LiveRelease.h
+    include/galleon/keyboard/LiveRequests.h
     include/galleon/keyboard/LiveYield.h
+    include/galleon/keyboard/VendorInterface.h
     src/BragiFrame.cpp
     src/BragiReply.cpp
     src/Brightness.cpp
@@ -22,7 +25,12 @@ add_library(galleon_keyboard STATIC
     src/LiveCommandGuard.cpp
     src/LiveFrame.cpp
     src/LivePolicy.cpp
+    src/LiveRelease.cpp
+    src/LiveRequests.cpp
+    src/Exchange.h
+    src/Exchange.cpp
     src/LiveYield.cpp
+    src/VendorInterface.cpp
 )
 
 target_include_directories(galleon_keyboard PUBLIC
