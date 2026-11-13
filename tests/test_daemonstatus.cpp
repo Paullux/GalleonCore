@@ -68,9 +68,9 @@ public Q_SLOTS:
         return {};
     }
     bool SetColor(int red, int green, int blue) { colours.append({red, green, blue}); return true; }
-    QString State() const { return state; }
+    [[nodiscard]] QString State() const { return state; }
 Q_SIGNALS:
-    void stateChanged(const QString &state, const QString &detail);
+    void stateChanged(const QString &_t1, const QString &_t2); // NOLINT(readability-inconsistent-declaration-parameter-name): moc names them
 };
 
 // galleond as another program: its own connection to the bus (a connection never gets its own signals back), with the
@@ -162,7 +162,7 @@ private Q_SLOTS:
         }
         QCOMPARE(status.lightingState(), QStringLiteral("listening"));
         QVERIFY(status.lightingActive());
-        QVERIFY(changed.size() >= 1);
+        QVERIFY(!changed.isEmpty());
 
         QVERIFY(status.setLightingColor(10, 20, 30).isEmpty());
         QTRY_COMPARE(daemon.endpoint.colours.size(), 1);
