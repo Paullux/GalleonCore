@@ -643,5 +643,7 @@
   "The brightness curve file is damaged and was not used; changing it here replaces it.": "El archivo de la curva de brillo está dañado y no se usó; cambiarlo aquí lo reemplaza.",
   "The brightness curve could not be saved.": "No se pudo guardar la curva de brillo.",
   "Unknown brightness mode.": "Modo de brillo desconocido.",
-  "There is no such hour on the curve.": "Esa hora no existe en la curva."
+  "There is no such hour on the curve.": "Esa hora no existe en la curva.",
+  "Scroll vertically": "Desplazar verticalmente",
+  "Scroll horizontally": "Desplazar horizontalmente"
 }

@@ -643,5 +643,7 @@
   "The brightness curve file is damaged and was not used; changing it here replaces it.": "Die Datei der Helligkeitskurve ist beschädigt und wurde nicht verwendet; eine Änderung hier ersetzt sie.",
   "The brightness curve could not be saved.": "Die Helligkeitskurve konnte nicht gespeichert werden.",
   "Unknown brightness mode.": "Unbekannter Helligkeitsmodus.",
-  "There is no such hour on the curve.": "Diese Stunde gibt es auf der Kurve nicht."
+  "There is no such hour on the curve.": "Diese Stunde gibt es auf der Kurve nicht.",
+  "Scroll vertically": "Vertikal scrollen",
+  "Scroll horizontally": "Horizontal scrollen"
 }

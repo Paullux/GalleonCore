@@ -643,5 +643,7 @@
   "The brightness curve file is damaged and was not used; changing it here replaces it.": "Le fichier de la courbe de luminosité est abîmé et n’a pas été utilisé ; le modifier ici le remplace.",
   "The brightness curve could not be saved.": "La courbe de luminosité n’a pas pu être enregistrée.",
   "Unknown brightness mode.": "Mode de luminosité inconnu.",
-  "There is no such hour on the curve.": "Il n’y a pas cette heure sur la courbe."
+  "There is no such hour on the curve.": "Il n’y a pas cette heure sur la courbe.",
+  "Scroll vertically": "Défiler verticalement",
+  "Scroll horizontally": "Défiler horizontalement"
 }

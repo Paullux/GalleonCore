@@ -22,6 +22,7 @@
 #include <QQmlPropertyMap>
 #include <QQuickWindow>
 #include <QPointer>
+#include <QScopedPointer>
 #include <QQuickItem>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -1496,9 +1497,49 @@ QtObject {
         QVERIFY(scroll->setProperty("contentY", travel));
         QTRY_VERIFY(editor->mapToItem(scroll, QPointF(0, editor->height())).y() <= scroll->height() + 1);
 
+        // The window is wide enough for everything: no bar at the bottom (it is there for wider content to come).
+        auto *horizontalRail = root->findChild<QQuickItem *>("keyboardScrollRailHorizontal");
+        QVERIFY(horizontalRail);
+        QVERIFY(!horizontalRail->property("needed").toBool());
+
         // A window tall enough for everything needs no bar.
         QVERIFY(root->setProperty("height", 1600));
         QTRY_VERIFY(!rail->property("needed").toBool());
+    }
+
+    void aScrollRailFollowsItsFlickableInBothDirectionsAndOnlyShowsWhenSomethingIsOutOfView()
+    {
+        QQmlEngine engine;
+        QQmlComponent flickableComponent(&engine);
+        flickableComponent.setData("import QtQuick\nFlickable { width: 300; height: 200; contentWidth: 900; contentHeight: 100 }", QUrl());
+        const QScopedPointer<QObject> flickable(flickableComponent.create());
+        QVERIFY(flickable);
+        QQmlComponent railComponent(&engine, QUrl(QStringLiteral("qrc:/bosun/qml/ScrollRail.qml")));
+        QVERIFY2(railComponent.status() == QQmlComponent::Ready, qPrintable(railComponent.errorString()));
+        const QScopedPointer<QObject> horizontal(railComponent.createWithInitialProperties(
+            {{QStringLiteral("flickable"), QVariant::fromValue(flickable.data())}, {QStringLiteral("orientation"), Qt::Horizontal},
+             {QStringLiteral("width"), 300}, {QStringLiteral("height"), 10}}));
+        const QScopedPointer<QObject> vertical(railComponent.createWithInitialProperties(
+            {{QStringLiteral("flickable"), QVariant::fromValue(flickable.data())}, {QStringLiteral("width"), 10}, {QStringLiteral("height"), 200}}));
+        QVERIFY(horizontal);
+        QVERIFY(vertical);
+
+        // 900 wide in 300: the bar is needed, its handle is a third of the track, at the start.
+        QVERIFY(horizontal->property("needed").toBool());
+        QCOMPARE(horizontal->property("handleLength").toDouble(), 100.0);
+        QCOMPARE(horizontal->property("handleOffset").toDouble(), 0.0);
+        // 100 high in 200: nothing is out of view vertically, so no vertical bar.
+        QVERIFY(!vertical->property("needed").toBool());
+
+        // At the end of the travel the handle is at the end of the track.
+        QVERIFY(flickable->setProperty("contentX", 600.0));
+        QCOMPARE(horizontal->property("handleOffset").toDouble(), 200.0);
+        QVERIFY(QMetaObject::invokeMethod(horizontal.data(), "moveTo", Q_ARG(QVariant, 150.0)));
+        QCOMPARE(flickable->property("contentX").toDouble(), 150.0);
+
+        // Content that fits needs no bar.
+        QVERIFY(flickable->setProperty("contentWidth", 250.0));
+        QVERIFY(!horizontal->property("needed").toBool());
     }
 
     void theWindowHasATabPerThemeAndTheFixedOnes()

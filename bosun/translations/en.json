@@ -643,5 +643,7 @@
   "The brightness curve file is damaged and was not used; changing it here replaces it.": "The brightness curve file is damaged and was not used; changing it here replaces it.",
   "The brightness curve could not be saved.": "The brightness curve could not be saved.",
   "Unknown brightness mode.": "Unknown brightness mode.",
-  "There is no such hour on the curve.": "There is no such hour on the curve."
+  "There is no such hour on the curve.": "There is no such hour on the curve.",
+  "Scroll vertically": "Scroll vertically",
+  "Scroll horizontally": "Scroll horizontally"
 }

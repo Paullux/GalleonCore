@@ -372,8 +372,11 @@ Window {
             id: keyboardScroll
             objectName: "keyboardScroll"
             anchors.fill: parent
-            anchors.rightMargin: 18
-            contentWidth: width
+            anchors.rightMargin: 18  // room for the bars, always: a bar that comes and goes would move the content
+            anchors.bottomMargin: 18
+            // What does not fit in width is reached by the bar at the bottom: a keyboard drawn for per-key settings
+            // or theme demos will need room that a narrow window does not have.
+            contentWidth: Math.max(width, keyboardColumn.childrenRect.width)
             contentHeight: keyboardColumn.height + 24
             clip: true
             boundsBehavior: Flickable.StopAtBounds
@@ -547,6 +550,16 @@ Window {
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
+            anchors.bottomMargin: 18
+        }
+        ScrollRail {
+            objectName: "keyboardScrollRailHorizontal"
+            orientation: Qt.Horizontal
+            flickable: keyboardScroll
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.rightMargin: 18
         }
     }
 
