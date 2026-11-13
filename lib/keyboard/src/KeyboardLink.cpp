@@ -97,6 +97,7 @@ const char *describe(LinkError error)
     case LinkError::Unconfirmed: return "the read-back value does not match what was written";
     case LinkError::StaleReports: return "the keyboard kept sending old reports: nothing was sent";
     case LinkError::InvalidReply: return "the keyboard answered a brightness outside 0..1000";
+    case LinkError::SessionExpired: return "the keyboard ended the session";
     }
     return "unknown";
 }

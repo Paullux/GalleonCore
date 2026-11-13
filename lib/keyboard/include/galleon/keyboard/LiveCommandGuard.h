@@ -71,6 +71,11 @@ public:
     // Forget the open file and any half-written frame (after a failure or a release).
     void reset();
 
+    // Give up a half-written frame but keep the file open: after a frame that did not go through, the next `06` may
+    // begin a new one. (That the keyboard accepts a new frame over an abandoned one is an assumption, not a
+    // measurement: the freeze rule stops the stream after two failures in a row.)
+    void abortFrame() { m_expected = 0; }
+
     [[nodiscard]] bool fileOpen() const { return m_open; }
     [[nodiscard]] std::size_t bytesExpected() const { return m_expected; }
 

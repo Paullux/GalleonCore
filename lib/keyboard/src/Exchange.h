@@ -25,9 +25,14 @@ namespace galleon::keyboard::detail {
 inline constexpr std::size_t ReadBufferSize = 256;
 inline constexpr int MaxStaleReports = 64; // bounded: a device that never stops talking cannot hold the caller
 
-// The report as read, or nothing; `failure` says why (Timeout when nothing acceptable arrived in time).
+using ReportObserver = std::function<void(std::span<const std::uint8_t>)>;
+
+// The report as read, or nothing; `failure` says why (Timeout when nothing acceptable arrived in time). Every
+// report that was read and is NOT the answer (one that was waiting, or an answer to someone else that arrived
+// meanwhile) is shown to `unmatched`, when there is one: that is how the live lighting notices another host.
 [[nodiscard]] std::optional<std::vector<std::uint8_t>> exchange(Transport &transport, std::span<const std::uint8_t> request,
                                                                  const std::function<bool(std::span<const std::uint8_t>)> &accept,
-                                                                 std::chrono::milliseconds timeout, LinkError *failure);
+                                                                 std::chrono::milliseconds timeout, LinkError *failure,
+                                                                 const ReportObserver &unmatched = {});
 
 } // namespace galleon::keyboard::detail

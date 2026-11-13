@@ -8,7 +8,7 @@
 #include "galleon/keyboard/LiveRequests.h"
 #include "galleon/keyboard/LiveYield.h"
 
-#include "Exchange.h"
+#include "CheckedLink.h"
 
 #include <thread>
 #include <vector>
@@ -25,63 +25,11 @@ namespace {
 
 constexpr std::size_t PayloadAt = 5;
 
-// The 128 payload bytes of an answer, whichever way the transport framed it (as BragiReply does).
-std::optional<std::span<const std::uint8_t>> payloadOf(std::span<const std::uint8_t> bytes)
-{
-    if (bytes.size() == PayloadSize)
-        return bytes;
-    if (bytes.size() == WriteSize && bytes.front() == 0)
-        return bytes.subspan(1);
-    return std::nullopt;
-}
-
-// One checked exchange: the report goes through the allowlist first, the answer must echo the command, and the
-// guard moves on only when the keyboard answered with status 0.
-class Checked
-{
-public:
-    Checked(Transport &transport, std::chrono::milliseconds timeout) : m_transport(transport), m_timeout(timeout) {}
-
-    // The 128-byte answer, or nothing (lastError says why).
-    std::optional<std::vector<std::uint8_t>> send(const Request &request)
-    {
-        if (m_guard.check(request) != Refusal::None) {
-            m_error = LinkError::WriteFailed; // never sent
-            return std::nullopt;
-        }
-        const std::uint8_t command = request[4];
-        const auto accept = [command](std::span<const std::uint8_t> received) {
-            const auto payload = payloadOf(received);
-            return payload && (*payload)[3] == command;
-        };
-        auto answer = detail::exchange(m_transport, request, accept, m_timeout, &m_error);
-        if (!answer)
-            return std::nullopt;
-        const auto payload = payloadOf(*answer);
-        if (!payload) {
-            m_error = LinkError::InvalidReply;
-            return std::nullopt;
-        }
-        if ((*payload)[4] != 0) { // a non-zero status is a failure
-            m_error = LinkError::InvalidReply;
-            return std::nullopt;
-        }
-        m_guard.confirmed(request);
-        return std::vector<std::uint8_t>(payload->begin(), payload->end());
-    }
-
-    [[nodiscard]] LinkError error() const { return m_error; }
-
-private:
-    Transport &m_transport;
-    std::chrono::milliseconds m_timeout;
-    LiveCommandGuard m_guard;
-    LinkError m_error = LinkError::None;
-};
+using detail::CheckedLink;
 
 // Session start: the answer repeats the 4 random bytes and ends with the session ID (docs/protocol/README.md,
 // command log: `1b 00 rr rr rr rr 01`). Session 0 means none.
-std::optional<std::uint8_t> startSession(Checked &link, const std::array<std::uint8_t, 4> &random)
+std::optional<std::uint8_t> startSession(CheckedLink &link, const std::array<std::uint8_t, 4> &random)
 {
     const auto answer = link.send(sessionStartRequest(random));
     if (!answer)
@@ -90,7 +38,7 @@ std::optional<std::uint8_t> startSession(Checked &link, const std::array<std::ui
     return session == 0 ? std::nullopt : std::optional<std::uint8_t>(session);
 }
 
-std::optional<std::uint8_t> readMode(Checked &link, std::uint8_t session)
+std::optional<std::uint8_t> readMode(CheckedLink &link, std::uint8_t session)
 {
     const auto answer = link.send(getPropertyIn(session, PropertyMode));
     if (!answer)
@@ -113,7 +61,7 @@ ReleaseResult releaseIfHostMode(Transport &transport, const std::array<std::uint
         if (attempt > 1)
             std::this_thread::sleep_for(retryDelay);
 
-        Checked link(transport, timeout);
+        CheckedLink link(transport, timeout);
         const auto session = startSession(link, random);
         if (!session) {
             result.lastError = link.error();

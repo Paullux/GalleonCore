@@ -21,7 +21,7 @@ constexpr auto PollInterval = std::chrono::milliseconds(1);
 
 std::optional<std::vector<std::uint8_t>> exchange(Transport &transport, std::span<const std::uint8_t> request,
                                                    const std::function<bool(std::span<const std::uint8_t>)> &accept,
-                                                   std::chrono::milliseconds timeout, LinkError *failure)
+                                                   std::chrono::milliseconds timeout, LinkError *failure, const ReportObserver &unmatched)
 {
     std::array<std::uint8_t, ReadBufferSize> buffer{};
     bool drained = false;
@@ -32,6 +32,8 @@ std::optional<std::vector<std::uint8_t>> exchange(Transport &transport, std::spa
             return std::nullopt;
         }
         drained = n == 0;
+        if (n > 0 && unmatched)
+            unmatched(std::span<const std::uint8_t>(buffer).first(static_cast<std::size_t>(n)));
     }
     if (!drained) { // never saw an empty queue: the next report could be an old answer, so send nothing
         *failure = LinkError::StaleReports;
@@ -57,6 +59,8 @@ std::optional<std::vector<std::uint8_t>> exchange(Transport &transport, std::spa
         const auto received = std::span<const std::uint8_t>(buffer).first(static_cast<std::size_t>(n));
         if (accept(received))
             return std::vector<std::uint8_t>(received.begin(), received.end());
+        if (unmatched)
+            unmatched(received);
     }
     *failure = LinkError::Timeout;
     return std::nullopt;

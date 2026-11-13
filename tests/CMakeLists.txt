@@ -58,6 +58,8 @@ galleon_add_test(test_keyboardyield)
 target_link_libraries(test_keyboardyield PRIVATE galleon_keyboard)
 galleon_add_test(test_keyboardrelease)
 target_link_libraries(test_keyboardrelease PRIVATE galleon_keyboard)
+galleon_add_test(test_keyboardlivelink)
+target_link_libraries(test_keyboardlivelink PRIVATE galleon_keyboard)
 
 # The argument parser and the process wait of tools/keyboard-watchdog (the tool itself is not built by default).
 galleon_add_test(test_keyboardwatchdog ../tools/keyboard-watchdog/WatchdogArgs.cpp ../tools/keyboard-watchdog/ProcessWait.cpp)

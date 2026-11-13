@@ -287,6 +287,20 @@ private Q_SLOTS:
         QCOMPARE(guard.check(begin), Refusal::BufferNotAllowed);
     }
 
+    void aFrameThatDidNotGoThroughCanBeAbandonedAndAnotherBegun()
+    {
+        LiveCommandGuard guard = openGuard();
+        const LiveReports frame = f1Green();
+        guard.confirmed(frame[0]);
+        guard.confirmed(frame[1]); // a half-written frame: the rest never comes
+        QVERIFY(guard.bytesExpected() > 0);
+        QCOMPARE(guard.check(frame[0]), Refusal::OutOfSequence);
+        guard.abortFrame();
+        QCOMPARE(guard.bytesExpected(), std::size_t{0});
+        QVERIFY(guard.fileOpen()); // the file stays open
+        QCOMPARE(guard.check(frame[0]), Refusal::None);
+    }
+
     void aReportTheGuardRefusesNeverChangesItsState()
     {
         LiveCommandGuard guard;
