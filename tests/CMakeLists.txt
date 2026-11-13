@@ -54,6 +54,8 @@ target_link_libraries(test_keyboardlink PRIVATE galleon_keyboard)
 # Live lighting safety layer of lib/keyboard/: pure code, nothing is sent anywhere.
 galleon_add_test(test_keyboardlive)
 target_link_libraries(test_keyboardlive PRIVATE galleon_keyboard)
+galleon_add_test(test_keyboardyield)
+target_link_libraries(test_keyboardyield PRIVATE galleon_keyboard)
 
 # Compile the real adapter against a fake C API: never enumerate real hardware.
 add_executable(test_hidtransport test_hidtransport.cpp ../lib/src/HidTransport.cpp)
