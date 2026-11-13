@@ -15,6 +15,7 @@
 #include "ScreensaverController.h"
 #include "ScreensaverSplitter.h"
 #include "VideoThumbnails.h"
+#include "BrightnessScheduler.h"
 #include "KeyboardController.h"
 #include "KeyboardState.h"
 #include "KeyboardStatePublisher.h"
@@ -890,6 +891,9 @@ int main(int argc, char *argv[])
     galleond::KeyboardController keyboard(galleond::KeyboardController::hidOpener());
     // What the keyboard held when last read or written, published for Bosun (the way back on Windows). It only
     // listens to `keyboard`; a failed read or write publishes nothing.
+    // The brightness curve of the day, when the user chose it in Bosun (slider mode: it does nothing). It reads the
+    // keyboard before writing and writes at most once an hour; it only talks to `keyboard`.
+    const galleond::BrightnessScheduler brightnessCurve(keyboard, galleond::brightnessCurvePath(), [] { return QTime::currentTime(); });
     const galleond::KeyboardStatePublisher keyboardState(keyboard, galleond::keyboardStatePath(), [] { return QDateTime::currentSecsSinceEpoch(); });
 
     // org.galleoncore.Deck on the session bus (the name was claimed at the start):

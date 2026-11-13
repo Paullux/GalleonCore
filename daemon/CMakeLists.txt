@@ -41,8 +41,11 @@ add_library(galleond_core STATIC
     ScreensaverController.h ScreensaverController.cpp
     MatrixTrigger.h MatrixTrigger.cpp
     MatrixRainController.h MatrixRainController.cpp
+    BrightnessCurve.h BrightnessCurve.cpp
     KeyboardController.h KeyboardController.cpp
     KeyboardState.h KeyboardState.cpp
+    ReplacedFileWatcher.h ReplacedFileWatcher.cpp
+    BrightnessScheduler.h BrightnessScheduler.cpp
     KeyboardStatePublisher.h KeyboardStatePublisher.cpp
 )
 target_include_directories(galleond_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

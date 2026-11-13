@@ -5,10 +5,10 @@
 
 #include <KeyboardState.h>
 
-#include <QFileSystemWatcher>
+#include <ReplacedFileWatcher.h>
+
 #include <QObject>
 #include <QString>
-#include <QTimer>
 
 #include <optional>
 
@@ -21,14 +21,13 @@ namespace bosun {
 // The file is untrusted input: anything that does not parse is ignored (logged by nobody, shown by nothing), and
 // a value stamped before `notBefore` (when this window started) is ignored too, since it describes an earlier
 // session and another program may have changed the keyboard since. The file is replaced by a rename on every
-// write, which drops a watch on the file itself, so the folder is watched and the file watched again each time.
-// The folder is created by galleond; while it does not exist yet this object retries every few seconds.
+// write: galleond::ReplacedFileWatcher deals with that and with a folder that does not exist yet.
 class KeyboardStateWatcher : public QObject
 {
     Q_OBJECT
 
 public:
-    KeyboardStateWatcher(QString path, qint64 notBefore, QObject *parent = nullptr);
+    KeyboardStateWatcher(const QString &path, qint64 notBefore, QObject *parent = nullptr);
 
     // Reads the file now and emits if it holds a fresh value that was not already reported. Public for tests.
     void refresh();
@@ -41,12 +40,9 @@ Q_SIGNALS:
     void brightnessChanged(int value);
 
 private:
-    void watch();
-
     QString m_path;
     qint64 m_notBefore;
-    QFileSystemWatcher m_watcher;
-    QTimer m_retry;
+    galleond::ReplacedFileWatcher m_watcher;
     std::optional<galleond::KeyboardState> m_last;
 };
 

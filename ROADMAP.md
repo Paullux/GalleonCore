@@ -370,10 +370,20 @@ Décision du propriétaire : `galleond` écrit, après chaque lecture ou écritu
 - Sous Linux le retour reste le signal D-Bus déjà en place ; le fichier est écrit aussi (même code), mais seul Windows le lit pour l'instant.
 - Tests : `test_keyboardstate` (format, écriture atomique, éditeur), `test_keyboardstatewatcher`, `test_localcontrol`. **Non vérifié** : le côté Windows de Bosun (`WindowsDaemonStatus.cpp`, quelques lignes écrites sans pouvoir les compiler ici : la CI Windows dira) et tout essai sur le clavier réel.
 
+### Branche `keyboard` — courbe de luminosité sur 24 h, partie démon — 13 novembre 2026
+
+Choix du propriétaire : **un point par heure**, chacun un **pas de 100** (0 à 1000) dans le fichier ; **échelle affichée de 0 à 100 %** ; dans l'interface, une **courbe continue et lissée**, enregistrée **point par point au plus proche**. Deux mécanismes au choix : **curseur** ou **courbe** (boutons radio dans Bosun, à faire).
+
+- Fichier `brightness-curve.json` à côté de `pages.json` : `{"version":1,"mode":"curve"|"slider","hours":[24 nombres]}`, **strict** (exactement ces trois clés, 24 entiers multiples de 100 entre 0 et 1000, 4 Kio au plus ; un fichier invalide est refusé en entier). `BrightnessCurve` : lecture et écriture atomique, `brightnessAt` (le point le plus proche de l'heure : 07:29 prend 07:00, 07:30 prend 08:00 ; 23:30 et après prennent 00:00), `smoothBrightness` (spline de Catmull-Rom fermée sur 24 h, passe par chaque point, bornée à 0..1000) et `snapBrightness` (arrondi au pas de 100) pour l'éditeur à venir. Défaut : mode curseur, forme jour/nuit.
+- `BrightnessScheduler` (démon) : ne fait **rien** en mode curseur ; en mode courbe il **lit d'abord le clavier** et n'écrit que si la valeur diffère de la cible, et seulement quand la cible **change** (au plus 24 écritures par jour, plus une au démarrage ou au passage en mode courbe). Il ne se bat pas contre un changement fait entre-temps (curseur de Bosun, Web Hub) avant son point suivant. Un fichier absent ou abîmé laisse la courbe en cours. L'heure est lue toutes les 30 s (veille, changement d'heure). Il ne parle qu'au `KeyboardController`.
+- `ReplacedFileWatcher` : surveillance partagée d'un fichier remplacé par renommage (dossier surveillé, nouvelle surveillance du fichier, nouvel essai tant que le dossier manque) ; Bosun (`KeyboardStateWatcher`) l'utilise aussi, au lieu d'une copie.
+- Tests : `test_brightnesscurve` (22), `test_brightnessscheduler` (11, clavier simulé : curseur, fichier absent, lecture avant écriture, pas de réécriture, point suivant, clavier illisible, retour au curseur, fichier abîmé, fichier enregistré après le démarrage).
+- **Reste** : l'éditeur dans Bosun (boutons radio curseur/courbe, courbe lissée glissable, échelle 0 à 100 %), sa traduction (fr, de, es, en), et l'essai du propriétaire sur le clavier. **Rien n'a été essayé sur le clavier réel.**
+
 ### Décisions du propriétaire — 13 novembre 2026
 
 - **Retour de la valeur sous Windows** : `galleond` écrit, après chaque lecture ou écriture de la luminosité, un petit fichier d'état (`keyboard-state.json`) que Bosun surveille. Fait (voir plus haut), côté Windows à confirmer.
-- **Courbe de luminosité sur 24 h** (heure en X, 0 à 1000 en Y) : la courbe vit dans un **fichier JSON à part**. Deux mécanismes d'écriture sur le calendrier sont voulus ; lesquels exactement reste à préciser avec le propriétaire avant de coder.
+- **Courbe de luminosité sur 24 h** (heure en X, 0 à 100 % en Y) : la courbe vit dans un **fichier JSON à part** ; deux mécanismes au choix, curseur ou courbe (voir plus haut).
 
 ### Correctifs issus d'un audit de `main` (57eeb11) — PR #96, 12 novembre 2026
 
