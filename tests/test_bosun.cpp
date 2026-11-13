@@ -1458,6 +1458,49 @@ QtObject {
         QCOMPARE(galleond::readBrightnessCurve(curveFile).value_or(galleond::BrightnessCurve{}).mode, galleond::BrightnessCurve::Mode::Slider);
     }
 
+    void theKeyboardTabScrollsWhenItIsTallerThanTheWindowSoNothingIsOutOfReach()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        auto *scroll = root->findChild<QQuickItem *>("keyboardScroll");
+        auto *rail = root->findChild<QQuickItem *>("keyboardScrollRail");
+        auto *editor = root->findChild<QQuickItem *>("brightnessCurveEditor");
+        QVERIFY(scroll);
+        QVERIFY(rail);
+        QVERIFY(editor);
+
+        // The Keyboard tab is after the two themes and the "+" tab.
+        QVERIFY(root->setProperty("currentTab", 3));
+        // A short window: more is below than fits, and the bar is there to reach it.
+        QVERIFY(root->setProperty("height", 520));
+        QTRY_VERIFY(scroll->property("contentHeight").toDouble() > scroll->height() + 1);
+        QVERIFY(rail->property("needed").toBool());
+        QTRY_VERIFY(rail->isVisible());
+
+        // At the end of its travel the bottom of the curve editor is in view.
+        const double travel = scroll->property("contentHeight").toDouble() - scroll->height();
+        QVERIFY(scroll->setProperty("contentY", travel));
+        QTRY_VERIFY(editor->mapToItem(scroll, QPointF(0, editor->height())).y() <= scroll->height() + 1);
+
+        // A window tall enough for everything needs no bar.
+        QVERIFY(root->setProperty("height", 1600));
+        QTRY_VERIFY(!rail->property("needed").toBool());
+    }
+
     void theWindowHasATabPerThemeAndTheFixedOnes()
     {
         const QTemporaryDir dir;
