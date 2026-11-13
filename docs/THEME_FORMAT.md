@@ -71,6 +71,10 @@ A desktop file ID only means anything on Linux: Windows has no equivalent a them
 
 At install time this id is resolved locally and replaced by whatever the installing machine actually has: a literal desktop file ID on Linux (through the same mechanism as `alternatives`), or, on Windows, a Start Menu shortcut found by matching the target's own vendor-set `ProductName`/`CompanyName` (from its version information) and executable name — never by guessing from a display name, which a user's language or a renamed shortcut would change. An id the installing machine cannot find behaves like an uninstalled `alternatives` entry: the key is kept, inert, with a warning, never a reason to refuse the whole theme. Exporting a theme does the reverse: an `app` key whose application is recognized this way is written back as the portable id, so the same exported file installs on both systems.
 
+## The file icon
+
+The icon of `.gctheme` files is **not part of the format**: no entry of the archive carries it, and a theme file cannot change it. The software installs it with the file type: on Linux the MIME type `application/x-galleoncore-theme` (glob `*.gctheme`, a kind of `application/zip`) and the hicolor icon `application-x-galleoncore-theme`; on Windows the per-user (HKCU) ProgID `GalleonCore.Theme` with `gctheme.ico`. Bosun opens no file given on its command line, so the file type has a name and an icon but no "open with" action. See [`tools/theme-icon/README.md`](../tools/theme-icon/README.md).
+
 ## Installing
 
 Installing a theme never replaces anything of the user's:
