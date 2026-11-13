@@ -890,7 +890,7 @@ int main(int argc, char *argv[])
     galleond::KeyboardController keyboard(galleond::KeyboardController::hidOpener());
     // What the keyboard held when last read or written, published for Bosun (the way back on Windows). It only
     // listens to `keyboard`; a failed read or write publishes nothing.
-    galleond::KeyboardStatePublisher keyboardState(keyboard, galleond::keyboardStatePath(), [] { return QDateTime::currentSecsSinceEpoch(); });
+    const galleond::KeyboardStatePublisher keyboardState(keyboard, galleond::keyboardStatePath(), [] { return QDateTime::currentSecsSinceEpoch(); });
 
     // org.galleoncore.Deck on the session bus (the name was claimed at the start):
     // SetWallpaper, ClearWallpaper, Wallpapers.
