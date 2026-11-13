@@ -451,7 +451,7 @@ Window {
                     id: keyboardBrightnessSlider
                     width: Math.min(parent.width, 560)
                     // In curve mode the curve is in charge, not this slider.
-                    enabledLook: win.daemon.running && win.backend.brightnessCurve.mode === "slider"
+                    enabledLook: win.daemon.running && win.backend.brightnessCurve.mode === "slider" && !win.daemon.lightingActive
                     // What galleond read from the keyboard (or what was just set), unless a stop is being picked now.
                     Connections {
                         target: win.daemon
@@ -512,6 +512,63 @@ Window {
                     curveModel: win.backend.brightnessCurve
                     onCommitted: (hour, value) => win.answered(win.backend.brightnessCurve.setHour(hour, value),
                                                                qsTr("Brightness at %1 h: %2 %").arg(hour).arg(value / 10))
+                }
+                Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+                Text {
+                    color: "white"
+                    font.pixelSize: 16
+                    font.bold: true
+                    text: qsTr("Corsair keyboard · live lighting (experimental)")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#c9ced6"
+                    font.pixelSize: 14
+                    text: win.daemon.lightingSupported
+                          ? qsTr("galleond can light the keys itself, one colour for all of them. It is off by default and never writes to the keyboard's memory: when it stops, or is stopped, the keys go back to what the keyboard held. A small watchdog program gives the keys back even if galleond crashes. Switch it on only if you accept that this is experimental.")
+                          : qsTr("The live lighting is not available on Windows yet.")
+                }
+                Pill {
+                    objectName: "lightingToggle"
+                    visible: win.daemon.lightingSupported
+                    enabled: win.daemon.running
+                    selected: win.daemon.lightingActive
+                    text: win.daemon.lightingActive ? qsTr("Switch the live lighting off") : qsTr("Switch the live lighting on")
+                    onClicked: win.answered(win.daemon.enableLighting(!win.daemon.lightingActive),
+                                            win.daemon.lightingActive ? qsTr("Asked galleond to give the keys back.")
+                                                                      : qsTr("Asked galleond to light the keys."))
+                }
+                Text {
+                    objectName: "lightingState"
+                    visible: win.daemon.lightingSupported
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: win.daemon.lightingDetail !== "" && !win.daemon.lightingActive ? "#ffb74d" : "#9aa0a6"
+                    font.pixelSize: 13
+                    text: {
+                        const names = {
+                            "off": qsTr("Live lighting: off"),
+                            "starting": qsTr("Live lighting: starting"),
+                            "listening": qsTr("Live lighting: waiting for the keyboard to be free"),
+                            "taking": qsTr("Live lighting: taking the keys"),
+                            "holding": qsTr("Live lighting: on"),
+                            "yielded": qsTr("Live lighting: given back to another program"),
+                            "sleeping": qsTr("Live lighting: paused while the computer sleeps")
+                        }
+                        const base = names[win.daemon.lightingState] !== undefined ? names[win.daemon.lightingState] : win.daemon.lightingState
+                        return win.daemon.lightingDetail !== "" ? base + " · " + win.daemon.lightingDetail : base
+                    }
+                }
+                Swatches {
+                    objectName: "lightingSwatches"
+                    visible: win.daemon.lightingSupported && win.daemon.lightingActive
+                    color: "#ffffff"
+                    onPicked: picked => {
+                        const c = Qt.color(picked)
+                        win.answered(win.daemon.setLightingColor(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)),
+                                     qsTr("Keyboard colour sent to galleond: %1").arg(picked))
+                    }
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
                 Text {

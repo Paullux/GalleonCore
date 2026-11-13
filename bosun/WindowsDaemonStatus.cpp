@@ -100,6 +100,19 @@ void DaemonStatus::setKeyboardBrightnessKnown(int value) {
     m_keyboardBrightness = value;
     Q_EMIT keyboardBrightnessChanged();
 }
+// The live lighting is not offered on Windows yet (galleond refuses it there: sleep notifications are not wired, and the
+// local endpoint has no reply to say why), so nothing here asks for it.
+bool DaemonStatus::lightingSupported() { return false; }
+void DaemonStatus::onLightingStateChanged(const QString &, const QString &) {}
+void DaemonStatus::setLighting(const QString &state, const QString &detail) {
+    if (state == m_lightingState && detail == m_lightingDetail) return;
+    m_lightingState = state;
+    m_lightingDetail = detail;
+    Q_EMIT lightingChanged();
+}
+QString DaemonStatus::enableLighting(bool) { return tr("The live lighting is not available on Windows yet"); }
+QString DaemonStatus::setLightingColor(int, int, int) { return tr("The live lighting is not available on Windows yet"); }
+QString DaemonStatus::refreshLighting() { return {}; }
 QString DaemonStatus::setKeyboardBrightness(int value) {
     if (!running()) return tr("Start galleond to change the keyboard brightness");
     galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::KeyboardBrightness, {}, {}, value}, this);

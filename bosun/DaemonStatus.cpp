@@ -26,6 +26,7 @@ DaemonStatus::DaemonStatus(QString systemctl, QObject *parent)
     const QString keyboardInterface = QStringLiteral("org.galleoncore.Keyboard");
     bus.connect(QString::fromLatin1(BusName), keyboardPath, keyboardInterface, QStringLiteral("brightnessRead"), this, SLOT(onBrightnessRead(int,bool,QString)));
     bus.connect(QString::fromLatin1(BusName), keyboardPath, keyboardInterface, QStringLiteral("brightnessWritten"), this, SLOT(onBrightnessWritten(int,bool,QString)));
+    bus.connect(QString::fromLatin1(BusName), QStringLiteral("/org/galleoncore/Lighting"), QStringLiteral("org.galleoncore.Lighting"), QStringLiteral("stateChanged"), this, SLOT(onLightingStateChanged(QString,QString)));
     look();
 }
 
@@ -57,6 +58,79 @@ void DaemonStatus::onBrightnessWritten(int value, bool ok, const QString & /*rea
         setKeyboardBrightnessKnown(nearestBrightnessStop(value));
 }
 
+bool DaemonStatus::lightingSupported()
+{
+    return true;
+}
+
+void DaemonStatus::setLighting(const QString &state, const QString &detail)
+{
+    if (state == m_lightingState && detail == m_lightingDetail)
+        return;
+    m_lightingState = state;
+    m_lightingDetail = detail;
+    Q_EMIT lightingChanged();
+}
+
+void DaemonStatus::onLightingStateChanged(const QString &state, const QString &detail)
+{
+    setLighting(state, detail);
+}
+
+namespace {
+QDBusMessage lightingCall(const QString &method)
+{
+    return QDBusMessage::createMethodCall(QString::fromLatin1(DaemonStatus::BusName), QStringLiteral("/org/galleoncore/Lighting"), QStringLiteral("org.galleoncore.Lighting"), method);
+}
+} // namespace
+
+QString DaemonStatus::enableLighting(bool on)
+{
+    if (!running()) return tr("Start galleond to switch the lighting on or off");
+    auto message = lightingCall(QStringLiteral("Enable"));
+    message << on;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 8000), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, on] {
+        const QDBusPendingReply<QString> reply = *watcher;
+        if (reply.isError())
+            setLighting(QStringLiteral("off"), tr("The lighting could not be reached: restart the updated daemon (%1)").arg(reply.error().message()));
+        else if (!reply.value().isEmpty())
+            setLighting(QStringLiteral("off"), reply.value()); // refused: the reason is the daemon's own
+        else if (!on)
+            setLighting(QStringLiteral("off"), {});
+        watcher->deleteLater();
+    });
+    return {};
+}
+
+QString DaemonStatus::setLightingColor(int red, int green, int blue)
+{
+    if (!running()) return tr("Start galleond to change the lighting");
+    if (red < 0 || red > 255 || green < 0 || green > 255 || blue < 0 || blue > 255)
+        return tr("A colour has three values from 0 to 255");
+    auto message = lightingCall(QStringLiteral("SetColor"));
+    message << red << green << blue;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [watcher] {
+        watcher->deleteLater();
+    });
+    return {};
+}
+
+QString DaemonStatus::refreshLighting()
+{
+    if (!running()) return {};
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(lightingCall(QStringLiteral("State")), 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
+        const QDBusPendingReply<QString> reply = *watcher;
+        // A daemon without the lighting object never answers: that is "off", not an error to show.
+        if (!reply.isError())
+            setLighting(reply.value(), {});
+        watcher->deleteLater();
+    });
+    return {};
+}
+
 QString DaemonStatus::readKeyboardBrightness()
 {
     if (!running()) return {};
@@ -74,8 +148,12 @@ void DaemonStatus::look()
         return;
     m_running = running;
     Q_EMIT changed();
-    if (m_running)
+    if (m_running) {
         static_cast<void>(readKeyboardBrightness());
+        static_cast<void>(refreshLighting());
+    } else {
+        setLighting(QStringLiteral("off"), {}); // no daemon, no lighting: whatever it held was given back or the watchdog did
+    }
 }
 
 QString DaemonStatus::showGaming()
