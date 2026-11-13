@@ -7,6 +7,9 @@
 
 #include <QString>
 
+#include <cstdint>
+#include <memory>
+
 namespace galleon::keyboard {
 
 namespace {

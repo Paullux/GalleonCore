@@ -15,6 +15,13 @@
 #include <deque>
 #include <set>
 #include <vector>
+#include <algorithm>
+#include <array>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <span>
 
 using namespace galleon::keyboard;
 using namespace std::chrono_literals;

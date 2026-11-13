@@ -13,6 +13,9 @@
 #include <QFile>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QByteArray>
+#include <QFileInfo>
+#include <QRegularExpression>
 
 using namespace galleond;
 
@@ -166,3 +169,6 @@ private Q_SLOTS:
 
 QTEST_GUILESS_MAIN(TestKeyboardState)
 #include "test_keyboardstate.moc"
+
+#include <memory>
+#include <optional>

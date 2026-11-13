@@ -26,6 +26,8 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <cstddef>
+#include <cstdint>
 
 namespace {
 constexpr auto Timeout = std::chrono::milliseconds(500);

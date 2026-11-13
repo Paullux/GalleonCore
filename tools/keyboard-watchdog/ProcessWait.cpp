@@ -7,6 +7,7 @@
 #include <windows.h>
 #else
 #include <cerrno>
+#include <cstdint>
 #include <poll.h>
 #include <sys/syscall.h>
 #include <unistd.h>

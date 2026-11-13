@@ -6,6 +6,9 @@
 #include "galleon/keyboard/LiveFrame.h"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <span>
 
 namespace galleon::keyboard {
 namespace {

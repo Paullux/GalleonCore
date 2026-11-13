@@ -10,9 +10,13 @@
 
 #include <QProcess>
 #include <QTest>
+#include <QElapsedTimer>
 
 #include <string_view>
 #include <vector>
+#include <cstdint>
+#include <optional>
+#include <string>
 
 using namespace watchdog;
 

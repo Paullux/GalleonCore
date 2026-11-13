@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <algorithm>
 
 using namespace galleon::keyboard;
 

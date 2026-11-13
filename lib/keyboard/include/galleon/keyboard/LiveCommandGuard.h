@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <span>
+#include <cstddef>
 
 // The allowlist of everything the live-lighting layer may ever send to the keyboard, as pure code: a report
 // that does not match is refused BEFORE it reaches a transport, so a mistake in a higher layer cannot reach

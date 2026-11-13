@@ -61,6 +61,7 @@
 #include <QStandardPaths>
 #ifdef Q_OS_WIN
 #include <QTextStream>
+#include <QTime>
 #endif
 
 #include <memory>

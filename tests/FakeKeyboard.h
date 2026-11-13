@@ -16,6 +16,9 @@
 #include <memory>
 #include <mutex>
 #include <vector>
+#include <cstddef>
+#include <cstdint>
+#include <span>
 
 namespace fakekeyboard {
 

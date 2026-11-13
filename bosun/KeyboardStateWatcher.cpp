@@ -3,6 +3,8 @@
 
 #include "KeyboardStateWatcher.h"
 
+#include <optional>
+
 namespace bosun {
 
 KeyboardStateWatcher::KeyboardStateWatcher(const QString &path, qint64 notBefore, QObject *parent)

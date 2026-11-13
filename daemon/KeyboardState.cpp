@@ -10,6 +10,7 @@
 #include <QJsonObject>
 #include <QSaveFile>
 #include <QStandardPaths>
+#include <QByteArray>
 
 #include <cmath>
 

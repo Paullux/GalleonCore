@@ -5,6 +5,10 @@
 
 #include "galleon/keyboard/LiveCommandGuard.h"
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
+
 namespace galleon::keyboard {
 
 namespace {

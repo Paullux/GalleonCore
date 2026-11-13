@@ -112,3 +112,5 @@ private Q_SLOTS:
 
 QTEST_GUILESS_MAIN(TestKeyboardStateWatcher)
 #include "test_keyboardstatewatcher.moc"
+
+#include <optional>

@@ -13,6 +13,8 @@
 #include <optional>
 #include <span>
 #include <vector>
+#include <cstddef>
+#include <cstdint>
 
 // Internal to lib/keyboard (not installed): one request, one answer, over a galleon::Transport. Shared by
 // KeyboardLink (brightness) and LiveRelease (the watchdog's release) so the stale-answer discipline lives in

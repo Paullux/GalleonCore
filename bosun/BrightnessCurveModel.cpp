@@ -5,6 +5,9 @@
 
 #include <QFile>
 #include <QTime>
+#include <QVariantList>
+
+#include <cstddef>
 
 namespace bosun {
 

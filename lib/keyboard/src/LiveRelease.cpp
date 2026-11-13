@@ -12,6 +12,12 @@
 
 #include <thread>
 #include <vector>
+#include <array>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <span>
 
 namespace galleon::keyboard {
 

@@ -261,3 +261,8 @@ private Q_SLOTS:
 
 QTEST_GUILESS_MAIN(TestKeyboardYield)
 #include "test_keyboardyield.moc"
+
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <optional>

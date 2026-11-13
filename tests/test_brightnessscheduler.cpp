@@ -12,8 +12,14 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QFile>
+#include <QRegularExpression>
+#include <QTime>
 
 #include <memory>
+#include <cstddef>
+#include <optional>
+#include <vector>
 
 using namespace galleond;
 using fakekeyboard::Keyboard;

@@ -11,9 +11,14 @@
 #include <QJsonObject>
 #include <QSaveFile>
 #include <QStandardPaths>
+#include <QByteArray>
+#include <QTime>
 
 #include <algorithm>
 #include <cmath>
+#include <array>
+#include <cstddef>
+#include <optional>
 
 namespace galleond {
 namespace {

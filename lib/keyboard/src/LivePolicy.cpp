@@ -4,6 +4,7 @@
 #include "galleon/keyboard/LivePolicy.h"
 
 #include <algorithm>
+#include <chrono>
 
 namespace galleon::keyboard {
 

@@ -14,6 +14,11 @@
 
 #include <array>
 #include <vector>
+#include <algorithm>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <span>
 
 using namespace galleon::keyboard;
 using namespace std::chrono_literals;

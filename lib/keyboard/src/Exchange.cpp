@@ -4,6 +4,14 @@
 #include "Exchange.h"
 
 #include <thread>
+#include <array>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <optional>
+#include <span>
+#include <vector>
 
 namespace galleon::keyboard::detail {
 

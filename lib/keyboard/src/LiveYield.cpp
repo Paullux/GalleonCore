@@ -4,6 +4,8 @@
 #include "galleon/keyboard/LiveYield.h"
 
 #include <algorithm>
+#include <cstdint>
+#include <optional>
 
 namespace galleon::keyboard {
 

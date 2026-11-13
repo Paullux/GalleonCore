@@ -8,6 +8,10 @@
 
 #include <QTemporaryDir>
 #include <QTest>
+#include <QByteArray>
+#include <QDir>
+#include <QFileInfo>
+#include <QTime>
 
 using namespace galleond;
 
@@ -237,3 +241,9 @@ private Q_SLOTS:
 
 QTEST_GUILESS_MAIN(TestBrightnessCurve)
 #include "test_brightnesscurve.moc"
+
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <limits>
+#include <optional>

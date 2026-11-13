@@ -4,6 +4,10 @@
 #include "WatchdogArgs.h"
 
 #include <charconv>
+#include <cstdint>
+#include <optional>
+#include <span>
+#include <string_view>
 
 namespace watchdog {
 
