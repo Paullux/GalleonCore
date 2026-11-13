@@ -32,7 +32,9 @@ Item {
 
     implicitWidth: vertical ? 10 : 100
     implicitHeight: vertical ? 100 : 10
-    visible: needed
+    // False when the page the bar belongs to is not shown.
+    property bool active: true
+    visible: needed && active
     Accessible.role: Accessible.ScrollBar
     Accessible.name: vertical ? qsTr("Scroll vertically") : qsTr("Scroll horizontally")
 

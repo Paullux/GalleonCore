@@ -418,6 +418,10 @@ Suite du point 1 : le composant `galleond` qui emploie `LiveLink`. **Expériment
 - Tests : `test_lightingcontroller` (18 : éteint par défaut, refus sans veille ni surveillance, surveillance avant ouverture, 3 s d'écoute, couleur, arrêt, destruction, mort de la surveillance, veille puis réveil, clavier illisible, cession, gel), `test_processwatchdog` (9, avec de petits scripts), `test_quitonsignals` (5), `test_keyboardcontroller` (pause, 14).
 - **Pas encore fait** : (activation par Bosun faite, voir plus bas ; avant, seulement par D-Bus : `busctl --user call org.galleoncore.Deck /org/galleoncore/Lighting org.galleoncore.Lighting Enable b true`), installation de l'outil de surveillance avec les paquets et son test **dans sa forme installée**, les effets (fond selon l'heure, frappe réactive), le sélecteur de modes de Bosun.
 
+### Barres de défilement dans tous les onglets de Bosun — 13 novembre 2026
+- Les onglets thème, Fonds d'écran, Widgets, Gaming et Économiseurs ont leur barre verticale (la même `ScrollRail` que l'onglet Clavier : elle n'apparaît que si quelque chose dépasse). La barre d'un onglet masqué n'est jamais affichée.
+- Test : `everyTabHasItsScrollBarAndOnlyTheShownTabShowsOne`. Une barre placée *dans* la page du thème provoquait une boucle de mise en page : elle est posée à côté, comme les autres. À regarder sur ton écran : l'onglet « + » et les fenêtres très petites.
+
 ### Branche `keyboard` — activation de l'éclairage en direct dans Bosun — 13 novembre 2026
 - Onglet Clavier de Bosun : section « éclairage en direct (expérimental) » avec un bouton allumer/éteindre, l'état en clair (éteint, démarrage, attend que le clavier soit libre, allumé, rendu à un autre programme, en pause pendant la veille), la raison d'un refus de `galleond`, et une couleur unique choisie dans les pastilles. Désactivé par défaut ; le curseur de luminosité est grisé tant que l'éclairage est actif.
 - `DaemonStatus` ne fait que **demander** à `galleond` (D-Bus `org.galleoncore.Lighting`) : Bosun n'ouvre jamais le clavier. Sous Windows : indisponible, message explicite.

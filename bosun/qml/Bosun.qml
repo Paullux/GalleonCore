@@ -354,6 +354,15 @@ Window {
         onCreated: win.currentTab = win.backend.themes.length - 1
     }
 
+    ScrollRail {
+        objectName: "themeScrollRail"
+        flickable: rightSide
+        active: themePage.visible
+        x: themePage.x + themePage.width - width
+        y: themePage.y
+        height: themePage.height
+    }
+
     // A theme was installed: show its tab here, and on the module.
     Connections {
         target: win.backend
@@ -702,43 +711,79 @@ Window {
     }
 
     WallpapersPage {
+        id: wallpapersPage
         filePicker: win.filePicker
         visible: win.tab.kind === "wallpapers" && win.backend.problem === ""
         x: 30
         y: 84
-        width: win.width - 60
+        width: win.width - 78
         height: win.height - 104 - statusBar.height
         library: win.library
         backend: win.backend
     }
+    ScrollRail {
+        objectName: "wallpapersPageScrollRail"
+        flickable: wallpapersPage
+        active: wallpapersPage.visible
+        x: wallpapersPage.x + wallpapersPage.width + 8
+        y: wallpapersPage.y
+        height: wallpapersPage.height
+    }
 
     WidgetsPage {
+        id: widgetsPage
         visible: win.tab.kind === "widgets"
         x: 30; y: 84
-        width: win.width - 60
+        width: win.width - 78
         height: win.height - 104 - statusBar.height
         widgets: win.backend.homeWidgets
     }
+    ScrollRail {
+        objectName: "widgetsPageScrollRail"
+        flickable: widgetsPage
+        active: widgetsPage.visible
+        x: widgetsPage.x + widgetsPage.width + 8
+        y: widgetsPage.y
+        height: widgetsPage.height
+    }
 
     GamingPage {
+        id: gamingPage
         visible: win.tab.kind === "gaming"
         x: 30; y: 84
-        width: win.width - 60
+        width: win.width - 78
         height: win.height - 104 - statusBar.height
         recording: win.backend.recording
         widgets: win.backend.homeWidgets
         daemon: win.daemon
     }
+    ScrollRail {
+        objectName: "gamingPageScrollRail"
+        flickable: gamingPage
+        active: gamingPage.visible
+        x: gamingPage.x + gamingPage.width + 8
+        y: gamingPage.y
+        height: gamingPage.height
+    }
 
     ScreensaversPage {
+        id: screensaversPage
         filePicker: win.filePicker
         visible: win.tab.kind === "screensavers" && win.backend.problem === ""
         x: 30
         y: 84
-        width: win.width - 60
+        width: win.width - 78
         height: win.height - 104 - statusBar.height
         backend: win.backend
         cropAtStart: win.cropOpen
+    }
+    ScrollRail {
+        objectName: "screensaversPageScrollRail"
+        flickable: screensaversPage
+        active: screensaversPage.visible
+        x: screensaversPage.x + screensaversPage.width + 8
+        y: screensaversPage.y
+        height: screensaversPage.height
     }
 
     // ---- the status bar: does the module follow, and what was done

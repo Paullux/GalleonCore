@@ -1507,6 +1507,44 @@ QtObject {
         QTRY_VERIFY(!rail->property("needed").toBool());
     }
 
+    void everyTabHasItsScrollBarAndOnlyTheShownTabShowsOne()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        // The tabs after the two themes: the "+" tab (2), the keyboard (3), then the pages below.
+        const QList<QPair<int, QString>> tabs = {{1, "themeScrollRail"}, {4, "wallpapersPageScrollRail"}, {5, "widgetsPageScrollRail"},
+                                                 {6, "gamingPageScrollRail"}, {7, "screensaversPageScrollRail"}};
+        QVERIFY(root->setProperty("height", 520));
+        for (const auto &[index, shown] : tabs) {
+            QVERIFY(root->setProperty("currentTab", index));
+            for (const auto &[otherIndex, name] : tabs) {
+                auto *rail = root->findChild<QQuickItem *>(name);
+                QVERIFY2(rail, qPrintable(name));
+                if (name != shown)
+                    QTRY_VERIFY2(!rail->isVisible(), qPrintable(name + " is shown on tab " + QString::number(index)));
+            }
+            auto *rail = root->findChild<QQuickItem *>(shown);
+            // Shown exactly when its page has something out of sight.
+            QTRY_COMPARE(rail->isVisible(), rail->property("needed").toBool());
+            if (index == 6)
+                QVERIFY2(rail->property("needed").toBool(), qPrintable(shown + " should be needed in a 520 px window"));
+        }
+    }
+
     void aScrollRailFollowsItsFlickableInBothDirectionsAndOnlyShowsWhenSomethingIsOutOfView()
     {
         QQmlEngine engine;
