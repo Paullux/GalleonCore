@@ -630,5 +630,18 @@
   "Start galleond (above) to change the brightness: this window never talks to the keyboard itself.": "Démarrez galleond (ci-dessus) pour changer la luminosité : cette fenêtre ne parle jamais au clavier elle-même.",
   "Start galleond to change the keyboard brightness": "Démarrez galleond pour changer la luminosité du clavier",
   "Cannot set the keyboard brightness: restart the updated daemon (%1)": "Impossible de régler la luminosité du clavier : redémarrez le démon à jour (%1)",
-  "The keyboard brightness was refused (steps of 10 % from 0 to 100)": "La luminosité du clavier a été refusée (pas de 10 % de 0 à 100)"
+  "The keyboard brightness was refused (steps of 10 % from 0 to 100)": "La luminosité du clavier a été refusée (pas de 10 % de 0 à 100)",
+  "Keyboard brightness through the day": "Luminosité du clavier au fil de la journée",
+  "Brightness at %1 h": "Luminosité à %1 h",
+  "now %1 · point %2 h: %3 %": "maintenant %1 · point de %2 h : %3 %",
+  "Manual slider": "Curseur manuel",
+  "Curve over 24 hours": "Courbe sur 24 heures",
+  "The slider is in charge of the keyboard brightness.": "Le curseur commande la luminosité du clavier.",
+  "The curve is in charge of the keyboard brightness.": "La courbe commande la luminosité du clavier.",
+  "In curve mode galleond sets the keyboard to the point nearest to the time of day, at most once an hour, and the slider above is not used. Drag the points up and down: the keyboard receives the nearest step of 10 % for each hour. The curve is saved as you go, whichever mode is chosen.": "En mode courbe, galleond règle le clavier sur le point le plus proche de l’heure, au plus une fois par heure, et le curseur ci-dessus n’est pas utilisé. Déplacez les points vers le haut ou le bas : le clavier reçoit le pas de 10 % le plus proche pour chaque heure. La courbe est enregistrée au fur et à mesure, quel que soit le mode choisi.",
+  "Brightness at %1 h: %2 %": "Luminosité à %1 h : %2 %",
+  "The brightness curve file is damaged and was not used; changing it here replaces it.": "Le fichier de la courbe de luminosité est abîmé et n’a pas été utilisé ; le modifier ici le remplace.",
+  "The brightness curve could not be saved.": "La courbe de luminosité n’a pas pu être enregistrée.",
+  "Unknown brightness mode.": "Mode de luminosité inconnu.",
+  "There is no such hour on the curve.": "Il n’y a pas cette heure sur la courbe."
 }

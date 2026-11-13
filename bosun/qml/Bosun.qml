@@ -424,7 +424,8 @@ Window {
             objectName: "keyboardBrightness"
             id: keyboardBrightnessSlider
             width: Math.min(parent.width, 560)
-            enabledLook: win.daemon.running
+            // In curve mode the curve is in charge, not this slider.
+            enabledLook: win.daemon.running && win.backend.brightnessCurve.mode === "slider"
             // What galleond read from the keyboard (or what was just set), unless a stop is being picked now.
             Connections {
                 target: win.daemon
@@ -445,6 +446,46 @@ Window {
             text: win.daemon.running
                   ? qsTr("The keyboard keeps this value when it is unplugged, as it does for the Web Hub. The slider shows the value galleond read from the keyboard when it started, and what you set since. Close the Web Hub first, or its own answers may hide this one.")
                   : qsTr("Start galleond (above) to change the brightness: this window never talks to the keyboard itself.")
+        }
+        Row {
+            spacing: 28
+            RadioOption {
+                objectName: "brightnessModeSlider"
+                text: qsTr("Manual slider")
+                checked: win.backend.brightnessCurve.mode === "slider"
+                onChosen: win.answered(win.backend.brightnessCurve.setMode("slider"),
+                                       qsTr("The slider is in charge of the keyboard brightness."))
+            }
+            RadioOption {
+                objectName: "brightnessModeCurve"
+                text: qsTr("Curve over 24 hours")
+                checked: win.backend.brightnessCurve.mode === "curve"
+                onChosen: win.answered(win.backend.brightnessCurve.setMode("curve"),
+                                       qsTr("The curve is in charge of the keyboard brightness."))
+            }
+        }
+        Text {
+            objectName: "brightnessCurveProblem"
+            visible: win.backend.brightnessCurve.problem !== ""
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: "#ffb74d"
+            font.pixelSize: 13
+            text: win.backend.brightnessCurve.problem
+        }
+        Text {
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: "#c9ced6"
+            font.pixelSize: 14
+            text: qsTr("In curve mode galleond sets the keyboard to the point nearest to the time of day, at most once an hour, and the slider above is not used. Drag the points up and down: the keyboard receives the nearest step of 10 % for each hour. The curve is saved as you go, whichever mode is chosen.")
+        }
+        BrightnessCurveEditor {
+            objectName: "brightnessCurveEditor"
+            width: Math.min(parent.width, 720)
+            curveModel: win.backend.brightnessCurve
+            onCommitted: (hour, value) => win.answered(win.backend.brightnessCurve.setHour(hour, value),
+                                                       qsTr("Brightness at %1 h: %2 %").arg(hour).arg(value / 10))
         }
         Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
         Text {

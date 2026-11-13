@@ -630,5 +630,18 @@
   "Start galleond (above) to change the brightness: this window never talks to the keyboard itself.": "Start galleond (above) to change the brightness: this window never talks to the keyboard itself.",
   "Start galleond to change the keyboard brightness": "Start galleond to change the keyboard brightness",
   "Cannot set the keyboard brightness: restart the updated daemon (%1)": "Cannot set the keyboard brightness: restart the updated daemon (%1)",
-  "The keyboard brightness was refused (steps of 10 % from 0 to 100)": "The keyboard brightness was refused (steps of 10 % from 0 to 100)"
+  "The keyboard brightness was refused (steps of 10 % from 0 to 100)": "The keyboard brightness was refused (steps of 10 % from 0 to 100)",
+  "Keyboard brightness through the day": "Keyboard brightness through the day",
+  "Brightness at %1 h": "Brightness at %1 h",
+  "now %1 · point %2 h: %3 %": "now %1 · point %2 h: %3 %",
+  "Manual slider": "Manual slider",
+  "Curve over 24 hours": "Curve over 24 hours",
+  "The slider is in charge of the keyboard brightness.": "The slider is in charge of the keyboard brightness.",
+  "The curve is in charge of the keyboard brightness.": "The curve is in charge of the keyboard brightness.",
+  "In curve mode galleond sets the keyboard to the point nearest to the time of day, at most once an hour, and the slider above is not used. Drag the points up and down: the keyboard receives the nearest step of 10 % for each hour. The curve is saved as you go, whichever mode is chosen.": "In curve mode galleond sets the keyboard to the point nearest to the time of day, at most once an hour, and the slider above is not used. Drag the points up and down: the keyboard receives the nearest step of 10 % for each hour. The curve is saved as you go, whichever mode is chosen.",
+  "Brightness at %1 h: %2 %": "Brightness at %1 h: %2 %",
+  "The brightness curve file is damaged and was not used; changing it here replaces it.": "The brightness curve file is damaged and was not used; changing it here replaces it.",
+  "The brightness curve could not be saved.": "The brightness curve could not be saved.",
+  "Unknown brightness mode.": "Unknown brightness mode.",
+  "There is no such hour on the curve.": "There is no such hour on the curve."
 }

@@ -44,6 +44,10 @@ struct BrightnessCurve
 [[nodiscard]] QByteArray encodeBrightnessCurve(const BrightnessCurve &curve);
 [[nodiscard]] std::optional<BrightnessCurve> parseBrightnessCurve(const QByteArray &bytes);
 
+// Which of the 24 points is nearest to this time of day (0 to 23): 07:29 gives 7, 07:30 gives 8, 23:30 and later give 0.
+// The one rule the daemon applies and the editor marks.
+[[nodiscard]] int nearestHourIndex(QTime time);
+
 // The brightness to write at this time of day: the point nearest to it, so 07:29 takes the 07:00 point and 07:30
 // the 08:00 one (a tie goes to the later hour); 23:30 and later take the 00:00 point, the curve being a circle.
 // One value per hour at most, so the keyboard's own memory is written at most 24 times a day.

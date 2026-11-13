@@ -92,12 +92,16 @@ std::optional<BrightnessCurve> parseBrightnessCurve(const QByteArray &bytes)
     return curve;
 }
 
-int brightnessAt(const BrightnessCurve &curve, QTime time)
+int nearestHourIndex(QTime time)
 {
     const int minutes = time.hour() * 60 + time.minute();
     // Nearest whole hour; 30 minutes rounds up; 23:30 and later wrap to 00:00.
-    const int hour = ((minutes + 30) / 60) % BrightnessCurve::Hours;
-    return curve.hours.at(static_cast<std::size_t>(hour));
+    return ((minutes + 30) / 60) % BrightnessCurve::Hours;
+}
+
+int brightnessAt(const BrightnessCurve &curve, QTime time)
+{
+    return curve.hours.at(static_cast<std::size_t>(nearestHourIndex(time)));
 }
 
 double smoothBrightness(const std::array<int, BrightnessCurve::Hours> &points, double hour)

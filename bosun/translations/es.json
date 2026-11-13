@@ -630,5 +630,18 @@
   "Start galleond (above) to change the brightness: this window never talks to the keyboard itself.": "Inicie galleond (arriba) para cambiar el brillo: esta ventana nunca habla con el teclado por sí misma.",
   "Start galleond to change the keyboard brightness": "Inicie galleond para cambiar el brillo del teclado",
   "Cannot set the keyboard brightness: restart the updated daemon (%1)": "No se puede ajustar el brillo del teclado: reinicie el daemon actualizado (%1)",
-  "The keyboard brightness was refused (steps of 10 % from 0 to 100)": "Se rechazó el brillo del teclado (pasos del 10 % de 0 a 100)"
+  "The keyboard brightness was refused (steps of 10 % from 0 to 100)": "Se rechazó el brillo del teclado (pasos del 10 % de 0 a 100)",
+  "Keyboard brightness through the day": "Brillo del teclado a lo largo del día",
+  "Brightness at %1 h": "Brillo a las %1 h",
+  "now %1 · point %2 h: %3 %": "ahora %1 · punto de las %2 h: %3 %",
+  "Manual slider": "Control manual",
+  "Curve over 24 hours": "Curva de 24 horas",
+  "The slider is in charge of the keyboard brightness.": "El control manual gobierna el brillo del teclado.",
+  "The curve is in charge of the keyboard brightness.": "La curva gobierna el brillo del teclado.",
+  "In curve mode galleond sets the keyboard to the point nearest to the time of day, at most once an hour, and the slider above is not used. Drag the points up and down: the keyboard receives the nearest step of 10 % for each hour. The curve is saved as you go, whichever mode is chosen.": "En el modo curva, galleond ajusta el teclado al punto más cercano a la hora del día, como máximo una vez por hora, y el control de arriba no se usa. Arrastre los puntos hacia arriba o abajo: el teclado recibe el paso de 10 % más cercano para cada hora. La curva se guarda sobre la marcha, sea cual sea el modo elegido.",
+  "Brightness at %1 h: %2 %": "Brillo a las %1 h: %2 %",
+  "The brightness curve file is damaged and was not used; changing it here replaces it.": "El archivo de la curva de brillo está dañado y no se usó; cambiarlo aquí lo reemplaza.",
+  "The brightness curve could not be saved.": "No se pudo guardar la curva de brillo.",
+  "Unknown brightness mode.": "Modo de brillo desconocido.",
+  "There is no such hour on the curve.": "Esa hora no existe en la curva."
 }

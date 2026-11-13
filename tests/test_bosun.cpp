@@ -8,6 +8,7 @@
 #include "Required.h"
 
 #include <AppsBackend.h>
+#include <BrightnessCurve.h>
 
 #include <QDir>
 #include <QFile>
@@ -1394,6 +1395,67 @@ QtObject {
         QVERIFY(QMetaObject::invokeMethod(slider, "choose", Q_ARG(QVariant, 10)));
         QVERIFY(QMetaObject::invokeMethod(slider, "commit"));
         QCOMPARE(committed.constLast().constFirst().toInt(), 1000);
+    }
+
+    void theBrightnessCurveEditorSavesEachPointItsHandleIsLetGoAtAndTheRadiosChooseWhoIsInCharge()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        auto *editor = root->findChild<QQuickItem *>("brightnessCurveEditor");
+        auto *sliderRadio = root->findChild<QQuickItem *>("brightnessModeSlider");
+        auto *curveRadio = root->findChild<QQuickItem *>("brightnessModeCurve");
+        auto *slider = root->findChild<QQuickItem *>("keyboardBrightness");
+        QVERIFY(editor);
+        QVERIFY(sliderRadio);
+        QVERIFY(curveRadio);
+        QVERIFY(slider);
+        const QString curveFile = dir.filePath("brightness-curve.json"); // next to the pages file
+        QVERIFY(!QFile::exists(curveFile)); // opening the window writes nothing
+        QVERIFY(sliderRadio->property("checked").toBool());
+        QVERIFY(!curveRadio->property("checked").toBool());
+
+        // Dragging shows a value and sends nothing; letting go commits one point, brought to a step of 10 %.
+        const QSignalSpy committed(editor, SIGNAL(committed(int, int)));
+        QVERIFY(QMetaObject::invokeMethod(editor, "choose", Q_ARG(QVariant, 3), Q_ARG(QVariant, 640)));
+        QCOMPARE(editor->property("previewHour").toInt(), 3);
+        QCOMPARE(editor->property("previewValue").toInt(), 600);
+        QCOMPARE(committed.size(), 0);
+        QVERIFY(!QFile::exists(curveFile));
+        QVERIFY(QMetaObject::invokeMethod(editor, "commit"));
+        QCOMPARE(committed.size(), 1);
+        QCOMPARE(committed.constFirst().at(0).toInt(), 3);
+        QCOMPARE(committed.constFirst().at(1).toInt(), 600);
+        QCOMPARE(galleond::readBrightnessCurve(curveFile).value_or(galleond::BrightnessCurve{}).hours.at(3), 600);
+        QCOMPARE(editor->property("previewHour").toInt(), -1);
+
+        // Letting go where the point already is sends nothing.
+        QVERIFY(QMetaObject::invokeMethod(editor, "choose", Q_ARG(QVariant, 3), Q_ARG(QVariant, 604)));
+        QVERIFY(QMetaObject::invokeMethod(editor, "commit"));
+        QCOMPARE(committed.size(), 1);
+
+        // The radio buttons choose who is in charge; the slider gives way to the curve.
+        QVERIFY(QMetaObject::invokeMethod(curveRadio, "chosen"));
+        QTRY_VERIFY(curveRadio->property("checked").toBool());
+        QVERIFY(!sliderRadio->property("checked").toBool());
+        QCOMPARE(galleond::readBrightnessCurve(curveFile).value_or(galleond::BrightnessCurve{}).mode, galleond::BrightnessCurve::Mode::Curve);
+        QVERIFY(!slider->property("enabledLook").toBool());
+        QVERIFY(QMetaObject::invokeMethod(sliderRadio, "chosen"));
+        QTRY_VERIFY(sliderRadio->property("checked").toBool());
+        QCOMPARE(galleond::readBrightnessCurve(curveFile).value_or(galleond::BrightnessCurve{}).mode, galleond::BrightnessCurve::Mode::Slider);
     }
 
     void theWindowHasATabPerThemeAndTheFixedOnes()
