@@ -63,6 +63,8 @@ LangString DesktopLabel ${LANG_ENGLISH} "Desktop shortcut"
 LangString DesktopLabel ${LANG_FRENCH} "Raccourci sur le bureau"
 LangString StartupLabel ${LANG_ENGLISH} "Start galleond and Bosun when signing in"
 LangString StartupLabel ${LANG_FRENCH} "Démarrer galleond et Bosun à l'ouverture de session"
+LangString ThemeLabel ${LANG_ENGLISH} "GalleonCore theme"
+LangString ThemeLabel ${LANG_FRENCH} "Thème GalleonCore"
 LangString StopError ${LANG_ENGLISH} "GalleonCore could not stop cleanly. Close Bosun and galleond, then retry."
 LangString StopError ${LANG_FRENCH} "GalleonCore n'a pas pu s'arrêter proprement. Fermez Bosun et galleond, puis réessayez."
 
@@ -125,6 +127,16 @@ Section "$(CoreLabel)" Core
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GalleonCore" "QuietUninstallString" '"$INSTDIR\Uninstall.exe" /S'
     WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GalleonCore" "NoModify" 1
     WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GalleonCore" "NoRepair" 1
+    ; File type of .gctheme theme files, for the current user only (HKCU\Software\Classes). It gives the files
+    ; a name and an icon; there is deliberately no open verb. The icon is shipped with the software, not in
+    ; the theme files. A repeated install or an upgrade rewrites the same values.
+    File "/oname=$INSTDIR\gctheme.ico" "${__FILEDIR__}\..\..\..\bosun\icons\theme-file\gctheme.ico"
+    WriteRegStr HKCU "Software\Classes\.gctheme" "" "GalleonCore.Theme"
+    WriteRegStr HKCU "Software\Classes\.gctheme" "Content Type" "application/x-galleoncore-theme"
+    WriteRegStr HKCU "Software\Classes\GalleonCore.Theme" "" "$(ThemeLabel)"
+    WriteRegStr HKCU "Software\Classes\GalleonCore.Theme\DefaultIcon" "" "$INSTDIR\gctheme.ico"
+    ; SHCNE_ASSOCCHANGED (0x08000000): Explorer reloads file types and icons.
+    System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
 SectionEnd
 Section /o "$(DesktopLabel)" Desktop
     CreateShortCut "$DESKTOP\Galleon Bosun.lnk" "$INSTDIR\bin\galleon-bosun.exe"
@@ -146,6 +158,14 @@ Section "Uninstall"
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "GalleonBosun"
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GalleonCore"
     DeleteRegKey HKCU "Software\GalleonCore\Installer"
+    ; Remove only the keys written above; .gctheme is left alone if another program has taken it over since.
+    ReadRegStr $0 HKCU "Software\Classes\.gctheme" ""
+    ${If} $0 == "GalleonCore.Theme"
+        DeleteRegKey HKCU "Software\Classes\.gctheme"
+    ${EndIf}
+    DeleteRegKey HKCU "Software\Classes\GalleonCore.Theme"
+    Delete "$INSTDIR\gctheme.ico"
+    System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
     Delete "$INSTDIR\install-payload.txt"
     Delete "$INSTDIR\Uninstall.exe"
     RMDir "$INSTDIR"

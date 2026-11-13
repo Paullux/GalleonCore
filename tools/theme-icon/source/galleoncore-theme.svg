@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GalleonCore themes">
+<defs>
+ <linearGradient id="wheel" x1=".15" y1=".1" x2=".85" y2=".9" gradientUnits="objectBoundingBox"><stop stop-color="#f9db13"/><stop offset=".24" stop-color="#ff9e16"/><stop offset=".47" stop-color="#ed2197"/><stop offset=".68" stop-color="#7135ef"/><stop offset=".83" stop-color="#087df7"/><stop offset="1" stop-color="#00dfbc"/></linearGradient>
+ <linearGradient id="card" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffb71b"/><stop offset=".45" stop-color="#dd258e"/><stop offset=".75" stop-color="#6321c9"/><stop offset="1" stop-color="#087bfa"/></linearGradient>
+ <linearGradient id="back" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#12e5e1"/><stop offset="1" stop-color="#0861b4"/></linearGradient>
+</defs>
+<rect x="10" y="10" width="492" height="492" rx="92" fill="#202731"/>
+<g fill="none" stroke="url(#wheel)" stroke-width="17" stroke-linecap="round">
+ <circle cx="256" cy="256" r="173"/><circle cx="256" cy="256" r="116"/>
+ <path d="M256 32V480 M32 256H480 M98 98L414 414 M414 98L98 414"/>
+</g>
+<g fill="url(#wheel)"><circle cx="256" cy="32" r="15"/><circle cx="256" cy="480" r="15"/><circle cx="32" cy="256" r="15"/><circle cx="480" cy="256" r="15"/><circle cx="98" cy="98" r="15"/><circle cx="414" cy="414" r="15"/><circle cx="414" cy="98" r="15"/><circle cx="98" cy="414" r="15"/></g>
+<rect x="201" y="184" width="160" height="143" rx="23" fill="url(#back)" stroke="#56e8ef" stroke-width="4"/>
+<rect x="179" y="200" width="160" height="143" rx="23" fill="#4935c9" stroke="#a18bff" stroke-width="4"/>
+<rect x="151" y="219" width="177" height="154" rx="27" fill="url(#card)" stroke="#fff" stroke-width="8"/>
+<path d="M205 322c12-1 14-10 18-24 3-11 9-16 19-17 0 15 8 21 20 22-10 19-30 31-57 19Z" fill="#fff"/>
+<path d="M249 280 284 243c8-9 19-10 27-2s7 18-1 27l-36 37c-6 6-13 6-19 0l-6-6c-6-6-6-13 0-19Z" fill="#fff"/>
+</svg>

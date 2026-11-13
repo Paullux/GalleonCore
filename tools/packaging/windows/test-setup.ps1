@@ -93,6 +93,21 @@ function Run-Installer([string]$Program, [string]$Arguments) {
     }
     if ($child.ExitCode -ne 0) { throw "Installer failed: $($child.ExitCode)" }
 }
+# The .gctheme file type is registered for the current user only (HKCU), with an icon shipped in the install folder.
+$classesKey = 'HKCU:\Software\Classes'
+function Assert-ThemeFileType {
+    if ((Get-ItemPropertyValue "$classesKey\.gctheme" '(default)') -ne 'GalleonCore.Theme') { throw '.gctheme is not associated with GalleonCore.Theme.' }
+    if ((Get-ItemPropertyValue "$classesKey\GalleonCore.Theme" '(default)') -notin @('GalleonCore theme', "Th$([char]0xE8)me GalleonCore")) { throw 'GalleonCore.Theme has no label.' }
+    $icon = Get-ItemPropertyValue "$classesKey\GalleonCore.Theme\DefaultIcon" '(default)'
+    if ($icon -ne (Join-Path $root 'gctheme.ico')) { throw "Unexpected .gctheme icon: $icon" }
+    if (-not (Test-Path -LiteralPath $icon)) { throw 'The .gctheme icon file is not installed.' }
+    if (Test-Path "$classesKey\GalleonCore.Theme\shell") { throw 'The theme file type must not have an open verb.' }
+}
+function Assert-ThemeFileTypeRemoved {
+    foreach ($key in @("$classesKey\.gctheme", "$classesKey\GalleonCore.Theme")) {
+        if (Test-Path $key) { throw "Uninstall left $key." }
+    }
+}
 function Start-Applications {
     $daemon = Start-LoggedApplication 'galleond' "--pages `"$pages`""
     $bosun = Start-LoggedApplication 'galleon-bosun' "--minimized --pages `"$pages`""
@@ -115,6 +130,7 @@ try {
     $bosunCommand = '"' + (Join-Path $root 'bin/galleon-bosun.exe') + '" --minimized'
     if ((Get-ItemPropertyValue $runKey GalleonCore) -ne $daemonCommand) { throw 'Daemon sign-in command missing or incorrectly quoted.' }
     if ((Get-ItemPropertyValue $runKey GalleonBosun) -ne $bosunCommand) { throw 'Bosun tray sign-in command missing or incorrectly quoted.' }
+    Assert-ThemeFileType
     # Launch Bosun alone, as from the Start menu: it must start its missing daemon.
     $bosun = Start-LoggedApplication 'galleon-bosun' '--minimized'
     $script:processes = @($bosun)
@@ -131,13 +147,14 @@ try {
     Run-Installer (Resolve-Path $Setup).Path "/S /D=$root"
     Assert-Closed
     if (-not (Test-Path $sentinel)) { throw 'Upgrade removed personal data.' }
+    Assert-ThemeFileType
     # Uninstall has the same lifecycle guarantee and keeps personal data.
     Start-Applications
     Run-Installer (Join-Path $root 'Uninstall.exe') '/S'
     Assert-Closed
     # NSIS launches a temporary uninstaller copy; its launcher can exit before cleanup ends.
     $markers = @((Join-Path $root 'bin/galleond.exe'), (Join-Path $root 'Uninstall.exe'),
-        (Join-Path $startup 'GalleonCore.lnk'), (Join-Path $startup 'Galleon Bosun.lnk'))
+        (Join-Path $root 'gctheme.ico'), (Join-Path $startup 'GalleonCore.lnk'), (Join-Path $startup 'Galleon Bosun.lnk'))
     $deadline = [System.DateTime]::UtcNow.AddSeconds(20)
     do {
         $remaining = @($markers | Where-Object { Test-Path -LiteralPath $_ })
@@ -148,6 +165,7 @@ try {
     foreach ($name in @('GalleonCore', 'GalleonBosun')) {
         if ($null -ne (Get-ItemProperty $runKey -Name $name -ErrorAction SilentlyContinue)) { throw 'Uninstall left a sign-in command.' }
     }
+    Assert-ThemeFileTypeRemoved
     if (-not (Test-Path $sentinel)) { throw 'Uninstall removed personal data.' }
     if ((Get-ItemPropertyValue $settingsKey SetupPreservationTest) -ne 'Keep settings') { throw 'Uninstall removed settings.' }
 } catch {

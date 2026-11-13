@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Paul Woisard
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<!-- A .gctheme file is a stored zip archive (docs/THEME_FORMAT.md). The icon is installed by the
+     software (bosun/CMakeLists.txt), never carried inside the theme file. -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-galleoncore-theme">
+    <comment>GalleonCore theme</comment>
+    <comment xml:lang="fr">Thème GalleonCore</comment>
+    <comment xml:lang="de">GalleonCore-Design</comment>
+    <comment xml:lang="es">Tema de GalleonCore</comment>
+    <sub-class-of type="application/zip"/>
+    <icon name="application-x-galleoncore-theme"/>
+    <glob pattern="*.gctheme"/>
+  </mime-type>
+</mime-info>

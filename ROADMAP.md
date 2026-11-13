@@ -556,6 +556,17 @@ Le 20 octobre, le propriétaire confirme le fonctionnement du correctif des fond
 
 ## 2. En cours
 
+### Icône des fichiers `.gctheme` — branche `feat/theme-file-icon`, 13 novembre 2026
+
+Pas encore fusionnée ni en pull request. Les fichiers de thème doivent avoir une icône propre dans les gestionnaires de fichiers ; l'icône est **livrée par le logiciel**, jamais dans le fichier de thème (le format reste inchangé).
+
+- **Fait** : type MIME `application/x-galleoncore-theme` (`bosun/mime/galleoncore-theme.xml`, glob `*.gctheme`, sous-classe de `application/zip`, commentaire en fr/de/es) ; icône `application-x-galleoncore-theme` en PNG de 16 à 512 px dans hicolor (`mimetypes`), installée par `bosun/CMakeLists.txt` (donc par les paquets deb/PPA, AUR et AppImage) et listée dans le `%files` du paquet RPM/COPR ; sous Windows, Setup (`galleoncore.nsi`) enregistre `.gctheme` pour l'utilisateur courant seulement (HKCU), ProgID `GalleonCore.Theme`, libellé « Thème GalleonCore », `DefaultIcon` vers `gctheme.ico` (installé dans le dossier d'installation), `SHChangeNotify` ; la désinstallation retire exactement ces clés (et l'association `.gctheme` seulement si elle est toujours à nous), la mise à niveau les réécrit à l'identique. Pas de verbe d'ouverture, pas de HKLM.
+- **Pas de `MimeType=`** dans `galleon-bosun.desktop` : Bosun n'ouvre aucun fichier passé en argument (aucune action d'ouverture inventée). Pas de recette Flatpak ni Snap dans le dépôt.
+- **Icône** : le SVG fourni par le propriétaire (barre de navire en dégradé arc-en-ciel, trois images et un pinceau) remplace l'icône provisoire ; lisible de 16 à 256 px à l'aperçu. Pour la changer à nouveau : `tools/theme-icon/source/galleoncore-theme.png` puis `python3 tools/theme-icon/build_icons.py` (voir `tools/theme-icon/README.md`). Provenance (ChatGPT, prompt du propriétaire) consignée dans `ASSETS.md` ; la date y est celle de la session, à corriger si besoin.
+- **Testé** : `tools/test_theme_icon.py` (XML MIME valide et accepté par `update-mime-database`, glob, sous-classe, nom d'icône identique à celui des paquets, tailles PNG et `.ico`, `%files` RPM, clés NSIS HKCU seulement et symétrie installation/désinstallation, icônes livrées = sortie du script) ; le script NSIS compile avec `-WX` ; `reuse lint`. `test-setup.ps1` vérifie maintenant les clés après installation, après mise à niveau et après désinstallation (CI Windows).
+- **Validation complète (`tools/check.py full`) : non faite** — la session de développement n'avait pas Docker utilisable (Docker Hub répondait 429). Obligatoire avant toute fusion ou pull request ; aucun C++ n'a changé, seules les lignes `install` de `bosun/CMakeLists.txt` le concernent.
+- **Non vérifié** : Setup réel sous Windows (les assertions de `test-setup.ps1` n'ont pas encore tourné), affichage de l'icône dans l'Explorateur, dans Dolphin ou un autre gestionnaire de fichiers Linux. À confirmer par le propriétaire avant de classer cette entrée « sur le module/le bureau ».
+
 ## 3. À vérifier ou corriger
 
 - **Stabilité du démon** : exécution longue (heures), reprise après veille, débranchement/rebranchement du module (le redessin complet est déjà prévu sur `deckAvailableChanged`), fuites : caches bornés (images, icônes, applications) mais pas mesurés sur la durée.
