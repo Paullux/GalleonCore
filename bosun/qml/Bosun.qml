@@ -39,6 +39,11 @@ Window {
     property bool messageIsError: false
     // The last theme looked at: its colour is the keyboard tab's (the left dial of the module shows it).
     property int lastTheme: 0
+    // The preview of the lamps of the keyboard (KeyboardMap): lamp id -> colour; only drawn, never sent anywhere.
+    property var lampColors: ({})
+    property int selectedCap: -1
+    property var selectedLamps: []
+    readonly property var lastThemeEntry: backend.themes.length > 0 ? backend.themes[Math.min(lastTheme, backend.themes.length - 1)] : null
 
     onClosing: close => {
         if (win.hideOnClose) {
@@ -540,6 +545,82 @@ Window {
                     color: "#7d8591"
                     font.pixelSize: 13
                     text: qsTr("The lighting can also be driven from Linux with OpenRGB (the dials' rings already are, through this project's plugin); the per-key lighting of the keyboard is not available there yet.")
+                }
+                Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+                Text {
+                    color: "white"
+                    font.pixelSize: 16
+                    font.bold: true
+                    text: qsTr("Keyboard and module · preview")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#c9ced6"
+                    font.pixelSize: 14
+                    text: qsTr("As on the keyboard, the legend and the outline of each key are see-through: the light of the lamps under it shows through. Click a key and pick a colour to see how a lighting would look. The module shows the keys of the theme tab you looked at last.")
+                }
+                KeyboardMap {
+                    id: keyboardMap
+                    objectName: "keyboardMap"
+                    width: Math.min(parent.width, 740)
+                    colors: win.lampColors
+                    selected: win.selectedCap
+                    themeName: win.lastThemeEntry ? win.lastThemeEntry.name : ""
+                    themeColor: win.lastThemeEntry ? win.lastThemeEntry.color : "#9aa0a6"
+                    tileSource: index => win.lastThemeEntry
+                        ? "image://tiles/" + win.lastThemeEntry.page + "/" + index + "?r=" + win.backend.revision + "&theme=" + win.lastThemeEntry.page
+                        : ""
+                    onCapClicked: (index, lamps) => { win.selectedCap = index; win.selectedLamps = lamps }
+                }
+                Text {
+                    objectName: "keySelection"
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: win.selectedCap < 0 ? qsTr("No key chosen: click a key.")
+                                              : qsTr("Key chosen (lamps: %1).").arg(win.selectedLamps.join(", "))
+                }
+                Swatches {
+                    objectName: "lampSwatches"
+                    visible: win.selectedCap >= 0
+                    onPicked: color => {
+                        const next = Object.assign({}, win.lampColors)
+                        for (const lamp of win.selectedLamps)
+                            next[lamp] = color
+                        win.lampColors = next
+                    }
+                }
+                Row {
+                    spacing: 8
+                    Pill {
+                        objectName: "lampsColourAll"
+                        enabledLook: win.selectedCap >= 0 && win.selectedLamps.length > 0 && win.lampColors[win.selectedLamps[0]] !== undefined
+                        text: qsTr("Give this colour to every key")
+                        onClicked: {
+                            const colour = win.lampColors[win.selectedLamps[0]]
+                            const next = {}
+                            for (const lamp of keyboardMap.allLamps)
+                                next[lamp] = colour
+                            win.lampColors = next
+                        }
+                    }
+                    Pill {
+                        objectName: "lampsRainbow"
+                        text: qsTr("Rainbow")
+                        onClicked: win.lampColors = keyboardMap.rainbow()
+                    }
+                    Pill {
+                        objectName: "lampsClear"
+                        text: qsTr("Clear the colours")
+                        onClicked: { win.lampColors = ({}); win.selectedCap = -1; win.selectedLamps = [] }
+                    }
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#7d8591"
+                    font.pixelSize: 13
+                    text: qsTr("This is a preview: nothing is sent to the keyboard, because the per-key lighting is not available yet. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
                 }
     
             }

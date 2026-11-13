@@ -645,5 +645,15 @@
   "Unknown brightness mode.": "Unbekannter Helligkeitsmodus.",
   "There is no such hour on the curve.": "Diese Stunde gibt es auf der Kurve nicht.",
   "Scroll vertically": "Vertikal scrollen",
-  "Scroll horizontally": "Horizontal scrollen"
+  "Scroll horizontally": "Horizontal scrollen",
+  "The keyboard and the Stream Deck module, drawn from their measurements": "Die Tastatur und das Stream-Deck-Modul, nach ihren Messwerten gezeichnet",
+  "Key": "Taste",
+  "Keyboard and module · preview": "Tastatur und Modul · Vorschau",
+  "As on the keyboard, the legend and the outline of each key are see-through: the light of the lamps under it shows through. Click a key and pick a colour to see how a lighting would look. The module shows the keys of the theme tab you looked at last.": "Wie auf der Tastatur sind Beschriftung und Rand jeder Taste durchsichtig: Das Licht der Lampen darunter scheint hindurch. Klicken Sie auf eine Taste und wählen Sie eine Farbe, um zu sehen, wie eine Beleuchtung aussähe. Das Modul zeigt die Tasten des Themen-Tabs, den Sie zuletzt angesehen haben.",
+  "No key chosen: click a key.": "Keine Taste gewählt: Klicken Sie auf eine Taste.",
+  "Key chosen (lamps: %1).": "Taste gewählt (Lampen: %1).",
+  "Give this colour to every key": "Diese Farbe allen Tasten geben",
+  "Rainbow": "Regenbogen",
+  "Clear the colours": "Farben löschen",
+  "This is a preview: nothing is sent to the keyboard, because the per-key lighting is not available yet. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Dies ist eine Vorschau: Es wird nichts an die Tastatur gesendet, da die Beleuchtung pro Taste noch nicht verfügbar ist. Die Tastenkappen sind ein französisches Standardlayout zur Orientierung; die Lampen darunter liegen an den Positionen, die die Tastatur meldet."
 }

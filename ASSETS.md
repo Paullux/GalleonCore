@@ -36,6 +36,10 @@ Wallpapers go in [`public/wallpaper/`](public/wallpaper/), one folder per style,
 
 Screensaver videos go in [`public/Screensavers/`](public/Screensavers/), with a `PROVENANCE.md` (tool, date, exact prompts). Same rules, same licence. A video is checked frame by frame for logos, brands and existing characters before it is added.
 
+## Drawings generated from the project's own data
+
+`bosun/icons/galleon-100-sd-overlay.svg` (the dark layer, with real holes), `bosun/icons/galleon-100-sd-map.svg` (the same over a white light, to look at) and `bosun/qml/KeyboardMapData.js` (what Bosun draws) are **generated** by `tools/keyboard-map/build_map.py` from `docs/protocol/lamps-*.csv` and `data/devices/galleon-100-sd.json`, which are this project's own measurements. They are GPL-3.0-or-later like the script, with the SPDX header written into each file; a test fails when they are out of date. They are **not** taken from, traced over or stylised from a photograph or a render of the product, and carry no logo or brand name: the key legends are those of the standard French layout, drawn by the script. Do not add a picture of the keyboard to the repository, original or "restyled": it would be a derivative of the maker's pictures and would carry their marks. Change the script and its data instead.
+
 ## AI-generated assets
 
 - Do not name an existing work, character or artist in the prompt.

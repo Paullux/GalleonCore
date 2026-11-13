@@ -645,5 +645,15 @@
   "Unknown brightness mode.": "Modo de brillo desconocido.",
   "There is no such hour on the curve.": "Esa hora no existe en la curva.",
   "Scroll vertically": "Desplazar verticalmente",
-  "Scroll horizontally": "Desplazar horizontalmente"
+  "Scroll horizontally": "Desplazar horizontalmente",
+  "The keyboard and the Stream Deck module, drawn from their measurements": "El teclado y el módulo Stream Deck, dibujados a partir de sus medidas",
+  "Key": "Tecla",
+  "Keyboard and module · preview": "Teclado y módulo · vista previa",
+  "As on the keyboard, the legend and the outline of each key are see-through: the light of the lamps under it shows through. Click a key and pick a colour to see how a lighting would look. The module shows the keys of the theme tab you looked at last.": "Como en el teclado, la leyenda y el contorno de cada tecla son transparentes: la luz de las lámparas de debajo pasa a través. Haga clic en una tecla y elija un color para ver cómo quedaría una iluminación. El módulo muestra las teclas de la pestaña de tema que miró por última vez.",
+  "No key chosen: click a key.": "Ninguna tecla elegida: haga clic en una tecla.",
+  "Key chosen (lamps: %1).": "Tecla elegida (lámparas: %1).",
+  "Give this colour to every key": "Dar este color a todas las teclas",
+  "Rainbow": "Arcoíris",
+  "Clear the colours": "Borrar los colores",
+  "This is a preview: nothing is sent to the keyboard, because the per-key lighting is not available yet. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Esto es una vista previa: no se envía nada al teclado, porque la iluminación tecla a tecla aún no está disponible. Las teclas son una disposición francesa estándar dibujada para orientarse; las lámparas de debajo están en las posiciones que informa el teclado."
 }

@@ -645,5 +645,15 @@
   "Unknown brightness mode.": "Mode de luminosité inconnu.",
   "There is no such hour on the curve.": "Il n’y a pas cette heure sur la courbe.",
   "Scroll vertically": "Défiler verticalement",
-  "Scroll horizontally": "Défiler horizontalement"
+  "Scroll horizontally": "Défiler horizontalement",
+  "The keyboard and the Stream Deck module, drawn from their measurements": "Le clavier et le module Stream Deck, dessinés d’après leurs mesures",
+  "Key": "Touche",
+  "Keyboard and module · preview": "Clavier et module · aperçu",
+  "As on the keyboard, the legend and the outline of each key are see-through: the light of the lamps under it shows through. Click a key and pick a colour to see how a lighting would look. The module shows the keys of the theme tab you looked at last.": "Comme sur le clavier, la légende et le contour de chaque touche sont transparents : la lumière des lampes en dessous passe à travers. Cliquez sur une touche et choisissez une couleur pour voir l’effet d’un éclairage. Le module montre les touches de l’onglet de thème que vous avez regardé en dernier.",
+  "No key chosen: click a key.": "Aucune touche choisie : cliquez sur une touche.",
+  "Key chosen (lamps: %1).": "Touche choisie (lampes : %1).",
+  "Give this colour to every key": "Donner cette couleur à toutes les touches",
+  "Rainbow": "Arc-en-ciel",
+  "Clear the colours": "Effacer les couleurs",
+  "This is a preview: nothing is sent to the keyboard, because the per-key lighting is not available yet. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Ceci est un aperçu : rien n’est envoyé au clavier, car l’éclairage touche par touche n’est pas encore disponible. Les capuchons sont une disposition française standard dessinée pour s’orienter ; les lampes dessous sont aux positions que rapporte le clavier."
 }

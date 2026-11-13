@@ -1542,6 +1542,62 @@ QtObject {
         QVERIFY(!horizontal->property("needed").toBool());
     }
 
+    void aKeyOfTheKeyboardDrawingTakesTheColourPickedForItAndNothingIsSent()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        auto *board = root->findChild<QQuickItem *>("keyboardMap");
+        QVERIFY(board);
+
+        // The drawing knows the 94 key lamps, and the caps that carry them.
+        QCOMPARE(board->property("allLamps").toList().size(), 94);
+        QVERIFY(board->property("map").toMap().value("caps").toList().size() > 80);
+        QVERIFY(root->property("lampColors").toMap().isEmpty());
+        QCOMPARE(root->property("selectedCap").toInt(), -1);
+
+        // Clicking a cap chooses it, with the lamps under it.
+        const QVariantList lamps{QVariant(23)};
+        QVERIFY(QMetaObject::invokeMethod(board, "capClicked", Q_ARG(int, 40), Q_ARG(QVariant, QVariant(lamps))));
+        QCOMPARE(root->property("selectedCap").toInt(), 40);
+        QCOMPARE(root->property("selectedLamps").toList(), lamps);
+
+        // A colour picked for it goes to its lamps and to no other.
+        auto *swatches = root->findChild<QQuickItem *>("lampSwatches");
+        QVERIFY(swatches);
+        QVERIFY(QMetaObject::invokeMethod(swatches, "picked", Q_ARG(QString, QStringLiteral("#e53935"))));
+        const QVariantMap colours = root->property("lampColors").toMap();
+        QCOMPARE(colours.size(), 1);
+        QCOMPARE(colours.value("23").toString(), QStringLiteral("#e53935"));
+
+        // The rainbow gives every lamp a colour, a different one at each end of the keyboard.
+        QVariant rainbow;
+        QVERIFY(QMetaObject::invokeMethod(board, "rainbow", Q_RETURN_ARG(QVariant, rainbow)));
+        const QVariantMap all = rainbow.toMap();
+        QCOMPARE(all.size(), 94);
+        QVERIFY(all.value("0").toString() != all.value("85").toString());
+
+        // Clearing forgets the colours and the choice.
+        auto *clear = root->findChild<QQuickItem *>("lampsClear");
+        QVERIFY(clear);
+        QVERIFY(QMetaObject::invokeMethod(clear, "clicked"));
+        QVERIFY(root->property("lampColors").toMap().isEmpty());
+        QCOMPARE(root->property("selectedCap").toInt(), -1);
+    }
+
     void theWindowHasATabPerThemeAndTheFixedOnes()
     {
         const QTemporaryDir dir;
