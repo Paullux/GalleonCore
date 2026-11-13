@@ -338,6 +338,15 @@ Voir [le fonctionnement et les limites](docs/UPDATES.md).
 
 `tools/keyboard-brightness` (option CMake `GALLEON_BUILD_KEYBOARD_BRIGHTNESS_TOOL`, hors build par défaut) lit ou écrit la luminosité globale du clavier (propriété `0xEA`, 0 à 1000) via `lib/keyboard/` (`galleon_keyboard`) et `galleon::HidTransport`. Sans argument : lecture seule ; avec une valeur : écriture puis relecture de confirmation. Tests : `tests/test_keyboardlink.cpp` (faux transport). **Sur le module** : confirmé par le propriétaire sous **Windows** (10 novembre) et sous **Linux** (11 novembre : lecture, écriture 100 puis 1000, relecture identique), firmware clavier 2.3.88, une seule unité. Pas encore de mémorisation/restauration ni de cession de place au Web Hub : rien n'est branché dans `galleond`.
 
+### Branche `keyboard` — lecture de la luminosité actuelle — 13 novembre 2026
+
+Première étape de la branche `origin/keyboard` (fonctions du clavier développées élément par élément, fusion dans `main` seulement quand l'ensemble est stable). `KeyboardController` sait lire la valeur que le clavier tient (`ReadBrightness`, signal `brightnessRead`) sans rien écrire ; une écriture en attente passe toujours avant une lecture. Bosun (Linux) la demande quand `galleond` apparaît et place le curseur sur le pas de 100 le plus proche (une valeur posée par le Web Hub reste lisible). Décision du propriétaire : le clavier garde la valeur choisie, pas de restauration à la sortie.
+
+- **Validation** : `tools/check.py full` réussi (GCC, Clang + ASan/UBSan 58/58, fuzzing, clang-tidy, qmllint, outils, REUSE), environnement hôte Ubuntu 24.04 comme la CI. Tests : trois cas de contrôleur et la règle du pas le plus proche (`test_keyboardcontroller`, `test_daemonstatus`).
+- **Non confirmé sur le module** : le curseur qui se place sur la vraie valeur au démarrage de `galleond` (à essayer après un changement dans le Web Hub).
+- **Windows** : le point d'accès local n'a pas de canal de réponse, le curseur y reste inconnu. Reste à concevoir (fichier d'état ou canal bidirectionnel).
+- **Reste dans cette branche** : détecter un contrôleur étranger pour lui céder la place ; puis la couche de sécurité RVB (étape 2) ; idée du propriétaire, plus tard : une courbe de luminosité sur 24 h (heure en X, 0 à 1000 en Y), qui demande un minuteur dans `galleond` avec garde-fou sur le nombre d'écritures.
+
 ### Correctifs issus d'un audit de `main` (57eeb11) — PR #96, 12 novembre 2026
 
 Cinq défauts relevés par un audit externe, vérifiés dans le code avant correction, chacun avec son test et son commit :
