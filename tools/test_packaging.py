@@ -111,5 +111,21 @@ class LiveLightingWatchdogIsShipped(unittest.TestCase):
                 self.assertNotIn('KillMode=mixed', lines)
 
 
+
+class InstalledProgramsFindTheirLibrary(unittest.TestCase):
+    """A program installed in a prefix of the user's (~/.local, /opt/...) must find libgalleon by itself; the packages,
+    which install under /usr, must not get a RUNPATH."""
+
+    def test_the_install_runpath_is_relative_and_set_only_outside_usr(self):
+        cmake = (ROOT / 'CMakeLists.txt').read_text(encoding='utf-8')
+        block = cmake.split('if(UNIX AND NOT CMAKE_INSTALL_PREFIX STREQUAL "/usr")', 1)[1].split('endif()', 1)[0]
+        self.assertIn('\\$ORIGIN/../${CMAKE_INSTALL_LIBDIR}', block)
+        self.assertNotIn('CMAKE_INSTALL_PREFIX}', block, 'the RUNPATH must not depend on the prefix: it is relative to the program')
+
+    def test_every_package_installs_under_usr(self):
+        for path in ('tools/packaging/appimage/build.sh', 'tools/packaging/aur/PKGBUILD.in'):
+            self.assertIn('-DCMAKE_INSTALL_PREFIX=/usr', (ROOT / path).read_text(encoding='utf-8'), path)
+
+
 if __name__ == '__main__':
     unittest.main()

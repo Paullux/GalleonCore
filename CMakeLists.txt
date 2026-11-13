@@ -68,6 +68,13 @@ endif()
 
 include(GNUInstallDirs)
 
+# A program installed outside the system folders (a prefix such as ~/.local or /opt/galleoncore) has to find libgalleon
+# without LD_LIBRARY_PATH: its RUNPATH says "the lib folder of my own prefix", relative to where the program is. The
+# packages install under /usr, where the system finds the library, and carry no RUNPATH (Debian policy).
+if(UNIX AND NOT CMAKE_INSTALL_PREFIX STREQUAL "/usr")
+    set(CMAKE_INSTALL_RPATH "\$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+endif()
+
 add_subdirectory(lib)
 add_subdirectory(lib/keyboard)
 add_subdirectory(media)
