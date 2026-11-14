@@ -7,6 +7,7 @@
 #include "AtomicFile.h"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -47,6 +48,18 @@ private Q_SLOTS:
     void theTotalWaitIsBoundedBecauseTheCallerHasOtherWork()
     {
         QVERIFY(MaxAttempts * RetryDelayMs <= 100);
+    }
+
+    void aFileKeepsTheRequestedPermissionsAndAFailureSaysWhy()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("pages.json");
+        QVERIFY(writeFileAtomically(path, "x", QFile::ReadOwner | QFile::WriteOwner));
+        QCOMPARE(QFileInfo(path).permissions() & (QFile::ReadGroup | QFile::ReadOther | QFile::WriteGroup | QFile::WriteOther), QFileDevice::Permissions());
+        // A folder that cannot be made (its parent is a file): false, and the reason is given.
+        QString why;
+        QVERIFY(!writeFileAtomically(path + "/inside/x.json", "x", std::nullopt, &why));
+        QVERIFY(!why.isEmpty());
     }
 
     void aFileIsWrittenWholeInAFolderThatDidNotExistAndReplacedByTheNextOne()
