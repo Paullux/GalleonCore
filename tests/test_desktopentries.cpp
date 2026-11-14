@@ -140,6 +140,14 @@ private Q_SLOTS:
         QCOMPARE(app.id, QStringLiteral("com.discordapp.Discord.desktop"));
         QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("com.discordapp.Discord.desktop")), QStringLiteral("discord"));
         QVERIFY(DesktopEntries::wellKnownIdFor(QStringLiteral("tool.desktop")).isEmpty());
+        // Exporting: the Linux desktop file ID of each of the applications measured on Windows becomes its portable id.
+        QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("audacity.desktop")), QStringLiteral("audacity"));
+        QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("ardour.desktop")), QStringLiteral("ardour"));
+        QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("org.kde.kdenlive.desktop")), QStringLiteral("kdenlive"));
+        QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("lmms.desktop")), QStringLiteral("lmms"));
+        QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("mscore.desktop")), QStringLiteral("musescore"));
+        QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("ar.com.tuxguitar.TuxGuitar.desktop")), QStringLiteral("tuxguitar"));
+        QVERIFY(DesktopEntries::wellKnownIdFor(QStringLiteral("org.openshot.OpenShot.desktop")).isEmpty()); // not measured on Windows: not portable yet
     }
 
     void theUsersFileHidesTheSystemOne()
