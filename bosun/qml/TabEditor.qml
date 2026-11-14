@@ -13,6 +13,7 @@ Column {
     required property int index // the theme's place in the list
     required property var theme // {name, page, color}
     property var filePicker: null
+    property var library: null // the wallpapers of the catalog: where the thumbnail of the tab's own comes from
     property string author: ""
     property string license: "CC-BY-SA-4.0"
     property string description: ""
@@ -133,6 +134,36 @@ Column {
         text: editor.theme.wallpaper === ""
               ? qsTr("None: this tab shows your own wallpaper.")
               : qsTr("This tab shows “%1” on the screen.").arg(editor.theme.wallpaper.split("/").pop())
+    }
+    // What the tab puts on the screen, as a thumbnail (the same one the Wallpapers tab shows for it).
+    Image {
+        id: tabWallpaperThumbnail
+        objectName: "tabWallpaperThumbnail"
+        visible: editor.theme.wallpaper !== ""
+        width: Math.min(parent.width, 320)
+        height: width * 384 / 720 // the screen's own shape
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        cache: false
+        sourceSize.width: 320
+        sourceSize.height: 171
+        source: editor.theme.wallpaper === "" ? "" : "image://wallpapers/" + editor.theme.wallpaper
+        // The picture of the tab is saved under the same name when it is replaced: ask again for it when the pages change.
+        readonly property int revision: editor.backend.revision
+        onRevisionChanged: {
+            if (editor.library)
+                editor.library.reload()
+            const current = source
+            source = ""
+            source = current
+        }
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            border.color: "#33ffffff"
+            border.width: 1
+            radius: 4
+        }
     }
     Row {
         spacing: 8

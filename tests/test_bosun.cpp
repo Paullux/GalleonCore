@@ -1590,6 +1590,86 @@ QtObject {
         QTRY_VERIFY_WITH_TIMEOUT(!note->isVisible(), 3000);
     }
 
+    void theTwelveKeysEndAboveTheStatusBarInALowWindowAndKeepTheirSizeInATallOne()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QVERIFY(root->setProperty("currentTab", 0));
+        const auto page = namedItems(root, "themePage");
+        QCOMPARE(page.size(), 1);
+        const auto lowestKeyBottom = [&] {
+            double bottom = 0;
+            for (const QQuickItem *cell : namedItems(root, "keyCell"))
+                bottom = std::max(bottom, cell->mapToScene(QPointF(0, cell->height())).y());
+            return bottom;
+        };
+        const auto pageBottom = [&] { return page.constFirst()->mapToScene(QPointF(0, page.constFirst()->height())).y(); };
+
+        QVERIFY(root->setProperty("height", 700)); // lower than the four rows of 140 px and what is above them
+        QTRY_VERIFY_WITH_TIMEOUT(namedItems(root, "keyCell").size() == 12, 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(namedItems(root, "keyCell").constFirst()->height() < 140, 3000);
+        // The grid lays its keys out a moment after they changed size: wait for the final place.
+        QTRY_VERIFY2_WITH_TIMEOUT(lowestKeyBottom() <= pageBottom() + 1,
+                                  qPrintable(QStringLiteral("the last row of keys is under the status bar: keys end at %1, the page at %2, a key is %3")
+                                                 .arg(lowestKeyBottom()).arg(pageBottom()).arg(namedItems(root, "keyCell").constFirst()->height())), 3000);
+
+        QVERIFY(root->setProperty("height", 1200));
+        QTRY_COMPARE_WITH_TIMEOUT(namedItems(root, "keyCell").constFirst()->height(), 140.0, 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(lowestKeyBottom() <= pageBottom() + 1, 3000);
+    }
+
+    void aTabWithItsOwnWallpaperShowsItsThumbnailAndOneWithoutShowsNone()
+    {
+        const QTemporaryDir dir;
+        const QString own = dir.filePath("own");
+        QVERIFY(QDir().mkpath(own + "/son"));
+        QImage picture(720, 384, QImage::Format_RGB32);
+        picture.fill(Qt::red);
+        QVERIFY(picture.save(own + "/son/pic.jpg", "JPEG"));
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, R"({"version": 1, "home": "main",
+            "themes": [{"name": "Son", "page": "main", "color": "#e53935", "wallpaper": "son/pic.jpg"},
+                       {"name": "Plain", "page": "other", "color": "#ffd600"}],
+            "pages": {"main": {"keys": []}, "other": {"keys": []}}})"));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = own, .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QVERIFY(root->setProperty("currentTab", 0));
+        const auto thumbnail = [&]() -> QQuickItem * {
+            const auto found = namedItems(root, "tabWallpaperThumbnail");
+            return found.isEmpty() ? nullptr : found.constFirst();
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(thumbnail() != nullptr, 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(thumbnail()->isVisible(), 3000);
+        QTRY_COMPARE_WITH_TIMEOUT(thumbnail()->property("status").toInt(), 1, 3000); // Image.Ready: the picture was found
+        QVERIFY(root->setProperty("currentTab", 1)); // the tab with no wallpaper of its own
+        QTRY_VERIFY_WITH_TIMEOUT(!thumbnail()->isVisible(), 3000);
+    }
+
     void everyTabHasItsScrollBarAndOnlyTheShownTabShowsOne()
     {
         const QTemporaryDir dir;
