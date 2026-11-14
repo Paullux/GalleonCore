@@ -677,5 +677,6 @@
   "The live lighting is not available on Windows yet": "L'éclairage en direct n'est pas encore disponible sous Windows",
   "A colour has three values from 0 to 255": "Une couleur a trois valeurs de 0 à 255",
   "Key %1, %2, application not installed": "Touche %1, %2, application non installée",
-  "This application is not installed on this computer: the key does nothing until you install it or choose another application above.": "Cette application n'est pas installée sur cet ordinateur : la touche ne fait rien tant que tu ne l'installes pas ou que tu ne choisis pas une autre application ci-dessus."
+  "This application is not installed on this computer: the key does nothing until you install it or choose another application above.": "Cette application n'est pas installée sur cet ordinateur : la touche ne fait rien tant que tu ne l'installes pas ou que tu ne choisis pas une autre application ci-dessus.",
+  "No preview: the picture of this tab is not in the list of wallpapers of this computer.": "Pas d’aperçu : l’image de cet onglet n’est pas dans la liste des fonds d’écran de cet ordinateur."
 }

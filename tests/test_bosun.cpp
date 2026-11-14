@@ -1632,6 +1632,65 @@ QtObject {
         QTRY_VERIFY_WITH_TIMEOUT(lowestKeyBottom() <= pageBottom() + 1, 3000);
     }
 
+    void aWallpaperThatArrivedAfterTheLibraryWasReadIsStillShownAsTheThumbnailOfItsTab()
+    {
+        // What happens when a theme is installed: the library of wallpapers was read when Bosun started, the theme brings its own
+        // picture afterwards, and the tab is shown after that.
+        const QTemporaryDir dir;
+        const QString own = dir.filePath("own");
+        QVERIFY(QDir().mkpath(own));
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = own, .settingsFile = dir.filePath("galleond.conf")});
+        QVERIFY(QDir().mkpath(own + "/son"));
+        QImage picture(720, 384, QImage::Format_RGB32);
+        picture.fill(Qt::blue);
+        QVERIFY(picture.save(own + "/son/late.jpg", "JPEG"));
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, R"({"version": 1, "home": "main",
+            "themes": [{"name": "Son", "page": "main", "color": "#e53935", "wallpaper": "son/late.jpg"}],
+            "pages": {"main": {"keys": []}}})"));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QVERIFY(root->setProperty("currentTab", 0));
+        QTRY_VERIFY_WITH_TIMEOUT(!namedItems(root, "tabWallpaperThumbnail").isEmpty(), 3000);
+        QQuickItem *thumbnail = namedItems(root, "tabWallpaperThumbnail").constFirst();
+        QTRY_COMPARE_WITH_TIMEOUT(thumbnail->property("status").toInt(), 1, 3000); // Image.Ready
+    }
+
+    void aTabWhosePictureIsNotInTheListSaysThereIsNoPreviewInsteadOfAnEmptyFrame()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, R"({"version": 1, "home": "main",
+            "themes": [{"name": "Son", "page": "main", "color": "#e53935", "wallpaper": "son/not-there.jpg"}],
+            "pages": {"main": {"keys": []}}})"));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QVERIFY(root->setProperty("currentTab", 0));
+        QTRY_VERIFY_WITH_TIMEOUT(!namedItems(root, "tabWallpaperMissing").isEmpty(), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(namedItems(root, "tabWallpaperMissing").constFirst()->isVisible(), 3000);
+    }
+
     void aTabWithItsOwnWallpaperShowsItsThumbnailAndOneWithoutShowsNone()
     {
         const QTemporaryDir dir;

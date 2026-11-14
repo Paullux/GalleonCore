@@ -164,6 +164,19 @@ Column {
             border.width: 1
             radius: 4
         }
+        // The name is known but the picture cannot be shown: say so, instead of an empty frame.
+        Text {
+            objectName: "tabWallpaperMissing"
+            visible: tabWallpaperThumbnail.status === Image.Error
+            anchors.fill: parent
+            anchors.margins: 12
+            wrapMode: Text.Wrap
+            verticalAlignment: Text.AlignVCenter
+            horizontalAlignment: Text.AlignHCenter
+            color: "#ffb74d"
+            font.pixelSize: 13
+            text: qsTr("No preview: the picture of this tab is not in the list of wallpapers of this computer.")
+        }
     }
     Row {
         spacing: 8
