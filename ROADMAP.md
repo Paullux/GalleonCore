@@ -422,6 +422,11 @@ Suite du point 1 : le composant `galleond` qui emploie `LiveLink`. **Expériment
 - Retour du propriétaire, avec deux photos : l'activation depuis Bosun allume bien les touches, et la couleur choisie dans les pastilles (vert) est appliquée à tout le clavier. **Le contrôle des LED fonctionne sur le matériel, sous Linux.**
 - Testé : activation, couleur unique. **Pas encore testé** : arrêt (rendu des touches), cession à un autre programme (Web Hub), veille/réveil, plantage de `galleond` avec le programme de surveillance, Windows. À faire avant de parler de fonction stable ; l'issue #102 (Aaryush1) doit en être informée.
 
+### Luminosité du clavier : essai sous Windows concluant — 14 novembre 2026
+- Retour du propriétaire sur la version Windows (archive de la CI, commit `d901a59`) : **le bouton radio de choix du mode fonctionne, le curseur de luminosité fonctionne, la courbe fonctionne.** Il a aussi utilisé le clavier toute la soirée et constaté que la courbe évolue bien au fil des heures.
+- Avant le correctif, la sauvegarde de la courbe échouait par moments sous Windows (renommage refusé quand un lecteur a le fichier ouvert un instant) : les trois petits fichiers partagés (courbe, `keyboard-state.json`, `lighting-state.json`) passent maintenant par `AtomicFile`, qui réessaie quelques fois à quelques millisecondes d'écart.
+- Toujours **non essayé sous Windows** : l'éclairage en direct (refusé : la veille n'est pas branchée), le chien de garde installé.
+
 ### Barres de défilement dans tous les onglets de Bosun — 13 novembre 2026
 - Les onglets thème, Fonds d'écran, Widgets, Gaming et Économiseurs ont leur barre verticale (la même `ScrollRail` que l'onglet Clavier : elle n'apparaît que si quelque chose dépasse). La barre d'un onglet masqué n'est jamais affichée.
 - Test : `everyTabHasItsScrollBarAndOnlyTheShownTabShowsOne`. Une barre placée *dans* la page du thème provoquait une boucle de mise en page : elle est posée à côté, comme les autres. À regarder sur ton écran : l'onglet « + » et les fenêtres très petites.
