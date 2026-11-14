@@ -3,13 +3,14 @@
 
 #include "BrightnessCurve.h"
 
+#include "AtomicFile.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QSaveFile>
 #include <QStandardPaths>
 #include <QByteArray>
 #include <QTime>
@@ -141,13 +142,7 @@ QString brightnessCurvePath()
 
 bool writeBrightnessCurve(const QString &path, const BrightnessCurve &curve)
 {
-    if (!QDir().mkpath(QFileInfo(path).absolutePath()))
-        return false;
-    QSaveFile file(path);
-    if (!file.open(QIODevice::WriteOnly))
-        return false;
-    file.write(encodeBrightnessCurve(curve));
-    return file.commit();
+    return writeFileAtomically(path, encodeBrightnessCurve(curve));
 }
 
 std::optional<BrightnessCurve> readBrightnessCurve(const QString &path)

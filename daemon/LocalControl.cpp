@@ -26,6 +26,18 @@ namespace {
 constexpr qint64 MaxFrame = 4096;
 constexpr int DeadlineMs = 1500;
 constexpr int MaxConnections = 4;
+
+// One channel of a colour: a JSON number that is a whole number from 0 to 255 (not 1.5, not "1", not 256).
+std::optional<int> colourChannel(const QJsonObject &object, const QString &name)
+{
+    const QJsonValue value = object.value(name);
+    if (!value.isDouble())
+        return std::nullopt;
+    const double number = value.toDouble();
+    if (number < 0.0 || number > 255.0 || number != static_cast<int>(number))
+        return std::nullopt;
+    return static_cast<int>(number);
+}
 }
 
 std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
@@ -74,21 +86,15 @@ std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
         return command;
     }
     if (object.size() == 4 && action == QStringLiteral("lighting-color")) {
-        int channels[3] = {0, 0, 0};
-        const QString names[3] = {QStringLiteral("red"), QStringLiteral("green"), QStringLiteral("blue")};
-        for (int i = 0; i < 3; ++i) {
-            const QJsonValue value = object.value(names[i]);
-            if (!value.isDouble())
-                return std::nullopt;
-            const double number = value.toDouble();
-            if (number < 0.0 || number > 255.0 || number != static_cast<int>(number))
-                return std::nullopt;
-            channels[i] = static_cast<int>(number);
-        }
+        const auto red = colourChannel(object, QStringLiteral("red"));
+        const auto green = colourChannel(object, QStringLiteral("green"));
+        const auto blue = colourChannel(object, QStringLiteral("blue"));
+        if (!red || !green || !blue)
+            return std::nullopt;
         LocalCommand command{LocalAction::LightingColor, {}, {}};
-        command.red = channels[0];
-        command.green = channels[1];
-        command.blue = channels[2];
+        command.red = *red;
+        command.green = *green;
+        command.blue = *blue;
         return command;
     }
     if (object.size() == 1 && action == QStringLiteral("stop"))

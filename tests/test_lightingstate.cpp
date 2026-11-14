@@ -19,12 +19,12 @@ namespace {
 // A controller that never opens anything; the publisher only listens to its signal.
 struct Idle final : WatchdogGuard
 {
-    bool start(qint64, QString *) override { return false; }
+    bool start(qint64 /*pid*/, QString * /*why*/) override { return false; }
     void stop() override {}
 };
 struct NoPower final : PowerEvents
 {
-    bool available(QString *) const override { return false; }
+    bool available(QString * /*why*/) const override { return false; }
     void holdSleep() override {}
     void allowSleep() override {}
 };
@@ -69,7 +69,8 @@ private Q_SLOTS:
     {
         const LightingState longDetail{.state = QStringLiteral("off"), .detail = QString(1000, QLatin1Char('x')), .time = 5};
         const auto parsed = parseLightingState(encodeLightingState(longDetail));
-        QVERIFY(parsed);
+        if (!parsed)
+            QFAIL("the state was not parsed");
         QCOMPARE(parsed->detail.size(), MaxLightingDetail);
     }
 
@@ -111,7 +112,10 @@ private Q_SLOTS:
         QCOMPARE(readLightingState(path), std::optional<LightingState>(LightingState{.state = QStringLiteral("off"), .detail = QStringLiteral("the watchdog is not installed"), .time = 1001}));
         now = 1002;
         Q_EMIT controller.stateChanged(QStringLiteral("burning"), QString());
-        QCOMPARE(readLightingState(path)->time, 1001); // the unknown state wrote nothing
+        const auto last = readLightingState(path);
+        if (!last)
+            QFAIL("the state file is gone");
+        QCOMPARE(last->time, 1001); // the unknown state wrote nothing
     }
 };
 

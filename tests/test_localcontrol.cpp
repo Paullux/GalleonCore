@@ -69,7 +69,8 @@ private slots:
         LocalCommand enable{LocalAction::LightingEnable, {}, {}};
         enable.on = true;
         const auto parsed = parseLocalCommand(encodeLocalCommand(enable));
-        QVERIFY(parsed);
+        if (!parsed)
+            QFAIL("the enable command was not parsed");
         QCOMPARE(parsed->action, LocalAction::LightingEnable);
         QVERIFY(parsed->on);
         LocalCommand colour{LocalAction::LightingColor, {}, {}};
@@ -77,7 +78,8 @@ private slots:
         colour.green = 20;
         colour.blue = 255;
         const auto parsedColour = parseLocalCommand(encodeLocalCommand(colour));
-        QVERIFY(parsedColour);
+        if (!parsedColour)
+            QFAIL("the colour command was not parsed");
         QCOMPARE(std::tuple(parsedColour->red, parsedColour->green, parsedColour->blue), std::tuple(10, 20, 255));
     }
 

@@ -43,6 +43,7 @@ add_library(galleond_core STATIC
     MatrixRainController.h MatrixRainController.cpp
     BrightnessCurve.h BrightnessCurve.cpp
     KeyboardController.h KeyboardController.cpp
+    AtomicFile.h AtomicFile.cpp
     KeyboardState.h KeyboardState.cpp
     ReplacedFileWatcher.h ReplacedFileWatcher.cpp
     BrightnessScheduler.h BrightnessScheduler.cpp

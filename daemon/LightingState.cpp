@@ -3,14 +3,16 @@
 
 #include "LightingState.h"
 
+#include "AtomicFile.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QSaveFile>
 #include <QStandardPaths>
 
+#include <algorithm>
 #include <cmath>
 
 namespace galleond {
@@ -20,11 +22,7 @@ constexpr int Version = 1;
 
 bool plain(const QString &text)
 {
-    for (const QChar c : text) {
-        if (c.unicode() < 0x20 || c.unicode() == 0x7f)
-            return false;
-    }
-    return true;
+    return std::ranges::all_of(text, [](QChar c) { return c.unicode() >= 0x20 && c.unicode() != 0x7f; });
 }
 
 } // namespace
@@ -84,13 +82,7 @@ QString lightingStatePath()
 
 bool writeLightingState(const QString &path, const LightingState &state)
 {
-    if (!QDir().mkpath(QFileInfo(path).absolutePath()))
-        return false;
-    QSaveFile file(path);
-    if (!file.open(QIODevice::WriteOnly))
-        return false;
-    file.write(encodeLightingState(state));
-    return file.commit();
+    return writeFileAtomically(path, encodeLightingState(state));
 }
 
 std::optional<LightingState> readLightingState(const QString &path)
