@@ -1,0 +1,80 @@
+<!doctype html>
+<!-- SPDX-FileCopyrightText: 2026 Paul Woisard -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<html lang="en" data-lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-localized="text" data-en="GalleonCore and OpenRGB · GalleonCore" data-fr="GalleonCore et OpenRGB · GalleonCore" data-de="GalleonCore und OpenRGB · GalleonCore" data-es="GalleonCore y OpenRGB · GalleonCore">GalleonCore and OpenRGB · GalleonCore</title>
+  <meta name="description" content="What to do when OpenRGB takes over the lighting of the Galleon 100 SD and the colour chosen in GalleonCore does not show." data-localized="content" data-en="What to do when OpenRGB takes over the lighting of the Galleon 100 SD and the colour chosen in GalleonCore does not show." data-fr="Que faire quand OpenRGB prend la main sur l’éclairage du Galleon 100 SD et que la couleur choisie dans GalleonCore ne s’affiche pas." data-de="Was zu tun ist, wenn OpenRGB die Beleuchtung des Galleon 100 SD übernimmt und die in GalleonCore gewählte Farbe nicht erscheint." data-es="Qué hacer cuando OpenRGB toma el control de la iluminación del Galleon 100 SD y el color elegido en GalleonCore no se muestra.">
+  <link rel="canonical" href="https://galleoncore.xyz/openrgb.html">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+  <link rel="stylesheet" href="legal.css">
+  <script src="privacy-consent.js" defer></script>
+</head>
+<body class="legal-page">
+  <div class="legal-wrap">
+    <header class="legal-head">
+      <a href="index.html"><img src="logo.svg" alt=""> GalleonCore</a>
+      <select class="lang-toggle" data-legal-lang-select aria-label="Language / Langue / Sprache / Idioma"><option value="en">English</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="es">Español</option></select>
+    </header>
+    <main>
+      <article lang="en">
+        <h1>GalleonCore and OpenRGB</h1>
+        <p>If you use OpenRGB, it can take over the lighting of your Galleon 100 SD: the rings around the two dials and, when GalleonCore’s live lighting is on, the keys of the keyboard. When this happens, the colour you choose in Bosun does not show. The live lighting of the keyboard is experimental and off by default.</p>
+        <h2>The simplest fix: close OpenRGB</h2>
+        <ol><li>Close OpenRGB completely: right-click its icon next to the clock and choose “Quit”. Closing its window can leave it running.</li><li>In Bosun, switch the live lighting off, then on again.</li><li>The colour shows after about 3 seconds. This is normal: GalleonCore first listens for 3 seconds to see whether another program is using the keyboard.</li></ol>
+        <h2>To keep OpenRGB for your other devices</h2>
+        <p>In OpenRGB, open <strong>Settings</strong>, then <strong>Supported Devices</strong> (“Paramètres”, then “Périphériques supportés” in French). Type <code>Lamp</code> in the filter, switch off <strong>HID LampArray Device</strong>, click “Apply changes” (“Appliquer les changements”), then scan the devices again or restart OpenRGB.</p>
+        <p>Careful: this stops OpenRGB from controlling <em>every</em> device that it finds this way, not only the Galleon. We have not checked yet that it also frees the keys of the keyboard: if the colour still does not show, close OpenRGB.</p>
+        <h2>Good to know</h2>
+        <p>The live lighting never writes to the keyboard’s own memory. When you switch it off, when another program such as the Web Hub takes over, or if GalleonCore stops, the keys go back to what the Web Hub last set.</p>
+      </article>
+      <article lang="fr">
+        <h1>GalleonCore et OpenRGB</h1>
+        <p>Si tu utilises OpenRGB, il peut prendre la main sur l’éclairage de ton Galleon 100 SD : les anneaux autour des deux molettes et, quand l’éclairage en direct de GalleonCore est allumé, les touches du clavier. Dans ce cas, la couleur choisie dans Bosun ne s’affiche pas. L’éclairage en direct du clavier est expérimental et éteint par défaut.</p>
+        <h2>Le plus simple : fermer OpenRGB</h2>
+        <ol><li>Ferme OpenRGB complètement : clic droit sur son icône près de l’horloge, puis « Quitter ». Fermer sa fenêtre peut le laisser actif.</li><li>Dans Bosun, éteins l’éclairage en direct, puis rallume-le.</li><li>La couleur s’affiche au bout d’environ 3 secondes. C’est normal : GalleonCore écoute d’abord 3 secondes pour voir si un autre programme utilise le clavier.</li></ol>
+        <h2>Pour garder OpenRGB pour tes autres appareils</h2>
+        <p>Dans OpenRGB, ouvre <strong>Paramètres</strong>, puis <strong>Périphériques supportés</strong>. Tape <code>Lamp</code> dans le filtre, désactive <strong>HID LampArray Device</strong>, clique sur « Appliquer les changements », puis scanne de nouveau les périphériques ou relance OpenRGB.</p>
+        <p>Attention : cela empêche OpenRGB de contrôler <em>tous</em> les appareils qu’il trouve de cette façon, pas seulement le Galleon. Nous n’avons pas encore vérifié que cela libère aussi les touches du clavier : si la couleur ne s’affiche toujours pas, ferme OpenRGB.</p>
+        <h2>Bon à savoir</h2>
+        <p>L’éclairage en direct n’écrit jamais dans la mémoire propre du clavier. Quand tu l’éteins, quand un autre programme comme le Web Hub reprend la main, ou si GalleonCore s’arrête, les touches reviennent à ce que le Web Hub a réglé en dernier.</p>
+      </article>
+      <article lang="de">
+        <h1>GalleonCore und OpenRGB</h1>
+        <p>Wenn du OpenRGB verwendest, kann es die Beleuchtung deines Galleon 100 SD übernehmen: die Ringe um die beiden Drehregler und, wenn die Live-Beleuchtung von GalleonCore an ist, die Tasten der Tastatur. Dann erscheint die in Bosun gewählte Farbe nicht. Die Live-Beleuchtung der Tastatur ist experimentell und standardmäßig aus.</p>
+        <h2>Am einfachsten: OpenRGB schließen</h2>
+        <ol><li>Schließe OpenRGB vollständig: Rechtsklick auf sein Symbol neben der Uhr und „Beenden“. Das Schließen des Fensters kann es weiterlaufen lassen.</li><li>Schalte in Bosun die Live-Beleuchtung aus und wieder an.</li><li>Die Farbe erscheint nach etwa 3 Sekunden. Das ist normal: GalleonCore lauscht zuerst 3 Sekunden, ob ein anderes Programm die Tastatur benutzt.</li></ol>
+        <h2>OpenRGB für deine anderen Geräte behalten</h2>
+        <p>Öffne in OpenRGB <strong>Settings</strong> (Einstellungen), dann <strong>Supported Devices</strong> (Unterstützte Geräte); die Namen hängen von der Sprache von OpenRGB ab. Gib im Filter <code>Lamp</code> ein, schalte <strong>HID LampArray Device</strong> aus, klicke auf „Apply changes“ (Änderungen übernehmen) und suche die Geräte erneut oder starte OpenRGB neu.</p>
+        <p>Achtung: Das hindert OpenRGB daran, <em>alle</em> Geräte zu steuern, die es auf diese Weise findet, nicht nur das Galleon. Wir haben noch nicht geprüft, ob dies auch die Tasten der Tastatur freigibt: Erscheint die Farbe weiterhin nicht, schließe OpenRGB.</p>
+        <h2>Gut zu wissen</h2>
+        <p>Die Live-Beleuchtung schreibt nie in den eigenen Speicher der Tastatur. Wenn du sie ausschaltest, wenn ein anderes Programm wie das Web Hub übernimmt oder wenn GalleonCore endet, kehren die Tasten zu dem zurück, was das Web Hub zuletzt eingestellt hat.</p>
+      </article>
+      <article lang="es">
+        <h1>GalleonCore y OpenRGB</h1>
+        <p>Si usas OpenRGB, puede tomar el control de la iluminación de tu Galleon 100 SD: los anillos alrededor de los dos diales y, cuando la iluminación en vivo de GalleonCore está encendida, las teclas del teclado. Entonces el color elegido en Bosun no se muestra. La iluminación en vivo del teclado es experimental y está apagada por defecto.</p>
+        <h2>Lo más sencillo: cerrar OpenRGB</h2>
+        <ol><li>Cierra OpenRGB por completo: clic derecho en su icono junto al reloj y «Salir». Cerrar su ventana puede dejarlo activo.</li><li>En Bosun, apaga la iluminación en vivo y vuelve a encenderla.</li><li>El color aparece al cabo de unos 3 segundos. Es normal: GalleonCore escucha primero 3 segundos para ver si otro programa usa el teclado.</li></ol>
+        <h2>Para conservar OpenRGB para tus otros dispositivos</h2>
+        <p>En OpenRGB, abre <strong>Settings</strong> (Ajustes) y luego <strong>Supported Devices</strong> (Dispositivos compatibles); los nombres dependen del idioma de OpenRGB. Escribe <code>Lamp</code> en el filtro, desactiva <strong>HID LampArray Device</strong>, haz clic en «Apply changes» (Aplicar cambios) y vuelve a buscar los dispositivos o reinicia OpenRGB.</p>
+        <p>Atención: esto impide que OpenRGB controle <em>todos</em> los dispositivos que encuentra de este modo, no solo el Galleon. Todavía no hemos comprobado que también libere las teclas del teclado: si el color sigue sin mostrarse, cierra OpenRGB.</p>
+        <h2>Conviene saber</h2>
+        <p>La iluminación en vivo nunca escribe en la memoria propia del teclado. Cuando la apagas, cuando otro programa como el Web Hub toma el control o si GalleonCore se detiene, las teclas vuelven a lo que el Web Hub ajustó por última vez.</p>
+      </article>
+    </main>
+    <footer class="legal-links">
+      <a href="index.html"><span lang="en">Home</span><span lang="fr">Accueil</span><span lang="de">Startseite</span><span lang="es">Inicio</span></a>
+      <a href="themes.html"><span lang="en">Themes</span><span lang="fr">Thèmes</span><span lang="de">Themen</span><span lang="es">Temas</span></a>
+      <a href="theme-format.html"><span lang="en">Theme file format</span><span lang="fr">Format des thèmes</span><span lang="de">Themenformat</span><span lang="es">Formato de temas</span></a>
+      <a href="openrgb.html"><span lang="en">OpenRGB</span><span lang="fr">OpenRGB</span><span lang="de">OpenRGB</span><span lang="es">OpenRGB</span></a>
+      <a href="privacy.html"><span lang="en">Privacy</span><span lang="fr">Confidentialité</span><span lang="de">Datenschutz</span><span lang="es">Privacidad</span></a>
+      <a href="terms.html"><span lang="en">Terms of use</span><span lang="fr">CGU</span><span lang="de">Nutzungsbedingungen</span><span lang="es">Condiciones de uso</span></a>
+      <button type="button" data-open-privacy-choices><span lang="en">Privacy choices</span><span lang="fr">Choix de confidentialité</span><span lang="de">Datenschutzeinstellungen</span><span lang="es">Opciones de privacidad</span></button>
+    </footer>
+  </div>
+</body>
+</html>

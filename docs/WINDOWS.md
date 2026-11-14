@@ -207,8 +207,11 @@ component during an upgrade removes previous sign-in commands. Uninstall removes
 both. These are interactive user-session processes, not Session 0 services.
 
 Setup installs `galleon-keyboard-watchdog.exe` beside `galleond.exe`. galleond starts it, for its own process ID, before
-the experimental live lighting touches the keyboard, and refuses the lighting if it cannot (the program is also refused on
-Windows for now because sleep notifications are not wired). It gives the keyboard's keys back if galleond dies; it writes
+the experimental live lighting touches the keyboard, and refuses the lighting if it cannot. galleond is told about sleep, wake
+and the end of the session by a window that is never shown (`WindowsPowerEvents`: a top-level window, since Windows sends the
+broadcasts to those only, also registered with `RegisterSuspendResumeNotification`), and gives the keys back inside the
+notification: Windows only waits a short time for an answer and cannot be asked to wait longer, so `holdSleep` does nothing
+there. Without that window the lighting is refused, with the reason. The watchdog gives the keyboard's keys back if galleond dies; it writes
 no file. `test-setup.ps1` checks that it is installed beside galleond, that it runs and that its `--dry-run` opens no
 keyboard, after install and after upgrade, and that Uninstall removes it.
 

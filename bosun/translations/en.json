@@ -658,7 +658,6 @@
   "This is a preview: nothing is sent to the keyboard, because the per-key lighting is not available yet. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "This is a preview: nothing is sent to the keyboard, because the per-key lighting is not available yet. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.",
   "Corsair keyboard · live lighting (experimental)": "Corsair keyboard · live lighting (experimental)",
   "galleond can light the keys itself, one colour for all of them. It is off by default and never writes to the keyboard's memory: when it stops, or is stopped, the keys go back to what the keyboard held. A small watchdog program gives the keys back even if galleond crashes. Switch it on only if you accept that this is experimental.": "galleond can light the keys itself, one colour for all of them. It is off by default and never writes to the keyboard's memory: when it stops, or is stopped, the keys go back to what the keyboard held. A small watchdog program gives the keys back even if galleond crashes. Switch it on only if you accept that this is experimental.",
-  "The live lighting is not available on Windows yet.": "The live lighting is not available on Windows yet.",
   "Switch the live lighting off": "Switch the live lighting off",
   "Switch the live lighting on": "Switch the live lighting on",
   "Asked galleond to give the keys back.": "Asked galleond to give the keys back.",
@@ -674,9 +673,11 @@
   "The lighting could not be reached: restart the updated daemon (%1)": "The lighting could not be reached: restart the updated daemon (%1)",
   "Start galleond to switch the lighting on or off": "Start galleond to switch the lighting on or off",
   "Start galleond to change the lighting": "Start galleond to change the lighting",
-  "The live lighting is not available on Windows yet": "The live lighting is not available on Windows yet",
   "A colour has three values from 0 to 255": "A colour has three values from 0 to 255",
   "Key %1, %2, application not installed": "Key %1, %2, application not installed",
   "This application is not installed on this computer: the key does nothing until you install it or choose another application above.": "This application is not installed on this computer: the key does nothing until you install it or choose another application above.",
-  "No preview: the picture of this tab is not in the list of wallpapers of this computer.": "No preview: the picture of this tab is not in the list of wallpapers of this computer."
+  "The live lighting is not available on this system.": "The live lighting is not available on this system.",
+  "No preview: the picture of this tab is not in the list of wallpapers of this computer.": "No preview: the picture of this tab is not in the list of wallpapers of this computer.",
+  "The live lighting is on: “Give this colour to every key” sends that colour to the keyboard (one colour for all the keys: a colour for each key is not available yet). Everything else here is a preview.": "The live lighting is on: “Give this colour to every key” sends that colour to the keyboard (one colour for all the keys: a colour for each key is not available yet). Everything else here is a preview.",
+  "The live lighting is on and holds the keyboard: the brightness is suspended, and the slider and the curve do nothing until it is switched off.": "The live lighting is on and holds the keyboard: the brightness is suspended, and the slider and the curve do nothing until it is switched off."
 }

@@ -658,7 +658,6 @@
   "This is a preview: nothing is sent to the keyboard, because the per-key lighting is not available yet. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Dies ist eine Vorschau: Es wird nichts an die Tastatur gesendet, da die Beleuchtung pro Taste noch nicht verfügbar ist. Die Tastenkappen sind ein französisches Standardlayout zur Orientierung; die Lampen darunter liegen an den Positionen, die die Tastatur meldet.",
   "Corsair keyboard · live lighting (experimental)": "Corsair-Tastatur · Live-Beleuchtung (experimentell)",
   "galleond can light the keys itself, one colour for all of them. It is off by default and never writes to the keyboard's memory: when it stops, or is stopped, the keys go back to what the keyboard held. A small watchdog program gives the keys back even if galleond crashes. Switch it on only if you accept that this is experimental.": "galleond kann die Tasten selbst beleuchten, alle in einer Farbe. Es ist standardmäßig aus und schreibt nie in den Speicher der Tastatur: Wenn es endet oder beendet wird, kehren die Tasten zu dem zurück, was die Tastatur hielt. Ein kleines Wächterprogramm gibt die Tasten auch dann zurück, wenn galleond abstürzt. Nur einschalten, wenn du akzeptierst, dass es experimentell ist.",
-  "The live lighting is not available on Windows yet.": "Die Live-Beleuchtung ist unter Windows noch nicht verfügbar.",
   "Switch the live lighting off": "Live-Beleuchtung ausschalten",
   "Switch the live lighting on": "Live-Beleuchtung einschalten",
   "Asked galleond to give the keys back.": "galleond wurde gebeten, die Tasten zurückzugeben.",
@@ -674,9 +673,11 @@
   "The lighting could not be reached: restart the updated daemon (%1)": "Die Beleuchtung ist nicht erreichbar: den aktualisierten Daemon neu starten (%1)",
   "Start galleond to switch the lighting on or off": "Starte galleond, um die Beleuchtung ein- oder auszuschalten",
   "Start galleond to change the lighting": "Starte galleond, um die Beleuchtung zu ändern",
-  "The live lighting is not available on Windows yet": "Die Live-Beleuchtung ist unter Windows noch nicht verfügbar",
   "A colour has three values from 0 to 255": "Eine Farbe hat drei Werte von 0 bis 255",
   "Key %1, %2, application not installed": "Taste %1, %2, Anwendung nicht installiert",
   "This application is not installed on this computer: the key does nothing until you install it or choose another application above.": "Diese Anwendung ist auf diesem Computer nicht installiert: Die Taste tut nichts, bis du sie installierst oder oben eine andere Anwendung wählst.",
-  "No preview: the picture of this tab is not in the list of wallpapers of this computer.": "Keine Vorschau: Das Bild dieses Tabs ist nicht in der Liste der Hintergrundbilder dieses Computers."
+  "The live lighting is not available on this system.": "Die Live-Beleuchtung ist auf diesem System nicht verfügbar.",
+  "No preview: the picture of this tab is not in the list of wallpapers of this computer.": "Keine Vorschau: Das Bild dieses Tabs ist nicht in der Liste der Hintergrundbilder dieses Computers.",
+  "The live lighting is on: “Give this colour to every key” sends that colour to the keyboard (one colour for all the keys: a colour for each key is not available yet). Everything else here is a preview.": "Die Live-Beleuchtung ist an: „Diese Farbe allen Tasten geben“ sendet diese Farbe an die Tastatur (eine Farbe für alle Tasten: eine Farbe pro Taste ist noch nicht verfügbar). Alles andere hier ist eine Vorschau.",
+  "The live lighting is on and holds the keyboard: the brightness is suspended, and the slider and the curve do nothing until it is switched off.": "Die Live-Beleuchtung ist an und hält die Tastatur: Die Helligkeit ist ausgesetzt, und Regler und Kurve bewirken nichts, bis sie ausgeschaltet wird."
 }

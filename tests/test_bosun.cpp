@@ -10,6 +10,7 @@
 #include <AppsBackend.h>
 #include <BrightnessCurve.h>
 
+#include <QDBusConnection>
 #include <QDir>
 #include <QFile>
 #include <QGuiApplication>
@@ -138,6 +139,32 @@ QList<QQuickItem *> namedItems(QObject *root, const QString &name)
         collectNamed(window->contentItem(), name, found);
     return found;
 }
+
+// What galleond's keyboard object is, as far as Bosun can tell: it is asked to read the brightness, and says nothing here.
+class KeyboardEndpoint : public QObject
+{
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.galleoncore.Keyboard")
+public:
+    int reads = 0;
+public Q_SLOTS:
+    void ReadBrightness() { ++reads; }
+};
+
+// The lighting object of galleond, as far as Bosun can tell: it says that it holds the keyboard, and notes the colours it is given.
+class LightingEndpoint : public QObject
+{
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.galleoncore.Lighting")
+public:
+    QList<QList<int>> colours;
+public Q_SLOTS:
+    [[nodiscard]] QString State() const { return QStringLiteral("holding"); }
+    QString Enable(bool /*on*/) { return {}; }
+    bool SetColor(int red, int green, int blue) { colours.append({red, green, blue}); return true; }
+Q_SIGNALS:
+    void stateChanged(const QString &_t1, const QString &_t2); // NOLINT(readability-inconsistent-declaration-parameter-name): moc names them
+};
 
 class TestBosun : public QObject
 {
@@ -683,6 +710,49 @@ QtObject {
         const QVariantList keys = backend.keys("main");
         QVERIFY(!keys.at(0).toMap().value("appMissing").toBool());
         QVERIFY(keys.at(1).toMap().value("appMissing").toBool());
+    }
+
+    void openingTheKeyboardTabAsksGalleondToReadTheBrightnessAgain()
+    {
+        // galleond as another program: its own connection to the bus, with the name Bosun looks for and the keyboard object.
+        const QString connectionName = QStringLiteral("fake-galleond-for-the-keyboard-tab");
+        QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, connectionName);
+        KeyboardEndpoint endpoint;
+        QVERIFY(bus.registerObject("/org/galleoncore/Keyboard", &endpoint, QDBusConnection::ExportAllSlots));
+        QVERIFY(bus.registerService(bosun::DaemonStatus::BusName));
+        const auto cleanUp = qScopeGuard([&] {
+            bus.unregisterObject("/org/galleoncore/Keyboard");
+            bus.unregisterService(bosun::DaemonStatus::BusName);
+            QDBusConnection::disconnectFromBus(connectionName);
+        });
+
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QTRY_VERIFY_WITH_TIMEOUT(daemon.running(), 3000);
+        QTest::qWait(300); // the read made when the daemon appeared
+        const int before = endpoint.reads;
+
+        QVERIFY(root->setProperty("currentTab", 3)); // the keyboard tab: after the two themes and the "+" tab
+        QTRY_COMPARE_WITH_TIMEOUT(endpoint.reads, before + 1, 3000);
+        QVERIFY(root->setProperty("currentTab", 0)); // another tab asks for nothing
+        QTest::qWait(300);
+        QCOMPARE(endpoint.reads, before + 1);
+        QVERIFY(root->setProperty("currentTab", 3)); // and every time the keyboard tab is opened
+        QTRY_COMPARE_WITH_TIMEOUT(endpoint.reads, before + 2, 3000);
     }
 
     void aPageHasTwelveKeysAndSaysWhatTheyDo()
@@ -1841,6 +1911,59 @@ QtObject {
         // Content that fits needs no bar.
         QVERIFY(flickable->setProperty("contentWidth", 250.0));
         QVERIFY(!horizontal->property("needed").toBool());
+    }
+
+    void withTheLiveLightingOnTheColourGivenToEveryKeyGoesToTheKeyboardAndTheBrightnessSaysItIsSuspended()
+    {
+        const QString connectionName = QStringLiteral("fake-galleond-for-the-preview");
+        QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, connectionName);
+        LightingEndpoint endpoint;
+        QVERIFY(bus.registerObject("/org/galleoncore/Lighting", &endpoint, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(bus.registerService(bosun::DaemonStatus::BusName));
+        const auto cleanUp = qScopeGuard([&] {
+            bus.unregisterObject("/org/galleoncore/Lighting");
+            bus.unregisterService(bosun::DaemonStatus::BusName);
+            QDBusConnection::disconnectFromBus(connectionName);
+        });
+
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QTRY_VERIFY_WITH_TIMEOUT(daemon.lightingActive(), 3000); // the daemon says that it holds the keyboard
+        QVERIFY(root->setProperty("currentTab", 3));
+        auto *board = root->findChild<QQuickItem *>("keyboardMap");
+        QVERIFY(board);
+
+        // The note under the brightness says that it is suspended.
+        auto *note = root->findChild<QQuickItem *>("brightnessSuspendedNote");
+        QVERIFY(note);
+        QVERIFY(note->isVisible());
+
+        // A colour chosen for a key, then given to every key: it goes to the keyboard.
+        const QVariantList lamps{QVariant(23)};
+        QVERIFY(QMetaObject::invokeMethod(board, "capClicked", Q_ARG(int, 40), Q_ARG(QVariant, QVariant(lamps))));
+        auto *swatches = root->findChild<QQuickItem *>("lampSwatches");
+        QVERIFY(swatches);
+        QVERIFY(QMetaObject::invokeMethod(swatches, "picked", Q_ARG(QString, QStringLiteral("#e53935"))));
+        QVERIFY(endpoint.colours.isEmpty()); // one key only: a colour per key cannot be sent yet
+        auto *all = root->findChild<QQuickItem *>("lampsColourAll");
+        QVERIFY(all);
+        QVERIFY(QMetaObject::invokeMethod(all, "clicked"));
+        QTRY_COMPARE_WITH_TIMEOUT(endpoint.colours.size(), 1, 3000);
+        QCOMPARE(endpoint.colours.constFirst(), (QList<int>{229, 57, 53}));
     }
 
     void aKeyOfTheKeyboardDrawingTakesTheColourPickedForItAndNothingIsSent()
