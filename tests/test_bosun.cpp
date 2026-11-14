@@ -159,11 +159,11 @@ class LightingEndpoint : public QObject
 public:
     QList<QList<int>> colours;
 public Q_SLOTS:
-    QString State() const { return QStringLiteral("holding"); }
-    QString Enable(bool) { return {}; }
+    [[nodiscard]] QString State() const { return QStringLiteral("holding"); }
+    QString Enable(bool /*on*/) { return {}; }
     bool SetColor(int red, int green, int blue) { colours.append({red, green, blue}); return true; }
 Q_SIGNALS:
-    void stateChanged(const QString &state, const QString &detail);
+    void stateChanged(const QString &_t1, const QString &_t2); // NOLINT(readability-inconsistent-declaration-parameter-name): moc names them
 };
 
 class TestBosun : public QObject

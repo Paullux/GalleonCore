@@ -23,7 +23,7 @@ namespace galleond {
 // the start of what it carries: never the whole of a report, and no path, name or user setting). It exists because the
 // lighting works on one system and not on another, and the only way to see why is to see what the keyboard answers.
 inline constexpr std::size_t TraceBytesPerReport = 16;
-inline constexpr std::size_t TraceFileLimit = 256 * 1024; // the file stops there: a long run cannot fill a disk
+inline constexpr std::size_t TraceFileLimit = std::size_t{256} * 1024; // the file stops there: a long run cannot fill a disk
 
 // One line for a report. Pure.
 [[nodiscard]] QString traceLine(std::int64_t milliseconds, const char *direction, std::span<const std::uint8_t> report);
@@ -56,7 +56,7 @@ public:
     bool open() override;
     void close() override;
     [[nodiscard]] bool isOpen() const override { return m_inner->isOpen(); }
-    [[nodiscard]] QString serialNumber() const override { return QString(); } // never into the log
+    [[nodiscard]] QString serialNumber() const override { return {}; } // never into the log
     int getFeatureReport(std::span<std::uint8_t> report) override { return m_inner->getFeatureReport(report); }
     bool sendFeatureReport(std::span<const std::uint8_t> report) override;
     bool write(std::span<const std::uint8_t> report) override;

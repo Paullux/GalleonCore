@@ -86,7 +86,7 @@ private Q_SLOTS:
     void theSerialNumberIsNeverInTheLog()
     {
         Lines lines;
-        TracedTransport traced(std::make_unique<FakeTransport>(), lines.sink(), [] { return 0; });
+        const TracedTransport traced(std::make_unique<FakeTransport>(), lines.sink(), [] { return 0; });
         QVERIFY(traced.serialNumber().isEmpty()); // the fake one is "FAKE0001"
     }
 
