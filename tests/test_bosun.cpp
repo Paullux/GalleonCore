@@ -10,6 +10,7 @@
 #include <AppsBackend.h>
 #include <BrightnessCurve.h>
 
+#include <QDBusConnection>
 #include <QDir>
 #include <QFile>
 #include <QGuiApplication>
@@ -138,6 +139,17 @@ QList<QQuickItem *> namedItems(QObject *root, const QString &name)
         collectNamed(window->contentItem(), name, found);
     return found;
 }
+
+// What galleond's keyboard object is, as far as Bosun can tell: it is asked to read the brightness, and says nothing here.
+class KeyboardEndpoint : public QObject
+{
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.galleoncore.Keyboard")
+public:
+    int reads = 0;
+public Q_SLOTS:
+    void ReadBrightness() { ++reads; }
+};
 
 class TestBosun : public QObject
 {
@@ -683,6 +695,49 @@ QtObject {
         const QVariantList keys = backend.keys("main");
         QVERIFY(!keys.at(0).toMap().value("appMissing").toBool());
         QVERIFY(keys.at(1).toMap().value("appMissing").toBool());
+    }
+
+    void openingTheKeyboardTabAsksGalleondToReadTheBrightnessAgain()
+    {
+        // galleond as another program: its own connection to the bus, with the name Bosun looks for and the keyboard object.
+        const QString connectionName = QStringLiteral("fake-galleond-for-the-keyboard-tab");
+        QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, connectionName);
+        KeyboardEndpoint endpoint;
+        QVERIFY(bus.registerObject("/org/galleoncore/Keyboard", &endpoint, QDBusConnection::ExportAllSlots));
+        QVERIFY(bus.registerService(bosun::DaemonStatus::BusName));
+        const auto cleanUp = qScopeGuard([&] {
+            bus.unregisterObject("/org/galleoncore/Keyboard");
+            bus.unregisterService(bosun::DaemonStatus::BusName);
+            QDBusConnection::disconnectFromBus(connectionName);
+        });
+
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QTRY_VERIFY_WITH_TIMEOUT(daemon.running(), 3000);
+        QTest::qWait(300); // the read made when the daemon appeared
+        const int before = endpoint.reads;
+
+        QVERIFY(root->setProperty("currentTab", 3)); // the keyboard tab: after the two themes and the "+" tab
+        QTRY_COMPARE_WITH_TIMEOUT(endpoint.reads, before + 1, 3000);
+        QVERIFY(root->setProperty("currentTab", 0)); // another tab asks for nothing
+        QTest::qWait(300);
+        QCOMPARE(endpoint.reads, before + 1);
+        QVERIFY(root->setProperty("currentTab", 3)); // and every time the keyboard tab is opened
+        QTRY_COMPARE_WITH_TIMEOUT(endpoint.reads, before + 2, 3000);
     }
 
     void aPageHasTwelveKeysAndSaysWhatTheyDo()

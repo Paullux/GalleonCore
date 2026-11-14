@@ -89,6 +89,11 @@ Window {
         shownPage = ""
         if (currentTab < backend.themes.length)
             lastTheme = currentTab
+        // The keyboard tab shows the brightness the keyboard holds now, not the one seen when Bosun started: another program, or
+        // the curve of the day, may have changed it. galleond reads it (this window never opens the keyboard) and says so.
+        // (Read in the list of tabs: `tab` may not have followed the new index yet when this handler runs.)
+        if (tabs[currentTab] !== undefined && tabs[currentTab].kind === "keyboard")
+            win.daemon.readKeyboardBrightness()
     }
 
     FontMetrics { id: tabFont; font.pixelSize: 14 }
