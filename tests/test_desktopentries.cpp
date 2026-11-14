@@ -91,6 +91,19 @@ private Q_SLOTS:
         QTest::newRow("only suffix") << ".desktop" << false; // no name before the suffix
         QTest::newRow("too long") << (QString(300, QLatin1Char('a')) + ".desktop") << false;
     }
+    void aPlainDesktopIdIsABareNameAndNothingElse()
+    {
+        // The shape a theme exported on Linux carries for an application with no portable id: Windows reads it, never resolves it.
+        QVERIFY(DesktopEntries::isPlainDesktopId(QStringLiteral("audacity.desktop")));
+        QVERIFY(DesktopEntries::isPlainDesktopId(QStringLiteral("org.kde.kdenlive.desktop")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral("/usr/share/applications/audacity.desktop")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral("sub/audacity.desktop")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral("a b.desktop")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral("audacity")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral(".desktop")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QString(300, QLatin1Char('a')) + QStringLiteral(".desktop")));
+    }
+
     void referencesAreChecked()
     {
         QFETCH(const QString, reference);

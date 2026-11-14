@@ -7,6 +7,7 @@
 #include "PagesEditor.h"
 #include "InitialPages.h"
 #include "LauncherCache.h"
+#include "PagesConfig.h"
 #include "PagesController.h"
 #include "FakeTransport.h"
 #include <galleon/StreamDeck.h>
@@ -370,6 +371,36 @@ private slots:
         bosun::DaemonStatus status(QStringLiteral("untrusted-relative.exe"), name, nullptr);
         QVERIFY(!status.start().isEmpty());
     }
+    void aLinuxDesktopFileIdIsReadButNeverResolvedNorStarted()
+    {
+        using galleond::DesktopEntries;
+        QVERIFY(DesktopEntries::isPlainDesktopId(QStringLiteral("audacity.desktop")));
+        QVERIFY(DesktopEntries::isPlainDesktopId(QStringLiteral("org.kde.kdenlive.desktop")));
+        QVERIFY(DesktopEntries::isValidReference(QStringLiteral("ar.com.tuxguitar.TuxGuitar.desktop")));
+        // Never a path, a space or another kind of file: only the bare ID a theme exported on Linux carries.
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral("C:/apps/audacity.desktop")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral("sub/audacity.desktop")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral("a b.desktop")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral("audacity.exe")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral(".desktop")));
+        // It names nothing here: no application is found, and nothing is started, whatever the folder it runs in.
+        QVERIFY(!DesktopEntries::lookup(QStringLiteral("audacity.desktop")).isValid());
+        galleond::DesktopApp app;
+        app.id = QStringLiteral("audacity.desktop");
+        app.file = QStringLiteral("audacity.desktop");
+        QVERIFY(!DesktopEntries::launch(app));
+    }
+
+    void aPagesFileWithALinuxDesktopFileIdIsAcceptedSoOneForeignKeyDoesNotRefuseTheWholeTheme()
+    {
+        const QByteArray json = R"({"version":1,"home":"p","pages":{"p":{"keys":[
+            {"key":0,"label":"Audacity","action":{"type":"app","desktop":"audacity.desktop"}},
+            {"key":1,"label":"Next","action":{"type":"media","command":"next"}}]}}})";
+        const auto result = galleond::parsePagesConfig(json);
+        QVERIFY2(result.errors.isEmpty(), qPrintable(result.errors.join(QStringLiteral("; "))));
+        QVERIFY(result.config.has_value());
+    }
+
     void launcherRefusesCommandsAndUris()
     {
         QVERIFY(!galleond::DesktopEntries::isValidReference(QStringLiteral("cmd.exe /c whoami")));
