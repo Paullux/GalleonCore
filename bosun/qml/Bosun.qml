@@ -512,6 +512,15 @@ Window {
                                                        qsTr("Keyboard brightness sent to galleond: %1 %").arg(value / 10))
                 }
                 Text {
+                    objectName: "brightnessSuspendedNote"
+                    visible: win.daemon.lightingActive
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#ffb74d"
+                    font.pixelSize: 13
+                    text: qsTr("The live lighting is on and holds the keyboard: the brightness is suspended, and the slider and the curve do nothing until it is switched off.")
+                }
+                Text {
                     width: parent.width
                     wrapMode: Text.Wrap
                     color: "#9aa0a6"
@@ -706,6 +715,12 @@ Window {
                             for (const lamp of keyboardMap.allLamps)
                                 next[lamp] = colour
                             win.lampColors = next
+                            // The live lighting holds one colour for all the keys: when it is on, this is what goes to the keyboard.
+                            if (win.daemon.lightingActive) {
+                                const c = Qt.color(colour)
+                                win.answered(win.daemon.setLightingColor(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)),
+                                             qsTr("Keyboard colour sent to galleond: %1").arg(colour))
+                            }
                         }
                     }
                     Pill {
@@ -724,7 +739,9 @@ Window {
                     wrapMode: Text.Wrap
                     color: "#7d8591"
                     font.pixelSize: 13
-                    text: qsTr("This is a preview: nothing is sent to the keyboard, because the per-key lighting is not available yet. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
+                    text: win.daemon.lightingActive
+                          ? qsTr("The live lighting is on: “Give this colour to every key” sends that colour to the keyboard (one colour for all the keys: a colour for each key is not available yet). Everything else here is a preview.")
+                          : qsTr("This is a preview: nothing is sent to the keyboard, because the per-key lighting is not available yet. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
                 }
     
             }

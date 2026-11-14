@@ -21,6 +21,7 @@
 #include "LightingState.h"
 #include "LightingStatePublisher.h"
 #include "ProcessWatchdog.h"
+#include "TransportTrace.h"
 #ifdef Q_OS_WIN
 #include "WindowsPowerEvents.h"
 #else
@@ -919,7 +920,34 @@ int main(int argc, char *argv[])
     // SIGTERM (systemctl stop), SIGINT, SIGHUP: leave through the event loop so that the lighting is switched off properly.
     const galleond::QuitOnSignals quitOnSignals({SIGTERM, SIGINT, SIGHUP});
 #endif
-    galleond::LightingController lighting(galleond::KeyboardController::hidOpener(), lightingWatchdog, lightingPower);
+    // The diagnostic of the lighting (see TransportTrace.h): a file with what goes to the keyboard and what comes back, only when
+    // GALLEON_LIGHTING_LOG=1 is in the environment. Nothing is sent that would not be sent without it.
+    galleond::KeyboardController::Opener lightingOpener = galleond::KeyboardController::hidOpener();
+    std::shared_ptr<galleond::TraceSink> lightingTrace;
+    if (qEnvironmentVariableIntValue("GALLEON_LIGHTING_LOG") == 1) {
+        lightingTrace = galleond::openLightingTrace();
+        if (lightingTrace) {
+            const auto traceClock = std::make_shared<QElapsedTimer>();
+            traceClock->start();
+            lightingTrace->line(QStringLiteral("galleond %1, live lighting trace (pid %2)").arg(QStringLiteral(PROJECT_VERSION_STRING)).arg(QCoreApplication::applicationPid()));
+            lightingOpener = [inner = std::move(lightingOpener), lightingTrace, traceClock]() -> std::unique_ptr<galleon::Transport> {
+                auto transport = inner();
+                if (!transport) {
+                    lightingTrace->line(QStringLiteral("the keyboard could not be opened"));
+                    return nullptr;
+                }
+                return std::make_unique<galleond::TracedTransport>(std::move(transport), lightingTrace, [traceClock] { return traceClock->elapsed(); });
+            };
+        } else {
+            qWarning() << "galleond: the lighting trace was asked for and its file could not be made";
+        }
+    }
+    galleond::LightingController lighting(lightingOpener, lightingWatchdog, lightingPower);
+    if (lightingTrace) {
+        QObject::connect(&lighting, &galleond::LightingController::stateChanged, &lighting, [lightingTrace](const QString &state, const QString &detail) {
+            lightingTrace->line(QStringLiteral("state: %1%2").arg(state, detail.isEmpty() ? QString() : QStringLiteral(" (%1)").arg(detail)));
+        });
+    }
     QObject::connect(&lighting, &galleond::LightingController::activeChanged, &keyboard, [&keyboard](bool active) {
         keyboard.setPaused(active, QCoreApplication::translate("main", "The lighting holds the keyboard: switch it off to change the brightness."));
     });

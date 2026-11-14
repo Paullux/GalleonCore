@@ -49,6 +49,7 @@ add_library(galleond_core STATIC
     BrightnessScheduler.h BrightnessScheduler.cpp
     LightingEnvironment.h
     PowerMessages.h PowerMessages.cpp
+    TransportTrace.h TransportTrace.cpp
     LightingController.h LightingController.cpp LightingWorker.h
     ProcessWatchdog.h ProcessWatchdog.cpp
     KeyboardStatePublisher.h KeyboardStatePublisher.cpp

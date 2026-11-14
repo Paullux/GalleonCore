@@ -677,5 +677,7 @@
   "Key %1, %2, application not installed": "Touche %1, %2, application non installée",
   "This application is not installed on this computer: the key does nothing until you install it or choose another application above.": "Cette application n'est pas installée sur cet ordinateur : la touche ne fait rien tant que tu ne l'installes pas ou que tu ne choisis pas une autre application ci-dessus.",
   "The live lighting is not available on this system.": "L’éclairage en direct n’est pas disponible sur ce système.",
-  "No preview: the picture of this tab is not in the list of wallpapers of this computer.": "Pas d’aperçu : l’image de cet onglet n’est pas dans la liste des fonds d’écran de cet ordinateur."
+  "No preview: the picture of this tab is not in the list of wallpapers of this computer.": "Pas d’aperçu : l’image de cet onglet n’est pas dans la liste des fonds d’écran de cet ordinateur.",
+  "The live lighting is on: “Give this colour to every key” sends that colour to the keyboard (one colour for all the keys: a colour for each key is not available yet). Everything else here is a preview.": "L’éclairage en direct est allumé : « Donner cette couleur à toutes les touches » envoie cette couleur au clavier (une seule couleur pour toutes les touches : une couleur par touche n’est pas encore disponible). Tout le reste ici est un aperçu.",
+  "The live lighting is on and holds the keyboard: the brightness is suspended, and the slider and the curve do nothing until it is switched off.": "L’éclairage en direct est allumé et tient le clavier : la luminosité est suspendue, et le curseur comme la courbe ne font rien tant qu’il n’est pas éteint."
 }
