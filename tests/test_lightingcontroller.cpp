@@ -208,6 +208,21 @@ private Q_SLOTS:
                  "the watchdog must keep watching a keyboard that may still be in host mode");
     }
 
+    void aKeyboardThatStopsAnsweringOnItsOwnLeavesTheWatchdogRunningToo()
+    {
+        Rig rig;
+        rig.hold();
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.disconnected = true;
+        }
+        rig.advance(2000); // the worker notices by itself, before anyone asks to switch off
+        QTRY_VERIFY_WITH_TIMEOUT(!rig.controller->active(), 5000);
+        const auto entries = rig.journal.entries();
+        QVERIFY2(std::find(entries.begin(), entries.end(), "watchdog.stop") == entries.end(),
+                 "a read error is not proof that the keyboard was unplugged: its mode was never seen back at 1");
+    }
+
     void aConfirmedReleaseStopsTheWatchdog()
     {
         Rig rig;

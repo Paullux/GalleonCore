@@ -78,8 +78,11 @@ public Q_SLOTS:
         m_timer.reset();
         bool released = true;
         if (m_link) {
+            // A keyboard that stopped answering ("gone") has nothing to release as far as the link can tell, but a read error
+            // is not proof that it was unplugged: its mode was never seen back at 1, so this is not a confirmed release.
+            const bool answeredUntilNow = m_link->status() != LiveLink::Status::Disconnected;
             const auto outcome = m_link->release(m_clock());
-            if (outcome == galleon::keyboard::ReleaseOutcome::Failed) {
+            if (outcome == galleon::keyboard::ReleaseOutcome::Failed || !answeredUntilNow) {
                 qWarning() << "galleond: lighting: the keys could not be confirmed as given back";
                 released = false;
             }
