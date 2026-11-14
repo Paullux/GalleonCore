@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <mutex>
 #include <span>
 #include <vector>
@@ -41,8 +42,13 @@ public:
     int frameReportsBeforeSilence = -1; // answer this many frame reports, then leave ONE unanswered (-1: not used)
     bool unreadableMode = false; // the answer to a read of the mode carries a value that cannot be a mode
     bool expireNext = false;     // the next answer says the session expired
+    std::uint8_t statusForNext = 0; // the next answer carries this status (non-zero: the keyboard refuses), then it is 0 again
     bool disconnected = false;
     bool spam = false;           // an answer nobody asked for, every time it is read
+
+    // Called with the command of each report that was answered, once its answer is queued: lets a test make another host
+    // speak at an exact point of a sequence.
+    std::function<void(std::uint8_t)> afterCommand;
 
     std::vector<std::vector<std::uint8_t>> sent;
     // Taken by write() and read(). A test that looks at the fields while another thread drives the device takes it too.
@@ -94,11 +100,17 @@ public:
         } else if (command == CommandUnbind) {
             fileOpen = false;
         }
+        if (statusForNext != 0) {
+            reply[4] = statusForNext;
+            statusForNext = 0;
+        }
         if (expireNext) {
             expireNext = false;
             reply[1] = 15;
         }
         m_answers.push_back(reply);
+        if (afterCommand)
+            afterCommand(command);
         return true;
     }
 

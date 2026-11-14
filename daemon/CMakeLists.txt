@@ -43,6 +43,7 @@ add_library(galleond_core STATIC
     MatrixRainController.h MatrixRainController.cpp
     BrightnessCurve.h BrightnessCurve.cpp
     KeyboardController.h KeyboardController.cpp
+    AtomicFile.h AtomicFile.cpp
     KeyboardState.h KeyboardState.cpp
     ReplacedFileWatcher.h ReplacedFileWatcher.cpp
     BrightnessScheduler.h BrightnessScheduler.cpp
@@ -50,6 +51,8 @@ add_library(galleond_core STATIC
     LightingController.h LightingController.cpp LightingWorker.h
     ProcessWatchdog.h ProcessWatchdog.cpp
     KeyboardStatePublisher.h KeyboardStatePublisher.cpp
+    LightingState.h LightingState.cpp
+    LightingStatePublisher.h LightingStatePublisher.cpp
 )
 target_include_directories(galleond_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(galleond_core PUBLIC galleon galleon_keyboard galleon_media galleon_keys galleon_platform Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::Network Qt6::WebSockets PRIVATE galleon_warnings)

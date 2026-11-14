@@ -3,6 +3,8 @@
 
 #include "galleon/keyboard/LiveYield.h"
 
+#include "galleon/keyboard/KeyboardLink.h"
+
 #include <algorithm>
 #include <cstdint>
 #include <optional>
@@ -22,6 +24,27 @@ void ReplyTracker::timedOut()
         m_stale.erase(m_stale.begin());
     m_stale.push_back(*m_waiting);
     m_waiting.reset();
+}
+
+void ReplyTracker::cancel()
+{
+    m_waiting.reset();
+}
+
+AnswerState answerStateAfter(LinkError error)
+{
+    switch (error) {
+    case LinkError::Timeout: return AnswerState::MayComeLate;
+    case LinkError::InvalidReply:
+    case LinkError::SessionExpired: return AnswerState::Received;
+    case LinkError::None:
+    case LinkError::InvalidValue:
+    case LinkError::WriteFailed:
+    case LinkError::Disconnected:
+    case LinkError::Unconfirmed:
+    case LinkError::StaleReports: return AnswerState::NeverSent;
+    }
+    return AnswerState::NeverSent;
 }
 
 ReplyKind ReplyTracker::classify(std::uint8_t command)

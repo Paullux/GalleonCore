@@ -3,12 +3,13 @@
 
 #include "KeyboardState.h"
 
+#include "AtomicFile.h"
+
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QSaveFile>
 #include <QStandardPaths>
 #include <QByteArray>
 
@@ -73,13 +74,7 @@ QString keyboardStatePath()
 
 bool writeKeyboardState(const QString &path, const KeyboardState &state)
 {
-    if (!QDir().mkpath(QFileInfo(path).absolutePath()))
-        return false;
-    QSaveFile file(path);
-    if (!file.open(QIODevice::WriteOnly))
-        return false;
-    file.write(encodeKeyboardState(state));
-    return file.commit();
+    return writeFileAtomically(path, encodeKeyboardState(state));
 }
 
 std::optional<KeyboardState> readKeyboardState(const QString &path)

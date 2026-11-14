@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QLocalSocket>
 #include "KeyboardStateWatcher.h"
+#include "LightingStateWatcher.h"
 #else
 #include <QDBusServiceWatcher>
 #endif
@@ -108,6 +109,7 @@ private:
     QTimer m_poll;
     QLocalSocket m_probe;
     KeyboardStateWatcher *m_keyboardState = nullptr; // child of this: the way the keyboard's value comes back
+    LightingStateWatcher *m_lightingStateFile = nullptr; // child of this: the way the lighting's state comes back
 #else
     QDBusServiceWatcher m_watcher;
 #endif

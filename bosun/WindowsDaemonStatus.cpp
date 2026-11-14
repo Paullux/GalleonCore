@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "DaemonStatus.h"
+#include "LightingStateWatcher.h"
 #include "LocalControl.h"
 #include <QCoreApplication>
 #include <QFileInfo>
@@ -26,6 +27,9 @@ DaemonStatus::DaemonStatus(QString program, QString endpoint, QObject *parent)
     // written after this window started is taken: an older one describes an earlier session.
     m_keyboardState = new KeyboardStateWatcher(galleond::keyboardStatePath(), QDateTime::currentSecsSinceEpoch(), this);
     connect(m_keyboardState, &KeyboardStateWatcher::brightnessChanged, this, [this](int value) { setKeyboardBrightnessKnown(nearestBrightnessStop(value)); });
+    // The state of the live lighting comes back the same way: galleond writes lighting-state.json (the endpoint has no reply).
+    m_lightingStateFile = new LightingStateWatcher(galleond::lightingStatePath(), QDateTime::currentSecsSinceEpoch(), this);
+    connect(m_lightingStateFile, &LightingStateWatcher::stateChanged, this, [this](const QString &state, const QString &detail) { setLighting(state, detail); });
     m_poll.start();
     look();
 }
@@ -34,6 +38,8 @@ void DaemonStatus::setRunning(bool running)
 {
     if (m_running != running) {
         m_running = running;
+        if (!m_running)
+            setLighting(QStringLiteral("off"), {}); // no daemon, no lighting: the keys were given back, or the watchdog does it
         Q_EMIT changed();
         if (m_running)
             static_cast<void>(readKeyboardBrightness());
@@ -100,8 +106,8 @@ void DaemonStatus::setKeyboardBrightnessKnown(int value) {
     m_keyboardBrightness = value;
     Q_EMIT keyboardBrightnessChanged();
 }
-// The live lighting is not offered on Windows yet (galleond refuses it there: sleep notifications are not wired, and the
-// local endpoint has no reply to say why), so nothing here asks for it.
+// The live lighting is not offered on Windows yet: the buttons stay hidden because galleond still refuses it there (sleep
+// notifications are not wired). The request and the state are in place so that switching it on is one line when they are.
 bool DaemonStatus::lightingSupported() { return false; }
 void DaemonStatus::onLightingStateChanged(const QString &, const QString &) {}
 void DaemonStatus::setLighting(const QString &state, const QString &detail) {
@@ -110,9 +116,26 @@ void DaemonStatus::setLighting(const QString &state, const QString &detail) {
     m_lightingDetail = detail;
     Q_EMIT lightingChanged();
 }
-QString DaemonStatus::enableLighting(bool) { return tr("The live lighting is not available on Windows yet"); }
-QString DaemonStatus::setLightingColor(int, int, int) { return tr("The live lighting is not available on Windows yet"); }
-QString DaemonStatus::refreshLighting() { return {}; }
+// No reply on this endpoint: a refusal of galleond comes back as the detail of lighting-state.json.
+QString DaemonStatus::enableLighting(bool on) {
+    if (!running()) return tr("Start galleond to switch the lighting on or off");
+    galleond::LocalCommand command{galleond::LocalAction::LightingEnable, {}, {}};
+    command.on = on;
+    galleond::sendLocalCommand(m_endpoint, command, this);
+    return {};
+}
+QString DaemonStatus::setLightingColor(int red, int green, int blue) {
+    if (!running()) return tr("Start galleond to change the lighting");
+    if (red < 0 || red > 255 || green < 0 || green > 255 || blue < 0 || blue > 255)
+        return tr("A colour has three values from 0 to 255");
+    galleond::LocalCommand command{galleond::LocalAction::LightingColor, {}, {}};
+    command.red = red;
+    command.green = green;
+    command.blue = blue;
+    galleond::sendLocalCommand(m_endpoint, command, this);
+    return {};
+}
+QString DaemonStatus::refreshLighting() { return {}; } // the watcher of the state file has it already
 QString DaemonStatus::setKeyboardBrightness(int value) {
     if (!running()) return tr("Start galleond to change the keyboard brightness");
     galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::KeyboardBrightness, {}, {}, value}, this);

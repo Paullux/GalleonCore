@@ -18,6 +18,8 @@
 #include "BrightnessScheduler.h"
 #include "KeyboardController.h"
 #include "LightingController.h"
+#include "LightingState.h"
+#include "LightingStatePublisher.h"
 #include "ProcessWatchdog.h"
 #ifdef Q_OS_WIN
 #include "UnavailablePowerEvents.h"
@@ -927,6 +929,12 @@ int main(int argc, char *argv[])
 #ifdef Q_OS_WIN
     QObject::connect(&localControl, &galleond::LocalControl::keyboardBrightnessRequested, &keyboard, [&keyboard](int value) { keyboard.SetBrightness(value); });
     QObject::connect(&localControl, &galleond::LocalControl::keyboardBrightnessReadRequested, &keyboard, [&keyboard] { keyboard.ReadBrightness(); });
+    // The way back to Bosun on Windows: the state of the lighting, in lighting-state.json at every change.
+    const galleond::LightingStatePublisher lightingState(lighting, galleond::lightingStatePath(), [] { return QDateTime::currentSecsSinceEpoch(); });
+    // The live lighting stays refused on Windows until the sleep notifications are wired (UnavailablePowerEvents says so):
+    // asking only ends in its state, which the settings window cannot read yet either.
+    QObject::connect(&localControl, &galleond::LocalControl::lightingEnableRequested, &lighting, [&lighting](bool on) { static_cast<void>(lighting.Enable(on)); });
+    QObject::connect(&localControl, &galleond::LocalControl::lightingColorRequested, &lighting, [&lighting](int red, int green, int blue) { static_cast<void>(lighting.SetColor(red, green, blue)); });
     QObject::connect(&localControl, &galleond::LocalControl::gamingRequested, &controller, [&controller] { controller.ShowGaming(); });
     QObject::connect(&localControl, &galleond::LocalControl::themeRequested, &controller, [&controller](const QString &page) { controller.ShowTheme(page); });
     QObject::connect(&localControl, &galleond::LocalControl::wallpaperRequested,

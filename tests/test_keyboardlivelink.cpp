@@ -72,6 +72,55 @@ class TestKeyboardLiveLink : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void aKeyboardThatRefusedACommandDoesNotMakeALaterAnswerOfAnotherHostLookLikeOurOwnLateOne()
+    {
+        Holding h;
+        h.device.statusForNext = 5; // the keyboard answers our read of the mode with an error status
+        h.link.tick(at(4200ms));
+        QCOMPARE(h.link.status(), LiveLink::Status::Holding); // one failure is not yet a freeze
+        h.device.otherHostSpeaks();       // another host polls the keyboard: an answer of the same command
+        h.link.tick(at(4300ms));
+        // That answer was never ours (ours came, with its error): another host is there, so the link yields.
+        QCOMPARE(h.link.status(), LiveLink::Status::Yielded);
+    }
+
+    void aHostThatSpeaksBetweenTheReadOfTheModeAndTheTakeoverIsNotOverriddenByIt()
+    {
+        FakeDevice device;
+        // The Web Hub answers one of its own commands right after our read of the mode.
+        device.afterCommand = [&device](std::uint8_t command) {
+            if (command == CommandGet)
+                device.otherHostSpeaks();
+        };
+        LiveLink link{device, settings()};
+        link.begin(t0);
+        link.tick(at(3000ms)); // the takeover starts
+        QCOMPARE(link.status(), LiveLink::Status::Yielded);
+        QVERIFY(!link.keysTaken());
+        QCOMPARE(device.mode, 1); // never switched to host mode
+        const auto sent = device.commands();
+        QVERIFY(std::find(sent.begin(), sent.end(), CommandSet) == sent.end());
+        QVERIFY(std::find(sent.begin(), sent.end(), CommandOpenFile) == sent.end());
+    }
+
+    void aHostThatSpeaksAfterTheModeWasSetLeavesTheFileUnopenedAndNothingReleased()
+    {
+        FakeDevice device;
+        device.afterCommand = [&device](std::uint8_t command) {
+            if (command == CommandSet)
+                device.otherHostSpeaks();
+        };
+        LiveLink link{device, settings()};
+        link.begin(t0);
+        link.tick(at(3000ms));
+        QCOMPARE(link.status(), LiveLink::Status::Yielded);
+        QVERIFY(!link.keysTaken());
+        const auto sent = device.commands();
+        QVERIFY(std::find(sent.begin(), sent.end(), CommandOpenFile) == sent.end());
+        QVERIFY(std::find(sent.begin(), sent.end(), CommandUnbind) == sent.end()); // nothing released over its traffic
+        QVERIFY2(link.lastError() == LinkError::None, "a host speaking is not a failure of the link");
+    }
+
     // ---- starting -----------------------------------------------------------------------------------
     void nothingIsSentForThreeSecondsAfterBegin()
     {

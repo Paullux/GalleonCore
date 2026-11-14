@@ -26,7 +26,14 @@ LightingController::LightingController(Opener opener, WatchdogGuard &watchdog, P
         if (m_active)
             finish(tr("The watchdog ended, so the keys are no longer protected: the lighting was stopped and the keys given back."));
     });
+    m_resumeTimer.setSingleShot(true);
+    connect(&m_resumeTimer, &QTimer::timeout, this, [this] {
+        if (m_active && !m_sleeping && !m_worker)
+            startWorker();
+    });
     connect(&m_power, &PowerEvents::aboutToSleep, this, [this] {
+        m_resumeTimer.stop();
+        m_resumeTriesLeft = 0;
         if (!m_active || m_sleeping)
             return;
         stopWorker(); // give the keys back before the machine sleeps
@@ -39,6 +46,7 @@ LightingController::LightingController(Opener opener, WatchdogGuard &watchdog, P
             return;
         m_sleeping = false;
         m_power.holdSleep();
+        m_resumeTriesLeft = m_resumeAttempts; // the keyboard may still be on its way back: see onWorkerState
         startWorker();
     });
 }
@@ -97,29 +105,39 @@ void LightingController::startWorker()
     QMetaObject::invokeMethod(m_worker.get(), &LightingWorker::start, Qt::QueuedConnection);
 }
 
-// Gives the keys back on the worker thread, waits for it, and ends the thread.
-void LightingController::stopWorker()
+// Gives the keys back on the worker thread, waits for it, and ends the thread. False when the release could not be
+// confirmed (the keyboard may still be in host mode); true when it was, or when nothing was held.
+bool LightingController::stopWorker()
 {
     if (!m_worker)
-        return;
-    QMetaObject::invokeMethod(m_worker.get(), &LightingWorker::stopAndRelease, Qt::BlockingQueuedConnection);
+        return true;
+    bool released = true;
+    QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), &released] { released = worker->stopAndRelease(); }, Qt::BlockingQueuedConnection);
     LightingWorker *worker = m_worker.release(); // it belongs to its thread now: deleted there
     disconnect(worker, nullptr, this, nullptr);
     worker->deleteLater();
     m_thread.quit();
     m_thread.wait();
+    return released;
 }
 
 void LightingController::finish(const QString &detail)
 {
-    stopWorker();
+    m_resumeTimer.stop();
+    m_resumeTriesLeft = 0;
+    const bool released = stopWorker();
     if (!m_active)
         return;
     m_sleeping = false;
-    m_watchdog.stop();
+    // The watchdog is only let go once the keyboard is confirmed back in its own mode. After a release that could not be
+    // confirmed it keeps watching: it gives the keys back when galleond ends (and starting the lighting again reuses it).
+    if (released)
+        m_watchdog.stop();
     m_power.allowSleep();
     m_active = false;
-    setState(QStringLiteral("off"), detail);
+    setState(QStringLiteral("off"), released ? detail
+                                             : tr("The keys could not be confirmed as given back. The watchdog keeps watching and gives them back when galleond ends.")
+                                                   + (detail.isEmpty() ? QString() : QLatin1Char(' ') + detail));
     Q_EMIT activeChanged(false);
 }
 
@@ -135,6 +153,17 @@ void LightingController::onWorkerState(const QString &state, const QString &deta
 {
     if (!m_active || m_sleeping)
         return;
+    if (state != QStringLiteral("failed"))
+        m_resumeTriesLeft = 0; // the keyboard was opened: no more waiting for it
+    // Just after waking: the keyboard is not back yet, so try again in a moment instead of giving up (stopWorker only closes
+    // what failed to open: there is nothing to release).
+    if (state == QStringLiteral("failed") && m_resumeTriesLeft > 0) {
+        --m_resumeTriesLeft;
+        static_cast<void>(stopWorker());
+        setState(QStringLiteral("starting"), tr("Waiting for the keyboard to come back after waking up."));
+        m_resumeTimer.start(m_resumeRetryMs);
+        return;
+    }
     // The link stopped by itself, or the keyboard could not be opened: it stays off until asked again.
     if (state == QStringLiteral("failed") || state == QStringLiteral("frozen") || state == QStringLiteral("disconnected")) {
         finish(detail);

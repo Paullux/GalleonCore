@@ -12,6 +12,7 @@ add_library(bosun_core STATIC
     FileNames.h FileNames.cpp
     DaemonStatus.h
     KeyboardStateWatcher.h KeyboardStateWatcher.cpp
+    LightingStateWatcher.h LightingStateWatcher.cpp
     BrightnessCurveModel.h BrightnessCurveModel.cpp
     PageName.h PageName.cpp
     TrayMenu.h TrayMenu.cpp

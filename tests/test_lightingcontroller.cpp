@@ -11,6 +11,7 @@
 #include <QSignalSpy>
 #include <QTest>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <memory>
@@ -190,6 +191,48 @@ class TestLightingController : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void aReleaseThatCannotBeConfirmedLeavesTheWatchdogRunning()
+    {
+        Rig rig;
+        rig.hold();
+        QVERIFY(rig.controller->active());
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.disconnected = true; // the keyboard stops answering: the release cannot be confirmed
+        }
+        QVERIFY(rig.controller->Enable(false).isEmpty());
+        QVERIFY(!rig.controller->active());
+        QCOMPARE(rig.controller->state(), QStringLiteral("off"));
+        const auto entries = rig.journal.entries();
+        QVERIFY2(std::find(entries.begin(), entries.end(), "watchdog.stop") == entries.end(),
+                 "the watchdog must keep watching a keyboard that may still be in host mode");
+    }
+
+    void aKeyboardThatStopsAnsweringOnItsOwnLeavesTheWatchdogRunningToo()
+    {
+        Rig rig;
+        rig.hold();
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.disconnected = true;
+        }
+        rig.advance(2000); // the worker notices by itself, before anyone asks to switch off
+        QTRY_VERIFY_WITH_TIMEOUT(!rig.controller->active(), 5000);
+        const auto entries = rig.journal.entries();
+        QVERIFY2(std::find(entries.begin(), entries.end(), "watchdog.stop") == entries.end(),
+                 "a read error is not proof that the keyboard was unplugged: its mode was never seen back at 1");
+    }
+
+    void aConfirmedReleaseStopsTheWatchdog()
+    {
+        Rig rig;
+        rig.hold();
+        QVERIFY(rig.controller->Enable(false).isEmpty());
+        const auto entries = rig.journal.entries();
+        QVERIFY(std::find(entries.begin(), entries.end(), "watchdog.stop") != entries.end());
+        QCOMPARE(rig.mode(), 1);
+    }
+
     void nothingHappensUntilItIsAskedFor()
     {
         Rig rig;
@@ -349,6 +392,38 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("holding"), 3000);
         QCOMPARE(rig.mode(), 2);
         QCOMPARE(rig.journal.count("watchdog.start"), 1);
+    }
+
+    void aKeyboardNotBackYetWhenTheMachineWakesIsWaitedForAndTheLightingComesBack()
+    {
+        Rig rig;
+        rig.controller->setResumeRetry(30, 200);
+        rig.hold();
+        rig.power.sleep();
+        rig.keyboardPresent = false; // still re-enumerating after the resume
+        rig.power.wake();
+        QTest::qWait(300); // several tries, all failed
+        QVERIFY(rig.controller->active()); // one failed opening did not switch the lighting off for good
+        QCOMPARE(rig.controller->state(), QStringLiteral("starting"));
+        rig.keyboardPresent = true;
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("listening"), 3000);
+        rig.advance(4000);
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("holding"), 3000);
+        QCOMPARE(rig.mode(), 2);
+        QCOMPARE(rig.journal.count("watchdog.start"), 1);
+    }
+
+    void aKeyboardThatNeverComesBackAfterWakingEndsInOffAfterTheTries()
+    {
+        Rig rig;
+        rig.controller->setResumeRetry(20, 3);
+        rig.hold();
+        rig.power.sleep();
+        rig.keyboardPresent = false;
+        rig.power.wake();
+        QTRY_VERIFY_WITH_TIMEOUT(!rig.controller->active(), 3000);
+        QCOMPARE(rig.controller->state(), QStringLiteral("off"));
+        QCOMPARE(rig.journal.count("opener"), 1 + 1 + 3); // the first start, the wake, then the three tries
     }
 
     void aKeyboardThatCannotBeOpenedStopsEverythingAndSaysWhy()

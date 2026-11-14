@@ -418,6 +418,34 @@ Suite du point 1 : le composant `galleond` qui emploie `LiveLink`. **Expériment
 - Tests : `test_lightingcontroller` (18 : éteint par défaut, refus sans veille ni surveillance, surveillance avant ouverture, 3 s d'écoute, couleur, arrêt, destruction, mort de la surveillance, veille puis réveil, clavier illisible, cession, gel), `test_processwatchdog` (9, avec de petits scripts), `test_quitonsignals` (5), `test_keyboardcontroller` (pause, 14).
 - **Pas encore fait** : (activation par Bosun faite, voir plus bas ; avant, seulement par D-Bus : `busctl --user call org.galleoncore.Deck /org/galleoncore/Lighting org.galleoncore.Lighting Enable b true`), installation de l'outil de surveillance avec les paquets et son test **dans sa forme installée**, les effets (fond selon l'heure, frappe réactive), le sélecteur de modes de Bosun.
 
+### Éclairage en direct — testé sur le clavier du propriétaire (Linux) — 13 novembre 2026
+- Retour du propriétaire, avec deux photos : l'activation depuis Bosun allume bien les touches, et la couleur choisie dans les pastilles (vert) est appliquée à tout le clavier. **Le contrôle des LED fonctionne sur le matériel, sous Linux.**
+- Testé : activation, couleur unique. **Pas encore testé** : arrêt (rendu des touches), cession à un autre programme (Web Hub), veille/réveil, plantage de `galleond` avec le programme de surveillance, Windows. À faire avant de parler de fonction stable ; l'issue #102 (Aaryush1) doit en être informée.
+
+### Éclairage en direct — trou 5 de la relecture d'Aaryush1 (suivi des réponses) — 14 novembre 2026
+- **Traité** : tout envoi échoué était enregistré comme « délai dépassé », même quand le clavier avait répondu avec un statut non nul ou la fin de session ; une réponse d'un autre hôte arrivant ensuite pour la même commande était alors avalée comme « en retard, la nôtre » (`Stale`). Maintenant seul un envoi réellement parti et resté sans réponse dans le délai laisse une réponse tardive possible (`answerStateAfter`) ; une réponse reçue avec une erreur, ou un envoi jamais parti, ne laisse rien à venir, donc une réponse suivante est étrangère et le lien cède.
+- **Non traité, volontairement** : une lecture (`get`) étrangère peut passer pour notre lecture du mode, car ces réponses ne portent pas d'étiquette de propriété. Son indice (l'octet 2, l'écho de session, vaut 00 chez les hôtes étrangers et porte notre identifiant chez nous) vient d'un seul hôte et d'un seul échantillon, sous Windows : **à mesurer sous Linux avant de s'en servir** pour filtrer. Sans danger pendant qu'on tient les touches ; pendant le sondage après cession, cela pourrait déclencher une reprise, et dans le chien de garde une valeur 2 déclencherait une libération.
+- Tests : le suivi (`test_keyboardyield`, 2 nouveaux) et un scénario complet avec un faux clavier qui refuse une lecture puis un autre hôte qui parle (`test_keyboardlivelink`). Le test du scénario échoue sans la correction (vérifié).
+
+### Éclairage en direct — trou 2 de la relecture d'Aaryush1 (prise des touches) — 14 novembre 2026
+- Avant : `takeKeys()` lisait le mode, libérait peut-être, passait en mode 2 et ouvrait le fichier sans revérifier si un autre hôte (le Web Hub qui se connecte en plein milieu) avait parlé entre-temps : il aurait été écrasé une fois. Maintenant : le trafic étranger est classé avant chaque étape qui écrit (libération, passage en mode 2, ouverture du fichier) ; s'il y en a, la prise s'arrête, le lien passe à « cédé » (`Yielded`), rien n'est libéré par-dessus le trafic de l'autre, et le compteur de pannes n'est pas touché (ce n'est pas une panne). La reprise se fait par la règle habituelle après une minute de calme.
+- Deux tests avec un faux clavier où l'autre hôte parle à un instant précis (`FakeDevice::afterCommand`) : juste après la lecture du mode, et juste après le passage en mode 2. Ils échouent sans la correction (vérifié).
+- Reste de ce trou : `show()` ne vide le trafic non sollicité qu'avant les quatre rapports d'une trame, pas entre eux (jugé mineur par Aaryush1, non traité).
+
+### Éclairage en direct — trou 3 de la relecture d'Aaryush1 (réveil) — 14 novembre 2026
+- Après la veille, le clavier peut ne pas être revenu sur le bus quand le démon veut le rouvrir. Avant : un seul échec d'ouverture éteignait l'éclairage pour de bon. Maintenant : l'ouverture est retentée toutes les secondes, 30 fois au plus (`LightingController::ResumeRetryMs` / `ResumeAttempts`), l'état reste « starting » avec une explication ; au-delà, l'éclairage s'éteint comme avant.
+- Deux tests : le clavier qui revient après quelques essais, et celui qui ne revient jamais. Ils échouent sans la correction (vérifié).
+- Sous Linux seulement pour l'instant : la veille n'est pas encore branchée sous Windows.
+
+### Luminosité du clavier : essai sous Windows concluant — 14 novembre 2026
+- Retour du propriétaire sur la version Windows (archive de la CI, commit `d901a59`) : **le bouton radio de choix du mode fonctionne, le curseur de luminosité fonctionne, la courbe fonctionne.** Il a aussi utilisé le clavier toute la soirée et constaté que la courbe évolue bien au fil des heures.
+- Avant le correctif, la sauvegarde de la courbe échouait par moments sous Windows (renommage refusé quand un lecteur a le fichier ouvert un instant) : les trois petits fichiers partagés (courbe, `keyboard-state.json`, `lighting-state.json`) passent maintenant par `AtomicFile`, qui réessaie quelques fois à quelques millisecondes d'écart.
+- Toujours **non essayé sous Windows** : l'éclairage en direct (refusé : la veille n'est pas branchée), le chien de garde installé.
+
+### Barres de défilement dans tous les onglets de Bosun — 13 novembre 2026
+- Les onglets thème, Fonds d'écran, Widgets, Gaming et Économiseurs ont leur barre verticale (la même `ScrollRail` que l'onglet Clavier : elle n'apparaît que si quelque chose dépasse). La barre d'un onglet masqué n'est jamais affichée.
+- Test : `everyTabHasItsScrollBarAndOnlyTheShownTabShowsOne`. Une barre placée *dans* la page du thème provoquait une boucle de mise en page : elle est posée à côté, comme les autres. À regarder sur ton écran : l'onglet « + » et les fenêtres très petites.
+
 ### Branche `keyboard` — activation de l'éclairage en direct dans Bosun — 13 novembre 2026
 - Onglet Clavier de Bosun : section « éclairage en direct (expérimental) » avec un bouton allumer/éteindre, l'état en clair (éteint, démarrage, attend que le clavier soit libre, allumé, rendu à un autre programme, en pause pendant la veille), la raison d'un refus de `galleond`, et une couleur unique choisie dans les pastilles. Désactivé par défaut ; le curseur de luminosité est grisé tant que l'éclairage est actif.
 - `DaemonStatus` ne fait que **demander** à `galleond` (D-Bus `org.galleoncore.Lighting`) : Bosun n'ouvre jamais le clavier. Sous Windows : indisponible, message explicite.
@@ -647,6 +675,20 @@ Décisions à ne pas perdre :
 - Build : `cmake -B build -DGALLEON_WERROR=ON && cmake --build build && ctest --test-dir build` ; aussi `-DGALLEON_SANITIZE=ON`, clang-tidy, `qmllint widgets/*.qml`, `reuse lint` (non installé sur cette machine : à lancer ailleurs avant une publication).
 
 ## 6. Prochaines étapes prioritaires
+
+### Ce que veut dire la v1.0.0 (décision du propriétaire, 14 novembre 2026)
+
+La v1.0.0 sortira quand les deux contrôles seront complets :
+
+- **Contrôle total du Stream Deck : OK** (état déclaré par le propriétaire).
+- **Contrôle total du clavier RVB : en cours.** Une fois terminé : OK. Aujourd'hui : luminosité (curseur, courbe de 24 h) et éclairage en direct d'une seule couleur, essayé sur le matériel sous Linux ; restent la veille/réveil, la cession au Web Hub et le plantage vérifiés sur le matériel, le portage Windows, les effets, et l'aperçu fidèle dans Bosun (point 7 de « À développer »).
+
+### Signature de code Windows : SignPath Foundation (à suivre)
+
+- Le propriétaire a décidé de demander un certificat de signature de code à [SignPath Foundation](https://signpath.org/) (programme gratuit pour les projets libres). **Statut de la demande : à confirmer par le propriétaire.**
+- Ce que le programme exige (page des conditions de SignPath, lue le 14 novembre 2026) : licence libre approuvée par l'OSI et sans double licence commerciale (GPL/LGPL : conforme) ; projet maintenu, déjà publié dans la forme à signer, avec une page de téléchargement qui décrit ses fonctions ; binaires construits depuis nos sources par une compilation automatique et vérifiable (la CI Windows en est une) ; **métadonnées imposées : le nom du produit identique à celui du projet et la version identique d'une compilation à l'autre** ; approbation manuelle de chaque version ; double authentification pour tous ceux qui signent ; **une « politique de signature » publiée sur la page d'accueil et les pages de téléchargement** (rôles, attribution SignPath, politique de confidentialité) ; désinstallation possible ; changements de configuration du système annoncés (démarrage automatique, règles udev). L'acceptation reste à la discrétion de SignPath, sans appel.
+- **À préparer de notre côté** : vérifier les métadonnées des exécutables Windows (aujourd'hui seul le Setup porte une description) ; rédiger la politique de signature et de confidentialité dans les quatre langues du site (le contrôle de mise à jour et le widget météo contactent des services externes) ; définir les rôles (auteur, relecteur, approbateur) ; vérifier l'authentification à deux facteurs sur GitHub.
+- Une signature n'efface pas tout de suite l'avertissement de Windows SmartScreen : la réputation d'un éditeur se construit avec les téléchargements.
 
 La liste courante est celle du **point de reprise du 29 octobre**, en tête du fichier : validation de l’arbre fusionné, essais Gaming Linux/Windows, configuration MangoHud, firmware/notifications puis endurance. Les fonctionnalités Bosun déjà présentes (édition des touches, fonds, veille, démarrage avec la session) ne sont plus à traiter comme des développements initiaux à entreprendre. Les détails anciens des sections 2 et 4 restent à réconcilier progressivement avec les validations ; ils ne remplacent pas les priorités courantes.
 
