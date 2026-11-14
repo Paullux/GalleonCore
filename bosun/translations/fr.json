@@ -658,7 +658,6 @@
   "This is a preview: nothing is sent to the keyboard, because the per-key lighting is not available yet. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Ceci est un aperçu : rien n’est envoyé au clavier, car l’éclairage touche par touche n’est pas encore disponible. Les capuchons sont une disposition française standard dessinée pour s’orienter ; les lampes dessous sont aux positions que rapporte le clavier.",
   "Corsair keyboard · live lighting (experimental)": "Clavier Corsair · éclairage en direct (expérimental)",
   "galleond can light the keys itself, one colour for all of them. It is off by default and never writes to the keyboard's memory: when it stops, or is stopped, the keys go back to what the keyboard held. A small watchdog program gives the keys back even if galleond crashes. Switch it on only if you accept that this is experimental.": "galleond peut éclairer lui-même les touches, d'une seule couleur pour toutes. C'est désactivé par défaut et rien n'est jamais écrit dans la mémoire du clavier : quand il s'arrête, ou qu'on l'arrête, les touches reprennent ce que le clavier gardait. Un petit programme de surveillance rend les touches même si galleond plante. Ne l'active que si tu acceptes que ce soit expérimental.",
-  "The live lighting is not available on Windows yet.": "L'éclairage en direct n'est pas encore disponible sous Windows.",
   "Switch the live lighting off": "Éteindre l'éclairage en direct",
   "Switch the live lighting on": "Allumer l'éclairage en direct",
   "Asked galleond to give the keys back.": "galleond a reçu la demande de rendre les touches.",
@@ -674,8 +673,8 @@
   "The lighting could not be reached: restart the updated daemon (%1)": "L'éclairage est injoignable : relance le démon mis à jour (%1)",
   "Start galleond to switch the lighting on or off": "Démarre galleond pour allumer ou éteindre l'éclairage",
   "Start galleond to change the lighting": "Démarre galleond pour changer l'éclairage",
-  "The live lighting is not available on Windows yet": "L'éclairage en direct n'est pas encore disponible sous Windows",
   "A colour has three values from 0 to 255": "Une couleur a trois valeurs de 0 à 255",
   "Key %1, %2, application not installed": "Touche %1, %2, application non installée",
-  "This application is not installed on this computer: the key does nothing until you install it or choose another application above.": "Cette application n'est pas installée sur cet ordinateur : la touche ne fait rien tant que tu ne l'installes pas ou que tu ne choisis pas une autre application ci-dessus."
+  "This application is not installed on this computer: the key does nothing until you install it or choose another application above.": "Cette application n'est pas installée sur cet ordinateur : la touche ne fait rien tant que tu ne l'installes pas ou que tu ne choisis pas une autre application ci-dessus.",
+  "The live lighting is not available on this system.": "L’éclairage en direct n’est pas disponible sur ce système."
 }

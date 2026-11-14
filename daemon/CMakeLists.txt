@@ -47,7 +47,8 @@ add_library(galleond_core STATIC
     KeyboardState.h KeyboardState.cpp
     ReplacedFileWatcher.h ReplacedFileWatcher.cpp
     BrightnessScheduler.h BrightnessScheduler.cpp
-    LightingEnvironment.h UnavailablePowerEvents.h
+    LightingEnvironment.h
+    PowerMessages.h PowerMessages.cpp
     LightingController.h LightingController.cpp LightingWorker.h
     ProcessWatchdog.h ProcessWatchdog.cpp
     KeyboardStatePublisher.h KeyboardStatePublisher.cpp
@@ -57,7 +58,7 @@ add_library(galleond_core STATIC
 target_include_directories(galleond_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(galleond_core PUBLIC galleon galleon_keyboard galleon_media galleon_keys galleon_platform Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::Network Qt6::WebSockets PRIVATE galleon_warnings)
 if(WIN32)
-    target_sources(galleond_core PRIVATE WindowsDesktopEntries.cpp)
+    target_sources(galleond_core PRIVATE WindowsDesktopEntries.cpp WindowsPowerEvents.h WindowsPowerEvents.cpp)
     target_link_libraries(galleond_core PUBLIC galleon_smtc PRIVATE shell32 ole32 uuid advapi32 user32 version)
     target_compile_definitions(galleond_core PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 else()

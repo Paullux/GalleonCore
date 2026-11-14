@@ -106,9 +106,9 @@ void DaemonStatus::setKeyboardBrightnessKnown(int value) {
     m_keyboardBrightness = value;
     Q_EMIT keyboardBrightnessChanged();
 }
-// The live lighting is not offered on Windows yet: the buttons stay hidden because galleond still refuses it there (sleep
-// notifications are not wired). The request and the state are in place so that switching it on is one line when they are.
-bool DaemonStatus::lightingSupported() { return false; }
+// Offered like on Linux: the request goes to galleond, and its answer, or the reason for a refusal (no watchdog program, no
+// window for the sleep notifications), comes back in lighting-state.json.
+bool DaemonStatus::lightingSupported() { return true; }
 void DaemonStatus::onLightingStateChanged(const QString &, const QString &) {}
 void DaemonStatus::setLighting(const QString &state, const QString &detail) {
     if (state == m_lightingState && detail == m_lightingDetail) return;

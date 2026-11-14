@@ -22,7 +22,7 @@
 #include "LightingStatePublisher.h"
 #include "ProcessWatchdog.h"
 #ifdef Q_OS_WIN
-#include "UnavailablePowerEvents.h"
+#include "WindowsPowerEvents.h"
 #else
 #include "LogindPowerEvents.h"
 #include "QuitOnSignals.h"
@@ -913,7 +913,7 @@ int main(int argc, char *argv[])
     // is on, the brightness requests of `keyboard` are paused: both would read the same answers.
     galleond::ProcessWatchdog lightingWatchdog;
 #ifdef Q_OS_WIN
-    galleond::UnavailablePowerEvents lightingPower;
+    galleond::WindowsPowerEvents lightingPower; // sleep, wake and the end of the session, through a window that is never shown
 #else
     galleond::LogindPowerEvents lightingPower;
     // SIGTERM (systemctl stop), SIGINT, SIGHUP: leave through the event loop so that the lighting is switched off properly.
@@ -931,8 +931,8 @@ int main(int argc, char *argv[])
     QObject::connect(&localControl, &galleond::LocalControl::keyboardBrightnessReadRequested, &keyboard, [&keyboard] { keyboard.ReadBrightness(); });
     // The way back to Bosun on Windows: the state of the lighting, in lighting-state.json at every change.
     const galleond::LightingStatePublisher lightingState(lighting, galleond::lightingStatePath(), [] { return QDateTime::currentSecsSinceEpoch(); });
-    // The live lighting stays refused on Windows until the sleep notifications are wired (UnavailablePowerEvents says so):
-    // asking only ends in its state, which the settings window cannot read yet either.
+    // The live lighting, asked for by Bosun (there is no reply on this endpoint: the answer, or the reason for a refusal, is in
+    // lighting-state.json, which the settings window watches).
     QObject::connect(&localControl, &galleond::LocalControl::lightingEnableRequested, &lighting, [&lighting](bool on) { static_cast<void>(lighting.Enable(on)); });
     QObject::connect(&localControl, &galleond::LocalControl::lightingColorRequested, &lighting, [&lighting](int red, int green, int blue) { static_cast<void>(lighting.SetColor(red, green, blue)); });
     QObject::connect(&localControl, &galleond::LocalControl::gamingRequested, &controller, [&controller] { controller.ShowGaming(); });

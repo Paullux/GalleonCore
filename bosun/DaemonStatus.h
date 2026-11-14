@@ -26,8 +26,8 @@ class DaemonStatus : public QObject
     // The keyboard's brightness as galleond last reported it, as a stop of the slider (0 to 1000, steps of 100),
     // or -1 while unknown (not read yet, unreadable, or no way back from the daemon on this system).
     Q_PROPERTY(int keyboardBrightness READ keyboardBrightness NOTIFY keyboardBrightnessChanged)
-    // The experimental live lighting of galleond (org.galleoncore.Lighting). `lightingSupported` is false where the daemon
-    // cannot run it (Windows for now). `lightingState` is "off", "starting", "listening", "taking", "holding", "yielded" or
+    // The experimental live lighting of galleond (org.galleoncore.Lighting). `lightingSupported` is false where Bosun has no way
+    // to ask for it (no system does today). `lightingState` is "off", "starting", "listening", "taking", "holding", "yielded" or
     // "sleeping"; `lightingDetail` says why when it is off or yielded, or why a request was refused. This window only asks
     // galleond: it never opens the keyboard.
     Q_PROPERTY(bool lightingSupported READ lightingSupported CONSTANT)

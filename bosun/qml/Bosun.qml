@@ -559,7 +559,7 @@ Window {
                     font.pixelSize: 14
                     text: win.daemon.lightingSupported
                           ? qsTr("galleond can light the keys itself, one colour for all of them. It is off by default and never writes to the keyboard's memory: when it stops, or is stopped, the keys go back to what the keyboard held. A small watchdog program gives the keys back even if galleond crashes. Switch it on only if you accept that this is experimental.")
-                          : qsTr("The live lighting is not available on Windows yet.")
+                          : qsTr("The live lighting is not available on this system.")
                 }
                 Pill {
                     objectName: "lightingToggle"
