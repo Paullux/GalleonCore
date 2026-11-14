@@ -97,29 +97,37 @@ void LightingController::startWorker()
     QMetaObject::invokeMethod(m_worker.get(), &LightingWorker::start, Qt::QueuedConnection);
 }
 
-// Gives the keys back on the worker thread, waits for it, and ends the thread.
-void LightingController::stopWorker()
+// Gives the keys back on the worker thread, waits for it, and ends the thread. False when the release could not be
+// confirmed (the keyboard may still be in host mode); true when it was, or when nothing was held.
+bool LightingController::stopWorker()
 {
     if (!m_worker)
-        return;
-    QMetaObject::invokeMethod(m_worker.get(), &LightingWorker::stopAndRelease, Qt::BlockingQueuedConnection);
+        return true;
+    bool released = true;
+    QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), &released] { released = worker->stopAndRelease(); }, Qt::BlockingQueuedConnection);
     LightingWorker *worker = m_worker.release(); // it belongs to its thread now: deleted there
     disconnect(worker, nullptr, this, nullptr);
     worker->deleteLater();
     m_thread.quit();
     m_thread.wait();
+    return released;
 }
 
 void LightingController::finish(const QString &detail)
 {
-    stopWorker();
+    const bool released = stopWorker();
     if (!m_active)
         return;
     m_sleeping = false;
-    m_watchdog.stop();
+    // The watchdog is only let go once the keyboard is confirmed back in its own mode. After a release that could not be
+    // confirmed it keeps watching: it gives the keys back when galleond ends (and starting the lighting again reuses it).
+    if (released)
+        m_watchdog.stop();
     m_power.allowSleep();
     m_active = false;
-    setState(QStringLiteral("off"), detail);
+    setState(QStringLiteral("off"), released ? detail
+                                             : tr("The keys could not be confirmed as given back. The watchdog keeps watching and gives them back when galleond ends.")
+                                                   + (detail.isEmpty() ? QString() : QLatin1Char(' ') + detail));
     Q_EMIT activeChanged(false);
 }
 

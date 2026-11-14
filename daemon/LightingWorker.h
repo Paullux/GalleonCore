@@ -70,20 +70,26 @@ public Q_SLOTS:
         m_dirty = true;
     }
 
-    // Called with a blocking connection: it returns once the keys are given back and the keyboard is closed.
-    void stopAndRelease()
+    // Called with a blocking connection: it returns once the keys are given back and the keyboard is closed. True when the
+    // keyboard is known to be back in its own mode (or nothing was held); false when the release could not be confirmed,
+    // so the caller must not stop the watchdog: the keyboard may still be in host mode.
+    [[nodiscard]] bool stopAndRelease()
     {
         m_timer.reset();
+        bool released = true;
         if (m_link) {
             const auto outcome = m_link->release(m_clock());
-            if (outcome == galleon::keyboard::ReleaseOutcome::Failed)
+            if (outcome == galleon::keyboard::ReleaseOutcome::Failed) {
                 qWarning() << "galleond: lighting: the keys could not be confirmed as given back";
+                released = false;
+            }
             m_link.reset();
         }
         if (m_transport) {
             m_transport->close();
             m_transport.reset();
         }
+        return released;
     }
 
 Q_SIGNALS:

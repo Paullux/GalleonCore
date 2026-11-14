@@ -11,6 +11,7 @@
 #include <QSignalSpy>
 #include <QTest>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <memory>
@@ -190,6 +191,33 @@ class TestLightingController : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void aReleaseThatCannotBeConfirmedLeavesTheWatchdogRunning()
+    {
+        Rig rig;
+        rig.hold();
+        QVERIFY(rig.controller->active());
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.disconnected = true; // the keyboard stops answering: the release cannot be confirmed
+        }
+        QVERIFY(rig.controller->Enable(false).isEmpty());
+        QVERIFY(!rig.controller->active());
+        QCOMPARE(rig.controller->state(), QStringLiteral("off"));
+        const auto entries = rig.journal.entries();
+        QVERIFY2(std::find(entries.begin(), entries.end(), "watchdog.stop") == entries.end(),
+                 "the watchdog must keep watching a keyboard that may still be in host mode");
+    }
+
+    void aConfirmedReleaseStopsTheWatchdog()
+    {
+        Rig rig;
+        rig.hold();
+        QVERIFY(rig.controller->Enable(false).isEmpty());
+        const auto entries = rig.journal.entries();
+        QVERIFY(std::find(entries.begin(), entries.end(), "watchdog.stop") != entries.end());
+        QCOMPARE(rig.mode(), 1);
+    }
+
     void nothingHappensUntilItIsAskedFor()
     {
         Rig rig;

@@ -28,6 +28,13 @@ QString script(const QTemporaryDir &dir, const QString &name, const QString &bod
     return dir.filePath(name);
 }
 
+// How many times the scripts logged that they were started for process 4242.
+int runsOf(const QString &log)
+{
+    QFile file(log);
+    return file.open(QIODevice::ReadOnly) ? static_cast<int>(file.readAll().count("--pid 4242")) : 0;
+}
+
 } // namespace
 
 class TestProcessWatchdog : public QObject
@@ -88,6 +95,34 @@ private Q_SLOTS:
         QVERIFY(watchdog.start(1, &why));
         QVERIFY(watchdog.start(1, &why));
         watchdog.stop();
+    }
+
+    void aWatchdogStillWantedWhenItsObjectGoesIsHandedOverToAnotherThatOutlivesIt()
+    {
+        const QTemporaryDir dir;
+        const QString log = dir.filePath("runs");
+        const QString program = script(dir, "watchdog", "echo \"$@\" >> '" + log + "'\nexec sleep 3");
+        {
+            ProcessWatchdog watchdog(program);
+            QString why;
+            QVERIFY2(watchdog.start(4242, &why), qPrintable(why));
+        } // gone without stop(): the keys were not confirmed back
+        QTRY_COMPARE_WITH_TIMEOUT(runsOf(log), 2, 3000); // the first one, and the one that took over
+    }
+
+    void aWatchdogStoppedOnPurposeIsNotHandedOver()
+    {
+        const QTemporaryDir dir;
+        const QString log = dir.filePath("runs");
+        const QString program = script(dir, "watchdog", "echo \"$@\" >> '" + log + "'\nexec sleep 3");
+        {
+            ProcessWatchdog watchdog(program);
+            QString why;
+            QVERIFY2(watchdog.start(4242, &why), qPrintable(why));
+            watchdog.stop(); // the keys were confirmed back: it is not needed any more
+        }
+        QTest::qWait(500);
+        QCOMPARE(runsOf(log), 1);
     }
 
     void aWatchdogThatDiesWhileItIsWantedIsReported()

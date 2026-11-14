@@ -67,7 +67,7 @@ Q_SIGNALS:
 
 private:
     void startWorker();
-    void stopWorker();
+    bool stopWorker();
     void finish(const QString &detail);
     void setState(const QString &state, const QString &detail);
     void onWorkerState(const QString &state, const QString &detail);

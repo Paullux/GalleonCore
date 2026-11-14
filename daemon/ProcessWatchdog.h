@@ -17,6 +17,10 @@ namespace galleond {
 // at once (it could not watch the process, or could not parse its arguments) protects nothing. It writes nothing to any
 // file (Aaryush1's first Guard crashed at start by logging inside the read-only application folder, unnoticed for two
 // builds): its one line of output goes to galleond's own output.
+//
+// If it is still wanted when this object goes (a release that was not confirmed left it running), a second watchdog is
+// started detached for the same process before this one is ended: a QProcess child is killed with its parent object, and
+// that is exactly the moment the keys must not be left unwatched.
 class ProcessWatchdog final : public WatchdogGuard
 {
     Q_OBJECT
@@ -37,6 +41,7 @@ private:
     QString m_program;
     QProcess m_process;
     bool m_wanted = false;
+    qint64 m_pid = 0;
 };
 
 } // namespace galleond

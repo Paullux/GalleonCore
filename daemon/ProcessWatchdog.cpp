@@ -22,6 +22,9 @@ ProcessWatchdog::ProcessWatchdog(QString program, QObject *parent)
 
 ProcessWatchdog::~ProcessWatchdog()
 {
+    // Still wanted: the keys were not confirmed back. Hand the watching to a process that outlives this object (and galleond).
+    if (m_wanted && m_process.state() != QProcess::NotRunning)
+        QProcess::startDetached(m_program, {QStringLiteral("--pid"), QString::number(m_pid)});
     stop();
 }
 
@@ -58,6 +61,7 @@ bool ProcessWatchdog::start(qint64 pid, QString *why)
         return false;
     }
     m_wanted = true;
+    m_pid = pid;
     return true;
 }
 
