@@ -38,7 +38,10 @@ namespace {
 // Before anything reads a setting: the tests keep to their own configuration folder.
 void isolateSettings()
 {
-    qputenv("XDG_CONFIG_HOME", (QDir::tempPath() + QStringLiteral("/galleoncore-test-config")).toUtf8());
+    // A folder of its own, removed when the process ends: ctest runs these tests side by side, and the one fixed folder they
+    // shared let the wallpaper saved by one test show up in the restore() of another.
+    static const QTemporaryDir folder(QDir::tempPath() + QStringLiteral("/galleoncore-test-config-XXXXXX"));
+    qputenv("XDG_CONFIG_HOME", folder.path().toUtf8());
 }
 Q_CONSTRUCTOR_FUNCTION(isolateSettings)
 
