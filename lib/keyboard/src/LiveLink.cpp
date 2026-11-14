@@ -143,14 +143,37 @@ struct LiveLink::Impl
         }
     }
 
+    // Another host may have spoken during the exchange before this one (the Web Hub connecting in the middle of a takeover):
+    // what is heard is classified at once, and a takeover never goes on over it. False also when the keyboard is gone.
+    bool stillOurs()
+    {
+        drainUnsolicited();
+        return !gone && policy.state() == LiveState::Holding;
+    }
+
+    // Each step that writes is preceded by the check above, so that a host that connects mid-takeover is overridden by
+    // nothing more than the step that was already on its way. When it speaks after the mode was set, the keys are left as
+    // they are (nothing is released over another host's traffic) and the file is not opened: the link is yielded and
+    // resumes by the usual rule after the quiet period. Not a failure of the link: the freeze count is untouched.
     bool takeKeys()
     {
         const auto mode = readMode();
+        if (!stillOurs())
+            return false;
         // A leftover of a crash, a sleep or a kill is released first; only a CONFIRMED 1 is left alone (a mode that
         // could not be read is not one).
-        if (startDecision(false, mode) == StartDecision::ReleaseFirst)
+        if (startDecision(false, mode) == StartDecision::ReleaseFirst) {
             static_cast<void>(releaseSequence());
-        if (!setMode(ModeHostControlled) || !send(openLiveFileRequest(session))) {
+            if (!stillOurs())
+                return false;
+        }
+        if (!setMode(ModeHostControlled)) {
+            failure();
+            return false;
+        }
+        if (!stillOurs())
+            return false;
+        if (!send(openLiveFileRequest(session))) {
             failure();
             return false;
         }

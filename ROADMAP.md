@@ -422,6 +422,11 @@ Suite du point 1 : le composant `galleond` qui emploie `LiveLink`. **Expériment
 - Retour du propriétaire, avec deux photos : l'activation depuis Bosun allume bien les touches, et la couleur choisie dans les pastilles (vert) est appliquée à tout le clavier. **Le contrôle des LED fonctionne sur le matériel, sous Linux.**
 - Testé : activation, couleur unique. **Pas encore testé** : arrêt (rendu des touches), cession à un autre programme (Web Hub), veille/réveil, plantage de `galleond` avec le programme de surveillance, Windows. À faire avant de parler de fonction stable ; l'issue #102 (Aaryush1) doit en être informée.
 
+### Éclairage en direct — trou 2 de la relecture d'Aaryush1 (prise des touches) — 14 novembre 2026
+- Avant : `takeKeys()` lisait le mode, libérait peut-être, passait en mode 2 et ouvrait le fichier sans revérifier si un autre hôte (le Web Hub qui se connecte en plein milieu) avait parlé entre-temps : il aurait été écrasé une fois. Maintenant : le trafic étranger est classé avant chaque étape qui écrit (libération, passage en mode 2, ouverture du fichier) ; s'il y en a, la prise s'arrête, le lien passe à « cédé » (`Yielded`), rien n'est libéré par-dessus le trafic de l'autre, et le compteur de pannes n'est pas touché (ce n'est pas une panne). La reprise se fait par la règle habituelle après une minute de calme.
+- Deux tests avec un faux clavier où l'autre hôte parle à un instant précis (`FakeDevice::afterCommand`) : juste après la lecture du mode, et juste après le passage en mode 2. Ils échouent sans la correction (vérifié).
+- Reste de ce trou : `show()` ne vide le trafic non sollicité qu'avant les quatre rapports d'une trame, pas entre eux (jugé mineur par Aaryush1, non traité).
+
 ### Éclairage en direct — trou 3 de la relecture d'Aaryush1 (réveil) — 14 novembre 2026
 - Après la veille, le clavier peut ne pas être revenu sur le bus quand le démon veut le rouvrir. Avant : un seul échec d'ouverture éteignait l'éclairage pour de bon. Maintenant : l'ouverture est retentée toutes les secondes, 30 fois au plus (`LightingController::ResumeRetryMs` / `ResumeAttempts`), l'état reste « starting » avec une explication ; au-delà, l'éclairage s'éteint comme avant.
 - Deux tests : le clavier qui revient après quelques essais, et celui qui ne revient jamais. Ils échouent sans la correction (vérifié).
