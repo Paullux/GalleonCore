@@ -656,6 +656,20 @@ Décisions à ne pas perdre :
 
 ## 6. Prochaines étapes prioritaires
 
+### Ce que veut dire la v1.0.0 (décision du propriétaire, 14 novembre 2026)
+
+La v1.0.0 sortira quand les deux contrôles seront complets :
+
+- **Contrôle total du Stream Deck : OK** (état déclaré par le propriétaire).
+- **Contrôle total du clavier RVB : en cours.** Une fois terminé : OK. Aujourd'hui : luminosité (curseur, courbe de 24 h) et éclairage en direct d'une seule couleur, essayé sur le matériel sous Linux ; restent la veille/réveil, la cession au Web Hub et le plantage vérifiés sur le matériel, le portage Windows, les effets, et l'aperçu fidèle dans Bosun (point 7 de « À développer »).
+
+### Signature de code Windows : SignPath Foundation (à suivre)
+
+- Le propriétaire a décidé de demander un certificat de signature de code à [SignPath Foundation](https://signpath.org/) (programme gratuit pour les projets libres). **Statut de la demande : à confirmer par le propriétaire.**
+- Ce que le programme exige (page des conditions de SignPath, lue le 14 novembre 2026) : licence libre approuvée par l'OSI et sans double licence commerciale (GPL/LGPL : conforme) ; projet maintenu, déjà publié dans la forme à signer, avec une page de téléchargement qui décrit ses fonctions ; binaires construits depuis nos sources par une compilation automatique et vérifiable (la CI Windows en est une) ; **métadonnées imposées : le nom du produit identique à celui du projet et la version identique d'une compilation à l'autre** ; approbation manuelle de chaque version ; double authentification pour tous ceux qui signent ; **une « politique de signature » publiée sur la page d'accueil et les pages de téléchargement** (rôles, attribution SignPath, politique de confidentialité) ; désinstallation possible ; changements de configuration du système annoncés (démarrage automatique, règles udev). L'acceptation reste à la discrétion de SignPath, sans appel.
+- **À préparer de notre côté** : vérifier les métadonnées des exécutables Windows (aujourd'hui seul le Setup porte une description) ; rédiger la politique de signature et de confidentialité dans les quatre langues du site (le contrôle de mise à jour et le widget météo contactent des services externes) ; définir les rôles (auteur, relecteur, approbateur) ; vérifier l'authentification à deux facteurs sur GitHub.
+- Une signature n'efface pas tout de suite l'avertissement de Windows SmartScreen : la réputation d'un éditeur se construit avec les téléchargements.
+
 La liste courante est celle du **point de reprise du 29 octobre**, en tête du fichier : validation de l’arbre fusionné, essais Gaming Linux/Windows, configuration MangoHud, firmware/notifications puis endurance. Les fonctionnalités Bosun déjà présentes (édition des touches, fonds, veille, démarrage avec la session) ne sont plus à traiter comme des développements initiaux à entreprendre. Les détails anciens des sections 2 et 4 restent à réconcilier progressivement avec les validations ; ils ne remplacent pas les priorités courantes.
 
 ## Règle de mise à jour
