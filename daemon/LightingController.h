@@ -11,6 +11,7 @@
 #include <QObject>
 #include <QString>
 #include <QThread>
+#include <QTimer>
 
 #include <functional>
 #include <memory>
@@ -54,6 +55,16 @@ public:
     // True from an accepted Enable(true) until the keys have been given back.
     [[nodiscard]] bool active() const { return m_active; }
 
+    // After waking up the keyboard may not be back on the bus yet (USB devices often take a moment): opening it is tried
+    // again every ResumeRetryMs, at most ResumeAttempts times, before the lighting gives up and goes off. For tests.
+    static constexpr int ResumeRetryMs = 1000;
+    static constexpr int ResumeAttempts = 30;
+    void setResumeRetry(int intervalMs, int attempts)
+    {
+        m_resumeRetryMs = intervalMs;
+        m_resumeAttempts = attempts;
+    }
+
 public Q_SLOTS:
     // "" when accepted, else why not. Enable(false) gives the keys back (and waits for it) and is always accepted.
     QString Enable(bool on);
@@ -81,6 +92,10 @@ private:
     QString m_state = QStringLiteral("off");
     bool m_active = false;
     bool m_sleeping = false;
+    QTimer m_resumeTimer; // single shot: the next try to open the keyboard after waking
+    int m_resumeTriesLeft = 0;
+    int m_resumeRetryMs = ResumeRetryMs;
+    int m_resumeAttempts = ResumeAttempts;
     int m_red = 90;
     int m_green = 90;
     int m_blue = 90;

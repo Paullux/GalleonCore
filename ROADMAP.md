@@ -422,6 +422,11 @@ Suite du point 1 : le composant `galleond` qui emploie `LiveLink`. **Expériment
 - Retour du propriétaire, avec deux photos : l'activation depuis Bosun allume bien les touches, et la couleur choisie dans les pastilles (vert) est appliquée à tout le clavier. **Le contrôle des LED fonctionne sur le matériel, sous Linux.**
 - Testé : activation, couleur unique. **Pas encore testé** : arrêt (rendu des touches), cession à un autre programme (Web Hub), veille/réveil, plantage de `galleond` avec le programme de surveillance, Windows. À faire avant de parler de fonction stable ; l'issue #102 (Aaryush1) doit en être informée.
 
+### Éclairage en direct — trou 3 de la relecture d'Aaryush1 (réveil) — 14 novembre 2026
+- Après la veille, le clavier peut ne pas être revenu sur le bus quand le démon veut le rouvrir. Avant : un seul échec d'ouverture éteignait l'éclairage pour de bon. Maintenant : l'ouverture est retentée toutes les secondes, 30 fois au plus (`LightingController::ResumeRetryMs` / `ResumeAttempts`), l'état reste « starting » avec une explication ; au-delà, l'éclairage s'éteint comme avant.
+- Deux tests : le clavier qui revient après quelques essais, et celui qui ne revient jamais. Ils échouent sans la correction (vérifié).
+- Sous Linux seulement pour l'instant : la veille n'est pas encore branchée sous Windows.
+
 ### Luminosité du clavier : essai sous Windows concluant — 14 novembre 2026
 - Retour du propriétaire sur la version Windows (archive de la CI, commit `d901a59`) : **le bouton radio de choix du mode fonctionne, le curseur de luminosité fonctionne, la courbe fonctionne.** Il a aussi utilisé le clavier toute la soirée et constaté que la courbe évolue bien au fil des heures.
 - Avant le correctif, la sauvegarde de la courbe échouait par moments sous Windows (renommage refusé quand un lecteur a le fichier ouvert un instant) : les trois petits fichiers partagés (courbe, `keyboard-state.json`, `lighting-state.json`) passent maintenant par `AtomicFile`, qui réessaie quelques fois à quelques millisecondes d'écart.

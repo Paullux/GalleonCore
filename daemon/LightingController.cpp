@@ -26,7 +26,14 @@ LightingController::LightingController(Opener opener, WatchdogGuard &watchdog, P
         if (m_active)
             finish(tr("The watchdog ended, so the keys are no longer protected: the lighting was stopped and the keys given back."));
     });
+    m_resumeTimer.setSingleShot(true);
+    connect(&m_resumeTimer, &QTimer::timeout, this, [this] {
+        if (m_active && !m_sleeping && !m_worker)
+            startWorker();
+    });
     connect(&m_power, &PowerEvents::aboutToSleep, this, [this] {
+        m_resumeTimer.stop();
+        m_resumeTriesLeft = 0;
         if (!m_active || m_sleeping)
             return;
         stopWorker(); // give the keys back before the machine sleeps
@@ -39,6 +46,7 @@ LightingController::LightingController(Opener opener, WatchdogGuard &watchdog, P
             return;
         m_sleeping = false;
         m_power.holdSleep();
+        m_resumeTriesLeft = m_resumeAttempts; // the keyboard may still be on its way back: see onWorkerState
         startWorker();
     });
 }
@@ -115,6 +123,8 @@ bool LightingController::stopWorker()
 
 void LightingController::finish(const QString &detail)
 {
+    m_resumeTimer.stop();
+    m_resumeTriesLeft = 0;
     const bool released = stopWorker();
     if (!m_active)
         return;
@@ -143,6 +153,17 @@ void LightingController::onWorkerState(const QString &state, const QString &deta
 {
     if (!m_active || m_sleeping)
         return;
+    if (state != QStringLiteral("failed"))
+        m_resumeTriesLeft = 0; // the keyboard was opened: no more waiting for it
+    // Just after waking: the keyboard is not back yet, so try again in a moment instead of giving up (stopWorker only closes
+    // what failed to open: there is nothing to release).
+    if (state == QStringLiteral("failed") && m_resumeTriesLeft > 0) {
+        --m_resumeTriesLeft;
+        static_cast<void>(stopWorker());
+        setState(QStringLiteral("starting"), tr("Waiting for the keyboard to come back after waking up."));
+        m_resumeTimer.start(m_resumeRetryMs);
+        return;
+    }
     // The link stopped by itself, or the keyboard could not be opened: it stays off until asked again.
     if (state == QStringLiteral("failed") || state == QStringLiteral("frozen") || state == QStringLiteral("disconnected")) {
         finish(detail);

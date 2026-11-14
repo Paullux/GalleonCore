@@ -394,6 +394,38 @@ private Q_SLOTS:
         QCOMPARE(rig.journal.count("watchdog.start"), 1);
     }
 
+    void aKeyboardNotBackYetWhenTheMachineWakesIsWaitedForAndTheLightingComesBack()
+    {
+        Rig rig;
+        rig.controller->setResumeRetry(30, 200);
+        rig.hold();
+        rig.power.sleep();
+        rig.keyboardPresent = false; // still re-enumerating after the resume
+        rig.power.wake();
+        QTest::qWait(300); // several tries, all failed
+        QVERIFY(rig.controller->active()); // one failed opening did not switch the lighting off for good
+        QCOMPARE(rig.controller->state(), QStringLiteral("starting"));
+        rig.keyboardPresent = true;
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("listening"), 3000);
+        rig.advance(4000);
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("holding"), 3000);
+        QCOMPARE(rig.mode(), 2);
+        QCOMPARE(rig.journal.count("watchdog.start"), 1);
+    }
+
+    void aKeyboardThatNeverComesBackAfterWakingEndsInOffAfterTheTries()
+    {
+        Rig rig;
+        rig.controller->setResumeRetry(20, 3);
+        rig.hold();
+        rig.power.sleep();
+        rig.keyboardPresent = false;
+        rig.power.wake();
+        QTRY_VERIFY_WITH_TIMEOUT(!rig.controller->active(), 3000);
+        QCOMPARE(rig.controller->state(), QStringLiteral("off"));
+        QCOMPARE(rig.journal.count("opener"), 1 + 1 + 3); // the first start, the wake, then the three tries
+    }
+
     void aKeyboardThatCannotBeOpenedStopsEverythingAndSaysWhy()
     {
         Rig rig;
