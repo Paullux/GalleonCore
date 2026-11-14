@@ -210,7 +210,15 @@ Window {
     // ---- a theme: the 12 keys, and on the right what the selected key does or the tab itself
     Item {
         id: themePage
+        objectName: "themePage"
         visible: win.tab.kind === "theme" && win.backend.problem === ""
+        // The size of a key: 140 px, smaller in a low window so that the four rows end above the status bar and none of the keys
+        // is hidden under it (never below 84 px: a key has to stay readable and hit).
+        readonly property real cellSize: Math.max(84, Math.min(140, (height - keyGrid.y - 3 * keyGrid.spacing) / 4))
+        // The left column keeps the width of three full-size keys whatever their size: the note above them wraps at that width
+        // (its height decides where the keys start, so it cannot depend on the keys' size: that would be a loop), and the
+        // right column does not move when the window is lowered.
+        readonly property real gridWidth: 3 * 140 + 2 * 12
         x: 30
         y: 84
         width: win.width - 60
@@ -248,7 +256,7 @@ Window {
         Text {
             id: pageNote
             y: pageChoice.height + 4
-            width: keyGrid.width
+            width: themePage.gridWidth
             color: "#9aa0a6"
             font.pixelSize: 12
             wrapMode: Text.Wrap
@@ -268,9 +276,10 @@ Window {
                 model: win.keys
                 delegate: Rectangle {
                     id: keyCell
+                    objectName: "keyCell"
                     required property var modelData
-                    width: 140
-                    height: 140
+                    width: themePage.cellSize
+                    height: themePage.cellSize
                     radius: 14
                     color: "transparent"
                     border.width: win.selectedKey === keyCell.modelData.index ? 3 : 0
@@ -321,7 +330,7 @@ Window {
         // The right side: the key that is selected, else the tab itself.
         Flickable {
             id: rightSide
-            x: keyGrid.width + 40
+            x: themePage.gridWidth + 40
             width: parent.width - x
             height: parent.height
             contentWidth: width
@@ -360,6 +369,7 @@ Window {
                     width: parent.width
                     filePicker: win.filePicker
                     backend: win.backend
+                    library: win.library
                     index: Math.min(win.currentTab, win.backend.themes.length - 1)
                     theme: win.backend.themes[Math.min(win.currentTab, win.backend.themes.length - 1)]
                     onAnswered: (error, done) => win.answered(error, done)

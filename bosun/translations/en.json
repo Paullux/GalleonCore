@@ -676,5 +676,6 @@
   "A colour has three values from 0 to 255": "A colour has three values from 0 to 255",
   "Key %1, %2, application not installed": "Key %1, %2, application not installed",
   "This application is not installed on this computer: the key does nothing until you install it or choose another application above.": "This application is not installed on this computer: the key does nothing until you install it or choose another application above.",
-  "The live lighting is not available on this system.": "The live lighting is not available on this system."
+  "The live lighting is not available on this system.": "The live lighting is not available on this system.",
+  "No preview: the picture of this tab is not in the list of wallpapers of this computer.": "No preview: the picture of this tab is not in the list of wallpapers of this computer."
 }

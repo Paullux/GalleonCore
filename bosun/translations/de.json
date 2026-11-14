@@ -676,5 +676,6 @@
   "A colour has three values from 0 to 255": "Eine Farbe hat drei Werte von 0 bis 255",
   "Key %1, %2, application not installed": "Taste %1, %2, Anwendung nicht installiert",
   "This application is not installed on this computer: the key does nothing until you install it or choose another application above.": "Diese Anwendung ist auf diesem Computer nicht installiert: Die Taste tut nichts, bis du sie installierst oder oben eine andere Anwendung wählst.",
-  "The live lighting is not available on this system.": "Die Live-Beleuchtung ist auf diesem System nicht verfügbar."
+  "The live lighting is not available on this system.": "Die Live-Beleuchtung ist auf diesem System nicht verfügbar.",
+  "No preview: the picture of this tab is not in the list of wallpapers of this computer.": "Keine Vorschau: Das Bild dieses Tabs ist nicht in der Liste der Hintergrundbilder dieses Computers."
 }

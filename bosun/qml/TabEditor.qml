@@ -13,6 +13,7 @@ Column {
     required property int index // the theme's place in the list
     required property var theme // {name, page, color}
     property var filePicker: null
+    property var library: null // the wallpapers of the catalog: where the thumbnail of the tab's own comes from
     property string author: ""
     property string license: "CC-BY-SA-4.0"
     property string description: ""
@@ -133,6 +134,49 @@ Column {
         text: editor.theme.wallpaper === ""
               ? qsTr("None: this tab shows your own wallpaper.")
               : qsTr("This tab shows “%1” on the screen.").arg(editor.theme.wallpaper.split("/").pop())
+    }
+    // What the tab puts on the screen, as a thumbnail (the same one the Wallpapers tab shows for it).
+    Image {
+        id: tabWallpaperThumbnail
+        objectName: "tabWallpaperThumbnail"
+        visible: editor.theme.wallpaper !== ""
+        width: Math.min(parent.width, 320)
+        height: width * 384 / 720 // the screen's own shape
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        cache: false
+        sourceSize.width: 320
+        sourceSize.height: 171
+        // The revision is part of the address: the picture of a tab is saved under the same name when it is replaced, so it is
+        // asked for again when the pages change (the provider ignores what follows the "?"). Assigning `source` from a script
+        // would end its link to the tab shown, and a thumbnail that stays empty for every later tab.
+        source: editor.theme.wallpaper === "" ? "" : "image://wallpapers/" + editor.theme.wallpaper + "?r=" + editor.backend.revision
+        // The list of wallpapers is read again when the pages change: a theme that was just installed brought its own.
+        readonly property int revision: editor.backend.revision
+        onRevisionChanged: {
+            if (editor.library)
+                editor.library.reload()
+        }
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            border.color: "#33ffffff"
+            border.width: 1
+            radius: 4
+        }
+        // The name is known but the picture cannot be shown: say so, instead of an empty frame.
+        Text {
+            objectName: "tabWallpaperMissing"
+            visible: tabWallpaperThumbnail.status === Image.Error
+            anchors.fill: parent
+            anchors.margins: 12
+            wrapMode: Text.Wrap
+            verticalAlignment: Text.AlignVCenter
+            horizontalAlignment: Text.AlignHCenter
+            color: "#ffb74d"
+            font.pixelSize: 13
+            text: qsTr("No preview: the picture of this tab is not in the list of wallpapers of this computer.")
+        }
     }
     Row {
         spacing: 8
