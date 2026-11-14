@@ -279,7 +279,8 @@ WallpaperThumbnails::WallpaperThumbnails(const WallpaperLibrary *library)
 QImage WallpaperThumbnails::requestImage(const QString &id, QSize *size, const QSize &requestedSize)
 {
     Q_UNUSED(requestedSize)
-    const QImage image = m_library->thumbnail(id);
+    // What follows a "?" only makes the address differ so that the picture is asked for again: it is not part of the name.
+    const QImage image = m_library->thumbnail(id.section(QLatin1Char('?'), 0, 0));
     if (size)
         *size = image.size();
     return image;

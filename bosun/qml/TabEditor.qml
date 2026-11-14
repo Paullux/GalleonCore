@@ -147,15 +147,15 @@ Column {
         cache: false
         sourceSize.width: 320
         sourceSize.height: 171
-        source: editor.theme.wallpaper === "" ? "" : "image://wallpapers/" + editor.theme.wallpaper
-        // The picture of the tab is saved under the same name when it is replaced: ask again for it when the pages change.
+        // The revision is part of the address: the picture of a tab is saved under the same name when it is replaced, so it is
+        // asked for again when the pages change (the provider ignores what follows the "?"). Assigning `source` from a script
+        // would end its link to the tab shown, and a thumbnail that stays empty for every later tab.
+        source: editor.theme.wallpaper === "" ? "" : "image://wallpapers/" + editor.theme.wallpaper + "?r=" + editor.backend.revision
+        // The list of wallpapers is read again when the pages change: a theme that was just installed brought its own.
         readonly property int revision: editor.backend.revision
         onRevisionChanged: {
             if (editor.library)
                 editor.library.reload()
-            const current = source
-            source = ""
-            source = current
         }
         Rectangle {
             anchors.fill: parent
