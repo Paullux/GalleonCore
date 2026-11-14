@@ -5,6 +5,8 @@
 // decisions. Pure code, time is an argument: nothing waits and nothing is sent. The numbers (3 s listening,
 // 1 s mode poll, 60 s quiet) are the ones measured by Aaryush1 (docs/WINDOWS_LIVE_LIGHTING_CSHARP.md).
 
+#include <galleon/keyboard/BragiFrame.h>
+#include <galleon/keyboard/KeyboardLink.h>
 #include <galleon/keyboard/LiveYield.h>
 
 #include <QTest>
@@ -44,6 +46,26 @@ class TestKeyboardYield : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void onlyAnExchangeThatWasSentAndGotNoAnswerInTimeLeavesALateAnswerToCome()
+    {
+        QCOMPARE(answerStateAfter(LinkError::Timeout), AnswerState::MayComeLate);
+        QCOMPARE(answerStateAfter(LinkError::InvalidReply), AnswerState::Received); // the keyboard answered, with an error
+        QCOMPARE(answerStateAfter(LinkError::SessionExpired), AnswerState::Received);
+        for (const LinkError error : {LinkError::WriteFailed, LinkError::Disconnected, LinkError::StaleReports, LinkError::InvalidValue})
+            QCOMPARE(answerStateAfter(error), AnswerState::NeverSent);
+    }
+
+    void anExchangeThatWasCancelledLeavesNoLateAnswerAndALaterOneIsForeign()
+    {
+        ReplyTracker tracker;
+        tracker.expect(CommandGet);
+        tracker.cancel();
+        QCOMPARE(tracker.classify(CommandGet), ReplyKind::Foreign);
+        tracker.expect(CommandGet);
+        tracker.timedOut();
+        QCOMPARE(tracker.classify(CommandGet), ReplyKind::Stale); // a late answer of ours, for contrast
+    }
+
     // ---- classification -----------------------------------------------------------------------------
     void theAnswerToTheCommandBeingWaitedForIsOurs()
     {

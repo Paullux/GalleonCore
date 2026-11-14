@@ -29,6 +29,19 @@ enum class ReplyKind : std::uint8_t {
     Foreign // an answer nobody here asked for: another host is polling the keyboard
 };
 
+enum class LinkError; // KeyboardLink.h: only named here, this policy does not depend on the link
+
+// What can still come after an exchange that did not end in a good answer. Only a command that was SENT and got no answer
+// within the time can still be answered late, and only then is a later answer of that command ours (Stale) rather than
+// another host's: a keyboard that answered with an error status, or an exchange that never sent anything, leaves nothing
+// to come, so a later answer of that command is foreign. (Review of Aaryush1, hole 5.)
+enum class AnswerState : std::uint8_t {
+    MayComeLate, // sent, and nothing came in time
+    Received,    // the keyboard answered, with an error status or the end of the session
+    NeverSent    // refused by the guard, nothing to write to, or the device was gone
+};
+[[nodiscard]] AnswerState answerStateAfter(LinkError error);
+
 // Every answer is classified against the command being waited for. Answers carry no host identity, only the
 // command they echo (byte 3 of the report), so an answer to ANOTHER host's command that happens to echo the
 // same command as ours cannot be told apart: the mode check below is the second line of defence.
@@ -39,6 +52,7 @@ public:
 
     void expect(std::uint8_t command);      // a command is sent and its answer awaited
     void timedOut();                        // gave up on it: its answer may still arrive, as Stale
+    void cancel();                          // it was never sent, or its answer already came: nothing more to wait for
     [[nodiscard]] ReplyKind classify(std::uint8_t command); // an answer arrived
 
 private:

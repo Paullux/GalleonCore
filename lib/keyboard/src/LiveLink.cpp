@@ -81,8 +81,12 @@ struct LiveLink::Impl
         if (answer) {
             static_cast<void>(tracker.classify(request[4])); // our own answer: nothing waited for any more
         } else {
-            tracker.timedOut();
             owner.m_lastError = link.error();
+            switch (answerStateAfter(link.error())) {
+            case AnswerState::MayComeLate: tracker.timedOut(); break;
+            case AnswerState::Received: static_cast<void>(tracker.classify(request[4])); break; // came, with an error: nothing late to come
+            case AnswerState::NeverSent: tracker.cancel(); break;
+            }
             if (link.error() == LinkError::SessionExpired) {
                 session = 0; // a new one is started at the next request, and the keys are taken anew at the next tick
                 owner.m_taken = false;

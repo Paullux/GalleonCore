@@ -72,6 +72,18 @@ class TestKeyboardLiveLink : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void aKeyboardThatRefusedACommandDoesNotMakeALaterAnswerOfAnotherHostLookLikeOurOwnLateOne()
+    {
+        Holding h;
+        h.device.statusForNext = 5; // the keyboard answers our read of the mode with an error status
+        h.link.tick(at(4200ms));
+        QCOMPARE(h.link.status(), LiveLink::Status::Holding); // one failure is not yet a freeze
+        h.device.otherHostSpeaks();       // another host polls the keyboard: an answer of the same command
+        h.link.tick(at(4300ms));
+        // That answer was never ours (ours came, with its error): another host is there, so the link yields.
+        QCOMPARE(h.link.status(), LiveLink::Status::Yielded);
+    }
+
     void aHostThatSpeaksBetweenTheReadOfTheModeAndTheTakeoverIsNotOverriddenByIt()
     {
         FakeDevice device;
