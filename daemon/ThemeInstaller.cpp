@@ -4,6 +4,7 @@
 #include "ThemeInstaller.h"
 
 #include "DesktopEntries.h"
+#include "WellKnownApps.h"
 #include "InitialPages.h"
 #include "PagesConfig.h"
 #include "PagesEditor.h"
@@ -58,6 +59,21 @@ PagesConfig currentConfig(const QString &pagesFile)
     return parsed.config.value_or(PagesConfig{});
 }
 
+// The application a reference of a theme stands for on this machine. On Windows, a theme exported on Linux before an
+// application had a portable id names it by its desktop file ID: that is never read as a file there, but at install it is
+// taken for the application of the table it is one of the IDs of, and found by its executable like the portable id. What is
+// stored is the path found here, once; nothing is searched later.
+DesktopApp lookupForInstall(const QString &id)
+{
+#ifdef Q_OS_WIN
+    if (DesktopEntries::isPlainDesktopId(id)) {
+        if (const WellKnownApp *known = WellKnownApps::findByLinuxDesktopId(id))
+            return DesktopEntries::lookup(known->id);
+    }
+#endif
+    return DesktopEntries::lookup(id);
+}
+
 ThemeInstallContext contextFor(const ThemeInstallOptions &options)
 {
     const PagesConfig config = currentConfig(options.pagesFile);
@@ -69,7 +85,7 @@ ThemeInstallContext contextFor(const ThemeInstallOptions &options)
     context.existingIconFiles = QDir(QFileInfo(options.pagesFile).absolutePath()).entryList(QDir::Files);
     context.existingWallpaperStyles = QDir(options.wallpaperRoot).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     context.resolveDesktop = [](const QString &id) -> QString {
-        const DesktopApp app = DesktopEntries::lookup(id);
+        const DesktopApp app = lookupForInstall(id);
         return app.isValid() ? app.id : QString();
     };
     context.applyDials = options.applyDials;

@@ -4,6 +4,7 @@
 #include "DesktopEntries.h"
 #include "WellKnownApps.h"
 
+#include <QSet>
 #include <QTest>
 
 using namespace galleond;
@@ -88,6 +89,29 @@ private slots:
         QVERIFY(!WellKnownApps::windowsSignatureMatches(QStringLiteral("Ardour2.exe"), {}, {}, *WellKnownApps::find(QStringLiteral("ardour"))));
         QVERIFY(!WellKnownApps::windowsSignatureMatches(QStringLiteral("MuseScore.exe"), {}, {}, *WellKnownApps::find(QStringLiteral("musescore"))));
         QVERIFY(!WellKnownApps::windowsSignatureMatches(QStringLiteral("Audacity.exe"), {}, {}, *WellKnownApps::find(QStringLiteral("kdenlive"))));
+    }
+
+    void aLinuxDesktopFileIdIsTheApplicationOfTheTableItIsOneOfTheIdsOf()
+    {
+        // What lets a theme exported before the portable ids existed be installed on Windows.
+        QCOMPARE(WellKnownApps::findByLinuxDesktopId(QStringLiteral("ardour.desktop"))->id, QStringLiteral("ardour"));
+        QCOMPARE(WellKnownApps::findByLinuxDesktopId(QStringLiteral("org.kde.kdenlive.desktop"))->id, QStringLiteral("kdenlive"));
+        QCOMPARE(WellKnownApps::findByLinuxDesktopId(QStringLiteral("mscore.desktop"))->id, QStringLiteral("musescore"));
+        QCOMPARE(WellKnownApps::findByLinuxDesktopId(QStringLiteral("com.discordapp.Discord.desktop"))->id, QStringLiteral("discord"));
+        QVERIFY(!WellKnownApps::findByLinuxDesktopId(QStringLiteral("guitarix.desktop"))); // not measured on Windows: stays inert
+        QVERIFY(!WellKnownApps::findByLinuxDesktopId(QStringLiteral("ardour")));          // the portable id is not a desktop file ID
+    }
+
+    void noDesktopFileIdBelongsToTwoApplications()
+    {
+        QSet<QString> seen;
+        for (const QString &id : WellKnownApps::knownIds()) {
+            for (const QString &desktopId : WellKnownApps::find(id)->linuxDesktopIds) {
+                QVERIFY2(!seen.contains(desktopId), qPrintable(desktopId));
+                seen.insert(desktopId);
+                QCOMPARE(WellKnownApps::findByLinuxDesktopId(desktopId)->id, id);
+            }
+        }
     }
 
     void aKnownPortableAppIdIsAcceptedButAnUnknownOneIsNot()

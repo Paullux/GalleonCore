@@ -80,6 +80,15 @@ const WellKnownApp *WellKnownApps::find(const QString &id)
     return nullptr;
 }
 
+const WellKnownApp *WellKnownApps::findByLinuxDesktopId(const QString &desktopId)
+{
+    for (const WellKnownApp &app : table()) {
+        if (app.linuxDesktopIds.contains(desktopId))
+            return &app;
+    }
+    return nullptr;
+}
+
 QStringList WellKnownApps::knownIds()
 {
     QStringList ids;

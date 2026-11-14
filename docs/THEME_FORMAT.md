@@ -73,7 +73,7 @@ At install time this id is resolved locally and replaced by whatever the install
 
 ### An application with no portable id
 
-A literal desktop file ID (`guitarix.desktop`) is what a theme exported on Linux carries for every application that is not in the list above. On Windows such a name is **read, never resolved and never started**: it names nothing there, so the key is kept in the page, inert, with a warning at install, exactly like an application that is not installed. It is never a reason to refuse the theme. The key can be changed in the editor of the theme's page; if the same application is installed later under a name that the theme knows, nothing is lost.
+A literal desktop file ID (`guitarix.desktop`) is what a theme exported on Linux carries for every application that is not in the list above. On Windows such a name is **never read as a file and never started**. At install it is looked up only if it is one of the desktop file IDs of an application of the list above (`ardour.desktop` is Ardour, so a theme exported before `ardour` had a portable id still finds it, by the same executable); the path found is what is stored. Any other name names nothing there, so the key is kept in the page, inert, with a warning at install, exactly like an application that is not installed. It is never a reason to refuse the theme. The key can be changed in the editor of the theme's page; if the same application is installed later under a name that the theme knows, nothing is lost.
 
 ## The file icon
 

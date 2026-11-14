@@ -58,6 +58,11 @@ public:
     // nullptr if `id` is not in the table (a syntactically valid id can still be unknown).
     [[nodiscard]] static const WellKnownApp *find(const QString &id);
 
+    // The application whose Linux desktop file IDs include `desktopId` ("ardour.desktop" is "ardour"), or nullptr. A theme
+    // exported on Linux before an application had a portable id carries the desktop file ID: on Windows it is read as the
+    // application it names, and found by the same signature as the portable id.
+    [[nodiscard]] static const WellKnownApp *findByLinuxDesktopId(const QString &desktopId);
+
     [[nodiscard]] static QStringList knownIds();
 
     // True if `exeBaseName` (and, when the table and the candidate both have
