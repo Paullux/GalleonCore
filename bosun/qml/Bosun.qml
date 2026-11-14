@@ -279,13 +279,36 @@ Window {
                         smooth: true
                         source: "image://tiles/" + win.page + "/" + keyCell.modelData.index + "?r=" + win.backend.revision + "&theme=" + win.tab.page
                     }
+                    // The application of this key is not installed on this computer: the key is kept and does nothing.
+                    Rectangle {
+                        objectName: "missingApp"
+                        visible: keyCell.modelData.appMissing === true
+                        anchors.top: parent.top
+                        anchors.right: parent.right
+                        anchors.margins: 6
+                        width: 26
+                        height: 26
+                        radius: 13
+                        color: "#e65100"
+                        border.width: 2
+                        border.color: "#1b1d20"
+                        Text {
+                            anchors.centerIn: parent
+                            text: "!"
+                            color: "white"
+                            font.pixelSize: 16
+                            font.bold: true
+                        }
+                    }
                     MouseArea {
                         anchors.fill: parent
                         onClicked: win.selectedKey = keyCell.modelData.index
                     }
                     Accessible.role: Accessible.Button
                     Accessible.name: keyCell.modelData.empty ? qsTr("Key %1, empty").arg(keyCell.modelData.index + 1)
-                                                             : qsTr("Key %1, %2").arg(keyCell.modelData.index + 1).arg(keyCell.modelData.label)
+                                     : keyCell.modelData.appMissing === true
+                                       ? qsTr("Key %1, %2, application not installed").arg(keyCell.modelData.index + 1).arg(keyCell.modelData.label)
+                                       : qsTr("Key %1, %2").arg(keyCell.modelData.index + 1).arg(keyCell.modelData.label)
                 }
             }
         }
