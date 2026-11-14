@@ -43,6 +43,11 @@ QStringList applicationFolders()
 
 } // namespace
 
+bool DesktopEntries::isPlainDesktopId(const QString &desktop)
+{
+    return desktop.size() <= 200 && idPattern().match(desktop).hasMatch();
+}
+
 bool DesktopEntries::isValidReference(const QString &desktop)
 {
     if (desktop.size() > 200)

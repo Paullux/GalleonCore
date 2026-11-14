@@ -207,6 +207,7 @@ void BosunBackend::reload()
 {
     watchFile();
     ++m_revision;
+    m_installed.clear(); // an application may have been installed (or removed) since the pages file was last read
     m_themes.clear();
     m_config.reset();
     m_problem.clear();
@@ -799,6 +800,28 @@ QString BosunBackend::moveTheme(int index, int delta)
     return applied(galleond::PagesEditor::moveTheme(m_file, index, delta));
 }
 
+bool BosunBackend::appInstalled(const QString &desktop) const
+{
+    constexpr qsizetype MaxKept = 256;
+    if (const auto known = m_installed.constFind(desktop); known != m_installed.constEnd())
+        return known.value();
+    bool present = false;
+#ifdef Q_OS_WIN
+    if (galleond::DesktopEntries::isPlainDesktopId(desktop))
+        present = false; // a Linux desktop file ID of a shared theme: it names nothing on Windows
+    else if (QFileInfo(desktop).isAbsolute())
+        present = QFileInfo(desktop).isFile(); // a shortcut or a program: its file is there or it is not
+    else
+        present = galleond::DesktopEntries::lookup(desktop).isValid(); // a portable id: the Start Menu is searched once
+#else
+    present = galleond::DesktopEntries::lookup(desktop).isValid();
+#endif
+    if (m_installed.size() >= MaxKept)
+        m_installed.clear();
+    m_installed.insert(desktop, present);
+    return present;
+}
+
 QVariantList BosunBackend::keys(const QString &page) const
 {
     QVariantList result;
@@ -822,7 +845,8 @@ QVariantList BosunBackend::keys(const QString &page) const
                           {QStringLiteral("label"), label},
                           {QStringLiteral("kind"), what.kind},
                           {QStringLiteral("detail"), what.detail},
-                          {QStringLiteral("empty"), !key.has_value()}};
+                          {QStringLiteral("empty"), !key.has_value()},
+                          {QStringLiteral("appMissing"), key && key->action.type == ActionType::App && !appInstalled(key->action.desktop)}};
         if (key)
             entry.insert(configuredFields(*key));
         result.append(entry);

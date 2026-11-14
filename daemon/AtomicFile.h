@@ -4,9 +4,11 @@
 #pragma once
 
 #include <QByteArray>
+#include <QFileDevice>
 #include <QString>
 
 #include <functional>
+#include <optional>
 
 namespace galleond {
 
@@ -25,7 +27,10 @@ inline constexpr int RetryDelayMs = 10;
 // a success). True as soon as one try succeeds.
 [[nodiscard]] bool retryUntilDone(int attempts, const std::function<bool()> &once, const std::function<void(int)> &wait);
 
-// Creates the folder, then writes `bytes` to `path` as above. False when every try failed.
-[[nodiscard]] bool writeFileAtomically(const QString &path, const QByteArray &bytes);
+// Creates the folder, then writes `bytes` to `path` as above. False when every try failed. `permissions` are those of the
+// new file when given (the pages file keeps those of the one it replaces); `error`, when given, receives the reason of the
+// last failure.
+[[nodiscard]] bool writeFileAtomically(const QString &path, const QByteArray &bytes,
+                                       std::optional<QFileDevice::Permissions> permissions = std::nullopt, QString *error = nullptr);
 
 } // namespace galleond

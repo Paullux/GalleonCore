@@ -192,6 +192,15 @@ Column {
             font.pixelSize: 12
             text: editor.spec.desktop
         }
+        Text {
+            objectName: "missingAppNote"
+            visible: editor.key.appMissing === true && editor.spec.type === "app"
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: "#ffb74d"
+            font.pixelSize: 13
+            text: qsTr("This application is not installed on this computer: the key does nothing until you install it or choose another application above.")
+        }
     }
 
     // The music player.

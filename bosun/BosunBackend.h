@@ -107,9 +107,11 @@ public:
     [[nodiscard]] QVariantMap candidate() const { return m_candidate; }
     [[nodiscard]] QVariantMap conversion() const { return m_conversion; }
 
-    // The 12 keys of `page`, as written in the file: [{index, label, kind, detail, empty}], and
+    // The 12 keys of `page`, as written in the file: [{index, label, kind, detail, empty, appMissing}], and
     // for an editor what is configured: type, command, step, seconds, pageTarget, desktop,
     // keyName, appid, rawLabel, rawIcon.
+    // `appMissing` is true for an application key whose application is not installed on this computer: the key is kept,
+    // inert, and the window says so (a theme made on another system names applications that may not exist here).
     // Empty list for a page that does not exist.
     Q_INVOKABLE [[nodiscard]] QVariantList keys(const QString &page) const;
     // What the module adds on its own to `page` (applications by use, Steam games, menu
@@ -209,6 +211,11 @@ private:
     QString m_wallpaperRoot;
     QString m_problem;
     QVariantList m_themes;
+    // Whether an application reference is installed here, by reference. Looking an application up reads files (and on
+    // Windows can scan the Start Menu), and the window asks again at every redraw: each answer is kept until the pages
+    // file is read again, and the list is bounded.
+    [[nodiscard]] bool appInstalled(const QString &desktop) const;
+    mutable QHash<QString, bool> m_installed;
     QVariantList m_apps;
     bool m_appsRead = false;
     int m_revision = 0;

@@ -13,10 +13,18 @@
 // ThemeInstallPlan.cpp, DesktopEntries::lookup): nothing here is a path, and
 // nothing here is ever written back into a shared file.
 
+#include <QList>
 #include <QString>
 #include <QStringList>
 
 namespace galleond {
+
+// The ProductName and CompanyName of an executable's version resource. An empty one is not checked.
+struct WindowsVersionInfo
+{
+    QString productName;
+    QString companyName;
+};
 
 struct WellKnownApp
 {
@@ -30,12 +38,13 @@ struct WellKnownApp
     // Windows: the shortcut/App Paths target's own file name (what the
     // installer named it, not a user-visible label), matched case-insensitively.
     QStringList windowsExeNames;
-    // Optional PE version info (ProductName/CompanyName) the target should
-    // also carry when it has version info at all: a corroborating signal,
-    // immune to the user's language or a renamed shortcut, on top of the exe
-    // name. Left empty: the exe name match alone is accepted.
-    QString windowsProductName;
-    QString windowsCompanyName;
+    // Optional PE version info the target should also carry when it has version
+    // info at all: a corroborating signal, immune to the user's language or a
+    // renamed shortcut, on top of the exe name. One entry per version of the
+    // application that carries its own (Audacity 3 and 4 do not agree), and each is
+    // a pair that has to match as a whole. Left empty: the exe name match alone is
+    // accepted, which is all that many applications leave to go on (no version info).
+    QList<WindowsVersionInfo> windowsVersionInfos;
 };
 
 // The small built-in table of applications a theme may name portably.
@@ -48,6 +57,11 @@ public:
 
     // nullptr if `id` is not in the table (a syntactically valid id can still be unknown).
     [[nodiscard]] static const WellKnownApp *find(const QString &id);
+
+    // The application whose Linux desktop file IDs include `desktopId` ("ardour.desktop" is "ardour"), or nullptr. A theme
+    // exported on Linux before an application had a portable id carries the desktop file ID: on Windows it is read as the
+    // application it names, and found by the same signature as the portable id.
+    [[nodiscard]] static const WellKnownApp *findByLinuxDesktopId(const QString &desktopId);
 
     [[nodiscard]] static QStringList knownIds();
 

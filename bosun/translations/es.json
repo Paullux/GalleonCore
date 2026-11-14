@@ -675,5 +675,7 @@
   "Start galleond to switch the lighting on or off": "Inicia galleond para encender o apagar la iluminación",
   "Start galleond to change the lighting": "Inicia galleond para cambiar la iluminación",
   "The live lighting is not available on Windows yet": "La iluminación en vivo aún no está disponible en Windows",
-  "A colour has three values from 0 to 255": "Un color tiene tres valores de 0 a 255"
+  "A colour has three values from 0 to 255": "Un color tiene tres valores de 0 a 255",
+  "Key %1, %2, application not installed": "Tecla %1, %2, aplicación no instalada",
+  "This application is not installed on this computer: the key does nothing until you install it or choose another application above.": "Esta aplicación no está instalada en este equipo: la tecla no hace nada hasta que la instales o elijas otra aplicación arriba."
 }

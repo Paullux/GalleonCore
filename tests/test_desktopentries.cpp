@@ -91,6 +91,19 @@ private Q_SLOTS:
         QTest::newRow("only suffix") << ".desktop" << false; // no name before the suffix
         QTest::newRow("too long") << (QString(300, QLatin1Char('a')) + ".desktop") << false;
     }
+    void aPlainDesktopIdIsABareNameAndNothingElse()
+    {
+        // The shape a theme exported on Linux carries for an application with no portable id: Windows reads it, never resolves it.
+        QVERIFY(DesktopEntries::isPlainDesktopId(QStringLiteral("audacity.desktop")));
+        QVERIFY(DesktopEntries::isPlainDesktopId(QStringLiteral("org.kde.kdenlive.desktop")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral("/usr/share/applications/audacity.desktop")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral("sub/audacity.desktop")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral("a b.desktop")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral("audacity")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QStringLiteral(".desktop")));
+        QVERIFY(!DesktopEntries::isPlainDesktopId(QString(300, QLatin1Char('a')) + QStringLiteral(".desktop")));
+    }
+
     void referencesAreChecked()
     {
         QFETCH(const QString, reference);
@@ -127,6 +140,14 @@ private Q_SLOTS:
         QCOMPARE(app.id, QStringLiteral("com.discordapp.Discord.desktop"));
         QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("com.discordapp.Discord.desktop")), QStringLiteral("discord"));
         QVERIFY(DesktopEntries::wellKnownIdFor(QStringLiteral("tool.desktop")).isEmpty());
+        // Exporting: the Linux desktop file ID of each of the applications measured on Windows becomes its portable id.
+        QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("audacity.desktop")), QStringLiteral("audacity"));
+        QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("ardour.desktop")), QStringLiteral("ardour"));
+        QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("org.kde.kdenlive.desktop")), QStringLiteral("kdenlive"));
+        QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("lmms.desktop")), QStringLiteral("lmms"));
+        QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("mscore.desktop")), QStringLiteral("musescore"));
+        QCOMPARE(DesktopEntries::wellKnownIdFor(QStringLiteral("ar.com.tuxguitar.TuxGuitar.desktop")), QStringLiteral("tuxguitar"));
+        QVERIFY(DesktopEntries::wellKnownIdFor(QStringLiteral("org.openshot.OpenShot.desktop")).isEmpty()); // not measured on Windows: not portable yet
     }
 
     void theUsersFileHidesTheSystemOne()

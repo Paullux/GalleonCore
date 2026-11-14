@@ -21,19 +21,32 @@ bool retryUntilDone(int attempts, const std::function<bool()> &once, const std::
     return false;
 }
 
-bool writeFileAtomically(const QString &path, const QByteArray &bytes)
+bool writeFileAtomically(const QString &path, const QByteArray &bytes, std::optional<QFileDevice::Permissions> permissions, QString *error)
 {
-    if (!QDir().mkpath(QFileInfo(path).absolutePath()))
+    if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
+        if (error)
+            *error = QStringLiteral("the folder cannot be created");
         return false;
+    }
     // A QSaveFile cannot commit twice: a refused rename removes its temporary file, so every try writes the whole file again.
     return retryUntilDone(
         MaxAttempts,
         [&] {
             QSaveFile file(path);
-            if (!file.open(QIODevice::WriteOnly))
+            if (!file.open(QIODevice::WriteOnly)) {
+                if (error)
+                    *error = file.errorString();
                 return false;
+            }
             file.write(bytes);
-            return file.commit();
+            if (permissions)
+                file.setPermissions(*permissions);
+            if (!file.commit()) {
+                if (error)
+                    *error = file.errorString();
+                return false;
+            }
+            return true;
         },
         [](int) { QThread::msleep(RetryDelayMs); });
 }

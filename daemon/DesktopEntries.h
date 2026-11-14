@@ -50,6 +50,13 @@ public:
     // The names accepted in a pages file.
     [[nodiscard]] static bool isValidReference(const QString &desktop);
 
+    // A bare desktop file ID such as "audacity.desktop": the name of an application on Linux, and the one a theme exported
+    // there carries for an application that has no portable id. On Windows it names nothing that can be started: it is
+    // accepted when a theme or a pages file is read (so that one application of a shared theme without an equivalent here
+    // does not refuse the whole theme) and never resolved: lookup() finds nothing, launch() refuses it, and the key is
+    // kept, inert, as for an application that is not installed.
+    [[nodiscard]] static bool isPlainDesktopId(const QString &desktop);
+
     // The portable id (see WellKnownApps.h) this literal reference is one of
     // the known candidates of, or empty if it names none. Used only when
     // exporting a theme, so a shared file never carries a path and stays

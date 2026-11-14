@@ -5,6 +5,8 @@
 
 #include "PagesEditor.h"
 
+#include "AtomicFile.h"
+
 #include "DesktopEntries.h"
 #include "PagesConfig.h"
 #include "ThemeInstallPlan.h"
@@ -16,7 +18,6 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QSaveFile>
 
 #include <algorithm>
 
@@ -211,13 +212,11 @@ EditResult write(const QString &file, const QJsonObject &root, bool original)
         QFile::remove(backup);
         QFile::copy(file, backup); // one backup: the file as it was before this edit
     }
-    QSaveFile out(file);
-    if (!out.open(QIODevice::WriteOnly))
-        return failure(QCoreApplication::translate("PagesEditor", "cannot write %1: %2").arg(file, out.errorString()));
-    out.write(bytes);
-    out.setPermissions(permissions & ~QFile::WriteOther);
-    if (!out.commit())
-        return failure(QCoreApplication::translate("PagesEditor", "cannot write %1: %2").arg(file, out.errorString()));
+    // Replaced by a rename, tried again a few times: on Windows a program that has the file open for a moment (galleond
+    // reading it after the last edit) makes the rename fail now and then.
+    QString problem;
+    if (!writeFileAtomically(file, bytes, permissions & ~QFile::WriteOther, &problem))
+        return failure(QCoreApplication::translate("PagesEditor", "cannot write %1: %2").arg(file, problem));
     return {.ok=true, .errors={}};
 }
 

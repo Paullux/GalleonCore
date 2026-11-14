@@ -25,6 +25,7 @@
 #include <QScopedPointer>
 #include <QQuickItem>
 #include <QSignalSpy>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QTest>
 
@@ -117,6 +118,26 @@ public:
     QStringList wallpaperPaths;
     Q_INVOKABLE QStringList pictures() { return wallpaperPaths; }
 };
+
+// The items called `name` among the visual descendants of `item`: the items a Repeater makes are not QObject children of the
+// window, only visual ones.
+void collectNamed(QQuickItem *item, const QString &name, QList<QQuickItem *> &found)
+{
+    if (!item)
+        return;
+    if (item->objectName() == name)
+        found.append(item);
+    for (QQuickItem *child : item->childItems())
+        collectNamed(child, name, found);
+}
+
+QList<QQuickItem *> namedItems(QObject *root, const QString &name)
+{
+    QList<QQuickItem *> found;
+    if (auto *window = qobject_cast<QQuickWindow *>(root))
+        collectNamed(window->contentItem(), name, found);
+    return found;
+}
 
 class TestBosun : public QObject
 {
@@ -641,6 +662,29 @@ QtObject {
         QCOMPARE(themes.at(1).toMap().value("color").toString(), QStringLiteral("#e53935"));
     }
 
+    void anApplicationKeyIsMissingItsApplicationOnlyWhileTheApplicationIsNotInstalled()
+    {
+        const QTemporaryDir dir;
+        const QString data = dir.filePath("share");
+        QVERIFY(QDir().mkpath(data + "/applications"));
+        QVERIFY(writeFile(data + "/applications/present-tool.desktop",
+                          "[Desktop Entry]\nType=Application\nName=Present Tool\nExec=present-tool\n"));
+        qputenv("XDG_DATA_HOME", data.toUtf8());
+        qputenv("XDG_DATA_DIRS", data.toUtf8());
+        const auto restore = qScopeGuard([] {
+            qunsetenv("XDG_DATA_HOME");
+            qunsetenv("XDG_DATA_DIRS");
+        });
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, R"({"version": 1, "home": "main", "pages": {"main": {"keys": [
+            {"key": 0, "action": {"type": "app", "desktop": "present-tool.desktop"}},
+            {"key": 1, "action": {"type": "app", "desktop": "absent-tool.desktop"}}]}}})"));
+        const bosun::BosunBackend backend(file);
+        const QVariantList keys = backend.keys("main");
+        QVERIFY(!keys.at(0).toMap().value("appMissing").toBool());
+        QVERIFY(keys.at(1).toMap().value("appMissing").toBool());
+    }
+
     void aPageHasTwelveKeysAndSaysWhatTheyDo()
     {
         const QTemporaryDir dir;
@@ -658,6 +702,8 @@ QtObject {
         const QVariantMap app = keys.at(1).toMap();
         QCOMPARE(app.value("kind").toString(), QStringLiteral("app"));
         QCOMPARE(app.value("label").toString(), QStringLiteral("nothing-like-this.desktop"));
+        QVERIFY(app.value("appMissing").toBool()); // and the window says it is not installed
+        QVERIFY(!play.value("appMissing").toBool()); // only an application key can miss its application
         QCOMPARE(keys.at(2).toMap().value("detail").toString(), QStringLiteral("music"));
         QVERIFY(keys.at(3).toMap().value("empty").toBool());
         QCOMPARE(keys.at(3).toMap().value("kind").toString(), QStringLiteral("empty"));
@@ -1505,6 +1551,43 @@ QtObject {
         // A window tall enough for everything needs no bar.
         QVERIFY(root->setProperty("height", 2600));
         QTRY_VERIFY(!rail->property("needed").toBool());
+    }
+
+    void aKeyWhoseApplicationIsNotInstalledShowsASymbolAndTheEditorSaysSo()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes())); // the key 1 of the first theme names an application that does not exist
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QVERIFY(root->setProperty("currentTab", 0));
+        // Exactly one key of this theme names an application, and it is missing: one symbol, on a visible key.
+        QTRY_VERIFY_WITH_TIMEOUT(!namedItems(root, "missingApp").isEmpty(), 3000); // one per key, shown for the one that needs it
+        QCOMPARE(namedItems(root, "missingApp").size(), 12);
+        int shown = 0;
+        for (const auto *badge : namedItems(root, "missingApp")) {
+            if (badge->isVisible())
+                ++shown;
+        }
+        QCOMPARE(shown, 1);
+        // Selecting it: the editor of the key says that the application is missing.
+        QVERIFY(root->setProperty("selectedKey", 1));
+        auto *note = root->findChild<QQuickItem *>("missingAppNote");
+        QVERIFY(note);
+        QTRY_VERIFY_WITH_TIMEOUT(note->isVisible(), 3000);
+        QVERIFY(root->setProperty("selectedKey", 0)); // a media key: no note
+        QTRY_VERIFY_WITH_TIMEOUT(!note->isVisible(), 3000);
     }
 
     void everyTabHasItsScrollBarAndOnlyTheShownTabShowsOne()

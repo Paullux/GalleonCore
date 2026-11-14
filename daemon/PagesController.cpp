@@ -829,9 +829,9 @@ void PagesController::setWallpaperMode(int dial)
 DesktopApp PagesController::appFor(const QString &desktop)
 {
 #ifdef Q_OS_WIN
+    if (!DesktopEntries::isValidReference(desktop) || DesktopEntries::isPlainDesktopId(desktop))
+        return {}; // a Linux desktop file ID of a shared theme: kept in the page, inert here, nothing asked of the launcher
     const auto data = m_launcherCache->lookup(desktop);
-    if (!DesktopEntries::isValidReference(desktop))
-        return {};
     DesktopApp app;
     app.file = desktop; // Launch validates the local file; it never needs a Shell icon lookup.
     app.id = desktop;

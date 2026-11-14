@@ -259,11 +259,18 @@ QStringList wellKnownCandidates()
 }
 }
 
+bool DesktopEntries::isPlainDesktopId(const QString &desktop)
+{
+    // The same shape as on Linux: letters, digits, dot, underscore, hyphen, then ".desktop"; never a path or a space.
+    static const QRegularExpression pattern(QStringLiteral("^[A-Za-z0-9._-]{1,150}\\.desktop$"));
+    return desktop.size() <= 200 && pattern.match(desktop).hasMatch();
+}
+
 bool DesktopEntries::isValidReference(const QString &desktop)
 {
     if (desktop.isEmpty() || desktop.size() > 4096 || desktop.contains(QChar::Null))
         return false;
-    if (WellKnownApps::find(desktop))
+    if (WellKnownApps::find(desktop) || isPlainDesktopId(desktop))
         return true;
     const QFileInfo info(desktop);
     const QString suffix = info.suffix().toLower();
@@ -332,8 +339,8 @@ DesktopApp DesktopEntries::read(const QString &file, const QString &id, bool inc
 
 DesktopApp DesktopEntries::lookup(const QString &desktop)
 {
-    if (!isValidReference(desktop))
-        return {};
+    if (!isValidReference(desktop) || isPlainDesktopId(desktop))
+        return {}; // a Linux desktop file ID names nothing here: never read as a file relative to the current folder
     if (const WellKnownApp *known = WellKnownApps::find(desktop)) {
         // A theme names an application portably: there is no ID to look up
         // directly, so every candidate list() would scan is tried in turn.
@@ -417,7 +424,7 @@ QList<DesktopApp> DesktopEntries::listCategory(const QString &category)
 
 bool DesktopEntries::launch(const DesktopApp &app)
 {
-    if (!isValidReference(app.file) || !allowedFile(QFileInfo(app.file)))
+    if (isPlainDesktopId(app.file) || !isValidReference(app.file) || !allowedFile(QFileInfo(app.file)))
         return false;
     if (QFileInfo(app.file).suffix().compare(QStringLiteral("url"), Qt::CaseInsensitive) == 0) {
         QFile shortcut(app.file);

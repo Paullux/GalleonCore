@@ -572,6 +572,9 @@ private Q_SLOTS:
         for (int round = 0; round < 3; ++round) {
             f.controller->setIdleTimeoutMs(100);
             QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+            // The decoder is a script that logs what it was given, and waking stops it: wake only once it has written its
+            // line, or on a slow machine it is stopped before and a clip is missing from the log.
+            QTRY_VERIFY_WITH_TIMEOUT(played().count(QStringLiteral(".mp4")) > round, 3000);
             f.controller->notifyActivity(); // wake
             QTRY_VERIFY_WITH_TIMEOUT(!f.controller->isActive(), 3000);
         }
