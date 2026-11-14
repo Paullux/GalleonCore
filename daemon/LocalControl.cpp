@@ -63,6 +63,34 @@ std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
     // Asks galleond to read the keyboard's brightness and publish it (keyboard-state.json): there is no reply here.
     if (object.size() == 1 && action == QStringLiteral("keyboard-brightness-read"))
         return LocalCommand{LocalAction::KeyboardBrightnessRead, {}, {}};
+    // The live lighting (experimental, off until asked): there is no reply here, galleond publishes its state in
+    // lighting-state.json. `on` must be a JSON true or false, and a colour three whole numbers from 0 to 255.
+    if (object.size() == 2 && action == QStringLiteral("lighting-enable")) {
+        const QJsonValue on = object.value(QStringLiteral("on"));
+        if (!on.isBool())
+            return std::nullopt;
+        LocalCommand command{LocalAction::LightingEnable, {}, {}};
+        command.on = on.toBool();
+        return command;
+    }
+    if (object.size() == 4 && action == QStringLiteral("lighting-color")) {
+        int channels[3] = {0, 0, 0};
+        const QString names[3] = {QStringLiteral("red"), QStringLiteral("green"), QStringLiteral("blue")};
+        for (int i = 0; i < 3; ++i) {
+            const QJsonValue value = object.value(names[i]);
+            if (!value.isDouble())
+                return std::nullopt;
+            const double number = value.toDouble();
+            if (number < 0.0 || number > 255.0 || number != static_cast<int>(number))
+                return std::nullopt;
+            channels[i] = static_cast<int>(number);
+        }
+        LocalCommand command{LocalAction::LightingColor, {}, {}};
+        command.red = channels[0];
+        command.green = channels[1];
+        command.blue = channels[2];
+        return command;
+    }
     if (object.size() == 1 && action == QStringLiteral("stop"))
         return LocalCommand{LocalAction::Stop, {}, {}};
     if (object.size() != 2 || action != QStringLiteral("wallpaper"))
@@ -92,6 +120,16 @@ QByteArray encodeLocalCommand(const LocalCommand &command)
         object.insert(QStringLiteral("value"), command.brightness);
         break;
     case LocalAction::KeyboardBrightnessRead: object.insert(QStringLiteral("action"), QStringLiteral("keyboard-brightness-read")); break;
+    case LocalAction::LightingEnable:
+        object.insert(QStringLiteral("action"), QStringLiteral("lighting-enable"));
+        object.insert(QStringLiteral("on"), command.on);
+        break;
+    case LocalAction::LightingColor:
+        object.insert(QStringLiteral("action"), QStringLiteral("lighting-color"));
+        object.insert(QStringLiteral("red"), command.red);
+        object.insert(QStringLiteral("green"), command.green);
+        object.insert(QStringLiteral("blue"), command.blue);
+        break;
     case LocalAction::Stop: object.insert(QStringLiteral("action"), QStringLiteral("stop")); break;
     case LocalAction::Wallpaper:
         object.insert(QStringLiteral("action"), QStringLiteral("wallpaper"));
@@ -214,6 +252,8 @@ void LocalControl::acceptConnections()
             case LocalAction::Theme: Q_EMIT themeRequested(command->page); break;
             case LocalAction::KeyboardBrightness: Q_EMIT keyboardBrightnessRequested(command->brightness); break;
             case LocalAction::KeyboardBrightnessRead: Q_EMIT keyboardBrightnessReadRequested(); break;
+            case LocalAction::LightingEnable: Q_EMIT lightingEnableRequested(command->on); break;
+            case LocalAction::LightingColor: Q_EMIT lightingColorRequested(command->red, command->green, command->blue); break;
             case LocalAction::Stop: Q_EMIT stopRequested(); break;
             }
         };

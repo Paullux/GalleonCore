@@ -64,6 +64,34 @@ private slots:
         QTRY_COMPARE(requested.size(), 1);
         QCOMPARE(requested.constFirst().constFirst().toInt(), 300);
     }
+    void theLightingCommandsRoundTripThroughTheirEncoding()
+    {
+        LocalCommand enable{LocalAction::LightingEnable, {}, {}};
+        enable.on = true;
+        const auto parsed = parseLocalCommand(encodeLocalCommand(enable));
+        QVERIFY(parsed);
+        QCOMPARE(parsed->action, LocalAction::LightingEnable);
+        QVERIFY(parsed->on);
+        LocalCommand colour{LocalAction::LightingColor, {}, {}};
+        colour.red = 10;
+        colour.green = 20;
+        colour.blue = 255;
+        const auto parsedColour = parseLocalCommand(encodeLocalCommand(colour));
+        QVERIFY(parsedColour);
+        QCOMPARE(std::tuple(parsedColour->red, parsedColour->green, parsedColour->blue), std::tuple(10, 20, 255));
+    }
+
+    void aLightingCommandWithAnythingOutOfShapeIsRefused()
+    {
+        for (const char *frame : {R"({"action":"lighting-enable"})", R"({"action":"lighting-enable","on":1})", R"({"action":"lighting-enable","on":"true"})",
+                                  R"({"action":"lighting-enable","on":true,"x":1})",
+                                  R"({"action":"lighting-color","red":1,"green":2})", R"({"action":"lighting-color","red":256,"green":0,"blue":0})",
+                                  R"({"action":"lighting-color","red":-1,"green":0,"blue":0})", R"({"action":"lighting-color","red":1.5,"green":0,"blue":0})",
+                                  R"({"action":"lighting-color","red":"1","green":0,"blue":0})",
+                                  R"({"action":"lighting-color","red":1,"green":2,"blue":3,"extra":4})"})
+            QVERIFY2(!parseLocalCommand(frame), frame);
+    }
+
     void aKeyboardBrightnessReadCarriesNothingElse()
     {
         const auto command = parseLocalCommand(encodeLocalCommand({LocalAction::KeyboardBrightnessRead, {}, {}}));
