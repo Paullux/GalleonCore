@@ -15,7 +15,7 @@ import "KeyboardMapData.js" as MapData
 Item {
     id: board
 
-    // lamp id -> "#rrggbb" for the lamps that have a colour; the others are drawn white, as a keyboard lit white.
+    // lamp id -> "#rrggbb" for the lamps that have a colour; the others are drawn dark grey, as a key that is out.
     property var colors: ({})
     // The index of the cap that was chosen, or -1.
     property int selected: -1
@@ -35,7 +35,8 @@ Item {
     // The thickness of the see-through outline of a cap, in millimetres.
     readonly property real rim: 0.55
     readonly property var allLamps: map.cells.map(cell => cell.id)
-    readonly property color unlit: "#e8eaed"
+    // A key with no colour is out, as on the keyboard when the live lighting starts: dark grey, not white.
+    readonly property color unlit: "#3b4048"
 
     implicitHeight: (map.body.h + 2 * margin) * scale
     height: implicitHeight
@@ -112,7 +113,7 @@ Item {
             id: cap
             required property var modelData
             required property int index
-            // The light of a cap is the colour of its first lamp; a cap with no colour is lit white.
+            // The light of a cap is the colour of its first lamp; a cap with no colour is out (dark grey).
             readonly property color light: modelData.lamps.length > 0 && board.colors[modelData.lamps[0]] !== undefined
                                            ? board.colors[modelData.lamps[0]] : board.unlit
             objectName: "cap" + index

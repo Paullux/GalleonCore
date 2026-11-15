@@ -296,6 +296,16 @@ private Q_SLOTS:
         QCOMPARE(rig.mode(), 2);
     }
 
+    void everyKeyIsDarkUntilAColourIsAskedFor()
+    {
+        Rig rig;
+        rig.hold();
+        QCOMPARE(rig.controller->state(), QStringLiteral("holding"));
+        QTRY_VERIFY_WITH_TIMEOUT(rig.frames() >= 1, 3000);
+        for (const int led : {0, 0x3a, 100, 145})
+            QCOMPARE(ledColour(rig.frame(), led), (std::vector<std::uint8_t>{0, 0, 0}));
+    }
+
     void aColourIsShownOnEveryKey()
     {
         Rig rig;

@@ -19,9 +19,9 @@ using galleon::keyboard::AnswerOutcome;
 constexpr int LitRed = 255; // the LED being asked about: plain white, the easiest to see
 constexpr int LitGreen = 255;
 constexpr int LitBlue = 255;
-constexpr int RestRed = 90; // the colour the lighting starts with when calibrating is over
-constexpr int RestGreen = 90;
-constexpr int RestBlue = 90;
+constexpr int RestRed = 0; // when calibrating is over every key is dark again, as when the live lighting is switched on
+constexpr int RestGreen = 0;
+constexpr int RestBlue = 0;
 
 constexpr galleon::keyboard::QtScanCodeSystem nativeSystem()
 {

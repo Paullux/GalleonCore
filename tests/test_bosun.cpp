@@ -2189,6 +2189,10 @@ QtObject {
         QObject *root = engine.rootObjects().constFirst();
         auto *board = root->findChild<QQuickItem *>("keyboardMap");
         QVERIFY(board);
+        // A key with no colour is out: dark grey, not white (as on the keyboard when the live lighting is switched on).
+        const auto noColour = namedItems(root, "cap0");
+        QCOMPARE(noColour.size(), 1);
+        QVERIFY(noColour.constFirst()->property("light").value<QColor>().lightnessF() < 0.35);
 
         // The drawing knows the 94 key lamps, and the caps that carry them.
         QCOMPARE(board->property("allLamps").toList().size(), 94);

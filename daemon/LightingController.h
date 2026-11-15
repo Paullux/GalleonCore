@@ -108,7 +108,7 @@ private:
     int m_resumeTriesLeft = 0;
     int m_resumeRetryMs = ResumeRetryMs;
     int m_resumeAttempts = ResumeAttempts;
-    galleon::keyboard::LiveScene m_scene = galleon::keyboard::uniformScene(90, 90, 90).value_or(galleon::keyboard::LiveScene{});
+    galleon::keyboard::LiveScene m_scene = galleon::keyboard::uniformScene(0, 0, 0).value_or(galleon::keyboard::LiveScene{}); // dark until a colour is asked for
 };
 
 } // namespace galleond
