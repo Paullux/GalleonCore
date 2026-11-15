@@ -12,7 +12,7 @@
 
 namespace galleond {
 
-enum class LocalAction : unsigned char { Ping, Wallpaper, Stop, Gaming, Theme, KeyboardBrightness, KeyboardBrightnessRead, LightingEnable, LightingColor };
+enum class LocalAction : unsigned char { Ping, Wallpaper, Stop, Gaming, Theme, KeyboardBrightness, KeyboardBrightnessRead, LightingEnable, LightingColor, LightingLed };
 struct LocalCommand
 {
     LocalAction action = LocalAction::Ping;
@@ -23,6 +23,7 @@ struct LocalCommand
     int red = 0;        // LightingColor: one colour for every key, 0 to 255 each
     int green = 0;
     int blue = 0;
+    int led = 0;        // LightingLed: ONE lit LED, 0 to 145 (the live frame), with red/green/blue; every other LED is black
 };
 
 // One bounded JSON object per connection; the server accepts only this user.
@@ -46,6 +47,7 @@ Q_SIGNALS:
     void keyboardBrightnessReadRequested();
     void lightingEnableRequested(bool on);
     void lightingColorRequested(int red, int green, int blue);
+    void lightingLedRequested(int led, int red, int green, int blue);
 private:
     void acceptConnections();
     std::unique_ptr<QLockFile> m_lock;

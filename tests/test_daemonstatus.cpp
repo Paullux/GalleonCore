@@ -58,6 +58,7 @@ public:
     QString state = QStringLiteral("off");
     QList<bool> enabled;
     QList<QList<int>> colours;
+    QList<QList<int>> leds;
 public Q_SLOTS:
     QString Enable(bool on)
     {
@@ -68,6 +69,7 @@ public Q_SLOTS:
         return {};
     }
     bool SetColor(int red, int green, int blue) { colours.append({red, green, blue}); return true; }
+    bool SetLed(int led, int red, int green, int blue) { leds.append({led, red, green, blue}); return true; }
     [[nodiscard]] QString State() const { return state; }
 Q_SIGNALS:
     void stateChanged(const QString &_t1, const QString &_t2); // NOLINT(readability-inconsistent-declaration-parameter-name): moc names them
@@ -142,6 +144,7 @@ private Q_SLOTS:
         QVERIFY(status.lightingSupported());
         QVERIFY(!status.enableLighting(true).isEmpty()); // no daemon: it says why, and sends nothing
         QVERIFY(!status.setLightingColor(1, 2, 3).isEmpty());
+        QVERIFY(!status.setLightingLed(1, 1, 2, 3).isEmpty());
     }
 
     void switchingTheLightingOnAsksTheDaemonAndFollowsItsState()
@@ -171,6 +174,15 @@ private Q_SLOTS:
         QVERIFY(!status.setLightingColor(0, -1, 0).isEmpty());
         QTest::qWait(100);
         QCOMPARE(daemon.endpoint.colours.size(), 1);
+
+        QVERIFY(status.setLightingLed(58, 1, 2, 3).isEmpty());
+        QTRY_COMPARE(daemon.endpoint.leds.size(), 1);
+        QCOMPARE(daemon.endpoint.leds.constFirst(), (QList<int>{58, 1, 2, 3}));
+        QVERIFY(!status.setLightingLed(146, 1, 2, 3).isEmpty()); // refused here, never sent
+        QVERIFY(!status.setLightingLed(-1, 1, 2, 3).isEmpty());
+        QVERIFY(!status.setLightingLed(5, 256, 0, 0).isEmpty());
+        QTest::qWait(100);
+        QCOMPARE(daemon.endpoint.leds.size(), 1);
 
         QVERIFY(status.enableLighting(false).isEmpty());
         QTRY_COMPARE(daemon.endpoint.enabled, (QList<bool>{true, false}));

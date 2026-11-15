@@ -83,6 +83,31 @@ private slots:
         QCOMPARE(std::tuple(parsedColour->red, parsedColour->green, parsedColour->blue), std::tuple(10, 20, 255));
     }
 
+    void aSingleLedCommandRoundTripsThroughItsEncoding()
+    {
+        LocalCommand led{LocalAction::LightingLed, {}, {}};
+        led.led = 58;
+        led.red = 255;
+        led.green = 0;
+        led.blue = 7;
+        const auto parsed = parseLocalCommand(encodeLocalCommand(led));
+        if (!parsed)
+            QFAIL("the single LED command was not parsed");
+        QCOMPARE(parsed->action, LocalAction::LightingLed);
+        QCOMPARE(std::tuple(parsed->led, parsed->red, parsed->green, parsed->blue), std::tuple(58, 255, 0, 7));
+    }
+
+    void aSingleLedCommandWithAnythingOutOfShapeIsRefused()
+    {
+        for (const char *frame : {R"({"action":"lighting-led","led":1,"red":1,"green":2})", R"({"action":"lighting-led","red":1,"green":2,"blue":3})",
+                                  R"({"action":"lighting-led","led":146,"red":0,"green":0,"blue":0})", R"({"action":"lighting-led","led":-1,"red":0,"green":0,"blue":0})",
+                                  R"({"action":"lighting-led","led":1.5,"red":0,"green":0,"blue":0})", R"({"action":"lighting-led","led":"1","red":0,"green":0,"blue":0})",
+                                  R"({"action":"lighting-led","led":1,"red":256,"green":0,"blue":0})",
+                                  R"({"action":"lighting-led","led":1,"red":1,"green":2,"blue":3,"extra":4})"})
+            QVERIFY2(!parseLocalCommand(frame), frame);
+        QVERIFY(parseLocalCommand(R"({"action":"lighting-led","led":145,"red":0,"green":0,"blue":0})").has_value()); // the last LED of the frame
+    }
+
     void aLightingCommandWithAnythingOutOfShapeIsRefused()
     {
         for (const char *frame : {R"({"action":"lighting-enable"})", R"({"action":"lighting-enable","on":1})", R"({"action":"lighting-enable","on":"true"})",

@@ -7,6 +7,7 @@
 
 #include <galleon/Transport.h>
 #include <galleon/keyboard/LivePolicy.h>
+#include <galleon/keyboard/LiveScene.h>
 
 #include <QObject>
 #include <QString>
@@ -70,6 +71,10 @@ public Q_SLOTS:
     QString Enable(bool on);
     // One colour for every key, 0 to 255 each; false when the lighting is off or a value is out of range.
     bool SetColor(int red, int green, int blue);
+    // ONE lit LED (0 to 145, as in the live frame) with every other LED black, for the calibration of the key map: it shows
+    // which key a LED belongs to. False when the lighting is off or a value is out of range. SetColor goes back to one colour
+    // for every key. Output only: nothing here reads a key.
+    bool SetLed(int led, int red, int green, int blue);
     [[nodiscard]] QString State() const { return m_state; }
 
 Q_SIGNALS:
@@ -77,6 +82,7 @@ Q_SIGNALS:
     void activeChanged(bool active);
 
 private:
+    bool showScene(const galleon::keyboard::LiveScene &scene);
     void startWorker();
     bool stopWorker();
     void finish(const QString &detail);
@@ -96,9 +102,7 @@ private:
     int m_resumeTriesLeft = 0;
     int m_resumeRetryMs = ResumeRetryMs;
     int m_resumeAttempts = ResumeAttempts;
-    int m_red = 90;
-    int m_green = 90;
-    int m_blue = 90;
+    galleon::keyboard::LiveScene m_scene = galleon::keyboard::uniformScene(90, 90, 90).value_or(galleon::keyboard::LiveScene{});
 };
 
 } // namespace galleond

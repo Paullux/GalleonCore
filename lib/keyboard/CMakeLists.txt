@@ -19,6 +19,7 @@ add_library(galleon_keyboard STATIC
     include/galleon/keyboard/LivePolicy.h
     include/galleon/keyboard/LiveRelease.h
     include/galleon/keyboard/LiveRequests.h
+    include/galleon/keyboard/LiveScene.h
     include/galleon/keyboard/LiveYield.h
     include/galleon/keyboard/VendorInterface.h
     src/BragiFrame.cpp
@@ -33,6 +34,7 @@ add_library(galleon_keyboard STATIC
     src/LivePolicy.cpp
     src/LiveRelease.cpp
     src/LiveRequests.cpp
+    src/LiveScene.cpp
     src/Exchange.h
     src/Exchange.cpp
     src/CheckedLink.h

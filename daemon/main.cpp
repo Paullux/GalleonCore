@@ -963,6 +963,7 @@ int main(int argc, char *argv[])
     // lighting-state.json, which the settings window watches).
     QObject::connect(&localControl, &galleond::LocalControl::lightingEnableRequested, &lighting, [&lighting](bool on) { static_cast<void>(lighting.Enable(on)); });
     QObject::connect(&localControl, &galleond::LocalControl::lightingColorRequested, &lighting, [&lighting](int red, int green, int blue) { static_cast<void>(lighting.SetColor(red, green, blue)); });
+    QObject::connect(&localControl, &galleond::LocalControl::lightingLedRequested, &lighting, [&lighting](int led, int red, int green, int blue) { static_cast<void>(lighting.SetLed(led, red, green, blue)); });
     QObject::connect(&localControl, &galleond::LocalControl::gamingRequested, &controller, [&controller] { controller.ShowGaming(); });
     QObject::connect(&localControl, &galleond::LocalControl::themeRequested, &controller, [&controller](const QString &page) { controller.ShowTheme(page); });
     QObject::connect(&localControl, &galleond::LocalControl::wallpaperRequested,
