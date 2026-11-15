@@ -76,6 +76,10 @@ public:
     bool setAppearance(const galleon::keyboard::Appearance &appearance);
     void setPositions(std::vector<galleon::keyboard::LedPosition> positions) { m_positions = std::move(positions); }
     [[nodiscard]] const galleon::keyboard::Appearance &appearance() const { return m_appearance; }
+    // A level that takes the place of the appearance's own (the curve of the day, LightingLevelScheduler), or none to go back to it. Kept while the
+    // lighting is off and over later appearances; the rainbow does not restart. False, and nothing changed, for a level outside 0 to 1000.
+    bool setLevelOverride(std::optional<int> level);
+    [[nodiscard]] int effectiveLevel() const { return m_levelOverride.value_or(m_appearance.level); }
 
 public Q_SLOTS:
     // "" when accepted, else why not. Enable(false) gives the keys back (and waits for it) and is always accepted.
@@ -100,6 +104,7 @@ Q_SIGNALS:
 private:
     bool showScene(const galleon::keyboard::LiveScene &scene);
     void startWorker();
+    [[nodiscard]] galleon::keyboard::Appearance shownAppearance() const; // the appearance with the level in force
     bool stopWorker();
     void finish(const QString &detail);
     void setState(const QString &state, const QString &detail);
@@ -119,6 +124,7 @@ private:
     int m_resumeRetryMs = ResumeRetryMs;
     int m_resumeAttempts = ResumeAttempts;
     galleon::keyboard::Appearance m_appearance; // dark until something is asked for
+    std::optional<int> m_levelOverride;
     std::optional<galleon::keyboard::LiveScene> m_tool; // what a tool shows over it, if one does
     std::vector<galleon::keyboard::LedPosition> m_positions;
 };

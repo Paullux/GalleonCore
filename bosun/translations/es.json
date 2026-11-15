@@ -740,5 +740,11 @@
   "Level of the colours": "Nivel de los colores",
   "The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.": "El dibujo está en gris: el teclado no lo muestra ahora mismo (véase el estado de la iluminación en directo arriba). Lo que elija aquí se guarda y se mostrará en cuanto pueda.",
   "The drawing stays in black and grey while the live lighting is off: switch it on to see and choose the colours of the keys. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "El dibujo se queda en blanco y negro mientras la iluminación en directo está apagada: enciéndala para ver y elegir los colores de las teclas. Las teclas son una disposición francesa estándar dibujada para orientarse; las lámparas de debajo están en las posiciones que indica el teclado.",
-  "Corsair keyboard · lighting and keys · manufacturer's solution": "Teclado Corsair · iluminación y teclas · solución del fabricante"
+  "Corsair keyboard · lighting and keys · manufacturer's solution": "Teclado Corsair · iluminación y teclas · solución del fabricante",
+  "The slider above sets the level of the colours.": "El control deslizante de arriba fija el nivel de los colores.",
+  "The curve sets the level of the colours.": "La curva fija el nivel de los colores.",
+  "In curve mode galleond shows the colours at the level of the point nearest to the time of day, instead of the slider above. It only dims the colours: nothing is written to the memory of the keyboard. This curve is separate from the one of the keyboard brightness.": "En modo curva, galleond muestra los colores con el nivel del punto más cercano a la hora, en lugar del control de arriba. Solo atenúa los colores: no se escribe nada en la memoria del teclado. Esta curva es independiente de la del brillo del teclado.",
+  "Level of the colours through the day": "Nivel de los colores a lo largo del día",
+  "Level at %1 h": "Nivel a las %1 h",
+  "Level at %1 h: %2 %": "Nivel a las %1 h: %2 %"
 }

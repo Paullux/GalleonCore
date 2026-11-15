@@ -16,6 +16,9 @@ Item {
     // The BrightnessCurveModel: hours (24 values, 0 to 1000), smoothWith(), snap(), pointForTime().
     required property var curveModel
     property bool enabledLook: true
+    // What the screen reader says: the whole curve and one of its points (the same editor is used for the level of the colours).
+    property string curveName: qsTr("Keyboard brightness through the day")
+    property string pointName: qsTr("Brightness at %1 h")
     // The hour being dragged or moved by the keys, and the value it would take (-1: nothing).
     property int previewHour: -1
     property int previewValue: -1
@@ -32,7 +35,7 @@ Item {
 
     implicitHeight: 250
     Accessible.role: Accessible.Grouping
-    Accessible.name: qsTr("Keyboard brightness through the day")
+    Accessible.name: editor.curveName
 
     function xFor(hour) { return plotLeft + hour / 24 * plotWidth }
     function yFor(value) { return plotTop + plotHeight * (1 - value / 1000) }
@@ -143,7 +146,7 @@ Item {
             height: 26
             activeFocusOnTab: editor.enabledLook && index === 0 // Tab enters the points once; the arrows move among them
             Accessible.role: Accessible.Slider
-            Accessible.name: qsTr("Brightness at %1 h").arg(index)
+            Accessible.name: editor.pointName.arg(index)
             Accessible.description: qsTr("%1 %").arg(value / 10)
             onActiveFocusChanged: if (activeFocus) editor.choose(index, value)
 

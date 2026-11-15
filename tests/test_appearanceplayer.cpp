@@ -41,6 +41,28 @@ class AppearancePlayerTest : public QObject
     Q_OBJECT
 
 private slots:
+    void changingOnlyTheLevelKeepsTheRainbowWhereItWas()
+    {
+        // A level that changes every hour must not send the moving rainbow back to the start of its turn.
+        Appearance moving = rainbow(500);
+        AppearancePlayer player = ready(moving, 0.0);
+        QVERIFY(player.setLevel(500));
+        moving.level = 500;
+        const auto scene = player.sceneAt(0.7);
+        QVERIFY(scene.has_value());
+        QCOMPARE(scene, renderAppearance(moving, fivePositions(), 0.7)); // the colours of 0.7 s into the turn, at half level
+    }
+
+    void aLevelOutOfRangeOrWithoutAppearanceIsRefused()
+    {
+        AppearancePlayer none;
+        none.setPositions(fivePositions());
+        QVERIFY(!none.setLevel(500));
+        AppearancePlayer player = ready(rainbow(0));
+        QVERIFY(!player.setLevel(-1));
+        QVERIFY(!player.setLevel(1001));
+    }
+
     void aStillAppearanceGivesOneSceneAndThenNothing()
     {
         Appearance still;

@@ -786,6 +786,37 @@ Window {
                     }
                     onCommitted: level => win.saved(win.appearance.setLevel(level))
                 }
+                Row {
+                    spacing: 28
+                    RadioOption {
+                        objectName: "levelModeSlider"
+                        text: qsTr("Manual slider")
+                        checked: win.backend.levelCurve.mode === "slider"
+                        onChosen: win.answered(win.backend.levelCurve.setMode("slider"), qsTr("The slider above sets the level of the colours."))
+                    }
+                    RadioOption {
+                        objectName: "levelModeCurve"
+                        text: qsTr("Curve over 24 hours")
+                        checked: win.backend.levelCurve.mode === "curve"
+                        onChosen: win.answered(win.backend.levelCurve.setMode("curve"), qsTr("The curve sets the level of the colours."))
+                    }
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: qsTr("In curve mode galleond shows the colours at the level of the point nearest to the time of day, instead of the slider above. It only dims the colours: nothing is written to the memory of the keyboard. This curve is separate from the one of the keyboard brightness.")
+                }
+                BrightnessCurveEditor {
+                    objectName: "levelCurveEditor"
+                    width: Math.min(parent.width, 720)
+                    curveModel: win.backend.levelCurve
+                    curveName: qsTr("Level of the colours through the day")
+                    pointName: qsTr("Level at %1 h")
+                    onCommitted: (hour, value) => win.answered(win.backend.levelCurve.setHour(hour, value),
+                                                               qsTr("Level at %1 h: %2 %").arg(hour).arg(value / 10))
+                }
                 Text {
                     width: parent.width
                     wrapMode: Text.Wrap

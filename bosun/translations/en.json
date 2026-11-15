@@ -740,5 +740,11 @@
   "Level of the colours": "Level of the colours",
   "The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.": "The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.",
   "The drawing stays in black and grey while the live lighting is off: switch it on to see and choose the colours of the keys. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "The drawing stays in black and grey while the live lighting is off: switch it on to see and choose the colours of the keys. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.",
-  "Corsair keyboard · lighting and keys · manufacturer's solution": "Corsair keyboard · lighting and keys · manufacturer's solution"
+  "Corsair keyboard · lighting and keys · manufacturer's solution": "Corsair keyboard · lighting and keys · manufacturer's solution",
+  "The slider above sets the level of the colours.": "The slider above sets the level of the colours.",
+  "The curve sets the level of the colours.": "The curve sets the level of the colours.",
+  "In curve mode galleond shows the colours at the level of the point nearest to the time of day, instead of the slider above. It only dims the colours: nothing is written to the memory of the keyboard. This curve is separate from the one of the keyboard brightness.": "In curve mode galleond shows the colours at the level of the point nearest to the time of day, instead of the slider above. It only dims the colours: nothing is written to the memory of the keyboard. This curve is separate from the one of the keyboard brightness.",
+  "Level of the colours through the day": "Level of the colours through the day",
+  "Level at %1 h": "Level at %1 h",
+  "Level at %1 h: %2 %": "Level at %1 h: %2 %"
 }

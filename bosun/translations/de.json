@@ -740,5 +740,11 @@
   "Level of the colours": "Stärke der Farben",
   "The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.": "Die Zeichnung ist ausgegraut: Die Tastatur zeigt sie gerade nicht (siehe den Zustand der Live-Beleuchtung oben). Was Sie hier wählen, wird gemerkt und gezeigt, sobald es möglich ist.",
   "The drawing stays in black and grey while the live lighting is off: switch it on to see and choose the colours of the keys. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Die Zeichnung bleibt schwarz-grau, solange die Live-Beleuchtung aus ist: Schalten Sie sie ein, um die Farben der Tasten zu sehen und zu wählen. Die Tastenkappen sind ein zur Orientierung gezeichnetes Standard-Französisch-Layout; die Lampen darunter liegen an den Positionen, die die Tastatur meldet.",
-  "Corsair keyboard · lighting and keys · manufacturer's solution": "Corsair-Tastatur · Beleuchtung und Tasten · Lösung des Herstellers"
+  "Corsair keyboard · lighting and keys · manufacturer's solution": "Corsair-Tastatur · Beleuchtung und Tasten · Lösung des Herstellers",
+  "The slider above sets the level of the colours.": "Der Regler oben bestimmt die Stärke der Farben.",
+  "The curve sets the level of the colours.": "Die Kurve bestimmt die Stärke der Farben.",
+  "In curve mode galleond shows the colours at the level of the point nearest to the time of day, instead of the slider above. It only dims the colours: nothing is written to the memory of the keyboard. This curve is separate from the one of the keyboard brightness.": "Im Kurvenmodus zeigt galleond die Farben mit der Stärke des Punkts, der der Uhrzeit am nächsten liegt, statt mit dem Regler oben. Das dämpft nur die Farben: Nichts wird in den Speicher der Tastatur geschrieben. Diese Kurve ist getrennt von der der Tastaturhelligkeit.",
+  "Level of the colours through the day": "Stärke der Farben im Tagesverlauf",
+  "Level at %1 h": "Stärke um %1 Uhr",
+  "Level at %1 h: %2 %": "Stärke um %1 Uhr: %2 %"
 }

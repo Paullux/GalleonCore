@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "BosunBackend.h"
+#include "BrightnessCurveModel.h"
 #include "LanguageSettings.h"
 #include "DaemonStatus.h"
 #include "AppearanceStore.h"
@@ -2399,6 +2400,55 @@ QtObject {
         QVERIFY(uniform->property("selected").toBool());
         QVERIFY(!speeds->property("visible").toBool());
         QCOMPARE(galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).base, galleon::keyboard::BaseType::Uniform);
+    }
+
+    void theLevelOfTheColoursHasItsOwnCurveSeparateFromTheKeyboardBrightnessCurve()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        const bosun::AppearanceStore appearance{QString()};
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        const QVariantList tabs = root->property("tabs").toList();
+        for (int i = 0; i < tabs.size(); ++i) {
+            if (tabs.at(i).toMap().value(QStringLiteral("kind")).toString() == QLatin1String("keyboard"))
+                root->setProperty("currentTab", i);
+        }
+        auto *levelEditor = root->findChild<QQuickItem *>("levelCurveEditor");
+        QVERIFY(levelEditor);
+        auto *brightnessEditor = root->findChild<QQuickItem *>("brightnessCurveEditor");
+        QVERIFY(brightnessEditor);
+
+        // Each half of the tab shows its own curve and only that one.
+        QVERIFY(brightnessEditor->property("visible").toBool());
+        QVERIFY(!levelEditor->property("visible").toBool());
+        root->setProperty("keyboardView", QStringLiteral("lighting"));
+        QVERIFY(levelEditor->property("visible").toBool());
+        QVERIFY(!brightnessEditor->property("visible").toBool());
+
+        // The level curve is its own file next to the pages file; choosing the curve and a point writes it, and the brightness curve is untouched.
+        auto *level = qobject_cast<bosun::BrightnessCurveModel *>(qvariant_cast<QObject *>(backend.property("levelCurve")));
+        auto *brightness = qobject_cast<bosun::BrightnessCurveModel *>(qvariant_cast<QObject *>(backend.property("brightnessCurve")));
+        QVERIFY(level);
+        QVERIFY(brightness);
+        QVERIFY(level->setMode(QStringLiteral("curve")).isEmpty());
+        QVERIFY(level->setHour(10, 300).isEmpty());
+        QVERIFY(QFile::exists(dir.filePath("lighting-level-curve.json")));
+        QVERIFY(!QFile::exists(dir.filePath("brightness-curve.json")));
+        QCOMPARE(brightness->mode(), QStringLiteral("slider"));
+        QCOMPARE(level->mode(), QStringLiteral("curve"));
     }
 
     void theWindowHasATabPerThemeAndTheFixedOnes()

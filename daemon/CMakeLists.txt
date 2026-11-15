@@ -47,6 +47,7 @@ add_library(galleond_core STATIC
     KeyboardState.h KeyboardState.cpp
     ReplacedFileWatcher.h ReplacedFileWatcher.cpp
     BrightnessScheduler.h BrightnessScheduler.cpp
+    LightingLevelScheduler.h LightingLevelScheduler.cpp
     LightingEnvironment.h
     PowerMessages.h PowerMessages.cpp
     TransportTrace.h TransportTrace.cpp
