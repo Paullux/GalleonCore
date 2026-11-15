@@ -173,10 +173,12 @@ class LightingEndpoint : public QObject
     Q_CLASSINFO("D-Bus Interface", "org.galleoncore.Lighting")
 public:
     QList<QList<int>> colours;
+    QList<QList<int>> ledLists;
 public Q_SLOTS:
     [[nodiscard]] QString State() const { return QStringLiteral("holding"); }
     QString Enable(bool /*on*/) { return {}; }
     bool SetColor(int red, int green, int blue) { colours.append({red, green, blue}); return true; }
+    bool SetLeds(const QList<int> &values) { ledLists.append(values); return true; }
 Q_SIGNALS:
     void stateChanged(const QString &_t1, const QString &_t2); // NOLINT(readability-inconsistent-declaration-parameter-name): moc names them
 };
@@ -1928,7 +1930,7 @@ QtObject {
         QVERIFY(!horizontal->property("needed").toBool());
     }
 
-    void withTheLiveLightingOnTheColourGivenToEveryKeyGoesToTheKeyboardAndTheBrightnessSaysItIsSuspended()
+    void withTheLiveLightingOnEachKeyColourOfTheDrawingGoesToTheKeyboardAndTheBrightnessSaysItIsSuspended()
     {
         const QString connectionName = QStringLiteral("fake-galleond-for-the-preview");
         QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, connectionName);
@@ -1967,18 +1969,44 @@ QtObject {
         QVERIFY(note);
         QVERIFY(note->isVisible());
 
-        // A colour chosen for a key, then given to every key: it goes to the keyboard.
-        const QVariantList lamps{QVariant(23)};
+        // A colour chosen for a key of the drawing goes to the keyboard at once, as that key's LED and nothing else.
+        const auto caps = root->findChild<QQuickItem *>("keyboardMap")->property("map").toMap().value(QStringLiteral("caps")).toList();
+        QVariantMap q; // the key engraved Q on this French drawing: it lights LED 4 (the A of a QWERTY)
+        for (const QVariant &cap : caps) {
+            if (cap.toMap().value(QStringLiteral("label")).toString() == QLatin1String("Q"))
+                q = cap.toMap();
+        }
+        QCOMPARE(q.value(QStringLiteral("led")).toInt(), 4);
+        const QVariantList lamps = q.value(QStringLiteral("lamps")).toList();
+        QVERIFY(!lamps.isEmpty());
         QVERIFY(QMetaObject::invokeMethod(board, "capClicked", Q_ARG(int, 40), Q_ARG(QVariant, QVariant(lamps))));
         auto *swatches = root->findChild<QQuickItem *>("lampSwatches");
         QVERIFY(swatches);
         QVERIFY(QMetaObject::invokeMethod(swatches, "picked", Q_ARG(QString, QStringLiteral("#e53935"))));
-        QVERIFY(endpoint.colours.isEmpty()); // one key only: a colour per key cannot be sent yet
+        QTRY_COMPARE_WITH_TIMEOUT(endpoint.ledLists.size(), 1, 3000);
+        QCOMPARE(endpoint.ledLists.constFirst(), (QList<int>{4, 229, 57, 53})); // LED 4, red 229, green 57, blue 53
+        QVERIFY(endpoint.colours.isEmpty());                                    // not the one colour for every key
+
+        // Given to every key: every key of the drawing has its LED in the list (88 keys, each once), all that colour.
         auto *all = root->findChild<QQuickItem *>("lampsColourAll");
         QVERIFY(all);
         QVERIFY(QMetaObject::invokeMethod(all, "clicked"));
+        QTRY_COMPARE_WITH_TIMEOUT(endpoint.ledLists.size(), 2, 3000);
+        const QList<int> everyKey = endpoint.ledLists.constLast();
+        QCOMPARE(everyKey.size(), 88 * 4);
+        QSet<int> leds;
+        for (int i = 0; i < everyKey.size(); i += 4) {
+            leds.insert(everyKey.at(i));
+            QCOMPARE(everyKey.mid(i + 1, 3), (QList<int>{229, 57, 53}));
+        }
+        QCOMPARE(leds.size(), 88); // the two parts of Enter are one LED
+
+        // Cleared: every key is dark (one colour, black), nothing is left over.
+        auto *clear = root->findChild<QQuickItem *>("lampsClear");
+        QVERIFY(clear);
+        QVERIFY(QMetaObject::invokeMethod(clear, "clicked"));
         QTRY_COMPARE_WITH_TIMEOUT(endpoint.colours.size(), 1, 3000);
-        QCOMPARE(endpoint.colours.constFirst(), (QList<int>{229, 57, 53}));
+        QCOMPARE(endpoint.colours.constFirst(), (QList<int>{0, 0, 0}));
     }
 
     void theKeyCalibrationScreenReadsTheKeysOfItsWindowOnlyWhileItIsOpen()

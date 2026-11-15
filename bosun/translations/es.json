@@ -655,7 +655,6 @@
   "Give this colour to every key": "Dar este color a todas las teclas",
   "Rainbow": "Arcoíris",
   "Clear the colours": "Borrar los colores",
-  "This is a preview: nothing is sent to the keyboard, because the per-key lighting is not available yet. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Esto es una vista previa: no se envía nada al teclado, porque la iluminación tecla a tecla aún no está disponible. Las teclas son una disposición francesa estándar dibujada para orientarse; las lámparas de debajo están en las posiciones que informa el teclado.",
   "Corsair keyboard · live lighting (experimental)": "Teclado Corsair · iluminación en vivo (experimental)",
   "galleond can light the keys itself, one colour for all of them. It is off by default and never writes to the keyboard's memory: when it stops, or is stopped, the keys go back to what the keyboard held. A small watchdog program gives the keys back even if galleond crashes. Switch it on only if you accept that this is experimental.": "galleond puede iluminar las teclas por sí mismo, con un solo color para todas. Está desactivado por defecto y nunca escribe en la memoria del teclado: cuando se detiene, o lo detienen, las teclas vuelven a lo que guardaba el teclado. Un pequeño programa vigilante devuelve las teclas aunque galleond falle. Actívalo solo si aceptas que es experimental.",
   "Switch the live lighting off": "Apagar la iluminación en vivo",
@@ -678,7 +677,6 @@
   "This application is not installed on this computer: the key does nothing until you install it or choose another application above.": "Esta aplicación no está instalada en este equipo: la tecla no hace nada hasta que la instales o elijas otra aplicación arriba.",
   "The live lighting is not available on this system.": "La iluminación en vivo no está disponible en este sistema.",
   "No preview: the picture of this tab is not in the list of wallpapers of this computer.": "Sin vista previa: la imagen de esta pestaña no está en la lista de fondos de este equipo.",
-  "The live lighting is on: “Give this colour to every key” sends that colour to the keyboard (one colour for all the keys: a colour for each key is not available yet). Everything else here is a preview.": "La iluminación en vivo está encendida: «Dar este color a todas las teclas» envía ese color al teclado (un solo color para todas las teclas: un color por tecla aún no está disponible). Todo lo demás aquí es una vista previa.",
   "The live lighting is on and holds the keyboard: the brightness is suspended, and the slider and the curve do nothing until it is switched off.": "La iluminación en vivo está encendida y tiene el teclado: el brillo está suspendido, y el control deslizante y la curva no hacen nada hasta que se apague.",
   "A LED is numbered from 0 to 145": "Un LED se numera de 0 a 145",
   "The calibration is already running": "La calibración ya está en curso",
@@ -721,5 +719,9 @@
   "LED %1 = %2.": "LED %1 = %2.",
   "A key that the system keeps from this window, or that sends no code of its own: choose it here.": "Una tecla que el sistema se reserva o que no envía ningún código propio: elíjala aquí.",
   "LED %1 = %2 (as named on a QWERTY keyboard).": "LED %1 = %2 (nombre en un teclado QWERTY).",
-  "A list of LEDs has one to 146 groups of four numbers": "Una lista de LED tiene de uno a 146 grupos de cuatro números"
+  "A list of LEDs has one to 146 groups of four numbers": "Una lista de LED tiene de uno a 146 grupos de cuatro números",
+  "All the keys are dark.": "Todas las teclas están apagadas.",
+  "Colours of %1 keys sent to galleond.": "Colores de %1 teclas enviados a galleond.",
+  "The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.": "La iluminación en vivo está encendida: los colores que da aquí a las teclas van al teclado, un color por tecla; una tecla sin color permanece apagada.",
+  "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Esto es una vista previa: no se envía nada al teclado mientras la iluminación en vivo no esté encendida. Las teclas son una distribución francesa estándar dibujada como referencia; las lámparas de debajo están en las posiciones que indica el teclado."
 }
