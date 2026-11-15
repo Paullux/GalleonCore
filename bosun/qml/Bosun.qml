@@ -767,57 +767,6 @@ Window {
                     }
                 }
                 Text {
-                    color: "#c9ced6"
-                    font.pixelSize: 13
-                    text: qsTr("Level of the colours: how strongly the colours above are shown, without changing the brightness of the keyboard itself.")
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                }
-                BrightnessSlider {
-                    id: levelSlider
-                    objectName: "appearanceLevel"
-                    width: Math.min(parent.width, 560)
-                    accessibleName: qsTr("Level of the colours")
-                    value: win.appearance !== null ? win.appearance.level : 1000
-                    // The slider sets its own value when it commits, which cuts the binding: follow the appearance again after any change.
-                    Connections {
-                        target: win.appearance
-                        function onChanged() { if (win.appearance !== null) levelSlider.value = win.appearance.level }
-                    }
-                    onCommitted: level => win.saved(win.appearance.setLevel(level))
-                }
-                Row {
-                    spacing: 28
-                    RadioOption {
-                        objectName: "levelModeSlider"
-                        text: qsTr("Manual slider")
-                        checked: win.backend.levelCurve.mode === "slider"
-                        onChosen: win.answered(win.backend.levelCurve.setMode("slider"), qsTr("The slider above sets the level of the colours."))
-                    }
-                    RadioOption {
-                        objectName: "levelModeCurve"
-                        text: qsTr("Curve over 24 hours")
-                        checked: win.backend.levelCurve.mode === "curve"
-                        onChosen: win.answered(win.backend.levelCurve.setMode("curve"), qsTr("The curve sets the level of the colours."))
-                    }
-                }
-                Text {
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    color: "#9aa0a6"
-                    font.pixelSize: 13
-                    text: qsTr("In curve mode galleond shows the colours at the level of the point nearest to the time of day, instead of the slider above. It only dims the colours: nothing is written to the memory of the keyboard. This curve is separate from the one of the keyboard brightness.")
-                }
-                BrightnessCurveEditor {
-                    objectName: "levelCurveEditor"
-                    width: Math.min(parent.width, 720)
-                    curveModel: win.backend.levelCurve
-                    curveName: qsTr("Level of the colours through the day")
-                    pointName: qsTr("Level at %1 h")
-                    onCommitted: (hour, value) => win.answered(win.backend.levelCurve.setHour(hour, value),
-                                                               qsTr("Level at %1 h: %2 %").arg(hour).arg(value / 10))
-                }
-                Text {
                     width: parent.width
                     wrapMode: Text.Wrap
                     visible: win.appearance !== null && win.appearance.baseType === "rainbow" && win.appearance.rainbowSpeed > 0
@@ -891,6 +840,57 @@ Window {
                           : win.daemon.lightingActive
                           ? qsTr("The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.")
                           : qsTr("The drawing stays in black and grey while the live lighting is off: switch it on to see and choose the colours of the keys. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
+                }
+                Text {
+                    color: "#c9ced6"
+                    font.pixelSize: 13
+                    text: qsTr("Level of the colours: how strongly the colours above are shown, without changing the brightness of the keyboard itself.")
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                }
+                BrightnessSlider {
+                    id: levelSlider
+                    objectName: "appearanceLevel"
+                    width: Math.min(parent.width, 560)
+                    accessibleName: qsTr("Level of the colours")
+                    value: win.appearance !== null ? win.appearance.level : 1000
+                    // The slider sets its own value when it commits, which cuts the binding: follow the appearance again after any change.
+                    Connections {
+                        target: win.appearance
+                        function onChanged() { if (win.appearance !== null) levelSlider.value = win.appearance.level }
+                    }
+                    onCommitted: level => win.saved(win.appearance.setLevel(level))
+                }
+                Row {
+                    spacing: 28
+                    RadioOption {
+                        objectName: "levelModeSlider"
+                        text: qsTr("Manual slider")
+                        checked: win.backend.levelCurve.mode === "slider"
+                        onChosen: win.answered(win.backend.levelCurve.setMode("slider"), qsTr("The slider above sets the level of the colours."))
+                    }
+                    RadioOption {
+                        objectName: "levelModeCurve"
+                        text: qsTr("Curve over 24 hours")
+                        checked: win.backend.levelCurve.mode === "curve"
+                        onChosen: win.answered(win.backend.levelCurve.setMode("curve"), qsTr("The curve sets the level of the colours."))
+                    }
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: qsTr("In curve mode galleond shows the colours at the level of the point nearest to the time of day, instead of the slider above. It only dims the colours: nothing is written to the memory of the keyboard. This curve is separate from the one of the keyboard brightness.")
+                }
+                BrightnessCurveEditor {
+                    objectName: "levelCurveEditor"
+                    width: Math.min(parent.width, 720)
+                    curveModel: win.backend.levelCurve
+                    curveName: qsTr("Level of the colours through the day")
+                    pointName: qsTr("Level at %1 h")
+                    onCommitted: (hour, value) => win.answered(win.backend.levelCurve.setHour(hour, value),
+                                                               qsTr("Level at %1 h: %2 %").arg(hour).arg(value / 10))
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff"; visible: win.keyCalibration !== null }
                 Text {

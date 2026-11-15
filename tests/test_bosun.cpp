@@ -2086,9 +2086,9 @@ QtObject {
         const double webHub = sceneY("openWebHub");
         QVERIFY(lighting >= 0 && appearanceRow >= 0 && level >= 0 && drawing >= 0 && calibrationY >= 0 && webHub >= 0);
         QVERIFY(lighting < appearanceRow);
-        QVERIFY(appearanceRow < level);
-        QVERIFY(level < drawing);
-        QVERIFY(drawing < calibrationY);
+        QVERIFY(appearanceRow < drawing);
+        QVERIFY(drawing < level); // the level is under the drawing: the settings and the result are seen together
+        QVERIFY(level < calibrationY);
         QVERIFY(calibrationY < webHub);
     }
 
