@@ -954,6 +954,9 @@ int main(int argc, char *argv[])
         keyboard.setPaused(active, QCoreApplication::translate("main", "The lighting holds the keyboard: switch it off to change the brightness."));
     });
 
+    // On Linux and on Windows. The appearance of the lighting (written by the settings window): read when the lighting is switched on, and again when the file changes while it is on.
+    const galleond::LightingAppearanceApplier lightingAppearance(lighting, galleond::appearancePath());
+
     // org.galleoncore.Deck on the session bus (the name was claimed at the start):
     // SetWallpaper, ClearWallpaper, Wallpapers.
 #ifdef Q_OS_WIN
@@ -961,8 +964,6 @@ int main(int argc, char *argv[])
     QObject::connect(&localControl, &galleond::LocalControl::keyboardBrightnessReadRequested, &keyboard, [&keyboard] { keyboard.ReadBrightness(); });
     // The way back to Bosun on Windows: the state of the lighting, in lighting-state.json at every change.
     const galleond::LightingStatePublisher lightingState(lighting, galleond::lightingStatePath(), [] { return QDateTime::currentSecsSinceEpoch(); });
-    // The appearance of the lighting (written by the settings window): read when the lighting is switched on, and again when the file changes while it is on.
-    const galleond::LightingAppearanceApplier lightingAppearance(lighting, galleond::appearancePath());
     // The live lighting, asked for by Bosun (there is no reply on this endpoint: the answer, or the reason for a refusal, is in
     // lighting-state.json, which the settings window watches).
     QObject::connect(&localControl, &galleond::LocalControl::lightingEnableRequested, &lighting, [&lighting](bool on) { static_cast<void>(lighting.Enable(on)); });
