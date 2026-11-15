@@ -53,6 +53,7 @@ add_library(galleond_core STATIC
     LightingController.h LightingController.cpp LightingWorker.h
     ProcessWatchdog.h ProcessWatchdog.cpp
     KeyboardStatePublisher.h KeyboardStatePublisher.cpp
+    KeyMapFile.h KeyMapFile.cpp
     LightingState.h LightingState.cpp
     LightingStatePublisher.h LightingStatePublisher.cpp
 )

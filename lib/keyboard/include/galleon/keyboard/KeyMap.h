@@ -59,6 +59,8 @@ public:
     [[nodiscard]] std::optional<LedAssignment> assignmentFor(std::uint16_t led) const;
     [[nodiscard]] std::optional<std::uint16_t> ledForKey(HidUsage key) const;
     [[nodiscard]] std::vector<std::uint16_t> unassignedLeds() const;
+    // Every answer recorded, by increasing LED index.
+    [[nodiscard]] std::vector<LedAssignment> assignments() const;
     [[nodiscard]] std::size_t assignedCount() const;
 
 private:

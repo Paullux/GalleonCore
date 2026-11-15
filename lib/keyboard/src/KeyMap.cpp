@@ -72,6 +72,16 @@ std::vector<std::uint16_t> KeyMap::unassignedLeds() const
     return missing;
 }
 
+std::vector<LedAssignment> KeyMap::assignments() const
+{
+    std::vector<LedAssignment> all;
+    for (const auto &entry : m_leds) {
+        if (entry)
+            all.push_back(*entry);
+    }
+    return all;
+}
+
 std::size_t KeyMap::assignedCount() const
 {
     return LiveLedCount - unassignedLeds().size();

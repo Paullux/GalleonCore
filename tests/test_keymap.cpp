@@ -136,6 +136,16 @@ private slots:
         QCOMPARE(map.assignmentFor(0x00).value_or(key(0, 0x04)).kind, LedKind::Unlit);
     }
 
+    void theAnswersAreListedByIncreasingLed()
+    {
+        KeyMap map;
+        QVERIFY(!map.assign(strip(0x90, 2)).has_value());
+        QVERIFY(!map.assign(key(0x3A, 0x3A)).has_value());
+        QVERIFY(!map.assign(unlit(0x00)).has_value());
+        const std::vector<LedAssignment> expected{unlit(0x00), key(0x3A, 0x3A), strip(0x90, 2)};
+        QVERIFY(map.assignments() == expected);
+    }
+
     void theDocumentedHypothesisIsOnlyAHint()
     {
         QCOMPARE(assumedLedForKey(0x3A), std::optional<std::uint16_t>(0x3A)); // F1
