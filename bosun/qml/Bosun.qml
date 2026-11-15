@@ -23,6 +23,7 @@ Window {
     property var languages: null
     property var filePicker: null
     property var updates: null
+    property var appearance: null // the appearance of the live lighting (AppearanceStore): written to lighting-appearance.json at every change
     property var keyCalibration: null // the calibration of the key map (KeyCalibration): off until the person starts it
     property bool updatesOpen: false
 
@@ -42,6 +43,10 @@ Window {
     property int lastTheme: 0
     // The preview of the lamps of the keyboard (KeyboardMap): lamp id -> colour; only drawn, never sent anywhere.
     property var lampColors: ({})
+    // True only while the keys really show the appearance (galleond holds them). Otherwise the drawing is a preview of what they will show.
+    readonly property bool keysShowTheDrawing: daemon.lightingState === "holding"
+    // Which half of the Keyboard tab is shown: "brightness" (the keyboard's own) or "lighting" (the live lighting, experimental).
+    property string keyboardView: "brightness"
     property int selectedCap: -1
     property var selectedLamps: []
     readonly property var lastThemeEntry: backend.themes.length > 0 ? backend.themes[Math.min(lastTheme, backend.themes.length - 1)] : null
@@ -78,42 +83,57 @@ Window {
     readonly property var selected: selectedKey >= 0 && selectedKey < keys.length ? keys[selectedKey] : null
 
     // What an edit answered, for the status bar.
-    // The colours given to the keys of the drawing, as galleond takes them: groups of LED, red, green, blue. A key has the colour of its
-    // first lamp; the two parts of Enter are one key with one LED, which takes the first colour found. A key with no colour is not
-    // listed, so it is dark on the keyboard, as it is in the drawing. The seven sections of the light strip are keys of their own.
-    function drawnLedColours() {
-        const seen = {}
-        const values = []
-        for (const cap of keyboardMap.map.caps) {
-            if (cap.led === undefined || cap.lamps.length === 0 || seen[cap.led])
-                continue
-            const colour = win.lampColors[cap.lamps[0]]
-            if (colour === undefined)
-                continue
-            seen[cap.led] = true
-            const c = Qt.color(colour)
-            values.push(cap.led, Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255))
+    // The LED lit by a key of the drawing: a cap of the keyboard, or one of the seven sections of the light strip (index 100 + its position).
+    function ledOfCap(index) {
+        if (index >= 100) {
+            for (const section of keyboardMap.map.strip.sections) {
+                if (100 + section.position === index)
+                    return section.led
+            }
+            return -1
         }
-        // The sections of the light strip: one LED each, in the order of the strip.
-        for (const section of keyboardMap.map.strip.sections) {
-            const colour = win.lampColors[section.lamp]
-            if (colour === undefined)
-                continue
-            const c = Qt.color(colour)
-            values.push(section.led, Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255))
-        }
-        return values
+        const cap = keyboardMap.map.caps[index]
+        return cap !== undefined && cap.led !== undefined ? cap.led : -1
     }
 
-    // With the live lighting on, what the drawing shows is what the keyboard shows: every change of a colour sends all of them.
-    function sendDrawnColours() {
-        if (!win.daemon.lightingActive)
-            return
-        const values = win.drawnLedColours()
-        if (values.length === 0)
-            win.answered(win.daemon.setLightingColor(0, 0, 0), qsTr("All the keys are dark."))
-        else
-            win.answered(win.daemon.setLightingLeds(values), qsTr("%1 keys sent.").arg(values.length / 4))
+    // What the appearance looks like in the drawing: the base on every lamp (a black base is "no colour": dark grey), then the retouches
+    // over it, a key with the colour of its LED. The same description galleond plays, drawn once, not moving.
+    function previewOfAppearance() {
+        if (win.appearance === null)
+            return ({})
+        let colours = ({})
+        if (win.appearance.baseType === "rainbow") {
+            colours = keyboardMap.rainbow()
+        } else if (win.appearance.colour.toString() !== "#000000") {
+            for (const lamp of keyboardMap.allLamps)
+                colours[lamp] = win.appearance.colour.toString()
+            for (const section of keyboardMap.map.strip.sections)
+                colours[section.lamp] = win.appearance.colour.toString()
+        }
+        const byLed = {}
+        for (const retouch of win.appearance.retouches)
+            byLed[retouch.led] = retouch.colour
+        for (const cap of keyboardMap.map.caps) {
+            if (cap.led !== undefined && byLed[cap.led] !== undefined) {
+                for (const lamp of cap.lamps)
+                    colours[lamp] = byLed[cap.led]
+            }
+        }
+        for (const section of keyboardMap.map.strip.sections) {
+            if (byLed[section.led] !== undefined)
+                colours[section.lamp] = byLed[section.led]
+        }
+        return colours
+    }
+
+    function refreshPreview() {
+        win.lampColors = win.previewOfAppearance()
+    }
+
+    // Every change is written to the appearance file; with the live lighting on, galleond shows it at once.
+    function saved(error) {
+        if (error !== "")
+            win.answered(error, "")
     }
 
     function answered(error, done) {
@@ -519,6 +539,26 @@ Window {
                     text: qsTr("7.6.0 is the Elgato application version, not the Stream Deck firmware version. Firmware updates are performed inside the Elgato app after fully stopping Bosun and galleond.")
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+                Row {
+                    spacing: 8
+                    Pill {
+                        objectName: "viewBrightness"
+                        selected: win.keyboardView === "brightness"
+                        text: qsTr("Corsair keyboard · brightness")
+                        onClicked: win.keyboardView = "brightness"
+                    }
+                    Pill {
+                        objectName: "viewLighting"
+                        selected: win.keyboardView === "lighting"
+                        text: qsTr("Corsair keyboard · live lighting (experimental)")
+                        onClicked: win.keyboardView = "lighting"
+                    }
+                }
+                Column {
+                    objectName: "brightnessView"
+                    width: parent.width
+                    spacing: 12
+                    visible: win.keyboardView === "brightness"
                 Text {
                     color: "white"
                     font.pixelSize: 16
@@ -608,7 +648,12 @@ Window {
                     onCommitted: (hour, value) => win.answered(win.backend.brightnessCurve.setHour(hour, value),
                                                                qsTr("Brightness at %1 h: %2 %").arg(hour).arg(value / 10))
                 }
-                Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+                }
+                Column {
+                    objectName: "lightingView"
+                    width: parent.width
+                    spacing: 12
+                    visible: win.keyboardView === "lighting"
                 Text {
                     color: "white"
                     font.pixelSize: 16
@@ -661,9 +706,191 @@ Window {
                     color: "#ffffff"
                     onPicked: picked => {
                         const c = Qt.color(picked)
-                        win.answered(win.daemon.setLightingColor(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)),
-                                     qsTr("Keyboard colour sent to galleond: %1").arg(picked))
+                        win.saved(win.appearance.clearRetouches())
+                        win.answered(win.appearance.setUniform(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)),
+                                     win.daemon.lightingActive ? qsTr("Keyboard colour sent to galleond: %1").arg(picked)
+                                                               : qsTr("Keyboard colour kept for the next time the live lighting is on: %1").arg(picked))
                     }
+                }
+                Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+                Text {
+                    color: "white"
+                    font.pixelSize: 16
+                    font.bold: true
+                    text: qsTr("Keyboard and module · preview")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#c9ced6"
+                    font.pixelSize: 14
+                    text: qsTr("As on the keyboard, the legend and the outline of each key are see-through: the light of the lamps under it shows through. Click a key and pick a colour to see how a lighting would look. The module shows the keys of the theme tab you looked at last.")
+                }
+                Text {
+                    color: "white"
+                    font.pixelSize: 14
+                    font.bold: true
+                    text: qsTr("Appearance")
+                }
+                Row {
+                    spacing: 8
+                    Pill {
+                        objectName: "appearanceUniform"
+                        selected: win.appearance !== null && win.appearance.baseType === "uniform"
+                        text: qsTr("One colour")
+                        onClicked: {
+                            const c = win.appearance.colour
+                            win.saved(win.appearance.setUniform(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)))
+                        }
+                    }
+                    Pill {
+                        objectName: "appearanceRainbow"
+                        selected: win.appearance !== null && win.appearance.baseType === "rainbow"
+                        text: qsTr("Rainbow")
+                        onClicked: win.saved(win.appearance.setRainbow(win.appearance.rainbowSpeed))
+                    }
+                }
+                Row {
+                    objectName: "rainbowSpeeds"
+                    spacing: 8
+                    visible: win.appearance !== null && win.appearance.baseType === "rainbow"
+                    Repeater {
+                        // Thousandths of a turn per second: fixed, one turn in 50 s, in 10 s, in 3 s.
+                        model: [{speed: 0, name: qsTr("Fixed")}, {speed: 20, name: qsTr("Slow")}, {speed: 100, name: qsTr("Medium")}, {speed: 300, name: qsTr("Fast")}]
+                        Pill {
+                            required property var modelData
+                            objectName: "rainbowSpeed" + modelData.speed
+                            selected: win.appearance !== null && win.appearance.rainbowSpeed === modelData.speed
+                            text: modelData.name
+                            onClicked: win.saved(win.appearance.setRainbow(modelData.speed))
+                        }
+                    }
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    visible: win.appearance !== null && win.appearance.baseType === "rainbow" && win.appearance.rainbowSpeed > 0
+                    color: "#7d8591"
+                    font.pixelSize: 13
+                    text: qsTr("The rainbow moves on the keyboard; the drawing shows it standing still.")
+                }
+                KeyboardMap {
+                    id: keyboardMap
+                    objectName: "keyboardMap"
+                    width: Math.min(parent.width, 740)
+                    opacity: win.keysShowTheDrawing ? 1 : 0.4 // greyed: what the keyboard shows now is not this
+                    colors: win.keysShowTheDrawing ? win.lampColors : ({}) // black and grey while the keys do not show it
+                    enabled: win.keysShowTheDrawing // and not to be edited blind
+                    selected: win.selectedCap
+                    themeName: win.lastThemeEntry ? win.lastThemeEntry.name : ""
+                    themeColor: win.lastThemeEntry ? win.lastThemeEntry.color : "#9aa0a6"
+                    tileSource: index => win.lastThemeEntry
+                        ? "image://tiles/" + win.lastThemeEntry.page + "/" + index + "?r=" + win.backend.revision + "&theme=" + win.lastThemeEntry.page
+                        : ""
+                    onCapClicked: (index, lamps) => { win.selectedCap = index; win.selectedLamps = lamps }
+                    Component.onCompleted: win.refreshPreview()
+                    Connections {
+                        target: win.appearance
+                        function onChanged() { win.refreshPreview() }
+                    }
+                }
+                Text {
+                    objectName: "keySelection"
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: win.selectedCap < 0 ? qsTr("No key chosen: click a key.")
+                                              : qsTr("Key chosen (lamps: %1).").arg(win.selectedLamps.join(", "))
+                }
+                Swatches {
+                    objectName: "lampSwatches"
+                    visible: win.selectedCap >= 0
+                    onPicked: color => {
+                        const led = win.ledOfCap(win.selectedCap)
+                        if (led < 0 || win.appearance === null)
+                            return
+                        const c = Qt.color(color)
+                        win.saved(win.appearance.retouch(led, Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)))
+                    }
+                }
+                Row {
+                    spacing: 8
+                    Pill {
+                        objectName: "lampsColourAll"
+                        enabledLook: win.selectedCap >= 0 && win.selectedLamps.length > 0 && win.lampColors[win.selectedLamps[0]] !== undefined
+                        text: qsTr("Give this colour to every key")
+                        onClicked: {
+                            const c = Qt.color(win.lampColors[win.selectedLamps[0]])
+                            win.saved(win.appearance.clearRetouches())
+                            win.saved(win.appearance.setUniform(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)))
+                        }
+                    }
+                    Pill {
+                        objectName: "lampsClear"
+                        text: qsTr("Clear the colours")
+                        onClicked: { win.selectedCap = -1; win.selectedLamps = []; win.saved(win.appearance.reset()) }
+                    }
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#7d8591"
+                    font.pixelSize: 13
+                    text: win.keysShowTheDrawing
+                          ? qsTr("The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.")
+                          : win.daemon.lightingActive
+                          ? qsTr("The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.")
+                          : qsTr("The drawing stays in black and grey while the live lighting is off: switch it on to see and choose the colours of the keys. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
+                }
+                Text {
+                    color: "#c9ced6"
+                    font.pixelSize: 13
+                    text: qsTr("Level of the colours: how strongly the colours above are shown, without changing the brightness of the keyboard itself.")
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                }
+                BrightnessSlider {
+                    id: levelSlider
+                    objectName: "appearanceLevel"
+                    width: Math.min(parent.width, 560)
+                    accessibleName: qsTr("Level of the colours")
+                    value: win.appearance !== null ? win.appearance.level : 1000
+                    // The slider sets its own value when it commits, which cuts the binding: follow the appearance again after any change.
+                    Connections {
+                        target: win.appearance
+                        function onChanged() { if (win.appearance !== null) levelSlider.value = win.appearance.level }
+                    }
+                    onCommitted: level => win.saved(win.appearance.setLevel(level))
+                }
+                Row {
+                    spacing: 28
+                    RadioOption {
+                        objectName: "levelModeSlider"
+                        text: qsTr("Manual slider")
+                        checked: win.backend.levelCurve.mode === "slider"
+                        onChosen: win.answered(win.backend.levelCurve.setMode("slider"), qsTr("The slider above sets the level of the colours."))
+                    }
+                    RadioOption {
+                        objectName: "levelModeCurve"
+                        text: qsTr("Curve over 24 hours")
+                        checked: win.backend.levelCurve.mode === "curve"
+                        onChosen: win.answered(win.backend.levelCurve.setMode("curve"), qsTr("The curve sets the level of the colours."))
+                    }
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: qsTr("In curve mode galleond shows the colours at the level of the point nearest to the time of day, instead of the slider above. It only dims the colours: nothing is written to the memory of the keyboard. This curve is separate from the one of the keyboard brightness.")
+                }
+                BrightnessCurveEditor {
+                    objectName: "levelCurveEditor"
+                    width: Math.min(parent.width, 720)
+                    curveModel: win.backend.levelCurve
+                    curveName: qsTr("Level of the colours through the day")
+                    pointName: qsTr("Level at %1 h")
+                    onCommitted: (hour, value) => win.answered(win.backend.levelCurve.setHour(hour, value),
+                                                               qsTr("Level at %1 h: %2 %").arg(hour).arg(value / 10))
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff"; visible: win.keyCalibration !== null }
                 Text {
@@ -824,92 +1051,13 @@ Window {
                         }
                     }
                 }
-                Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
-                Text {
-                    color: "white"
-                    font.pixelSize: 16
-                    font.bold: true
-                    text: qsTr("Keyboard and module · preview")
-                }
-                Text {
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    color: "#c9ced6"
-                    font.pixelSize: 14
-                    text: qsTr("As on the keyboard, the legend and the outline of each key are see-through: the light of the lamps under it shows through. Click a key and pick a colour to see how a lighting would look. The module shows the keys of the theme tab you looked at last.")
-                }
-                KeyboardMap {
-                    id: keyboardMap
-                    objectName: "keyboardMap"
-                    width: Math.min(parent.width, 740)
-                    colors: win.lampColors
-                    selected: win.selectedCap
-                    themeName: win.lastThemeEntry ? win.lastThemeEntry.name : ""
-                    themeColor: win.lastThemeEntry ? win.lastThemeEntry.color : "#9aa0a6"
-                    tileSource: index => win.lastThemeEntry
-                        ? "image://tiles/" + win.lastThemeEntry.page + "/" + index + "?r=" + win.backend.revision + "&theme=" + win.lastThemeEntry.page
-                        : ""
-                    onCapClicked: (index, lamps) => { win.selectedCap = index; win.selectedLamps = lamps }
-                }
-                Text {
-                    objectName: "keySelection"
-                    color: "#9aa0a6"
-                    font.pixelSize: 13
-                    text: win.selectedCap < 0 ? qsTr("No key chosen: click a key.")
-                                              : qsTr("Key chosen (lamps: %1).").arg(win.selectedLamps.join(", "))
-                }
-                Swatches {
-                    objectName: "lampSwatches"
-                    visible: win.selectedCap >= 0
-                    onPicked: color => {
-                        const next = Object.assign({}, win.lampColors)
-                        for (const lamp of win.selectedLamps)
-                            next[lamp] = color
-                        win.lampColors = next
-                        win.sendDrawnColours()
-                    }
-                }
-                Row {
-                    spacing: 8
-                    Pill {
-                        objectName: "lampsColourAll"
-                        enabledLook: win.selectedCap >= 0 && win.selectedLamps.length > 0 && win.lampColors[win.selectedLamps[0]] !== undefined
-                        text: qsTr("Give this colour to every key")
-                        onClicked: {
-                            const colour = win.lampColors[win.selectedLamps[0]]
-                            const next = {}
-                            for (const lamp of keyboardMap.allLamps)
-                                next[lamp] = colour
-                            win.lampColors = next
-                            win.sendDrawnColours()
-                        }
-                    }
-                    Pill {
-                        objectName: "lampsRainbow"
-                        text: qsTr("Rainbow")
-                        onClicked: { win.lampColors = keyboardMap.rainbow(); win.sendDrawnColours() }
-                    }
-                    Pill {
-                        objectName: "lampsClear"
-                        text: qsTr("Clear the colours")
-                        onClicked: { win.lampColors = ({}); win.selectedCap = -1; win.selectedLamps = []; win.sendDrawnColours() }
-                    }
-                }
-                Text {
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    color: "#7d8591"
-                    font.pixelSize: 13
-                    text: win.daemon.lightingActive
-                          ? qsTr("The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.")
-                          : qsTr("This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
                 Text {
                     color: "white"
                     font.pixelSize: 16
                     font.bold: true
-                    text: qsTr("Corsair keyboard · lighting and keys")
+                    text: qsTr("Corsair keyboard · lighting and keys · manufacturer's solution")
                 }
                 Text {
                     width: parent.width

@@ -26,6 +26,9 @@ public:
     [[nodiscard]] bool setAppearance(const Appearance &appearance, double seconds);
 
     // The next scene has to be given even if it looks like the last: after the keys were taken back (the keyboard shows what it showed before).
+    // Only the level changes (0 to LevelFull): the rainbow keeps its place in its turn. False, and nothing changed, when it is out of range or
+    // there is no appearance yet.
+    [[nodiscard]] bool setLevel(int level);
     void resend();
 
     [[nodiscard]] bool ready() const { return m_appearance.has_value() && !m_positions.empty(); }

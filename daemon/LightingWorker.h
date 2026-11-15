@@ -89,6 +89,9 @@ public Q_SLOTS:
         static_cast<void>(m_player.setAppearance(appearance, secondsSince(m_clock())));
     }
 
+    // The level of the appearance only (a curve of the day changes it every hour): the rainbow keeps its place.
+    void setLevel(int level) { static_cast<void>(m_player.setLevel(level)); }
+
     // Called with a blocking connection: it returns once the keys are given back and the keyboard is closed. True when the
     // keyboard is known to be back in its own mode (or nothing was held); false when the release could not be confirmed,
     // so the caller must not stop the watchdog: the keyboard may still be in host mode.

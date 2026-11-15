@@ -25,6 +25,14 @@ bool AppearancePlayer::setAppearance(const Appearance &appearance, double second
     return true;
 }
 
+bool AppearancePlayer::setLevel(int level)
+{
+    if (!m_appearance || level < 0 || level > LevelFull)
+        return false;
+    m_appearance->level = level;
+    return true;
+}
+
 void AppearancePlayer::resend()
 {
     m_resend = true;

@@ -14,6 +14,7 @@ Item {
     // The value in force: -1 while unknown (nothing was set from here since Bosun started).
     property int value: -1
     property bool enabledLook: true
+    property string accessibleName: qsTr("Keyboard brightness") // for the level of the colours it is another name
     readonly property int stops: 10
     // What the pointer or the keys show now, before it is committed.
     property int preview: -1
@@ -23,7 +24,7 @@ Item {
     implicitHeight: 86
     activeFocusOnTab: true
     Accessible.role: Accessible.Slider
-    Accessible.name: qsTr("Keyboard brightness")
+    Accessible.name: slider.accessibleName
     Accessible.description: slider.shown < 0 ? qsTr("not set from this window yet") : qsTr("%1 %").arg(slider.shown / 10)
 
     readonly property real trackWidth: width - 2 * handle.width / 2 - 2

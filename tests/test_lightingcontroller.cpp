@@ -7,8 +7,10 @@
 
 #include "FakeLiveKeyboard.h"
 #include "AppearanceFile.h"
+#include "BrightnessCurve.h"
 #include "LightingAppearanceApplier.h"
 #include "LightingController.h"
+#include "LightingLevelScheduler.h"
 
 #include <QSignalSpy>
 #include <QFile>
@@ -519,6 +521,92 @@ private Q_SLOTS:
         rig.hold();
         QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{10, 20, 30}), 3000);
         QCOMPARE(ledColour(rig.frame(), 4), (std::vector<std::uint8_t>{255, 255, 255}));
+    }
+
+    // ---- the level in force (a curve of the day), over the level of the appearance
+
+    void aLevelOverrideDimsWhatTheKeysShowAndGoingBackShowsTheAppearanceAgain()
+    {
+        Rig rig;
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {100, 200, 40};
+        QVERIFY(rig.controller->setAppearance(appearance));
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{100, 200, 40}), 3000);
+        QVERIFY(rig.controller->setLevelOverride(500));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{50, 100, 20}), 3000);
+        rig.advance(500); // the pacing of the frames follows the clock of the rig
+        QVERIFY(rig.controller->setLevelOverride(std::nullopt));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{100, 200, 40}), 3000);
+    }
+
+    void aLevelOverrideStaysOverALaterAppearanceAndIsKeptWhileOff()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setLevelOverride(500)); // while the lighting is off
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {100, 200, 40};
+        QVERIFY(rig.controller->setAppearance(appearance));
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{50, 100, 20}), 3000);
+        appearance.colour = {200, 100, 20}; // a new appearance from the file: the level in force is still the curve's
+        rig.advance(500);
+        QVERIFY(rig.controller->setAppearance(appearance));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{100, 50, 10}), 3000);
+    }
+
+    void aLevelOverrideOutOfRangeIsRefusedAndNothingChanges()
+    {
+        Rig rig;
+        QVERIFY(!rig.controller->setLevelOverride(1001));
+        QVERIFY(!rig.controller->setLevelOverride(-1));
+        QCOMPARE(rig.controller->effectiveLevel(), 1000);
+    }
+
+    // ---- LightingLevelScheduler: the curve of the level through the day
+
+    void inCurveModeTheLevelFollowsTheHourAndOtherwiseTheAppearanceKeepsItsOwn()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-level-curve.json");
+        galleond::BrightnessCurve curve;
+        curve.mode = galleond::BrightnessCurve::Mode::Curve;
+        curve.hours.fill(1000);
+        curve.hours[10] = 300;
+        curve.hours[11] = 600;
+        QVERIFY(galleond::writeBrightnessCurve(path, curve));
+        Rig rig;
+        QTime now(10, 0);
+        galleond::LightingLevelScheduler scheduler(*rig.controller, path, [&now] { return now; }, 3600000);
+        QCOMPARE(rig.controller->effectiveLevel(), 300);
+        now = QTime(11, 0);
+        scheduler.evaluate();
+        QCOMPARE(rig.controller->effectiveLevel(), 600);
+        curve.mode = galleond::BrightnessCurve::Mode::Slider;
+        QVERIFY(galleond::writeBrightnessCurve(path, curve));
+        scheduler.reload();
+        QCOMPARE(rig.controller->effectiveLevel(), 1000); // the slider: the level of the appearance file
+    }
+
+    void aMissingOrDamagedCurveFileChangesNothing()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-level-curve.json");
+        Rig rig;
+        galleond::LightingLevelScheduler missing(*rig.controller, path, [] { return QTime(10, 0); }, 3600000);
+        QCOMPARE(rig.controller->effectiveLevel(), 1000);
+        galleond::BrightnessCurve curve;
+        curve.mode = galleond::BrightnessCurve::Mode::Curve;
+        curve.hours.fill(400);
+        QVERIFY(galleond::writeBrightnessCurve(path, curve));
+        missing.reload();
+        QCOMPARE(rig.controller->effectiveLevel(), 400);
+        QFile damaged(path);
+        QVERIFY(damaged.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        damaged.write(R"({"version":1,"mode":)");
+        damaged.close();
+        missing.reload();
+        QCOMPARE(rig.controller->effectiveLevel(), 400); // a half-written file changes nothing: the curve in force stays
     }
 
     void theFixedRainbowOfTheFileIsWhatTheKeysShowWithTheRealPositions()

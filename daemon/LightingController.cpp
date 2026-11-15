@@ -132,15 +132,37 @@ bool LightingController::setAppearance(const galleon::keyboard::Appearance &appe
         return false;
     m_appearance = appearance; // kept even while off, so the next start shows it
     m_tool.reset();
-    if (m_worker)
-        QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), appearance] { worker->setAppearance(appearance); }, Qt::QueuedConnection);
+    if (m_worker) {
+        galleon::keyboard::Appearance shown = appearance;
+        shown.level = effectiveLevel();
+        QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), shown] { worker->setAppearance(shown); }, Qt::QueuedConnection);
+    }
     return true;
+}
+
+bool LightingController::setLevelOverride(std::optional<int> level)
+{
+    if (level && (*level < 0 || *level > galleon::keyboard::LevelFull))
+        return false;
+    if (level == m_levelOverride)
+        return true;
+    m_levelOverride = level;
+    if (m_worker)
+        QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), shown = effectiveLevel()] { worker->setLevel(shown); }, Qt::QueuedConnection);
+    return true;
+}
+
+galleon::keyboard::Appearance LightingController::shownAppearance() const
+{
+    galleon::keyboard::Appearance shown = m_appearance;
+    shown.level = effectiveLevel();
+    return shown;
 }
 
 void LightingController::startWorker()
 {
     setState(QStringLiteral("starting"), {});
-    m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, m_appearance, m_tool, m_positions);
+    m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, shownAppearance(), m_tool, m_positions);
     m_worker->moveToThread(&m_thread);
     connect(m_worker.get(), &LightingWorker::reported, this, &LightingController::onWorkerState);
     m_thread.start();
