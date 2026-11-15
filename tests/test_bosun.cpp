@@ -2037,8 +2037,12 @@ QtObject {
         engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
         engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
         engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        FakeCalibrationLights lights;
+        bosun::KeyCalibration calibration(lights, dir.filePath("keymap.json"));
+        const bosun::AppearanceStore appearance{QString()};
         engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
-                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("keyCalibration"), QVariant::fromValue(&calibration)},
+                                     {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
         engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
         QVERIFY(!engine.rootObjects().isEmpty());
         QObject *root = engine.rootObjects().constFirst();
@@ -2056,12 +2060,19 @@ QtObject {
         const double brightness = sceneY("keyboardBrightness");
         const double lighting = sceneY("lightingToggle");
         const double drawing = sceneY("keyboardMap");
+        const double appearanceRow = sceneY("appearanceUniform");
+        const double level = sceneY("appearanceLevel");
+        const double calibrationY = sceneY("calibrationBegin");
         const double webHub = sceneY("openWebHub");
-        QVERIFY(brightness >= 0 && lighting >= 0 && drawing >= 0 && webHub >= 0);
-        // The brightness, the live lighting and the keyboard drawing come first; Corsair's Web Hub is the last thing on the tab.
+        QVERIFY(brightness >= 0 && lighting >= 0 && appearanceRow >= 0 && level >= 0 && drawing >= 0 && calibrationY >= 0 && webHub >= 0);
+        // The brightness, then one live lighting section (switch, appearance, level, drawing), then the calibration; Corsair's Web Hub is the
+        // last thing on the tab.
         QVERIFY(brightness < lighting);
-        QVERIFY(lighting < drawing);
-        QVERIFY(drawing < webHub);
+        QVERIFY(lighting < appearanceRow);
+        QVERIFY(appearanceRow < level);
+        QVERIFY(level < drawing);
+        QVERIFY(drawing < calibrationY);
+        QVERIFY(calibrationY < webHub);
     }
 
     void theLightStripIsSevenEqualSectionsEachLitByItsOwnLedAndColouredLikeAKey()
