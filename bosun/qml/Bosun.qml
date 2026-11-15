@@ -856,6 +856,54 @@ Window {
                     font.pixelSize: 14
                     text: qsTr("As on the keyboard, the legend and the outline of each key are see-through: the light of the lamps under it shows through. Click a key and pick a colour to see how a lighting would look. The module shows the keys of the theme tab you looked at last.")
                 }
+                Text {
+                    color: "white"
+                    font.pixelSize: 14
+                    font.bold: true
+                    text: qsTr("Appearance")
+                }
+                Row {
+                    spacing: 8
+                    Pill {
+                        objectName: "appearanceUniform"
+                        selected: win.appearance !== null && win.appearance.baseType === "uniform"
+                        text: qsTr("One colour")
+                        onClicked: {
+                            const c = win.appearance.colour
+                            win.saved(win.appearance.setUniform(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)))
+                        }
+                    }
+                    Pill {
+                        objectName: "appearanceRainbow"
+                        selected: win.appearance !== null && win.appearance.baseType === "rainbow"
+                        text: qsTr("Rainbow")
+                        onClicked: win.saved(win.appearance.setRainbow(win.appearance.rainbowSpeed))
+                    }
+                }
+                Row {
+                    objectName: "rainbowSpeeds"
+                    spacing: 8
+                    visible: win.appearance !== null && win.appearance.baseType === "rainbow"
+                    Repeater {
+                        // Thousandths of a turn per second: fixed, one turn in 50 s, in 10 s, in 3 s.
+                        model: [{speed: 0, name: qsTr("Fixed")}, {speed: 20, name: qsTr("Slow")}, {speed: 100, name: qsTr("Medium")}, {speed: 300, name: qsTr("Fast")}]
+                        Pill {
+                            required property var modelData
+                            objectName: "rainbowSpeed" + modelData.speed
+                            selected: win.appearance !== null && win.appearance.rainbowSpeed === modelData.speed
+                            text: modelData.name
+                            onClicked: win.saved(win.appearance.setRainbow(modelData.speed))
+                        }
+                    }
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    visible: win.appearance !== null && win.appearance.baseType === "rainbow" && win.appearance.rainbowSpeed > 0
+                    color: "#7d8591"
+                    font.pixelSize: 13
+                    text: qsTr("The rainbow moves on the keyboard; the drawing shows it standing still.")
+                }
                 KeyboardMap {
                     id: keyboardMap
                     objectName: "keyboardMap"
@@ -903,11 +951,6 @@ Window {
                             win.saved(win.appearance.clearRetouches())
                             win.saved(win.appearance.setUniform(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)))
                         }
-                    }
-                    Pill {
-                        objectName: "lampsRainbow"
-                        text: qsTr("Rainbow")
-                        onClicked: { win.saved(win.appearance.clearRetouches()); win.saved(win.appearance.setRainbow(0)) }
                     }
                     Pill {
                         objectName: "lampsClear"

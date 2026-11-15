@@ -729,5 +729,12 @@
   "The appearance could not be saved.": "The appearance could not be saved.",
   "A colour is made of three numbers from 0 to 255.": "A colour is made of three numbers from 0 to 255.",
   "A LED is 0 to 145 and a colour is made of three numbers from 0 to 255.": "A LED is 0 to 145 and a colour is made of three numbers from 0 to 255.",
-  "Keyboard colour kept for the next time the live lighting is on: %1": "Keyboard colour kept for the next time the live lighting is on: %1"
+  "Keyboard colour kept for the next time the live lighting is on: %1": "Keyboard colour kept for the next time the live lighting is on: %1",
+  "Appearance": "Appearance",
+  "One colour": "One colour",
+  "Fixed": "Fixed",
+  "Slow": "Slow",
+  "Medium": "Medium",
+  "Fast": "Fast",
+  "The rainbow moves on the keyboard; the drawing shows it standing still.": "The rainbow moves on the keyboard; the drawing shows it standing still."
 }

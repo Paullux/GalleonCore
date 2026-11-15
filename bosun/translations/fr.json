@@ -729,5 +729,12 @@
   "The appearance could not be saved.": "L'apparence n'a pas pu être enregistrée.",
   "A colour is made of three numbers from 0 to 255.": "Une couleur est faite de trois nombres de 0 à 255.",
   "A LED is 0 to 145 and a colour is made of three numbers from 0 to 255.": "Une LED va de 0 à 145 et une couleur est faite de trois nombres de 0 à 255.",
-  "Keyboard colour kept for the next time the live lighting is on: %1": "Couleur du clavier mémorisée pour la prochaine fois que l'éclairage en direct sera allumé : %1"
+  "Keyboard colour kept for the next time the live lighting is on: %1": "Couleur du clavier mémorisée pour la prochaine fois que l'éclairage en direct sera allumé : %1",
+  "Appearance": "Apparence",
+  "One colour": "Une couleur",
+  "Fixed": "Fixe",
+  "Slow": "Lent",
+  "Medium": "Moyen",
+  "Fast": "Rapide",
+  "The rainbow moves on the keyboard; the drawing shows it standing still.": "L'arc-en-ciel défile sur le clavier ; le dessin le montre immobile."
 }

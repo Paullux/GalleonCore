@@ -2295,6 +2295,64 @@ QtObject {
         QCOMPARE(root->property("selectedCap").toInt(), -1);
     }
 
+    void theAppearanceSelectorChoosesTheBaseAndTheSpeedOfTheRainbowAndWritesThem()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        const QString appearanceFile = dir.filePath("lighting-appearance.json");
+        const bosun::AppearanceStore appearance(appearanceFile);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        const QVariantList tabs = root->property("tabs").toList();
+        for (int i = 0; i < tabs.size(); ++i) {
+            if (tabs.at(i).toMap().value(QStringLiteral("kind")).toString() == QLatin1String("keyboard"))
+                root->setProperty("currentTab", i);
+        }
+        auto *uniform = root->findChild<QQuickItem *>("appearanceUniform");
+        QVERIFY(uniform);
+        auto *rainbow = root->findChild<QQuickItem *>("appearanceRainbow");
+        QVERIFY(rainbow);
+        auto *speeds = root->findChild<QQuickItem *>("rainbowSpeeds");
+        QVERIFY(speeds);
+
+        // At the start: one colour, and no choice of speed (there is no rainbow).
+        QVERIFY(uniform->property("selected").toBool());
+        QVERIFY(!rainbow->property("selected").toBool());
+        QVERIFY(!speeds->isVisible());
+
+        // The rainbow is chosen: it is written (fixed), the speeds appear.
+        QVERIFY(QMetaObject::invokeMethod(rainbow, "clicked"));
+        QVERIFY(rainbow->property("selected").toBool());
+        QVERIFY(speeds->property("visible").toBool());
+        QCOMPARE(galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).base, galleon::keyboard::BaseType::Rainbow);
+
+        // A speed is chosen: it is written and marked.
+        const auto mediums = namedItems(root, "rainbowSpeed100");
+        QCOMPARE(mediums.size(), 1);
+        QQuickItem *medium = mediums.constFirst();
+        QVERIFY(QMetaObject::invokeMethod(medium, "clicked"));
+        QVERIFY(medium->property("selected").toBool());
+        QCOMPARE(galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).rainbowSpeed, 100);
+
+        // Back to one colour: the base changes, the speed is no longer offered.
+        QVERIFY(QMetaObject::invokeMethod(uniform, "clicked"));
+        QVERIFY(uniform->property("selected").toBool());
+        QVERIFY(!speeds->property("visible").toBool());
+        QCOMPARE(galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).base, galleon::keyboard::BaseType::Uniform);
+    }
+
     void theWindowHasATabPerThemeAndTheFixedOnes()
     {
         const QTemporaryDir dir;
