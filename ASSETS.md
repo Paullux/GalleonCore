@@ -36,6 +36,10 @@ Styles are free to use: manga, cyberpunk, space western, cinematic lighting. Cha
 
 - **Icon (13 November 2026)**: SVG supplied by the owner (`tools/theme-icon/source/galleoncore-theme.svg`, title "GalleonCore themes"): a ship's wheel with a continuous rainbow gradient around three stacked pictures and a brush, derived from the owner's own application icon. Rendered to the 1024 × 1024 master with Chromium. No text, no existing character, mark or logo. Generated with ChatGPT (free version, as the owner put it: the weaker one) from the owner's own Bosun application icon, shared with the request; date: 13 November 2026 (to be corrected by the owner if different). Exact prompt (French, as written by the owner): « est-ce que tu peux t'inspirer de cette icone pour créer une icone des thèmes de GalleonCore dans les systèmes de fichiers de Linux et Windows en svg ? ». Licence: CC-BY-SA-4.0 (default), unless the owner says otherwise. An earlier provisional document-shaped icon, hand drawn for the project, was replaced by it.
 
+## Keys-FX icon
+
+`bosun/icons/key-fx/key_fx_icon.svg` is the icon for the future Keys-FX store (lighting effects for the keyboard). SVG supplied by the owner on 15 November 2026, title "Key FX - effets lumineux": a stylised keyboard with a multicolour light wave and a star, on a dark rounded square. No text, no existing character, mark or logo; the keyboard is a generic drawing of 21 keys, not a picture or a trace of the product. CC-BY-SA-4.0 (default), author Paul Woisard. **Provenance to be completed by the owner**: the tool that produced it, the date and the prompt are not recorded yet (see "AI-generated assets" below if it was generated). Not used by the software yet.
+
 ## Where they go
 
 Wallpapers go in [`public/wallpaper/`](public/wallpaper/), one folder per style, with a `PROVENANCE.md` listing each file. That folder is CC-BY-SA-4.0 as a whole.
