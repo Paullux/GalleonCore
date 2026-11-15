@@ -3,6 +3,10 @@
     "leds": [
         {
             "kind": "unlit",
+            "led": 0
+        },
+        {
+            "kind": "unlit",
             "led": 1
         },
         {
@@ -486,6 +490,18 @@
             "led": 101
         },
         {
+            "kind": "unlit",
+            "led": 102
+        },
+        {
+            "kind": "unlit",
+            "led": 103
+        },
+        {
+            "kind": "unlit",
+            "led": 104
+        },
+        {
             "key": 224,
             "kind": "key",
             "led": 105
@@ -504,6 +520,10 @@
             "key": 227,
             "kind": "key",
             "led": 108
+        },
+        {
+            "kind": "unlit",
+            "led": 109
         },
         {
             "key": 229,
@@ -525,11 +545,23 @@
         },
         {
             "kind": "unlit",
+            "led": 114
+        },
+        {
+            "kind": "unlit",
             "led": 115
         },
         {
             "kind": "unlit",
+            "led": 116
+        },
+        {
+            "kind": "unlit",
             "led": 117
+        },
+        {
+            "kind": "unlit",
+            "led": 118
         },
         {
             "kind": "unlit",
@@ -610,6 +642,10 @@
             "led": 137
         },
         {
+            "kind": "unlit",
+            "led": 138
+        },
+        {
             "kind": "strip",
             "led": 139,
             "position": 1
@@ -645,6 +681,6 @@
             "position": 7
         }
     ],
-    "source": "Key calibration of the owner on 2026-11-15 on his Galleon 100 SD (French layout), with Galleon Bosun: each LED of the live frame lit alone and the key pressed by the person. LEDs 70, 108, 110, 111, 122 and 129 were written by hand by the owner (Print Screen, left Windows, right Shift, Alt Gr, Fn, Copilot) because the system keeps those keys from the window or they send no key code of their own. LEDs 0, 109, 116, 118 and 138 were not measured. The ISO key next to Enter (LED 50) carries the identity of the ANSI backslash.",
+    "source": "Key calibration of the owner on his Galleon 100 SD (French layout) with Galleon Bosun: each LED of the live frame lit alone and the key pressed by the person. Run 1 (Linux, 2026-11-15): most answers. Run 2 (Windows 11, 2026-11-15, same keyboard): the same answer for 132 LEDs, right Shift and Alt Gr pressed successfully, and LEDs 0, 102 to 104, 109, 114, 116, 118 and 138 seen to light nothing. LEDs 70, 108, 122 and 129 (Print Screen, left Windows, Fn, Copilot) were written by hand by the owner: the system keeps those keys from the window, or they send no code of their own. LED 72 (Pause) was pressed under Linux; it sends no scan code under Windows, where it was answered as lit nothing, an answer not kept. The ISO key next to Enter (LED 50) carries the identity of the ANSI backslash.",
     "version": 1
 }

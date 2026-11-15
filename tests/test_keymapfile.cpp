@@ -182,7 +182,7 @@ private Q_SLOTS:
         if (!shipped)
             QFAIL(qPrintable(QStringLiteral("the shipped map was refused: ") + why));
         const auto &map = shipped->map;
-        QCOMPARE(map.assignedCount(), std::size_t{137});
+        QCOMPARE(map.assignedCount(), std::size_t{146}); // every LED of the frame has an answer
         QCOMPARE(map.ledForKey(0x3A), std::optional<std::uint16_t>(58)); // F1 is the LED of its HID usage, as documented
         QCOMPARE(map.ledForKey(0x04), std::optional<std::uint16_t>(4));  // the key at the A of a QWERTY, the Q of an AZERTY
         QCOMPARE(map.ledForKey(galleon::keyboard::CopilotKey), std::optional<std::uint16_t>(129)); // as in the Web Hub's key table
@@ -190,8 +190,11 @@ private Q_SLOTS:
         QCOMPARE(map.ledForKey(0xE0), std::optional<std::uint16_t>(105)); // the modifiers do not follow their usage
         QCOMPARE(map.assignmentFor(139).value_or(LedAssignment{}).kind, LedKind::Strip);
         QCOMPARE(map.assignmentFor(145).value_or(LedAssignment{}).stripPosition, std::uint8_t{7});
-        QVERIFY(!map.assignmentFor(0).has_value()); // not measured: no entry, no placeholder
-        QVERIFY(!map.assignmentFor(109).has_value());
+        QCOMPARE(map.assignmentFor(0).value_or(LedAssignment{}).kind, LedKind::Unlit); // seen to light nothing (Windows run)
+        QCOMPARE(map.assignmentFor(109).value_or(LedAssignment{}).kind, LedKind::Unlit);
+        QCOMPARE(map.ledForKey(0xE5), std::optional<std::uint16_t>(110)); // right Shift, pressed under Windows
+        QCOMPARE(map.ledForKey(0x48), std::optional<std::uint16_t>(72));  // Pause stays a key, as pressed under Linux
+        QVERIFY(map.unassignedLeds().empty());
         QVERIFY(!shipped->source.isEmpty());
     }
 
