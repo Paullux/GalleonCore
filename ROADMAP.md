@@ -650,6 +650,16 @@ Pas encore fusionnée ni en pull request. Les fichiers de thème doivent avoir u
 - **Validation complète (`tools/check.py full`) : non faite** — la session de développement n'avait pas Docker utilisable (Docker Hub répondait 429). Obligatoire avant toute fusion ou pull request ; aucun C++ n'a changé, seules les lignes `install` de `bosun/CMakeLists.txt` le concernent.
 - **Non vérifié** : Setup réel sous Windows (les assertions de `test-setup.ps1` n'ont pas encore tourné), affichage de l'icône dans l'Explorateur, dans Dolphin ou un autre gestionnaire de fichiers Linux. À confirmer par le propriétaire avant de classer cette entrée « sur le module/le bureau ».
 
+### Calibration touche par touche — branche `feat/key-calibration`, 15 novembre 2026
+
+Pas encore en pull request. Objectif : la carte entre les 146 LED de la trame live et les touches physiques, établie par un outil graphique qui allume une LED à la fois (Linux et Windows). Les exigences de « Sécurité et vie privée dès la conception » (section 5) s'appliquent : la calibration est la première fonctionnalité qui lit des frappes.
+
+- **Étape 1, première tranche faite (logique pure, aucun matériel)** : `KeyIdentity` (`lib/keyboard/`) : l'identité d'une touche physique est son code HID (page clavier 0x07), avec les conversions depuis les codes evdev de Linux et les codes de balayage de Windows (drapeau « étendu » inclus), tables vérifiées contre `input-event-codes.h` ; `KeyMap` : la carte LED ↔ touche, validée strictement (LED 0 à 145, touche connue, une touche n'est allumée que par une LED, sections de bande de 1 à 64, LED « n'allume rien »). L'hypothèse « l'index de LED est le code HID » n'est qu'un indice (`assumedLedForKey`), jamais une valeur de la carte. Tests : `test_keyidentity`, `test_keymap` (contrôles de mutation faits).
+- **Pas couvert** : pavé numérique (le Galleon 100 SD n'en a pas), touches multimédia, touche Pause sous Windows (séquence, pas un code), touche ISO `#~` (même code que la barre oblique inverse : la calibration note ce que la personne voit).
+- **Reste de l'étape 1** : le format du fichier de carte (JSON, avec la source de chaque mesure, `null` tant que non mesuré).
+- **À faire ensuite** : étape 2, la commande « allumer une seule LED » (D-Bus sous Linux, LocalControl sous Windows, mêmes protections que l'éclairage en direct) ; étape 3, l'écran de calibration dans Bosun, qui lit les frappes **seulement dans sa fenêtre quand elle a le focus** (pas de capture globale), n'est active que pendant la calibration lancée explicitement, ne garde que la carte finale.
+- **Validation** : tests ciblés sur cette machine (79 tests sur 79, clang-tidy et `reuse lint` propres sur les nouveaux fichiers) ; **`tools/check.py full` non fait**, obligatoire avant toute pull request. Rien n'a été écrit sur le clavier.
+
 ## 3. À vérifier ou corriger
 
 - **Stabilité du démon** : exécution longue (heures), reprise après veille, débranchement/rebranchement du module (le redessin complet est déjà prévu sur `deckAvailableChanged`), fuites : caches bornés (images, icônes, applications) mais pas mesurés sur la durée.
