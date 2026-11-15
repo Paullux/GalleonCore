@@ -764,6 +764,26 @@ Window {
                                 onClicked: { win.keyCalibration.answerStrip(calibrationPanel.stripPosition); calibrationPanel.forceActiveFocus() }
                             }
                         }
+                        Text {
+                            width: parent.width
+                            wrapMode: Text.Wrap
+                            color: "#c9ced6"
+                            font.pixelSize: 13
+                            text: qsTr("A key that the system keeps from this window, or that sends no code of its own: choose it here.")
+                        }
+                        Flow {
+                            width: parent.width
+                            spacing: 8
+                            Repeater {
+                                model: win.keyCalibration !== null ? win.keyCalibration.specialKeys() : []
+                                delegate: Pill {
+                                    required property var modelData
+                                    objectName: "calibrationSpecial" + modelData.usage
+                                    text: modelData.label
+                                    onClicked: { win.keyCalibration.answerNamedKey(modelData.usage); calibrationPanel.forceActiveFocus() }
+                                }
+                            }
+                        }
                     }
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff" }

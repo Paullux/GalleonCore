@@ -708,5 +708,16 @@
   "Nothing lit up": "Nothing lit up",
   "Skip": "Skip",
   "A section of the light strip lit up, counted from the left:": "A section of the light strip lit up, counted from the left:",
-  "It is that section": "It is that section"
+  "It is that section": "It is that section",
+  "Print Screen": "Print Screen",
+  "Pause": "Pause",
+  "Left Windows": "Left Windows",
+  "Right Windows": "Right Windows",
+  "Right Shift": "Right Shift",
+  "Alt Gr": "Alt Gr",
+  "Right Control": "Right Control",
+  "Fn": "Fn",
+  "Copilot": "Copilot",
+  "LED %1 = %2.": "LED %1 = %2.",
+  "A key that the system keeps from this window, or that sends no code of its own: choose it here.": "A key that the system keeps from this window, or that sends no code of its own: choose it here."
 }

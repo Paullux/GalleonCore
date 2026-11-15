@@ -708,5 +708,16 @@
   "Nothing lit up": "No se encendió nada",
   "Skip": "Omitir",
   "A section of the light strip lit up, counted from the left:": "Se encendió una sección de la franja luminosa, contada desde la izquierda:",
-  "It is that section": "Es esa sección"
+  "It is that section": "Es esa sección",
+  "Print Screen": "Impr Pant",
+  "Pause": "Pausa",
+  "Left Windows": "Windows izquierda",
+  "Right Windows": "Windows derecha",
+  "Right Shift": "Mayús derecha",
+  "Alt Gr": "Alt Gr",
+  "Right Control": "Ctrl derecha",
+  "Fn": "Fn",
+  "Copilot": "Copilot",
+  "LED %1 = %2.": "LED %1 = %2.",
+  "A key that the system keeps from this window, or that sends no code of its own: choose it here.": "Una tecla que el sistema se reserva o que no envía ningún código propio: elíjala aquí."
 }

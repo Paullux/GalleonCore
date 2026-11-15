@@ -7,6 +7,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QVariantList>
 
 #include <memory>
 #include <optional>
@@ -70,6 +71,10 @@ public:
 
     // A key press of the window that has the focus: QKeyEvent::nativeScanCode. Nothing happens when not active.
     Q_INVOKABLE void handleKey(unsigned nativeScanCode);
+    // The keys that the system keeps from the window, or that send no code, to answer by choosing them (not by pressing them):
+    // a list of {label, usage}. The same identities as a key press gives; the labels are translated.
+    Q_INVOKABLE [[nodiscard]] static QVariantList specialKeys();
+    Q_INVOKABLE void answerNamedKey(int usage);
     Q_INVOKABLE void answerNone();                // "no key lit up"
     Q_INVOKABLE void answerStrip(int position);   // "a section of the light strip lit up", 1 = leftmost
     Q_INVOKABLE void skip();
@@ -79,6 +84,7 @@ Q_SIGNALS:
     void changed();
 
 private:
+    void applyKey(galleon::keyboard::HidUsage key);
     void settle(const QString &message); // lights the next LED (or finishes), saves, tells the person
     void say(const QString &message);
     [[nodiscard]] bool save();

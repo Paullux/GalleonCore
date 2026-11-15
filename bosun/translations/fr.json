@@ -708,5 +708,16 @@
   "Nothing lit up": "Rien ne s’est allumé",
   "Skip": "Passer",
   "A section of the light strip lit up, counted from the left:": "Une section de la bande lumineuse s’est allumée, comptée depuis la gauche :",
-  "It is that section": "C’est cette section"
+  "It is that section": "C’est cette section",
+  "Print Screen": "Impr. écran",
+  "Pause": "Pause",
+  "Left Windows": "Windows gauche",
+  "Right Windows": "Windows droite",
+  "Right Shift": "Maj droit",
+  "Alt Gr": "Alt Gr",
+  "Right Control": "Ctrl droit",
+  "Fn": "Fn",
+  "Copilot": "Copilot",
+  "LED %1 = %2.": "LED %1 = %2.",
+  "A key that the system keeps from this window, or that sends no code of its own: choose it here.": "Une touche que le système garde pour lui, ou qui n’envoie aucun code : choisissez-la ici."
 }

@@ -2048,6 +2048,14 @@ QtObject {
         QVERIFY(QMetaObject::invokeMethod(back, "clicked"));
         QCOMPARE(calibration.currentLed(), 1);
 
+        // A key the system keeps can be chosen on the screen instead of pressed (Fn here: it has no code to press).
+        QTRY_VERIFY_WITH_TIMEOUT(namedItems(root, "calibrationSpecial65281").size() == 1, 3000); // made by a Repeater
+        auto *fn = namedItems(root, "calibrationSpecial65281").constFirst();
+        QVERIFY(fn);
+        const int before = calibration.currentLed();
+        QVERIFY(QMetaObject::invokeMethod(fn, "clicked"));
+        QCOMPARE(calibration.currentLed(), before + 1);
+
         // Stopped: the screen goes away and the keys are ignored again.
         auto *stop = root->findChild<QQuickItem *>("calibrationStop");
         QVERIFY(stop);
