@@ -1975,6 +1975,7 @@ QtObject {
         auto *note = root->findChild<QQuickItem *>("brightnessSuspendedNote");
         QVERIFY(note);
         QVERIFY(note->isVisible());
+        root->setProperty("keyboardView", QStringLiteral("lighting")); // the live lighting half of the tab
 
         // A colour chosen for a key of the drawing goes to the keyboard at once, as that key's LED and nothing else.
         const auto caps = root->findChild<QQuickItem *>("keyboardMap")->property("map").toMap().value(QStringLiteral("caps")).toList();
@@ -2056,18 +2057,33 @@ QtObject {
             const auto found = namedItems(root, QString::fromLatin1(name));
             return found.size() == 1 ? found.constFirst()->mapToScene(QPointF(0, 0)).y() : -1.0;
         };
-        QTRY_VERIFY_WITH_TIMEOUT(sceneY("openWebHub") > sceneY("keyboardMap"), 3000);
-        const double brightness = sceneY("keyboardBrightness");
+        const auto shown = [root](const char *name) {
+            const auto found = namedItems(root, QString::fromLatin1(name));
+            return found.size() == 1 && found.constFirst()->isVisible();
+        };
+
+        // One half at a time: the brightness first, the live lighting after the choice. Corsair's Web Hub is under both.
+        QCOMPARE(root->property("keyboardView").toString(), QStringLiteral("brightness"));
+        QTRY_VERIFY_WITH_TIMEOUT(shown("keyboardBrightness"), 3000);
+        QVERIFY(!shown("lightingToggle"));
+        QVERIFY(!shown("keyboardMap"));
+        QVERIFY(!shown("calibrationBegin"));
+        QVERIFY(sceneY("keyboardBrightness") >= 0);
+        QVERIFY(sceneY("openWebHub") > sceneY("keyboardBrightness"));
+
+        // The live lighting: the switch, the appearance, the level, the drawing, then the calibration.
+        root->setProperty("keyboardView", QStringLiteral("lighting"));
+        QTRY_VERIFY_WITH_TIMEOUT(shown("lightingToggle"), 3000);
+        QVERIFY(!shown("keyboardBrightness"));
+        // The layout settles after the switch of view: wait for the last comparison, then check them all.
+        QTRY_VERIFY_WITH_TIMEOUT(sceneY("calibrationBegin") >= 0 && sceneY("calibrationBegin") < sceneY("openWebHub"), 3000);
         const double lighting = sceneY("lightingToggle");
-        const double drawing = sceneY("keyboardMap");
         const double appearanceRow = sceneY("appearanceUniform");
         const double level = sceneY("appearanceLevel");
+        const double drawing = sceneY("keyboardMap");
         const double calibrationY = sceneY("calibrationBegin");
         const double webHub = sceneY("openWebHub");
-        QVERIFY(brightness >= 0 && lighting >= 0 && appearanceRow >= 0 && level >= 0 && drawing >= 0 && calibrationY >= 0 && webHub >= 0);
-        // The brightness, then one live lighting section (switch, appearance, level, drawing), then the calibration; Corsair's Web Hub is the
-        // last thing on the tab.
-        QVERIFY(brightness < lighting);
+        QVERIFY(lighting >= 0 && appearanceRow >= 0 && level >= 0 && drawing >= 0 && calibrationY >= 0 && webHub >= 0);
         QVERIFY(lighting < appearanceRow);
         QVERIFY(appearanceRow < level);
         QVERIFY(level < drawing);
@@ -2124,6 +2140,7 @@ QtObject {
         const double step = sections.at(1)->x() - sections.at(0)->x();
         for (int i = 2; i < 7; ++i)
             QVERIFY(qAbs((sections.at(i)->x() - sections.at(i - 1)->x()) - step) < 0.6); // regular divisions
+        root->setProperty("keyboardView", QStringLiteral("lighting")); // the live lighting half of the tab
         auto *board = root->findChild<QQuickItem *>("keyboardMap");
         QVERIFY(board);
         const double middle = sections.at(3)->x() + width / 2;
@@ -2185,6 +2202,7 @@ QtObject {
             if (tabs.at(i).toMap().value(QStringLiteral("kind")).toString() == QLatin1String("keyboard"))
                 root->setProperty("currentTab", i); // the calibration is on the keyboard tab
         }
+        root->setProperty("keyboardView", QStringLiteral("lighting")); // the live lighting half of the tab
         auto *panel = root->findChild<QQuickItem *>("calibrationPanel");
         QVERIFY(panel);
         QVERIFY(root->findChild<QQuickItem *>("calibrationBegin"));
@@ -2295,6 +2313,11 @@ QtObject {
         for (const QString &lamp : colours.keys())
             QCOMPARE(colours.value(lamp).toString(), QStringLiteral("#e53935"));
         QCOMPARE(colours.value(lamps.constFirst().toString()).toString(), QStringLiteral("#e53935"));
+        // The live lighting is off: the colour is kept, but the drawing stays black and grey (and cannot be clicked).
+        const auto stillGrey = namedItems(root, "cap40");
+        QCOMPARE(stillGrey.size(), 1);
+        QVERIFY(stillGrey.constFirst()->property("light").value<QColor>().lightnessF() < 0.35);
+        QVERIFY(!board->isEnabled());
 
         // The rainbow gives every lamp a colour, a different one at each end of the keyboard.
         QVariant rainbow;
@@ -2337,6 +2360,7 @@ QtObject {
             if (tabs.at(i).toMap().value(QStringLiteral("kind")).toString() == QLatin1String("keyboard"))
                 root->setProperty("currentTab", i);
         }
+        root->setProperty("keyboardView", QStringLiteral("lighting")); // the live lighting half of the tab
         auto *uniform = root->findChild<QQuickItem *>("appearanceUniform");
         QVERIFY(uniform);
         auto *rainbow = root->findChild<QQuickItem *>("appearanceRainbow");

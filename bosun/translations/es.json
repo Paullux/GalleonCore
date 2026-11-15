@@ -722,7 +722,6 @@
   "A list of LEDs has one to 146 groups of four numbers": "Una lista de LED tiene de uno a 146 grupos de cuatro números",
   "All the keys are dark.": "Todas las teclas están apagadas.",
   "The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.": "La iluminación en vivo está encendida: los colores que da aquí a las teclas van al teclado, un color por tecla; una tecla sin color permanece apagada.",
-  "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Esto es una vista previa: no se envía nada al teclado mientras la iluminación en vivo no esté encendida. Las teclas son una distribución francesa estándar dibujada como referencia; las lámparas de debajo están en las posiciones que indica el teclado.",
   "Light strip, section %1": "Franja luminosa, sección %1",
   "%1 keys sent.": "%1 teclas enviadas.",
   "This appearance is not valid.": "Esta apariencia no es válida.",
@@ -739,5 +738,7 @@
   "The rainbow moves on the keyboard; the drawing shows it standing still.": "El arcoíris se mueve en el teclado; el dibujo lo muestra quieto.",
   "Level of the colours: how strongly the colours above are shown, without changing the brightness of the keyboard itself.": "Nivel de los colores: con qué intensidad se muestran los colores de arriba, sin cambiar el brillo del propio teclado.",
   "Level of the colours": "Nivel de los colores",
-  "The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.": "El dibujo está en gris: el teclado no lo muestra ahora mismo (véase el estado de la iluminación en directo arriba). Lo que elija aquí se guarda y se mostrará en cuanto pueda."
+  "The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.": "El dibujo está en gris: el teclado no lo muestra ahora mismo (véase el estado de la iluminación en directo arriba). Lo que elija aquí se guarda y se mostrará en cuanto pueda.",
+  "The drawing stays in black and grey while the live lighting is off: switch it on to see and choose the colours of the keys. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "El dibujo se queda en blanco y negro mientras la iluminación en directo está apagada: enciéndala para ver y elegir los colores de las teclas. Las teclas son una disposición francesa estándar dibujada para orientarse; las lámparas de debajo están en las posiciones que indica el teclado.",
+  "Corsair keyboard · lighting and keys · manufacturer's solution": "Teclado Corsair · iluminación y teclas · solución del fabricante"
 }

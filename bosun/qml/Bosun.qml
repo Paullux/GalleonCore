@@ -45,6 +45,8 @@ Window {
     property var lampColors: ({})
     // True only while the keys really show the appearance (galleond holds them). Otherwise the drawing is a preview of what they will show.
     readonly property bool keysShowTheDrawing: daemon.lightingState === "holding"
+    // Which half of the Keyboard tab is shown: "brightness" (the keyboard's own) or "lighting" (the live lighting, experimental).
+    property string keyboardView: "brightness"
     property int selectedCap: -1
     property var selectedLamps: []
     readonly property var lastThemeEntry: backend.themes.length > 0 ? backend.themes[Math.min(lastTheme, backend.themes.length - 1)] : null
@@ -537,6 +539,26 @@ Window {
                     text: qsTr("7.6.0 is the Elgato application version, not the Stream Deck firmware version. Firmware updates are performed inside the Elgato app after fully stopping Bosun and galleond.")
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+                Row {
+                    spacing: 8
+                    Pill {
+                        objectName: "viewBrightness"
+                        selected: win.keyboardView === "brightness"
+                        text: qsTr("Corsair keyboard · brightness")
+                        onClicked: win.keyboardView = "brightness"
+                    }
+                    Pill {
+                        objectName: "viewLighting"
+                        selected: win.keyboardView === "lighting"
+                        text: qsTr("Corsair keyboard · live lighting (experimental)")
+                        onClicked: win.keyboardView = "lighting"
+                    }
+                }
+                Column {
+                    objectName: "brightnessView"
+                    width: parent.width
+                    spacing: 12
+                    visible: win.keyboardView === "brightness"
                 Text {
                     color: "white"
                     font.pixelSize: 16
@@ -626,7 +648,12 @@ Window {
                     onCommitted: (hour, value) => win.answered(win.backend.brightnessCurve.setHour(hour, value),
                                                                qsTr("Brightness at %1 h: %2 %").arg(hour).arg(value / 10))
                 }
-                Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+                }
+                Column {
+                    objectName: "lightingView"
+                    width: parent.width
+                    spacing: 12
+                    visible: win.keyboardView === "lighting"
                 Text {
                     color: "white"
                     font.pixelSize: 16
@@ -772,7 +799,8 @@ Window {
                     objectName: "keyboardMap"
                     width: Math.min(parent.width, 740)
                     opacity: win.keysShowTheDrawing ? 1 : 0.4 // greyed: what the keyboard shows now is not this
-                    colors: win.lampColors
+                    colors: win.keysShowTheDrawing ? win.lampColors : ({}) // black and grey while the keys do not show it
+                    enabled: win.keysShowTheDrawing // and not to be edited blind
                     selected: win.selectedCap
                     themeName: win.lastThemeEntry ? win.lastThemeEntry.name : ""
                     themeColor: win.lastThemeEntry ? win.lastThemeEntry.color : "#9aa0a6"
@@ -831,7 +859,7 @@ Window {
                           ? qsTr("The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.")
                           : win.daemon.lightingActive
                           ? qsTr("The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.")
-                          : qsTr("This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
+                          : qsTr("The drawing stays in black and grey while the live lighting is off: switch it on to see and choose the colours of the keys. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff"; visible: win.keyCalibration !== null }
                 Text {
@@ -992,12 +1020,13 @@ Window {
                         }
                     }
                 }
+                }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
                 Text {
                     color: "white"
                     font.pixelSize: 16
                     font.bold: true
-                    text: qsTr("Corsair keyboard · lighting and keys")
+                    text: qsTr("Corsair keyboard · lighting and keys · manufacturer's solution")
                 }
                 Text {
                     width: parent.width
