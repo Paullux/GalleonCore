@@ -713,6 +713,26 @@ Décisions à ne pas perdre :
 - **Validation** : `tools/check.py quick|batch|full|status` (voir CLAUDE.md, « Validation method »). Ciblé pendant le développement, complet (conteneur Ubuntu 24.04 de `tools/ci/`, comme la CI) à la fin d'un lot et avant toute fusion ; le rapport dit `TARGETED` ou `FULL VALIDATION PASSED`, lié à l'arbre exact (`status`).
 - Build : `cmake -B build -DGALLEON_WERROR=ON && cmake --build build && ctest --test-dir build` ; aussi `-DGALLEON_SANITIZE=ON`, clang-tidy, `qmllint widgets/*.qml`, `reuse lint` (non installé sur cette machine : à lancer ailleurs avant une publication).
 
+### Sécurité et vie privée dès la conception (exigences d'architecture, décision du propriétaire, 15 novembre 2026)
+
+Ces règles valent pour le futur mapping des touches, l'API locale et les effets lumineux réactifs. Ce sont des **exigences**, pas des recommandations : une fonctionnalité qui ne les respecte pas n'est pas fusionnée. Rien n'est implémenté à ce jour ; cette section documente ce qu'il faudra respecter.
+
+1. **Séparation des responsabilités.** La détection des frappes, le mapping des touches physiques et le pilotage des LED restent dans des composants internes de `galleond`, contrôlés. L'API publique n'expose jamais d'événement clavier.
+2. **API déclarative.** Une application externe demande un comportement (« une vague arc-en-ciel à chaque frappe », une couleur sur une zone, un effet). Elle ne reçoit jamais l'identité des touches pressées, leur ordre ni leur fréquence individuelle.
+3. **Aucune collecte des frappes.** Ne jamais enregistrer, transmettre sur le réseau ni journaliser les touches pressées, les caractères saisis ou les séquences d'événements. Ce qui sert à l'animation reste temporaire, en mémoire, et borné. Cela vaut aussi pour la trace de diagnostic (`GALLEON_LIGHTING_LOG`), pour les journaux, les rapports de plantage et les captures de test.
+4. **Permissions minimales.** Le composant qui détecte les frappes est isolé autant que possible, avec le moins de privilèges possible, et cette détection est désactivée quand aucun effet réactif n'est utilisé.
+5. **Activation explicite.** Toute fonctionnalité qui observe les frappes est désactivée par défaut et activée volontairement par l'utilisateur. L'état est visible dans Bosun.
+6. **Protection de l'API locale.** Contrôle des clients autorisés à envoyer des commandes ; aucune exposition réseau inutile (D-Bus ou IPC local de l'utilisateur seulement) ; aucune fonction qui permette de récupérer des événements clavier ou d'interroger un historique de frappes.
+7. **Contrôles de sécurité.** Toute modification qui touche la capture des événements, les permissions, les journaux ou les communications réseau est accompagnée de tests spécifiques et d'une revue dédiée, nommée dans la description de la pull request.
+8. **Limitation des informations indirectes.** Ne pas exposer de télémétrie ni d'état lumineux par touche qui permette à une application externe de reconstituer les frappes (par exemple la couleur courante d'une touche, ou une LED qui reflète la dernière touche pressée).
+
+Conséquences sur le plan existant :
+- La table de correspondance touche physique ↔ LED décrit du matériel ; elle ne contient aucune donnée d'usage.
+- L'API locale souhaitée (issue #111) est dans le sens de ces règles : elle reste déclarative, `galleond` garde le matériel, les priorités et les protections.
+- L'effet « frappe réactive » dépend de l'observation des frappes : il est soumis aux points 3, 4 et 5 avant toute implémentation.
+
+**À faire après l'implémentation des effets réactifs aux frappes (décision du propriétaire, 15 novembre 2026) : relire les journaux de diagnostic et les trames LED.** Une trace qui ne contient aucune frappe aujourd'hui (seulement les rapports échangés avec le clavier) pourrait, une fois les effets réactifs en place, en laisser deviner par déduction : une trame qui allume une touche donnée à un instant donné révèle quelle touche a été pressée et quand. Cette relecture est un point de sortie obligatoire de cette fonctionnalité : vérifier `GALLEON_LIGHTING_LOG`, les autres journaux et les captures de test, et décider de ce qui doit être supprimé, agrégé ou désactivé tant que la détection est active.
+
 ## 6. Prochaines étapes prioritaires
 
 ### Ce que veut dire la v1.0.0 (décision du propriétaire, 14 novembre 2026)

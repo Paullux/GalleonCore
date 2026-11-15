@@ -131,6 +131,18 @@ Historical HID incidents and the observed firmware recovery are recorded in
 `docs/WINDOWS_HID_HISTORY.md`. Consult those observations before changing HID
 ownership or recovery policy; do not infer a proven root cause from them.
 
+## Security and privacy by design (architecture requirements)
+These are requirements, not recommendations, for the key mapping, the local API and any reactive lighting effect (decision of 2026-11-15; nothing of this is implemented yet). A change that does not respect them is not merged. Details in the French `ROADMAP.md`, section 5.
+1. **Separation of responsibilities.** Key-press detection, physical key mapping and LED control stay in controlled internal components of `galleond`. The public API never exposes keyboard events.
+2. **Declarative API.** External applications request behaviours (a colour on a zone, an effect, "a rainbow wave on every key press"). They never receive which keys were pressed, their order or their individual frequency.
+3. **No collection of key presses.** Never record, send over a network or log pressed keys, typed characters or event sequences, including in the lighting trace (`GALLEON_LIGHTING_LOG`), logs, crash reports and test captures. Whatever an animation needs stays temporary, in memory and bounded.
+4. **Minimal permissions.** The component that detects key presses is isolated and has as few privileges as possible; detection is off whenever no reactive effect is in use.
+5. **Explicit activation.** Anything that observes key presses is off by default and enabled deliberately by the user, with its state visible in Bosun.
+6. **Local API protection.** Control which clients may send commands, no needless network exposure (per-user D-Bus or local IPC only), and no function that returns keyboard events or a key-press history.
+7. **Security checks.** Any change to event capture, permissions, logs or network communication comes with specific tests and a dedicated review, named in the pull request.
+8. **No indirect leaks.** No per-key telemetry or light state that lets an external application reconstruct key presses (for example a key's current colour, or an LED that reflects the last key pressed).
+After reactive key-press effects are implemented, the diagnostic logs and LED frames must be reviewed again: a frame lighting a given key at a given moment reveals that key was pressed, by deduction. This review is a required exit step of that feature.
+
 ## Maintaining architecture over time
 - Keep these shared rules in `AGENTS.md`. `CLAUDE.md` imports it; do not copy rules back and forth. Update linked documentation when behavior or architecture changes.
 - Dependency direction: protocol/transport libraries must not depend on Bosun or daemon controllers. Platform backends implement shared interfaces. QML presents state and forwards actions; parsing, persistence and policy belong in testable C++ components.
