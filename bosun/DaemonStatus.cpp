@@ -117,6 +117,22 @@ QString DaemonStatus::setLightingColor(int red, int green, int blue)
     return {};
 }
 
+QString DaemonStatus::setLightingLed(int led, int red, int green, int blue)
+{
+    if (!running()) return tr("Start galleond to change the lighting");
+    if (led < 0 || led > 145)
+        return tr("A LED is numbered from 0 to 145");
+    if (red < 0 || red > 255 || green < 0 || green > 255 || blue < 0 || blue > 255)
+        return tr("A colour has three values from 0 to 255");
+    auto message = lightingCall(QStringLiteral("SetLed"));
+    message << led << red << green << blue;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [watcher] {
+        watcher->deleteLater();
+    });
+    return {};
+}
+
 QString DaemonStatus::refreshLighting()
 {
     if (!running()) return {};

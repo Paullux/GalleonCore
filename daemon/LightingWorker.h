@@ -7,6 +7,7 @@
 
 #include <galleon/keyboard/LiveFrame.h>
 #include <galleon/keyboard/LiveLink.h>
+#include <galleon/keyboard/LiveScene.h>
 
 #include <QDebug>
 #include <QObject>
@@ -35,8 +36,8 @@ class LightingWorker : public QObject
     Q_OBJECT
 
 public:
-    LightingWorker(LightingController::Opener opener, LightingController::Clock clock, int red, int green, int blue)
-        : m_opener(std::move(opener)), m_clock(std::move(clock)), m_red(red), m_green(green), m_blue(blue)
+    LightingWorker(LightingController::Opener opener, LightingController::Clock clock, galleon::keyboard::LiveScene scene)
+        : m_opener(std::move(opener)), m_clock(std::move(clock)), m_scene(scene)
     {
     }
 
@@ -62,11 +63,9 @@ public Q_SLOTS:
         report(QStringLiteral("starting"));
     }
 
-    void setColor(int red, int green, int blue)
+    void setScene(galleon::keyboard::LiveScene scene)
     {
-        m_red = red;
-        m_green = green;
-        m_blue = blue;
+        m_scene = scene;
         m_dirty = true;
     }
 
@@ -128,11 +127,7 @@ private:
         }
         if (!m_dirty || m_link->status() != LiveLink::Status::Holding || !m_link->keysTaken())
             return;
-        std::vector<galleon::keyboard::LedColor> leds;
-        leds.reserve(galleon::keyboard::LiveLedCount);
-        for (std::uint16_t led = 0; led < galleon::keyboard::LiveLedCount; ++led)
-            leds.push_back({led, static_cast<std::uint8_t>(m_red), static_cast<std::uint8_t>(m_green), static_cast<std::uint8_t>(m_blue)});
-        const auto frame = galleon::keyboard::buildLiveFrame(leds);
+        const auto frame = galleon::keyboard::sceneFrame(m_scene);
         if (frame && m_link->show(*frame, now) == LiveLink::ShowResult::Sent)
             m_dirty = false; // dropped for pacing, or failed: it is tried again at the next tick
     }
@@ -145,9 +140,7 @@ private:
     QString m_reported;
     std::uint32_t m_generation = 0;
     bool m_dirty = false;
-    int m_red;
-    int m_green;
-    int m_blue;
+    galleon::keyboard::LiveScene m_scene;
 };
 
 

@@ -81,6 +81,9 @@ public:
     Q_INVOKABLE [[nodiscard]] QString enableLighting(bool on);
     // One colour for every key, 0 to 255 each; "" when sent, else why not.
     Q_INVOKABLE [[nodiscard]] QString setLightingColor(int red, int green, int blue);
+    // ONE lit LED (0 to 145, the LEDs of the live frame) with every other LED black, for the calibration of the key map;
+    // setLightingColor goes back to one colour for every key. "" when sent, else why not. Output only: this reads no key.
+    Q_INVOKABLE [[nodiscard]] QString setLightingLed(int led, int red, int green, int blue);
     // Asks galleond for its lighting state (when it appears, or to look again).
     Q_INVOKABLE [[nodiscard]] QString refreshLighting();
 

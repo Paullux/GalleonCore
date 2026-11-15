@@ -135,6 +135,20 @@ QString DaemonStatus::setLightingColor(int red, int green, int blue) {
     galleond::sendLocalCommand(m_endpoint, command, this);
     return {};
 }
+QString DaemonStatus::setLightingLed(int led, int red, int green, int blue) {
+    if (!running()) return tr("Start galleond to change the lighting");
+    if (led < 0 || led > 145)
+        return tr("A LED is numbered from 0 to 145");
+    if (red < 0 || red > 255 || green < 0 || green > 255 || blue < 0 || blue > 255)
+        return tr("A colour has three values from 0 to 255");
+    galleond::LocalCommand command{galleond::LocalAction::LightingLed, {}, {}};
+    command.led = led;
+    command.red = red;
+    command.green = green;
+    command.blue = blue;
+    galleond::sendLocalCommand(m_endpoint, command, this);
+    return {};
+}
 QString DaemonStatus::refreshLighting() { return {}; } // the watcher of the state file has it already
 QString DaemonStatus::setKeyboardBrightness(int value) {
     if (!running()) return tr("Start galleond to change the keyboard brightness");

@@ -85,20 +85,28 @@ QString LightingController::Enable(bool on)
 
 bool LightingController::SetColor(int red, int green, int blue)
 {
-    if (red < 0 || red > 255 || green < 0 || green > 255 || blue < 0 || blue > 255)
-        return false;
-    m_red = red;
-    m_green = green;
-    m_blue = blue;
+    const auto scene = galleon::keyboard::uniformScene(red, green, blue);
+    return scene && showScene(*scene);
+}
+
+bool LightingController::SetLed(int led, int red, int green, int blue)
+{
+    const auto scene = galleon::keyboard::singleLedScene(led, red, green, blue);
+    return scene && showScene(*scene);
+}
+
+bool LightingController::showScene(const galleon::keyboard::LiveScene &scene)
+{
+    m_scene = scene; // kept even while off, so the next start shows it
     if (m_worker)
-        QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), red, green, blue] { worker->setColor(red, green, blue); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), scene] { worker->setScene(scene); }, Qt::QueuedConnection);
     return m_active;
 }
 
 void LightingController::startWorker()
 {
     setState(QStringLiteral("starting"), {});
-    m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, m_red, m_green, m_blue);
+    m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, m_scene);
     m_worker->moveToThread(&m_thread);
     connect(m_worker.get(), &LightingWorker::reported, this, &LightingController::onWorkerState);
     m_thread.start();

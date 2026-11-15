@@ -317,6 +317,46 @@ private Q_SLOTS:
         QVERIFY(rig.controller->SetColor(1, 2, 3));
     }
 
+    void oneLedCanBeLitAloneForTheCalibrationOfTheKeyMap()
+    {
+        Rig rig;
+        rig.hold();
+        QCOMPARE(rig.controller->state(), QStringLiteral("holding"));
+        QVERIFY(rig.controller->SetLed(0x3a, 1, 2, 3));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 0x3a) == std::vector<std::uint8_t>{1, 2, 3}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 0), (std::vector<std::uint8_t>{0, 0, 0}));
+        QCOMPARE(ledColour(rig.frame(), 0x3b), (std::vector<std::uint8_t>{0, 0, 0}));
+        QCOMPARE(ledColour(rig.frame(), 145), (std::vector<std::uint8_t>{0, 0, 0}));
+    }
+
+    void aColourAfterOneLedGoesBackToEveryKey()
+    {
+        Rig rig;
+        rig.hold();
+        QVERIFY(rig.controller->SetLed(5, 9, 9, 9));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 5) == std::vector<std::uint8_t>{9, 9, 9}), 3000);
+        rig.advance(200); // the frames are paced on the test's clock: a second one needs time to have passed
+        QVERIFY(rig.controller->SetColor(7, 8, 9));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 0x3a) == std::vector<std::uint8_t>{7, 8, 9}), 3000);
+    }
+
+    void aLedOrAColourOutOfRangeIsRefusedForOneLed()
+    {
+        Rig rig;
+        rig.hold();
+        QCOMPARE(rig.controller->state(), QStringLiteral("holding"));
+        QVERIFY(!rig.controller->SetLed(146, 1, 1, 1));
+        QVERIFY(!rig.controller->SetLed(-1, 1, 1, 1));
+        QVERIFY(!rig.controller->SetLed(5, 256, 0, 0));
+        QVERIFY(rig.controller->SetLed(145, 1, 1, 1));
+    }
+
+    void oneLedIsRefusedWhileTheLightingIsOff()
+    {
+        Rig rig;
+        QVERIFY(!rig.controller->SetLed(5, 1, 1, 1)); // not enabled: nothing is sent and nobody is told it worked
+    }
+
     void switchingItOffGivesTheKeysBackAndStopsTheWatchdog()
     {
         Rig rig;

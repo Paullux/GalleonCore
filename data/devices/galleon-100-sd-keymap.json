@@ -1,0 +1,650 @@
+{
+    "device": "1b1c:2b0c",
+    "leds": [
+        {
+            "kind": "unlit",
+            "led": 1
+        },
+        {
+            "kind": "unlit",
+            "led": 2
+        },
+        {
+            "kind": "unlit",
+            "led": 3
+        },
+        {
+            "key": 4,
+            "kind": "key",
+            "led": 4
+        },
+        {
+            "key": 5,
+            "kind": "key",
+            "led": 5
+        },
+        {
+            "key": 6,
+            "kind": "key",
+            "led": 6
+        },
+        {
+            "key": 7,
+            "kind": "key",
+            "led": 7
+        },
+        {
+            "key": 8,
+            "kind": "key",
+            "led": 8
+        },
+        {
+            "key": 9,
+            "kind": "key",
+            "led": 9
+        },
+        {
+            "key": 10,
+            "kind": "key",
+            "led": 10
+        },
+        {
+            "key": 11,
+            "kind": "key",
+            "led": 11
+        },
+        {
+            "key": 12,
+            "kind": "key",
+            "led": 12
+        },
+        {
+            "key": 13,
+            "kind": "key",
+            "led": 13
+        },
+        {
+            "key": 14,
+            "kind": "key",
+            "led": 14
+        },
+        {
+            "key": 15,
+            "kind": "key",
+            "led": 15
+        },
+        {
+            "key": 16,
+            "kind": "key",
+            "led": 16
+        },
+        {
+            "key": 17,
+            "kind": "key",
+            "led": 17
+        },
+        {
+            "key": 18,
+            "kind": "key",
+            "led": 18
+        },
+        {
+            "key": 19,
+            "kind": "key",
+            "led": 19
+        },
+        {
+            "key": 20,
+            "kind": "key",
+            "led": 20
+        },
+        {
+            "key": 21,
+            "kind": "key",
+            "led": 21
+        },
+        {
+            "key": 22,
+            "kind": "key",
+            "led": 22
+        },
+        {
+            "key": 23,
+            "kind": "key",
+            "led": 23
+        },
+        {
+            "key": 24,
+            "kind": "key",
+            "led": 24
+        },
+        {
+            "key": 25,
+            "kind": "key",
+            "led": 25
+        },
+        {
+            "key": 26,
+            "kind": "key",
+            "led": 26
+        },
+        {
+            "key": 27,
+            "kind": "key",
+            "led": 27
+        },
+        {
+            "key": 28,
+            "kind": "key",
+            "led": 28
+        },
+        {
+            "key": 29,
+            "kind": "key",
+            "led": 29
+        },
+        {
+            "key": 30,
+            "kind": "key",
+            "led": 30
+        },
+        {
+            "key": 31,
+            "kind": "key",
+            "led": 31
+        },
+        {
+            "key": 32,
+            "kind": "key",
+            "led": 32
+        },
+        {
+            "key": 33,
+            "kind": "key",
+            "led": 33
+        },
+        {
+            "key": 34,
+            "kind": "key",
+            "led": 34
+        },
+        {
+            "key": 35,
+            "kind": "key",
+            "led": 35
+        },
+        {
+            "key": 36,
+            "kind": "key",
+            "led": 36
+        },
+        {
+            "key": 37,
+            "kind": "key",
+            "led": 37
+        },
+        {
+            "key": 38,
+            "kind": "key",
+            "led": 38
+        },
+        {
+            "key": 39,
+            "kind": "key",
+            "led": 39
+        },
+        {
+            "key": 40,
+            "kind": "key",
+            "led": 40
+        },
+        {
+            "key": 41,
+            "kind": "key",
+            "led": 41
+        },
+        {
+            "key": 42,
+            "kind": "key",
+            "led": 42
+        },
+        {
+            "key": 43,
+            "kind": "key",
+            "led": 43
+        },
+        {
+            "key": 44,
+            "kind": "key",
+            "led": 44
+        },
+        {
+            "key": 45,
+            "kind": "key",
+            "led": 45
+        },
+        {
+            "key": 46,
+            "kind": "key",
+            "led": 46
+        },
+        {
+            "key": 47,
+            "kind": "key",
+            "led": 47
+        },
+        {
+            "key": 48,
+            "kind": "key",
+            "led": 48
+        },
+        {
+            "kind": "unlit",
+            "led": 49
+        },
+        {
+            "key": 49,
+            "kind": "key",
+            "led": 50
+        },
+        {
+            "key": 51,
+            "kind": "key",
+            "led": 51
+        },
+        {
+            "key": 52,
+            "kind": "key",
+            "led": 52
+        },
+        {
+            "key": 53,
+            "kind": "key",
+            "led": 53
+        },
+        {
+            "key": 54,
+            "kind": "key",
+            "led": 54
+        },
+        {
+            "key": 55,
+            "kind": "key",
+            "led": 55
+        },
+        {
+            "key": 56,
+            "kind": "key",
+            "led": 56
+        },
+        {
+            "key": 57,
+            "kind": "key",
+            "led": 57
+        },
+        {
+            "key": 58,
+            "kind": "key",
+            "led": 58
+        },
+        {
+            "key": 59,
+            "kind": "key",
+            "led": 59
+        },
+        {
+            "key": 60,
+            "kind": "key",
+            "led": 60
+        },
+        {
+            "key": 61,
+            "kind": "key",
+            "led": 61
+        },
+        {
+            "key": 62,
+            "kind": "key",
+            "led": 62
+        },
+        {
+            "key": 63,
+            "kind": "key",
+            "led": 63
+        },
+        {
+            "key": 64,
+            "kind": "key",
+            "led": 64
+        },
+        {
+            "key": 65,
+            "kind": "key",
+            "led": 65
+        },
+        {
+            "key": 66,
+            "kind": "key",
+            "led": 66
+        },
+        {
+            "key": 67,
+            "kind": "key",
+            "led": 67
+        },
+        {
+            "key": 68,
+            "kind": "key",
+            "led": 68
+        },
+        {
+            "key": 69,
+            "kind": "key",
+            "led": 69
+        },
+        {
+            "key": 70,
+            "kind": "key",
+            "led": 70
+        },
+        {
+            "key": 71,
+            "kind": "key",
+            "led": 71
+        },
+        {
+            "key": 72,
+            "kind": "key",
+            "led": 72
+        },
+        {
+            "key": 73,
+            "kind": "key",
+            "led": 73
+        },
+        {
+            "key": 74,
+            "kind": "key",
+            "led": 74
+        },
+        {
+            "key": 75,
+            "kind": "key",
+            "led": 75
+        },
+        {
+            "key": 76,
+            "kind": "key",
+            "led": 76
+        },
+        {
+            "key": 77,
+            "kind": "key",
+            "led": 77
+        },
+        {
+            "key": 78,
+            "kind": "key",
+            "led": 78
+        },
+        {
+            "key": 79,
+            "kind": "key",
+            "led": 79
+        },
+        {
+            "key": 80,
+            "kind": "key",
+            "led": 80
+        },
+        {
+            "key": 81,
+            "kind": "key",
+            "led": 81
+        },
+        {
+            "key": 82,
+            "kind": "key",
+            "led": 82
+        },
+        {
+            "kind": "unlit",
+            "led": 83
+        },
+        {
+            "kind": "unlit",
+            "led": 84
+        },
+        {
+            "kind": "unlit",
+            "led": 85
+        },
+        {
+            "kind": "unlit",
+            "led": 86
+        },
+        {
+            "kind": "unlit",
+            "led": 87
+        },
+        {
+            "kind": "unlit",
+            "led": 88
+        },
+        {
+            "kind": "unlit",
+            "led": 89
+        },
+        {
+            "kind": "unlit",
+            "led": 90
+        },
+        {
+            "kind": "unlit",
+            "led": 91
+        },
+        {
+            "kind": "unlit",
+            "led": 92
+        },
+        {
+            "kind": "unlit",
+            "led": 93
+        },
+        {
+            "kind": "unlit",
+            "led": 94
+        },
+        {
+            "kind": "unlit",
+            "led": 95
+        },
+        {
+            "kind": "unlit",
+            "led": 96
+        },
+        {
+            "kind": "unlit",
+            "led": 97
+        },
+        {
+            "kind": "unlit",
+            "led": 98
+        },
+        {
+            "kind": "unlit",
+            "led": 99
+        },
+        {
+            "key": 100,
+            "kind": "key",
+            "led": 100
+        },
+        {
+            "key": 101,
+            "kind": "key",
+            "led": 101
+        },
+        {
+            "key": 224,
+            "kind": "key",
+            "led": 105
+        },
+        {
+            "key": 225,
+            "kind": "key",
+            "led": 106
+        },
+        {
+            "key": 226,
+            "kind": "key",
+            "led": 107
+        },
+        {
+            "key": 227,
+            "kind": "key",
+            "led": 108
+        },
+        {
+            "key": 229,
+            "kind": "key",
+            "led": 110
+        },
+        {
+            "key": 230,
+            "kind": "key",
+            "led": 111
+        },
+        {
+            "kind": "unlit",
+            "led": 112
+        },
+        {
+            "kind": "unlit",
+            "led": 113
+        },
+        {
+            "kind": "unlit",
+            "led": 115
+        },
+        {
+            "kind": "unlit",
+            "led": 117
+        },
+        {
+            "kind": "unlit",
+            "led": 119
+        },
+        {
+            "kind": "unlit",
+            "led": 120
+        },
+        {
+            "kind": "unlit",
+            "led": 121
+        },
+        {
+            "key": 65281,
+            "kind": "key",
+            "led": 122
+        },
+        {
+            "kind": "unlit",
+            "led": 123
+        },
+        {
+            "kind": "unlit",
+            "led": 124
+        },
+        {
+            "kind": "unlit",
+            "led": 125
+        },
+        {
+            "kind": "unlit",
+            "led": 126
+        },
+        {
+            "kind": "unlit",
+            "led": 127
+        },
+        {
+            "kind": "unlit",
+            "led": 128
+        },
+        {
+            "key": 65282,
+            "kind": "key",
+            "led": 129
+        },
+        {
+            "kind": "unlit",
+            "led": 130
+        },
+        {
+            "kind": "unlit",
+            "led": 131
+        },
+        {
+            "kind": "unlit",
+            "led": 132
+        },
+        {
+            "kind": "unlit",
+            "led": 133
+        },
+        {
+            "kind": "unlit",
+            "led": 134
+        },
+        {
+            "kind": "unlit",
+            "led": 135
+        },
+        {
+            "kind": "unlit",
+            "led": 136
+        },
+        {
+            "kind": "unlit",
+            "led": 137
+        },
+        {
+            "kind": "strip",
+            "led": 139,
+            "position": 1
+        },
+        {
+            "kind": "strip",
+            "led": 140,
+            "position": 2
+        },
+        {
+            "kind": "strip",
+            "led": 141,
+            "position": 3
+        },
+        {
+            "kind": "strip",
+            "led": 142,
+            "position": 4
+        },
+        {
+            "kind": "strip",
+            "led": 143,
+            "position": 5
+        },
+        {
+            "kind": "strip",
+            "led": 144,
+            "position": 6
+        },
+        {
+            "kind": "strip",
+            "led": 145,
+            "position": 7
+        }
+    ],
+    "source": "Key calibration of the owner on 2026-11-15 on his Galleon 100 SD (French layout), with Galleon Bosun: each LED of the live frame lit alone and the key pressed by the person. LEDs 70, 108, 110, 111, 122 and 129 were written by hand by the owner (Print Screen, left Windows, right Shift, Alt Gr, Fn, Copilot) because the system keeps those keys from the window or they send no key code of their own. LEDs 0, 109, 116, 118 and 138 were not measured. The ISO key next to Enter (LED 50) carries the identity of the ANSI backslash.",
+    "version": 1
+}

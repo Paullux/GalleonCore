@@ -38,6 +38,21 @@ std::optional<int> colourChannel(const QJsonObject &object, const QString &name)
         return std::nullopt;
     return static_cast<int>(number);
 }
+
+// The index of one LED of the live frame: a whole number from 0 to 145. 146 is galleon::keyboard::LiveLedCount; this file is in
+// galleon_platform, shared with Bosun, which does not link the keyboard library, so the number is written here and the
+// controller checks it again (singleLedScene) before anything is lit.
+constexpr double LedCount = 146.0;
+std::optional<int> ledIndex(const QJsonObject &object, const QString &name)
+{
+    const QJsonValue value = object.value(name);
+    if (!value.isDouble())
+        return std::nullopt;
+    const double number = value.toDouble();
+    if (number < 0.0 || number >= LedCount || number != static_cast<int>(number))
+        return std::nullopt;
+    return static_cast<int>(number);
+}
 }
 
 std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
@@ -97,6 +112,20 @@ std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
         command.blue = *blue;
         return command;
     }
+    if (object.size() == 5 && action == QStringLiteral("lighting-led")) {
+        const auto led = ledIndex(object, QStringLiteral("led"));
+        const auto red = colourChannel(object, QStringLiteral("red"));
+        const auto green = colourChannel(object, QStringLiteral("green"));
+        const auto blue = colourChannel(object, QStringLiteral("blue"));
+        if (!led || !red || !green || !blue)
+            return std::nullopt;
+        LocalCommand command{LocalAction::LightingLed, {}, {}};
+        command.led = *led;
+        command.red = *red;
+        command.green = *green;
+        command.blue = *blue;
+        return command;
+    }
     if (object.size() == 1 && action == QStringLiteral("stop"))
         return LocalCommand{LocalAction::Stop, {}, {}};
     if (object.size() != 2 || action != QStringLiteral("wallpaper"))
@@ -132,6 +161,13 @@ QByteArray encodeLocalCommand(const LocalCommand &command)
         break;
     case LocalAction::LightingColor:
         object.insert(QStringLiteral("action"), QStringLiteral("lighting-color"));
+        object.insert(QStringLiteral("red"), command.red);
+        object.insert(QStringLiteral("green"), command.green);
+        object.insert(QStringLiteral("blue"), command.blue);
+        break;
+    case LocalAction::LightingLed:
+        object.insert(QStringLiteral("action"), QStringLiteral("lighting-led"));
+        object.insert(QStringLiteral("led"), command.led);
         object.insert(QStringLiteral("red"), command.red);
         object.insert(QStringLiteral("green"), command.green);
         object.insert(QStringLiteral("blue"), command.blue);
@@ -260,6 +296,7 @@ void LocalControl::acceptConnections()
             case LocalAction::KeyboardBrightnessRead: Q_EMIT keyboardBrightnessReadRequested(); break;
             case LocalAction::LightingEnable: Q_EMIT lightingEnableRequested(command->on); break;
             case LocalAction::LightingColor: Q_EMIT lightingColorRequested(command->red, command->green, command->blue); break;
+            case LocalAction::LightingLed: Q_EMIT lightingLedRequested(command->led, command->red, command->green, command->blue); break;
             case LocalAction::Stop: Q_EMIT stopRequested(); break;
             }
         };
