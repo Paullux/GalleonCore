@@ -54,6 +54,7 @@ add_library(galleond_core STATIC
     ProcessWatchdog.h ProcessWatchdog.cpp
     KeyboardStatePublisher.h KeyboardStatePublisher.cpp
     AppearanceFile.h AppearanceFile.cpp
+    LightingAppearanceApplier.h LightingAppearanceApplier.cpp
     LedPositions.h LedPositions.cpp
     StrictJson.h
     KeyMapFile.h KeyMapFile.cpp

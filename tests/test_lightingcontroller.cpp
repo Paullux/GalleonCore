@@ -6,9 +6,14 @@
 // never starts a process, and proves nothing about a real keyboard.
 
 #include "FakeLiveKeyboard.h"
+#include "AppearanceFile.h"
+#include "LightingAppearanceApplier.h"
 #include "LightingController.h"
 
 #include <QSignalSpy>
+#include <QFile>
+#include <QRegularExpression>
+#include <QTemporaryDir>
 #include <QTest>
 
 #include <algorithm>
@@ -496,6 +501,121 @@ private Q_SLOTS:
         }
         QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("holding"), 3000);
         QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{70, 80, 90}), 3000);
+    }
+
+    // ---- the file of the appearance (lighting-appearance.json), applied by LightingAppearanceApplier
+
+    void aGoodFileIsWhatTheKeysShowWhenTheLightingIsSwitchedOn()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {10, 20, 30};
+        appearance.retouches = {{4, {255, 255, 255}}};
+        QVERIFY(writeAppearance(path, appearance));
+        Rig rig;
+        const LightingAppearanceApplier applier(*rig.controller, path);
+        QVERIFY(!rig.controller->active()); // a file never switches the lighting on
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{10, 20, 30}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 4), (std::vector<std::uint8_t>{255, 255, 255}));
+    }
+
+    void withoutAFileTheKeysAreDarkWhenTheLightingIsSwitchedOn()
+    {
+        const QTemporaryDir dir;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression("the appearance file is not used"));
+        Rig rig;
+        const LightingAppearanceApplier applier(*rig.controller, dir.filePath("lighting-appearance.json"));
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT(rig.frames() >= 1, 3000);
+        QCOMPARE(ledColour(rig.frame(), 58), (std::vector<std::uint8_t>{0, 0, 0}));
+    }
+
+    void aFileThatChangesWhileTheLightingIsOnIsAppliedAtOnce()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        galleon::keyboard::Appearance first;
+        first.colour = {1, 2, 3};
+        QVERIFY(writeAppearance(path, first));
+        Rig rig;
+        const LightingAppearanceApplier applier(*rig.controller, path);
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{1, 2, 3}), 3000);
+        galleon::keyboard::Appearance second;
+        second.colour = {7, 8, 9};
+        QVERIFY(writeAppearance(path, second));
+        rig.advance(200);
+        // The watcher of the folder says so by itself; the clock moves on so that the frame is not held back for pacing.
+        for (int i = 0; i < 60 && ledColour(rig.frame(), 58) != std::vector<std::uint8_t>{7, 8, 9}; ++i) {
+            rig.advance(60);
+            QTest::qWait(100);
+        }
+        QCOMPARE(ledColour(rig.frame(), 58), (std::vector<std::uint8_t>{7, 8, 9}));
+    }
+
+    void aFileThatBecomesInvalidWhileTheLightingIsOnIsIgnoredAndWhatIsShownStays()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        galleon::keyboard::Appearance good;
+        good.colour = {40, 50, 60};
+        QVERIFY(writeAppearance(path, good));
+        Rig rig;
+        LightingAppearanceApplier applier(*rig.controller, path);
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{40, 50, 60}), 3000);
+        QFile broken(path);
+        QVERIFY(broken.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        broken.write("{ half a file");
+        broken.close();
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression("the appearance file is not used"));
+        applier.onFileMaybeChanged();
+        rig.advance(300);
+        QTest::qWait(200);
+        QCOMPARE(ledColour(rig.frame(), 58), (std::vector<std::uint8_t>{40, 50, 60})); // not dark: a damaged file does not make the keys flash
+        QCOMPARE(rig.controller->appearance().colour.red, std::uint8_t{40});
+    }
+
+    void aChangeOfTheFileWhileTheLightingIsOffIsReadWhenItIsSwitchedOn()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        Rig rig;
+        LightingAppearanceApplier applier(*rig.controller, path);
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {12, 13, 14};
+        QVERIFY(writeAppearance(path, appearance));
+        applier.onFileMaybeChanged();
+        QCOMPARE(rig.controller->appearance().colour.red, std::uint8_t{0}); // off: nothing was read
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{12, 13, 14}), 3000);
+    }
+
+    void anInvalidFileAtSwitchOnGivesDarkKeysAndNotWhatWasShownBefore()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {90, 91, 92};
+        QVERIFY(writeAppearance(path, appearance));
+        Rig rig;
+        const LightingAppearanceApplier applier(*rig.controller, path);
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{90, 91, 92}), 3000);
+        QCOMPARE(rig.controller->Enable(false), QString());
+        QFile broken(path);
+        QVERIFY(broken.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        broken.write("not json");
+        broken.close();
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.lastFrame.clear();
+        }
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression("the appearance file is not used"));
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{0, 0, 0}), 3000);
     }
 
     void aToolSceneIsNotCarriedOverASwitchingOff()
