@@ -3,6 +3,7 @@
 
 #include "LightingController.h"
 
+#include "LedPositions.h"
 #include "LightingWorker.h"
 
 #include <QCoreApplication>
@@ -20,7 +21,7 @@ using galleon::keyboard::LiveClock;
 
 LightingController::LightingController(Opener opener, WatchdogGuard &watchdog, PowerEvents &power, Clock clock, QObject *parent)
     : QObject(parent), m_opener(std::move(opener)), m_clock(clock ? std::move(clock) : Clock([] { return LiveClock::now(); })),
-      m_watchdog(watchdog), m_power(power)
+      m_watchdog(watchdog), m_power(power), m_positions(builtInLedPositions())
 {
     connect(&m_watchdog, &WatchdogGuard::died, this, [this] {
         if (m_active)
@@ -77,6 +78,7 @@ QString LightingController::Enable(bool on)
         return why;
     }
     m_power.holdSleep();
+    m_tool.reset(); // what a tool showed before is not carried over a switching off
     m_active = true;
     Q_EMIT activeChanged(true);
     startWorker();
@@ -118,16 +120,27 @@ bool LightingController::SetLeds(const QList<int> &values)
 
 bool LightingController::showScene(const galleon::keyboard::LiveScene &scene)
 {
-    m_scene = scene; // kept even while off, so the next start shows it
+    m_tool = scene; // a tool shows this, over the appearance, until the appearance is set again
     if (m_worker)
-        QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), scene] { worker->setScene(scene); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), scene] { worker->setToolScene(scene); }, Qt::QueuedConnection);
     return m_active;
+}
+
+bool LightingController::setAppearance(const galleon::keyboard::Appearance &appearance)
+{
+    if (!galleon::keyboard::isValid(appearance))
+        return false;
+    m_appearance = appearance; // kept even while off, so the next start shows it
+    m_tool.reset();
+    if (m_worker)
+        QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), appearance] { worker->setAppearance(appearance); }, Qt::QueuedConnection);
+    return true;
 }
 
 void LightingController::startWorker()
 {
     setState(QStringLiteral("starting"), {});
-    m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, m_scene);
+    m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, m_appearance, m_tool, m_positions);
     m_worker->moveToThread(&m_thread);
     connect(m_worker.get(), &LightingWorker::reported, this, &LightingController::onWorkerState);
     m_thread.start();

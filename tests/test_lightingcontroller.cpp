@@ -361,6 +361,158 @@ private Q_SLOTS:
         QVERIFY(rig.controller->SetLed(145, 1, 1, 1));
     }
 
+    void anAppearanceSetBeforeSwitchingOnIsWhatTheKeysShowWhenTheyAreTaken()
+    {
+        Rig rig;
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {10, 20, 30};
+        QVERIFY(rig.controller->setAppearance(appearance)); // asked for while the lighting is off: kept for the start
+        rig.hold();
+        QCOMPARE(rig.controller->state(), QStringLiteral("holding"));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{10, 20, 30}), 3000); // F1 lights something
+        QCOMPARE(ledColour(rig.frame(), 0), (std::vector<std::uint8_t>{0, 0, 0}));                             // LED 0 lights nothing: no place, dark
+    }
+
+    void changingTheAppearanceWhileTheLightingIsOnChangesTheKeys()
+    {
+        Rig rig;
+        rig.hold();
+        galleon::keyboard::Appearance first;
+        first.colour = {1, 2, 3};
+        QVERIFY(rig.controller->setAppearance(first));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{1, 2, 3}), 3000);
+        rig.advance(200); // the frames are paced on the test's clock
+        galleon::keyboard::Appearance second;
+        second.colour = {7, 8, 9};
+        second.retouches = {{4, {255, 255, 255}}};
+        QVERIFY(rig.controller->setAppearance(second));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{7, 8, 9}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 4), (std::vector<std::uint8_t>{255, 255, 255})); // the retouch is over the base
+    }
+
+    void aRainbowThatMovesChangesTheFramesWithTheClockAndAFixedOneDoesNot()
+    {
+        Rig rig;
+        rig.hold();
+        galleon::keyboard::Appearance moving;
+        moving.base = galleon::keyboard::BaseType::Rainbow;
+        moving.rainbowSpeed = 1000; // one turn a second
+        QVERIFY(rig.controller->setAppearance(moving));
+        QTRY_VERIFY_WITH_TIMEOUT(rig.frames() >= 1, 3000);
+        const auto before = rig.frame();
+        for (int i = 0; i < 6; ++i) { // 6 steps of 60 ms: a third of a turn
+            rig.advance(60);
+            QTest::qWait(120);
+        }
+        QVERIFY(rig.frame() != before);
+        // A fixed rainbow sends nothing more once it is shown.
+        rig.advance(200);
+        galleon::keyboard::Appearance fixed;
+        fixed.base = galleon::keyboard::BaseType::Rainbow;
+        QVERIFY(rig.controller->setAppearance(fixed));
+        QTest::qWait(200);
+        const int framesNow = rig.frames();
+        for (int i = 0; i < 5; ++i) {
+            rig.advance(100);
+            QTest::qWait(120);
+        }
+        QCOMPARE(rig.frames(), framesNow);
+    }
+
+    void theSceneOfAToolIsOverTheAppearanceUntilTheAppearanceIsSetAgain()
+    {
+        Rig rig;
+        rig.hold();
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {40, 50, 60};
+        QVERIFY(rig.controller->setAppearance(appearance));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{40, 50, 60}), 3000);
+        rig.advance(200);
+        QVERIFY(rig.controller->SetLed(0x3a, 1, 2, 3)); // a tool lights one LED alone
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 0x3a) == std::vector<std::uint8_t>{1, 2, 3}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 4), (std::vector<std::uint8_t>{0, 0, 0})); // and the rest is dark, not the appearance
+        rig.advance(200);
+        QVERIFY(rig.controller->setAppearance(appearance)); // asked for again: the tool is let go
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 4) == std::vector<std::uint8_t>{40, 50, 60}), 3000);
+    }
+
+    void anAppearanceThatIsNotValidIsRefusedAndTheOneBeforeStays()
+    {
+        Rig rig;
+        rig.hold();
+        galleon::keyboard::Appearance good;
+        good.colour = {9, 9, 9};
+        QVERIFY(rig.controller->setAppearance(good));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{9, 9, 9}), 3000);
+        galleon::keyboard::Appearance wild;
+        wild.level = 5000;
+        QVERIFY(!rig.controller->setAppearance(wild));
+        rig.advance(200);
+        QTest::qWait(150);
+        QCOMPARE(ledColour(rig.frame(), 58), (std::vector<std::uint8_t>{9, 9, 9}));
+        QCOMPARE(rig.controller->appearance().colour.red, std::uint8_t{9});
+    }
+
+    void theAppearanceIsShownAgainWhenTheKeysAreTakenBackAfterASleep()
+    {
+        Rig rig;
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {11, 22, 33};
+        QVERIFY(rig.controller->setAppearance(appearance));
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{11, 22, 33}), 3000);
+        rig.power.sleep();
+        QCOMPARE(rig.mode(), 1);
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.lastFrame.clear(); // what the keyboard showed is gone with the keys
+        }
+        rig.power.wake();
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("listening"), 3000);
+        rig.advance(4000);
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("holding"), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{11, 22, 33}), 3000);
+    }
+
+    void theAppearanceIsShownAgainWhenTheWebHubLeavesAndTheKeysAreTakenBack()
+    {
+        Rig rig;
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {70, 80, 90};
+        QVERIFY(rig.controller->setAppearance(appearance));
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{70, 80, 90}), 3000);
+        rig.device.webHubTakes(); // the Web Hub takes the keyboard to its own mode: it shows its own colours now
+        rig.device.otherHostSpeaks();
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("yielded"), 3000);
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.lastFrame.clear(); // what the keyboard shows is the Web Hub's now
+        }
+        // A minute of quiet: the keys are taken back, and the appearance is shown again (the player does not think it has already been shown).
+        for (int i = 0; i < 50 && rig.controller->state() != QStringLiteral("holding"); ++i) {
+            rig.advance(2000);
+            QTest::qWait(120);
+        }
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("holding"), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{70, 80, 90}), 3000);
+    }
+
+    void aToolSceneIsNotCarriedOverASwitchingOff()
+    {
+        Rig rig;
+        rig.hold();
+        QVERIFY(rig.controller->SetLed(0x3a, 1, 2, 3));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 0x3a) == std::vector<std::uint8_t>{1, 2, 3}), 3000);
+        QCOMPARE(rig.controller->Enable(false), QString());
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.lastFrame.clear(); // only what is sent from now on counts
+        }
+        rig.hold(); // switched on again, nothing asked for since: what the tool showed is not there, the keys are dark
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 0x3a) == std::vector<std::uint8_t>{0, 0, 0}), 3000);
+    }
+
     void oneColourPerLedShowsEachLedItsOwnColourAndTheOthersBlack()
     {
         Rig rig;

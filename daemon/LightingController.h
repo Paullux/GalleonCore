@@ -7,6 +7,7 @@
 
 #include <galleon/Transport.h>
 #include <galleon/keyboard/LivePolicy.h>
+#include <galleon/keyboard/Appearance.h>
 #include <galleon/keyboard/LiveScene.h>
 
 #include <QList>
@@ -17,6 +18,8 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
+#include <vector>
 
 namespace galleond {
 
@@ -67,6 +70,13 @@ public:
         m_resumeAttempts = attempts;
     }
 
+    // The appearance of the lighting (a base, retouches, a level): played from now on while the lighting is on, and the first thing shown when it is
+    // switched on. The scene of a tool (SetColor, SetLed, SetLeds) is let go. False, and nothing changed, for an appearance that is not valid. Where the
+    // LEDs are: the positions built into galleond; a test may give others.
+    bool setAppearance(const galleon::keyboard::Appearance &appearance);
+    void setPositions(std::vector<galleon::keyboard::LedPosition> positions) { m_positions = std::move(positions); }
+    [[nodiscard]] const galleon::keyboard::Appearance &appearance() const { return m_appearance; }
+
 public Q_SLOTS:
     // "" when accepted, else why not. Enable(false) gives the keys back (and waits for it) and is always accepted.
     QString Enable(bool on);
@@ -108,7 +118,9 @@ private:
     int m_resumeTriesLeft = 0;
     int m_resumeRetryMs = ResumeRetryMs;
     int m_resumeAttempts = ResumeAttempts;
-    galleon::keyboard::LiveScene m_scene = galleon::keyboard::uniformScene(0, 0, 0).value_or(galleon::keyboard::LiveScene{}); // dark until a colour is asked for
+    galleon::keyboard::Appearance m_appearance; // dark until something is asked for
+    std::optional<galleon::keyboard::LiveScene> m_tool; // what a tool shows over it, if one does
+    std::vector<galleon::keyboard::LedPosition> m_positions;
 };
 
 } // namespace galleond
