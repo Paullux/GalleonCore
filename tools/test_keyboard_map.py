@@ -134,3 +134,97 @@ class SeeThrough(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LedsOfTheKeys(unittest.TestCase):
+    """Every cap of the drawing knows its LED of the live frame, and every LED that lights a key or a section of the light strip knows
+    where it is. The drawing and the calibration (data/devices/galleon-100-sd-keymap.json) have to agree."""
+
+    def setUp(self) -> None:
+        self.data = build_map.build()
+        self.keymap = {e["led"]: e for e in json.loads(build_map.KEYMAP.read_text())["leds"]}
+        self.caps = self.data["caps"]
+
+    def cap(self, label: str, nth: int = 0) -> dict:
+        return [c for c in self.caps if c["label"] == label][nth]
+
+    def test_every_cap_has_a_usage_and_the_led_the_calibration_gives_it(self) -> None:
+        for c in self.caps:
+            with self.subTest(cap=c["label"], x=c["x"]):
+                entry = self.keymap[c["led"]]
+                self.assertEqual(entry["kind"], "key")
+                self.assertEqual(entry["key"], c["usage"])
+
+    def test_a_cap_is_found_by_where_the_key_is_not_by_the_letter_on_a_qwerty(self) -> None:
+        # The drawing is the French AZERTY: the key engraved Q lights LED 4 (the A of a QWERTY), the one engraved A lights LED 20.
+        self.assertEqual((self.cap("Q")["usage"], self.cap("Q")["led"]), (0x04, 4))
+        self.assertEqual((self.cap("A")["usage"], self.cap("A")["led"]), (0x14, 20))
+        self.assertEqual(self.cap("M")["led"], 51)    # the key next to L is the semicolon of a QWERTY
+        self.assertEqual(self.cap("*")["led"], 50)    # the ISO key next to Enter
+        self.assertEqual(self.cap("Fn")["led"], 122)
+        self.assertEqual(self.cap("◉")["led"], 129)   # Copilot
+
+    def test_the_two_shift_keys_the_two_parts_of_enter_and_the_space_bar_are_told_apart(self) -> None:
+        shifts = [c for c in self.caps if c["label"] == "⇧"]
+        self.assertEqual(sorted(c["led"] for c in shifts), [106, 110])
+        self.assertLess(min(shifts, key=lambda c: c["x"])["x"], 40)       # the left one is at the left edge
+        enters = [c for c in self.caps if c["usage"] == 0x28]
+        self.assertEqual(len(enters), 2)
+        self.assertEqual({c["led"] for c in enters}, {40})
+        space = [c for c in self.caps if c["usage"] == 0x2C]
+        self.assertEqual([c["led"] for c in space], [44])
+
+    def test_every_key_of_the_calibration_has_a_cap(self) -> None:
+        keys = {e["key"] for e in self.keymap.values() if e["kind"] == "key"}
+        self.assertEqual(keys, {c["usage"] for c in self.caps})
+
+    def test_the_six_extra_lamps_belong_to_enter_right_shift_and_the_space_bar(self) -> None:
+        # 94 lamps for 88 keys: the space bar has 5 lamps, Enter 2 and the right Shift 2, each lit by one LED.
+        lamps_per_led: dict[int, int] = {}
+        for c in self.caps:
+            lamps_per_led[c["led"]] = lamps_per_led.get(c["led"], 0) + len(c["lamps"])
+        many = {led: n for led, n in lamps_per_led.items() if n > 1}
+        self.assertEqual(many, {40: 2, 44: 5, 110: 2})
+        self.assertEqual(sum(lamps_per_led.values()), 94)
+
+    def test_a_cap_without_a_known_usage_stops_the_build(self) -> None:
+        with self.assertRaises(ValueError):
+            build_map.cap("?", 100.0, 50.0, 1, 20.0)
+
+    def test_every_led_that_lights_something_has_a_position_and_the_others_have_none(self) -> None:
+        lit = {led for led, e in self.keymap.items() if e["kind"] in ("key", "strip")}
+        self.assertEqual({e["led"] for e in self.data["leds"]}, lit)
+        self.assertEqual(len(lit), 88 + 7)
+
+    def test_a_key_led_sits_on_the_mean_of_its_measured_lamps(self) -> None:
+        lamps = measured_lamps()
+        for e in self.data["leds"]:
+            if e["kind"] != "key":
+                continue
+            with self.subTest(led=e["led"]):
+                self.assertAlmostEqual(e["x"], sum(lamps[l][0] for l in e["lamps"]) / len(e["lamps"]), delta=0.01)
+                self.assertAlmostEqual(e["y"], sum(lamps[l][1] for l in e["lamps"]) / len(e["lamps"]), delta=0.01)
+
+    def test_a_key_led_is_inside_the_cap_it_belongs_to_or_close_to_it(self) -> None:
+        pitch = self.data["keyPitchMm"]
+        for e in self.data["leds"]:
+            if e["kind"] != "key":
+                continue
+            caps = [c for c in self.caps if c["led"] == e["led"]]
+            nearest = min(max(abs(e["x"] - (c["x"] + c["w"] / 2)) - c["w"] / 2, abs(e["y"] - (c["y"] + c["h"] / 2)) - c["h"] / 2) for c in caps)
+            self.assertLess(nearest, pitch, f"LED {e['led']}")
+
+    def test_the_strip_sections_run_from_left_to_right_inside_the_drawn_strip(self) -> None:
+        strip = self.data["strip"]
+        sections = sorted((e for e in self.data["leds"] if e["kind"] == "strip"), key=lambda e: e["position"])
+        self.assertEqual([e["led"] for e in sections], list(range(139, 146)))
+        xs = [e["x"] for e in sections]
+        self.assertEqual(xs, sorted(xs))
+        self.assertGreater(xs[0], strip["x"])
+        self.assertLess(xs[-1], strip["x"] + strip["w"])
+        self.assertTrue(all(strip["y"] <= e["y"] <= strip["y"] + strip["h"] for e in sections))
+
+    def test_the_data_file_for_the_effects_is_the_same_list(self) -> None:
+        shipped = json.loads(build_map.OUT_LEDS.read_text())
+        self.assertEqual(shipped["leds"], self.data["leds"])
+        self.assertEqual(shipped["unit"], "mm")
