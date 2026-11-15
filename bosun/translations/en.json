@@ -723,5 +723,6 @@
   "All the keys are dark.": "All the keys are dark.",
   "Colours of %1 keys sent to galleond.": "Colours of %1 keys sent to galleond.",
   "The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.": "The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.",
-  "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports."
+  "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.",
+  "Light strip, section %1": "Light strip, section %1"
 }

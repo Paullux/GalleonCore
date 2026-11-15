@@ -133,6 +133,22 @@ def read_keymap():
     return {entry["led"]: entry for entry in json.loads(KEYMAP.read_text())["leds"]}
 
 
+STRIP_GAP = 1.0   # mm between two sections of the drawn strip
+STRIP_LAMP_BASE = 1000  # the drawing's id for a section of the strip as a "lamp": the 94 real lamps are 0..93, these are 1001..1007
+
+
+def strip_sections(strip, leds):
+    """The seven sections of the light strip, equal cells from the left end (section 1) to the right end (section 7), the fourth
+    in the middle. Each one is clickable in the drawing and is the LED the calibration found for its position. The cells are
+    drawn, not measured (the strip is an estimate), and `lamp` is the drawing's own id for it, outside the 94 real lamps."""
+    by_position = {e["position"]: e for e in leds if e["kind"] == "strip"}
+    width = strip["w"] / STRIP_SECTIONS
+    return [{"position": position, "led": by_position[position]["led"], "lamp": STRIP_LAMP_BASE + position,
+             "x": round(strip["x"] + (position - 1) * width + STRIP_GAP / 2, 2), "y": strip["y"],
+             "w": round(width - STRIP_GAP, 2), "h": strip["h"]}
+            for position in range(1, STRIP_SECTIONS + 1)]
+
+
 def build_leds(caps, keyboard):
     """Gives every cap its LED, and every LED that lights a key or a section of the light strip its position.
 
@@ -232,6 +248,7 @@ def build():
     first_cap = min(c["x"] for c in caps)
     last_cap = max(c["x"] + c["w"] for c in caps)
     strip = {"x": round(first_cap, 2), "y": STRIP_Y, "w": round(last_cap - first_cap, 2), "h": STRIP_H}
+    strip["sections"] = strip_sections(strip, leds)
     return {
         "version": 1,
         "unit": "mm",

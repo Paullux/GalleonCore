@@ -51,6 +51,9 @@ Item {
         const colours = {}
         for (const cell of map.cells)
             colours[cell.id] = Qt.hsla(0.85 * (cell.x - low) / span, 0.9, 0.55, 1).toString()
+        // The light strip is part of it: each section takes the colour of the keys under it.
+        for (const section of map.strip.sections)
+            colours[section.lamp] = Qt.hsla(0.85 * Math.min(1, Math.max(0, (section.x + section.w / 2 - low) / span)), 0.9, 0.55, 1).toString()
         return colours
     }
 
@@ -68,19 +71,37 @@ Item {
         border.color: "#3a3f47"
     }
 
-    // The light bar above the function row: decoration, drawn like a cap whose light is white.
-    Rectangle {
-        x: board.xp(board.map.strip.x)
-        y: board.yp(board.map.strip.y)
-        width: board.map.strip.w * board.scale
-        height: board.map.strip.h * board.scale
-        radius: 2.4 * board.scale
-        color: board.unlit
+    // The light bar above the function row: seven equal sections, the first at the left end, the fourth in the middle and the seventh at the
+    // right end, each lit by its own LED. Clicked and coloured like a key; its "lamp" is the drawing's own id (1001 to 1007), outside the
+    // 94 real lamps, and its index in `capClicked` is 100 + its position, outside the indices of the caps.
+    Repeater {
+        model: board.map.strip.sections
         Rectangle {
-            anchors.fill: parent
-            anchors.margins: Math.max(1, board.rim * board.scale)
-            radius: parent.radius - board.rim * board.scale
-            color: "#1c1e22"
+            id: section
+            required property var modelData
+            readonly property color light: board.colors[modelData.lamp] !== undefined ? board.colors[modelData.lamp] : board.unlit
+            objectName: "stripSection" + modelData.position
+            x: board.xp(modelData.x)
+            y: board.yp(modelData.y)
+            width: modelData.w * board.scale
+            height: modelData.h * board.scale
+            radius: 2.4 * board.scale
+            color: light
+            border.width: board.selected === 100 + modelData.position ? 2 : 0
+            border.color: "#64b5f6"
+            Accessible.role: Accessible.Button
+            Accessible.name: qsTr("Light strip, section %1").arg(modelData.position)
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: Math.max(1, board.rim * board.scale)
+                radius: Math.max(0, parent.radius - board.rim * board.scale)
+                color: "#1c1e22"
+            }
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: board.capClicked(100 + section.modelData.position, [section.modelData.lamp])
+            }
         }
     }
 

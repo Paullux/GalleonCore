@@ -2009,6 +2009,81 @@ QtObject {
         QCOMPARE(endpoint.colours.constFirst(), (QList<int>{0, 0, 0}));
     }
 
+    void theLightStripIsSevenEqualSectionsEachLitByItsOwnLedAndColouredLikeAKey()
+    {
+        const QString connectionName = QStringLiteral("fake-galleond-for-the-strip");
+        QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, connectionName);
+        LightingEndpoint endpoint;
+        QVERIFY(bus.registerObject("/org/galleoncore/Lighting", &endpoint, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(bus.registerService(bosun::DaemonStatus::BusName));
+        const auto cleanUp = qScopeGuard([&] {
+            bus.unregisterObject("/org/galleoncore/Lighting");
+            bus.unregisterService(bosun::DaemonStatus::BusName);
+            QDBusConnection::disconnectFromBus(connectionName);
+        });
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QTRY_VERIFY_WITH_TIMEOUT(daemon.lightingActive(), 3000);
+        QVERIFY(root->setProperty("currentTab", 3));
+
+        // Seven sections in a row, equal, the first at the left end of the bar, the fourth in the middle, the seventh at the right end.
+        QList<QQuickItem *> sections;
+        for (int position = 1; position <= 7; ++position) {
+            const auto found = namedItems(root, QStringLiteral("stripSection%1").arg(position));
+            QCOMPARE(found.size(), 1);
+            sections << found.constFirst();
+        }
+        const double width = sections.constFirst()->width();
+        for (int i = 1; i < 7; ++i) {
+            QCOMPARE(sections.at(i)->width(), width);
+            QVERIFY(sections.at(i)->x() > sections.at(i - 1)->x());
+            QCOMPARE(sections.at(i)->y(), sections.constFirst()->y());
+        }
+        const double step = sections.at(1)->x() - sections.at(0)->x();
+        for (int i = 2; i < 7; ++i)
+            QVERIFY(qAbs((sections.at(i)->x() - sections.at(i - 1)->x()) - step) < 0.6); // regular divisions
+        auto *board = root->findChild<QQuickItem *>("keyboardMap");
+        QVERIFY(board);
+        const double middle = sections.at(3)->x() + width / 2;
+        QVERIFY(qAbs(middle - (sections.constFirst()->x() + sections.constLast()->x() + width) / 2) < 0.6); // the fourth is in the middle
+
+        // A real click on the fourth section chooses it, and a colour then goes to LED 142, the fourth LED of the strip, alone.
+        auto *window = qobject_cast<QQuickWindow *>(root);
+        QVERIFY(window);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        // The drawing is down the tab: scroll to it first, as a person would.
+        auto *scroll = root->findChild<QQuickItem *>("keyboardScroll");
+        QVERIFY(scroll);
+        auto *content = scroll->property("contentItem").value<QQuickItem *>();
+        QVERIFY(content);
+        scroll->setProperty("contentY", qMax(0.0, sections.at(3)->mapToItem(content, QPointF(0, 0)).y() - 60));
+        const QPoint centre = sections.at(3)->mapToScene(QPointF(sections.at(3)->width() / 2, sections.at(3)->height() / 2)).toPoint();
+        QVERIFY(window->contentItem()->boundingRect().contains(centre)); // it is on the screen
+        QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, centre);
+        QCOMPARE(root->property("selectedCap").toInt(), 104);
+        QCOMPARE(root->property("selectedLamps").toList(), (QVariantList{1004}));
+        auto *swatches = root->findChild<QQuickItem *>("lampSwatches");
+        QVERIFY(swatches);
+        QVERIFY(QMetaObject::invokeMethod(swatches, "picked", Q_ARG(QString, QStringLiteral("#1e88e5"))));
+        QTRY_COMPARE_WITH_TIMEOUT(endpoint.ledLists.size(), 1, 3000);
+        QCOMPARE(endpoint.ledLists.constFirst(), (QList<int>{142, 30, 136, 229}));
+    }
+
     void theKeyCalibrationScreenReadsTheKeysOfItsWindowOnlyWhileItIsOpen()
     {
         const QTemporaryDir dir;
@@ -2139,8 +2214,9 @@ QtObject {
         QVariant rainbow;
         QVERIFY(QMetaObject::invokeMethod(board, "rainbow", Q_RETURN_ARG(QVariant, rainbow)));
         const QVariantMap all = rainbow.toMap();
-        QCOMPARE(all.size(), 94);
+        QCOMPARE(all.size(), 94 + 7); // the 94 lamps of the keys and the seven sections of the light strip
         QVERIFY(all.value("0").toString() != all.value("85").toString());
+        QVERIFY(all.value("1001").toString() != all.value("1007").toString()); // the strip too runs from one colour to another
 
         // Clearing forgets the colours and the choice.
         auto *clear = root->findChild<QQuickItem *>("lampsClear");

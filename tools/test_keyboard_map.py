@@ -228,3 +228,50 @@ class LedsOfTheKeys(unittest.TestCase):
         shipped = json.loads(build_map.OUT_LEDS.read_text())
         self.assertEqual(shipped["leds"], self.data["leds"])
         self.assertEqual(shipped["unit"], "mm")
+
+
+class LightStrip(unittest.TestCase):
+    """The strip above the function row is seven equal sections, the first at the left end, the fourth in the middle and the seventh at
+    the right end; each is lit by the LED the calibration found for its position."""
+
+    def setUp(self) -> None:
+        self.data = build_map.build()
+        self.strip = self.data["strip"]
+        self.sections = self.strip["sections"]
+
+    def test_there_are_seven_sections_in_order(self) -> None:
+        self.assertEqual([s["position"] for s in self.sections], list(range(1, 8)))
+        self.assertEqual([s["led"] for s in self.sections], list(range(139, 146)))
+
+    def test_the_sections_are_equal_and_regularly_spaced(self) -> None:
+        widths = {s["w"] for s in self.sections}
+        self.assertEqual(len(widths), 1)
+        steps = [b["x"] - a["x"] for a, b in zip(self.sections, self.sections[1:])]
+        self.assertLess(max(steps) - min(steps), 0.05, steps)  # equal up to the rounding of the data to 0.01 mm
+
+    def test_the_first_is_at_the_left_end_the_fourth_in_the_middle_and_the_seventh_at_the_right_end(self) -> None:
+        gap = build_map.STRIP_GAP
+        self.assertAlmostEqual(self.sections[0]["x"], self.strip["x"] + gap / 2, delta=0.02)
+        last = self.sections[-1]
+        self.assertAlmostEqual(last["x"] + last["w"], self.strip["x"] + self.strip["w"] - gap / 2, delta=0.02)
+        fourth = self.sections[3]
+        self.assertAlmostEqual(fourth["x"] + fourth["w"] / 2, self.strip["x"] + self.strip["w"] / 2, delta=0.02)
+
+    def test_each_section_is_centred_on_the_position_of_its_led(self) -> None:
+        by_led = {e["led"]: e for e in self.data["leds"] if e["kind"] == "strip"}
+        for s in self.sections:
+            with self.subTest(position=s["position"]):
+                self.assertAlmostEqual(s["x"] + s["w"] / 2, by_led[s["led"]]["x"], delta=0.02)
+
+    def test_a_section_has_a_drawing_id_outside_the_real_lamps(self) -> None:
+        lamps = [s["lamp"] for s in self.sections]
+        self.assertEqual(lamps, list(range(1001, 1008)))
+        self.assertTrue(all(lamp > 93 for lamp in lamps))   # the 94 real lamps are 0 to 93
+
+    def test_the_sections_sit_above_the_function_row_and_inside_the_body(self) -> None:
+        body = self.data["body"]
+        top_of_keys = min(c["y"] for c in self.data["caps"])
+        for s in self.sections:
+            self.assertLess(s["y"] + s["h"], top_of_keys)
+            self.assertGreaterEqual(s["x"], body["x"])
+            self.assertLessEqual(s["x"] + s["w"], body["x"] + body["w"])

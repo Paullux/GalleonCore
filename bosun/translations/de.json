@@ -723,5 +723,6 @@
   "All the keys are dark.": "Alle Tasten sind dunkel.",
   "Colours of %1 keys sent to galleond.": "Farben von %1 Tasten an galleond gesendet.",
   "The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.": "Die Live-Beleuchtung ist an: Die Farben, die Sie hier den Tasten geben, gehen an die Tastatur, eine Farbe pro Taste; eine Taste ohne Farbe bleibt dunkel.",
-  "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Dies ist eine Vorschau: Es wird nichts an die Tastatur gesendet, solange die Live-Beleuchtung nicht eingeschaltet ist. Die Tastenkappen sind ein französisches Standardlayout zur Orientierung; die Lampen darunter liegen an den vom Keyboard gemeldeten Positionen."
+  "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Dies ist eine Vorschau: Es wird nichts an die Tastatur gesendet, solange die Live-Beleuchtung nicht eingeschaltet ist. Die Tastenkappen sind ein französisches Standardlayout zur Orientierung; die Lampen darunter liegen an den vom Keyboard gemeldeten Positionen.",
+  "Light strip, section %1": "Lichtband, Abschnitt %1"
 }

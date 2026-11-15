@@ -80,7 +80,7 @@ Window {
     // What an edit answered, for the status bar.
     // The colours given to the keys of the drawing, as galleond takes them: groups of LED, red, green, blue. A key has the colour of its
     // first lamp; the two parts of Enter are one key with one LED, which takes the first colour found. A key with no colour is not
-    // listed, so it is dark on the keyboard, as it is in the drawing.
+    // listed, so it is dark on the keyboard, as it is in the drawing. The seven sections of the light strip are keys of their own.
     function drawnLedColours() {
         const seen = {}
         const values = []
@@ -93,6 +93,14 @@ Window {
             seen[cap.led] = true
             const c = Qt.color(colour)
             values.push(cap.led, Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255))
+        }
+        // The sections of the light strip: one LED each, in the order of the strip.
+        for (const section of keyboardMap.map.strip.sections) {
+            const colour = win.lampColors[section.lamp]
+            if (colour === undefined)
+                continue
+            const c = Qt.color(colour)
+            values.push(section.led, Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255))
         }
         return values
     }

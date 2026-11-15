@@ -723,5 +723,6 @@
   "All the keys are dark.": "Toutes les touches sont éteintes.",
   "Colours of %1 keys sent to galleond.": "Couleurs de %1 touches envoyées à galleond.",
   "The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.": "L’éclairage en direct est allumé : les couleurs que vous donnez ici aux touches vont au clavier, une couleur par touche ; une touche sans couleur reste éteinte.",
-  "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Ceci est un aperçu : rien n’est envoyé au clavier tant que l’éclairage en direct n’est pas allumé. Les capuchons sont une disposition française standard dessinée pour s’orienter ; les lampes dessous sont aux positions que le clavier indique."
+  "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Ceci est un aperçu : rien n’est envoyé au clavier tant que l’éclairage en direct n’est pas allumé. Les capuchons sont une disposition française standard dessinée pour s’orienter ; les lampes dessous sont aux positions que le clavier indique.",
+  "Light strip, section %1": "Bande lumineuse, section %1"
 }
