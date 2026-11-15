@@ -904,6 +904,7 @@ Window {
                     wrapMode: Text.Wrap
                 }
                 BrightnessSlider {
+                    id: levelSlider
                     objectName: "appearanceLevel"
                     width: Math.min(parent.width, 560)
                     accessibleName: qsTr("Level of the colours")
@@ -911,7 +912,7 @@ Window {
                     // The slider sets its own value when it commits, which cuts the binding: follow the appearance again after any change.
                     Connections {
                         target: win.appearance
-                        function onChanged() { if (win.appearance !== null) parent.value = win.appearance.level }
+                        function onChanged() { if (win.appearance !== null) levelSlider.value = win.appearance.level }
                     }
                     onCommitted: level => win.saved(win.appearance.setLevel(level))
                 }
