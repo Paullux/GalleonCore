@@ -721,8 +721,8 @@
   "LED %1 = %2 (as named on a QWERTY keyboard).": "LED %1 = %2 (nombre en un teclado QWERTY).",
   "A list of LEDs has one to 146 groups of four numbers": "Una lista de LED tiene de uno a 146 grupos de cuatro números",
   "All the keys are dark.": "Todas las teclas están apagadas.",
-  "Colours of %1 keys sent to galleond.": "Colores de %1 teclas enviados a galleond.",
   "The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.": "La iluminación en vivo está encendida: los colores que da aquí a las teclas van al teclado, un color por tecla; una tecla sin color permanece apagada.",
   "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Esto es una vista previa: no se envía nada al teclado mientras la iluminación en vivo no esté encendida. Las teclas son una distribución francesa estándar dibujada como referencia; las lámparas de debajo están en las posiciones que indica el teclado.",
-  "Light strip, section %1": "Franja luminosa, sección %1"
+  "Light strip, section %1": "Franja luminosa, sección %1",
+  "%1 keys sent.": "%1 teclas enviadas."
 }

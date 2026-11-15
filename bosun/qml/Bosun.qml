@@ -113,7 +113,7 @@ Window {
         if (values.length === 0)
             win.answered(win.daemon.setLightingColor(0, 0, 0), qsTr("All the keys are dark."))
         else
-            win.answered(win.daemon.setLightingLeds(values), qsTr("Colours of %1 keys sent to galleond.").arg(values.length / 4))
+            win.answered(win.daemon.setLightingLeds(values), qsTr("%1 keys sent.").arg(values.length / 4))
     }
 
     function answered(error, done) {
