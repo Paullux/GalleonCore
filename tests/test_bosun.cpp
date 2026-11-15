@@ -2160,6 +2160,8 @@ QtObject {
         scroll->setProperty("contentY", qMax(0.0, sections.at(3)->mapToItem(content, QPointF(0, 0)).y() - 60));
         const QPoint centre = sections.at(3)->mapToScene(QPointF(sections.at(3)->width() / 2, sections.at(3)->height() / 2)).toPoint();
         QVERIFY(window->contentItem()->boundingRect().contains(centre)); // it is on the screen
+        // The drawing answers clicks only while galleond holds the keys: wait for the state that the fake daemon reports (it comes by the bus).
+        QTRY_VERIFY_WITH_TIMEOUT(root->property("keysShowTheDrawing").toBool(), 5000);
         QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, centre);
         QCOMPARE(root->property("selectedCap").toInt(), 104);
         QCOMPARE(root->property("selectedLamps").toList(), (QVariantList{1004}));
