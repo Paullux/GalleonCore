@@ -75,7 +75,7 @@ private slots:
             QCOMPARE(hidUsageFromEvdev(*evdev), std::optional<HidUsage>(static_cast<HidUsage>(usage)));
             QVERIFY(keyName(static_cast<HidUsage>(usage)).has_value());
         }
-        QCOMPARE(known, 88);
+        QCOMPARE(known, 88); // the keys with a HID usage (Fn and Copilot are outside this range)
         // Every Windows scan code (and its extended flag) also leads to one usage, and back.
         std::set<std::pair<unsigned, bool>> scanSeen;
         for (unsigned scan = 1; scan <= 0x7F; ++scan) {
@@ -110,6 +110,17 @@ private slots:
         QVERIFY(!hidUsageFromQtNativeScanCode(0, QtScanCodeSystem::Windows).has_value());
         QVERIFY(!hidUsageFromQtNativeScanCode(0x7F00 | 0x1E, QtScanCodeSystem::Windows).has_value()); // a high byte that is no flag
         QVERIFY(!hidUsageFromQtNativeScanCode(0x1'0000, QtScanCodeSystem::Windows).has_value());
+    }
+
+    void fnAndCopilotHaveAnIdentityButNoCodeToReadThemFrom()
+    {
+        QCOMPARE(QString::fromLatin1(keyName(FnKey).value_or("")), QStringLiteral("Fn"));
+        QCOMPARE(QString::fromLatin1(keyName(CopilotKey).value_or("")), QStringLiteral("Copilot"));
+        QVERIFY(!evdevFromHidUsage(FnKey).has_value());
+        QVERIFY(!evdevFromHidUsage(CopilotKey).has_value());
+        QVERIFY(!hidUsageFromEvdev(0).has_value()); // 0 is "no code", never one of these two keys
+        QVERIFY(!hidUsageFromWindowsScanCode(0, false).has_value());
+        QVERIFY(FnKey != CopilotKey && FnKey > 0xFF);
     }
 
     void aKeyHasAnEnglishNameForThePersonCalibrating()

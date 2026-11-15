@@ -24,7 +24,7 @@ struct KeyRow
 // One row per key, so both conversions come from the same source. The ISO key next to Enter (HID 0x32, "#~") is not
 // listed: on Linux and on Windows it sends the same code as the ANSI backslash (HID 0x31), so the code cannot tell
 // the two apart; the calibration records the pairing the person sees.
-constexpr std::array<KeyRow, 88> Keys{{
+constexpr std::array<KeyRow, 90> Keys{{
     {0x04, 30, 0x1E, false, "A"},
     {0x05, 48, 0x30, false, "B"},
     {0x06, 46, 0x2E, false, "C"},
@@ -113,6 +113,10 @@ constexpr std::array<KeyRow, 88> Keys{{
     {0xE5, 54, 0x36, false, "Right Shift"},
     {0xE6, 100, 0x38, true, "Right Alt"},
     {0xE7, 126, 0x5C, true, "Right Windows"},
+    // Keys with no HID usage on this keyboard (they send no code of their own, or a combination): identities of this project,
+    // in a range that no HID usage uses, with no evdev code and no scan code. Chosen by hand in the calibration.
+    {FnKey, 0, 0, false, "Fn"},
+    {CopilotKey, 0, 0, false, "Copilot"},
 }};
 
 template <typename Predicate>
@@ -126,7 +130,7 @@ template <typename Predicate>
 
 std::optional<HidUsage> hidUsageFromEvdev(unsigned code)
 {
-    const KeyRow *row = findKey([code](const KeyRow &key) { return key.evdev == code; });
+    const KeyRow *row = code == 0 ? nullptr : findKey([code](const KeyRow &key) { return key.evdev == code; });
     return row == nullptr ? std::nullopt : std::optional<HidUsage>(row->usage);
 }
 
@@ -160,7 +164,7 @@ std::optional<HidUsage> hidUsageFromQtNativeScanCode(unsigned code, QtScanCodeSy
 std::optional<unsigned> evdevFromHidUsage(HidUsage usage)
 {
     const KeyRow *row = findKey([usage](const KeyRow &key) { return key.usage == usage; });
-    return row == nullptr ? std::nullopt : std::optional<unsigned>(row->evdev);
+    return row == nullptr || row->evdev == 0 ? std::nullopt : std::optional<unsigned>(row->evdev); // 0 = no evdev code
 }
 
 std::optional<const char *> keyName(HidUsage usage)

@@ -173,6 +173,28 @@ private Q_SLOTS:
         QVERIFY(!readKeyMap(path));
     }
 
+    void theMapShippedWithTheProjectIsValidAndHoldsWhatTheCalibrationFound()
+    {
+        // data/devices/galleon-100-sd-keymap.json: the owner's calibration of 2026-11-15, with six keys written by hand.
+        const QString path = QStringLiteral(QT_TESTCASE_SOURCEDIR) + QStringLiteral("/../data/devices/galleon-100-sd-keymap.json");
+        QString why;
+        const auto shipped = readKeyMap(path, &why);
+        if (!shipped)
+            QFAIL(qPrintable(QStringLiteral("the shipped map was refused: ") + why));
+        const auto &map = shipped->map;
+        QCOMPARE(map.assignedCount(), std::size_t{137});
+        QCOMPARE(map.ledForKey(0x3A), std::optional<std::uint16_t>(58)); // F1 is the LED of its HID usage, as documented
+        QCOMPARE(map.ledForKey(0x04), std::optional<std::uint16_t>(4));  // the key at the A of a QWERTY, the Q of an AZERTY
+        QCOMPARE(map.ledForKey(galleon::keyboard::CopilotKey), std::optional<std::uint16_t>(129)); // as in the Web Hub's key table
+        QCOMPARE(map.ledForKey(galleon::keyboard::FnKey), std::optional<std::uint16_t>(122));
+        QCOMPARE(map.ledForKey(0xE0), std::optional<std::uint16_t>(105)); // the modifiers do not follow their usage
+        QCOMPARE(map.assignmentFor(139).value_or(LedAssignment{}).kind, LedKind::Strip);
+        QCOMPARE(map.assignmentFor(145).value_or(LedAssignment{}).stripPosition, std::uint8_t{7});
+        QVERIFY(!map.assignmentFor(0).has_value()); // not measured: no entry, no placeholder
+        QVERIFY(!map.assignmentFor(109).has_value());
+        QVERIFY(!shipped->source.isEmpty());
+    }
+
     void theReasonForARefusalNeverQuotesTheFile()
     {
         QString why;

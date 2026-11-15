@@ -304,6 +304,7 @@ The owner watched every visual result on the keyboard. The counts come from the 
 - Index 0x3A lit F1. During a typing test that lit each pressed key by its USB HID usage, the key that lit was the key pressed.
 - Index 0x81 (129) is the Copilot key, which matches the Web Hub key table.
 - Indices from 0x82 drive the light strip along the top edge. The first few light single LEDs from the left end. Later indices light larger sections.
+  - **Measured by the owner's calibration of 15 November 2026 (Galleon Bosun, Linux, one LED lit alone each time)**: the light strip is the **seven LEDs 139 to 145** (0x8B to 0x91), sections 1 to 7 from the left; LEDs 130 to 137 (0x82 to 0x89) light nothing that could be seen. Read this in preference to the sentence above, which came from a first, partial test.
 - Eighteen indices that are absent from the Web Hub lighting record (`00..03`, `66..68`, `70..72`, `78`, `79`, `7b`, `7d..80`, `88`) lit nothing.
 
 **Release.**
