@@ -2038,7 +2038,7 @@ QtObject {
         engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
         engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
         FakeCalibrationLights lights;
-        bosun::KeyCalibration calibration(lights, dir.filePath("keymap.json"));
+        const bosun::KeyCalibration calibration(lights, dir.filePath("keymap.json"));
         const bosun::AppearanceStore appearance{QString()};
         engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
                                      {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("keyCalibration"), QVariant::fromValue(&calibration)},
