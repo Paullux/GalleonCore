@@ -3,6 +3,8 @@
 
 #include "DaemonStatus.h"
 
+#include "LedValues.h"
+
 #include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusMessage>
@@ -126,6 +128,21 @@ QString DaemonStatus::setLightingLed(int led, int red, int green, int blue)
         return tr("A colour has three values from 0 to 255");
     auto message = lightingCall(QStringLiteral("SetLed"));
     message << led << red << green << blue;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [watcher] {
+        watcher->deleteLater();
+    });
+    return {};
+}
+
+QString DaemonStatus::setLightingLeds(const QVariantList &values)
+{
+    if (!running()) return tr("Start galleond to change the lighting");
+    QString why;
+    const auto list = checkedLedValues(values, &why);
+    if (!list) return why;
+    auto message = lightingCall(QStringLiteral("SetLeds"));
+    message << QVariant::fromValue(*list);
     auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [watcher] {
         watcher->deleteLater();

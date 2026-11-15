@@ -720,5 +720,6 @@
   "Copilot": "Copilot",
   "LED %1 = %2.": "LED %1 = %2.",
   "A key that the system keeps from this window, or that sends no code of its own: choose it here.": "Une touche que le système garde pour lui, ou qui n’envoie aucun code : choisissez-la ici.",
-  "LED %1 = %2 (as named on a QWERTY keyboard).": "LED %1 = %2 (nom sur un clavier QWERTY)."
+  "LED %1 = %2 (as named on a QWERTY keyboard).": "LED %1 = %2 (nom sur un clavier QWERTY).",
+  "A list of LEDs has one to 146 groups of four numbers": "Une liste de LED a de un à 146 groupes de quatre nombres"
 }

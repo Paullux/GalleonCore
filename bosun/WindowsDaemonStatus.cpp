@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "DaemonStatus.h"
+#include "LedValues.h"
 #include "LightingStateWatcher.h"
 #include "LocalControl.h"
 #include <QCoreApplication>
@@ -146,6 +147,16 @@ QString DaemonStatus::setLightingLed(int led, int red, int green, int blue) {
     command.red = red;
     command.green = green;
     command.blue = blue;
+    galleond::sendLocalCommand(m_endpoint, command, this);
+    return {};
+}
+QString DaemonStatus::setLightingLeds(const QVariantList &values) {
+    if (!running()) return tr("Start galleond to change the lighting");
+    QString why;
+    const auto list = checkedLedValues(values, &why);
+    if (!list) return why;
+    galleond::LocalCommand command{galleond::LocalAction::LightingLeds, {}, {}};
+    command.ledValues = *list;
     galleond::sendLocalCommand(m_endpoint, command, this);
     return {};
 }
