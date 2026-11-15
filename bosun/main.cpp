@@ -3,7 +3,10 @@
 
 #include "BosunBackend.h"
 #include "LanguageSettings.h"
+#include "DaemonCalibrationLights.h"
 #include "DaemonStatus.h"
+#include "KeyCalibration.h"
+#include <KeyMapFile.h>
 #include "FilePicker.h"
 #include "UpdateChecker.h"
 #include "PackageUpdates.h"
@@ -111,6 +114,8 @@ int main(int argc, char *argv[])
         if (recording) Q_EMIT recording->changed();
     });
     bosun::DaemonStatus daemon;
+    bosun::DaemonCalibrationLights calibrationLights(daemon);
+    bosun::KeyCalibration keyCalibration(calibrationLights, galleond::keyMapPath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
 #ifdef Q_OS_WIN
     if (!parser.isSet(shotOption) && !parser.isSet(pagesOption) && !parser.isSet(simulateUpdateOption) && !parser.isSet(oldFirmwareOption)) {
         // Let the asynchronous IPC probe finish before starting a missing daemon.
@@ -160,6 +165,7 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("filePicker"), QVariant::fromValue(filePicker.get())},
                                  {QStringLiteral("backend"), QVariant::fromValue(&backend)},
                                  {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                 {QStringLiteral("keyCalibration"), QVariant::fromValue(&keyCalibration)},
                                  {QStringLiteral("library"), QVariant::fromValue(&library)}});
     engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
     if (engine.rootObjects().isEmpty())

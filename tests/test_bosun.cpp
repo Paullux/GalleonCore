@@ -4,6 +4,7 @@
 #include "BosunBackend.h"
 #include "LanguageSettings.h"
 #include "DaemonStatus.h"
+#include "KeyCalibration.h"
 #include "WallpaperLibrary.h"
 #include "Required.h"
 
@@ -152,6 +153,20 @@ public Q_SLOTS:
 };
 
 // The lighting object of galleond, as far as Bosun can tell: it says that it holds the keyboard, and notes the colours it is given.
+// The lights of the key calibration: the keyboard is not involved, only what would be asked of galleond is written down.
+class FakeCalibrationLights final : public bosun::CalibrationLights
+{
+public:
+    [[nodiscard]] bool ready() const override { return true; }
+    QString showLed(int led, int /*red*/, int /*green*/, int /*blue*/) override
+    {
+        ledsLit.push_back(led);
+        return {};
+    }
+    QString showAll(int /*red*/, int /*green*/, int /*blue*/) override { return {}; }
+    QList<int> ledsLit;
+};
+
 class LightingEndpoint : public QObject
 {
     Q_OBJECT
@@ -1964,6 +1979,83 @@ QtObject {
         QVERIFY(QMetaObject::invokeMethod(all, "clicked"));
         QTRY_COMPARE_WITH_TIMEOUT(endpoint.colours.size(), 1, 3000);
         QCOMPARE(endpoint.colours.constFirst(), (QList<int>{229, 57, 53}));
+    }
+
+    void theKeyCalibrationScreenReadsTheKeysOfItsWindowOnlyWhileItIsOpen()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        FakeCalibrationLights lights;
+        bosun::KeyCalibration calibration(lights, dir.filePath("keymap.json"));
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("keyCalibration"), QVariant::fromValue(&calibration)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        auto *window = qobject_cast<QQuickWindow *>(root);
+        QVERIFY(window);
+        window->show();
+        const QVariantList tabs = root->property("tabs").toList();
+        for (int i = 0; i < tabs.size(); ++i) {
+            if (tabs.at(i).toMap().value(QStringLiteral("kind")).toString() == QLatin1String("keyboard"))
+                root->setProperty("currentTab", i); // the calibration is on the keyboard tab
+        }
+        auto *panel = root->findChild<QQuickItem *>("calibrationPanel");
+        QVERIFY(panel);
+        QVERIFY(root->findChild<QQuickItem *>("calibrationBegin"));
+#ifdef Q_OS_WIN
+        constexpr quint32 codeA = 0x1E;
+#else
+        constexpr quint32 codeA = 38;
+#endif
+        const auto press = [window](quint32 nativeScanCode) {
+            QKeyEvent event(QEvent::KeyPress, Qt::Key_A, Qt::NoModifier, nativeScanCode, 0, 0, QStringLiteral("a"));
+            QCoreApplication::sendEvent(window, &event);
+        };
+
+        // Not started: the screen is not there and a key press reaches nothing.
+        QVERIFY(!panel->isVisible());
+        press(codeA);
+        QCOMPARE(calibration.passed(), 0);
+        QVERIFY(lights.ledsLit.isEmpty());
+
+        // Started: the first LED is lit alone, the key of the window answers it, and the next LED is lit.
+        QVERIFY(calibration.begin(false).isEmpty());
+        QTRY_VERIFY(panel->isVisible());
+        QCOMPARE(lights.ledsLit, (QList<int>{0}));
+        QTRY_VERIFY(panel->hasActiveFocus());
+        press(codeA);
+        QCOMPARE(calibration.currentLed(), 1);
+        QCOMPARE(lights.ledsLit, (QList<int>{0, 1}));
+        QVERIFY(QFile::exists(dir.filePath("keymap.json")));
+
+        // The buttons answer too: nothing lit up, back.
+        auto *none = root->findChild<QQuickItem *>("calibrationNone");
+        auto *back = root->findChild<QQuickItem *>("calibrationBack");
+        QVERIFY(none);
+        QVERIFY(back);
+        QVERIFY(QMetaObject::invokeMethod(none, "clicked"));
+        QCOMPARE(calibration.currentLed(), 2);
+        QVERIFY(QMetaObject::invokeMethod(back, "clicked"));
+        QCOMPARE(calibration.currentLed(), 1);
+
+        // Stopped: the screen goes away and the keys are ignored again.
+        auto *stop = root->findChild<QQuickItem *>("calibrationStop");
+        QVERIFY(stop);
+        QVERIFY(QMetaObject::invokeMethod(stop, "clicked"));
+        QTRY_VERIFY(!panel->isVisible());
+        const int passed = calibration.passed();
+        press(codeA);
+        QCOMPARE(calibration.passed(), passed);
     }
 
     void aKeyOfTheKeyboardDrawingTakesTheColourPickedForItAndNothingIsSent()

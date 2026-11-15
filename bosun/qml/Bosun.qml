@@ -23,6 +23,7 @@ Window {
     property var languages: null
     property var filePicker: null
     property var updates: null
+    property var keyCalibration: null // the calibration of the key map (KeyCalibration): off until the person starts it
     property bool updatesOpen: false
 
     property int currentTab: 0
@@ -624,6 +625,145 @@ Window {
                         const c = Qt.color(picked)
                         win.answered(win.daemon.setLightingColor(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)),
                                      qsTr("Keyboard colour sent to galleond: %1").arg(picked))
+                    }
+                }
+                Rectangle { width: parent.width; height: 1; color: "#33ffffff"; visible: win.keyCalibration !== null }
+                Text {
+                    visible: win.keyCalibration !== null
+                    color: "white"
+                    font.pixelSize: 16
+                    font.bold: true
+                    text: qsTr("Calibrate the keys")
+                }
+                Text {
+                    visible: win.keyCalibration !== null
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#c9ced6"
+                    font.pixelSize: 14
+                    text: qsTr("galleond lights one LED at a time and you press the key that lit up. The answers build the map between the LEDs and your keys. Only this window reads the keys, only while the calibration is open, and nothing you press is kept: the file holds which LED is which key, nothing else.")
+                }
+                Row {
+                    spacing: 8
+                    visible: win.keyCalibration !== null && !win.keyCalibration.active
+                    Pill {
+                        objectName: "calibrationBegin"
+                        enabledLook: win.daemon.lightingActive
+                        text: qsTr("Calibrate the keys")
+                        onClicked: {
+                            win.answered(win.keyCalibration.begin(false), qsTr("Calibration started."))
+                            calibrationPanel.forceActiveFocus()
+                        }
+                    }
+                    Pill {
+                        objectName: "calibrationRestart"
+                        enabledLook: win.daemon.lightingActive
+                        text: qsTr("Start over")
+                        onClicked: {
+                            win.answered(win.keyCalibration.begin(true), qsTr("Calibration started over."))
+                            calibrationPanel.forceActiveFocus()
+                        }
+                    }
+                }
+                Text {
+                    objectName: "calibrationNeedsLighting"
+                    visible: win.keyCalibration !== null && !win.keyCalibration.active && !win.daemon.lightingActive
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#ffb74d"
+                    font.pixelSize: 13
+                    text: qsTr("Switch the live lighting on first: the calibration lights one LED at a time.")
+                }
+                Item {
+                    id: calibrationPanel
+                    objectName: "calibrationPanel"
+                    property int stripPosition: 1
+                    visible: win.keyCalibration !== null && win.keyCalibration.active
+                    width: parent.width
+                    height: visible ? calibrationColumn.height : 0
+                    focus: visible
+                    onVisibleChanged: if (visible) forceActiveFocus()
+                    // The key of this window that has the focus: the code of the physical key, never the character. Nothing is kept.
+                    Keys.onPressed: event => {
+                        if (win.keyCalibration !== null && !event.isAutoRepeat)
+                            win.keyCalibration.handleKey(event.nativeScanCode)
+                        event.accepted = true
+                    }
+                    Column {
+                        id: calibrationColumn
+                        width: parent.width
+                        spacing: 8
+                        Text {
+                            objectName: "calibrationProgress"
+                            color: "white"
+                            font.pixelSize: 15
+                            text: win.keyCalibration === null ? "" : win.keyCalibration.finished
+                                  ? qsTr("Done: all %1 LEDs have been passed.").arg(win.keyCalibration.total)
+                                  : qsTr("LED %1 is lit. %2 of %3 passed, %4 skipped.").arg(win.keyCalibration.currentLed).arg(win.keyCalibration.passed).arg(win.keyCalibration.total).arg(win.keyCalibration.skipped)
+                        }
+                        Text {
+                            objectName: "calibrationMessage"
+                            width: parent.width
+                            wrapMode: Text.Wrap
+                            color: "#c9ced6"
+                            font.pixelSize: 13
+                            text: win.keyCalibration === null ? "" : win.keyCalibration.message
+                        }
+                        Row {
+                            spacing: 8
+                            Pill {
+                                objectName: "calibrationNone"
+                                text: qsTr("Nothing lit up")
+                                onClicked: { win.keyCalibration.answerNone(); calibrationPanel.forceActiveFocus() }
+                            }
+                            Pill {
+                                objectName: "calibrationSkip"
+                                text: qsTr("Skip")
+                                onClicked: { win.keyCalibration.skip(); calibrationPanel.forceActiveFocus() }
+                            }
+                            Pill {
+                                objectName: "calibrationBack"
+                                text: qsTr("Back")
+                                onClicked: { win.keyCalibration.back(); calibrationPanel.forceActiveFocus() }
+                            }
+                            Pill {
+                                objectName: "calibrationStop"
+                                danger: true
+                                text: qsTr("Stop")
+                                onClicked: win.keyCalibration.end()
+                            }
+                        }
+                        Row {
+                            spacing: 8
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: "#c9ced6"
+                                font.pixelSize: 13
+                                text: qsTr("A section of the light strip lit up, counted from the left:")
+                            }
+                            Pill {
+                                objectName: "calibrationStripLess"
+                                text: "−"
+                                onClicked: { calibrationPanel.stripPosition = Math.max(1, calibrationPanel.stripPosition - 1); calibrationPanel.forceActiveFocus() }
+                            }
+                            Text {
+                                objectName: "calibrationStripPosition"
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: "white"
+                                font.pixelSize: 15
+                                text: calibrationPanel.stripPosition
+                            }
+                            Pill {
+                                objectName: "calibrationStripMore"
+                                text: "+"
+                                onClicked: { calibrationPanel.stripPosition = Math.min(64, calibrationPanel.stripPosition + 1); calibrationPanel.forceActiveFocus() }
+                            }
+                            Pill {
+                                objectName: "calibrationStrip"
+                                text: qsTr("It is that section")
+                                onClicked: { win.keyCalibration.answerStrip(calibrationPanel.stripPosition); calibrationPanel.forceActiveFocus() }
+                            }
+                        }
                     }
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
