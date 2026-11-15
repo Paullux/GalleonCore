@@ -38,7 +38,18 @@ Styles are free to use: manga, cyberpunk, space western, cinematic lighting. Cha
 
 ## Keys-FX icon
 
-`bosun/icons/key-fx/key_fx_icon.svg` is the icon for the future Keys-FX store (lighting effects for the keyboard). SVG supplied by the owner on 15 November 2026, title "Key FX - effets lumineux": a stylised keyboard with a multicolour light wave and a star, on a dark rounded square. No text, no existing character, mark or logo; the keyboard is a generic drawing of 21 keys, not a picture or a trace of the product. CC-BY-SA-4.0 (default), author Paul Woisard. **Provenance to be completed by the owner**: the tool that produced it, the date and the prompt are not recorded yet (see "AI-generated assets" below if it was generated). Not used by the software yet.
+`bosun/icons/key-fx/key_fx_icon.svg` is the icon for the future Keys-FX store (lighting effects for the keyboard). SVG supplied by the owner on 15 November 2026, title "Key FX - effets lumineux": a stylised keyboard of 21 keys with a multicolour light wave and a star, on a dark rounded square. No text, no existing character, mark or logo; the keyboard is a generic drawing, not a picture or a trace of the product. CC-BY-SA-4.0 (default), author Paul Woisard. Not used by the software yet.
+
+- **Tool**: ChatGPT (version not recorded). **Date of generation**: not recorded; the file was supplied on 15 November 2026 (to be corrected by the owner if known).
+- **Prompt** (French, as given by the owner, who supplied it as the provenance of this icon). It asks for an SVG named `galleoncore-keyfx.svg` with a 256 × 256 `viewBox` and a transparent background; the file kept here has a 512 × 512 `viewBox` and a dark background, so it may come from a later iteration of the request, which is not recorded:
+
+> Crée une icône vectorielle SVG pour la fonctionnalité Key FX du logiciel open source GalleonCore, qui permet de personnaliser les effets d'éclairage RGB d'un clavier mécanique Corsair Galleon 100 SD.
+>
+> Direction artistique : style moderne, technologique et élégant, inspiré des interfaces gaming haut de gamme. Icône représentant un clavier mécanique stylisé, vu légèrement en perspective. Touches sombres aux contours arrondis, avec un éclairage RGB individuel. Une vague lumineuse multicolore traverse le clavier pour symboliser les effets réactifs à la frappe. Dégradés lumineux allant du cyan au violet, magenta, rouge et orange. Effets de halo néon subtils, sans surcharge visuelle. Composition équilibrée et immédiatement reconnaissable, même en petite taille.
+>
+> Contraintes techniques : produire un véritable fichier SVG, et non une image PNG intégrée dans un conteneur SVG. Utiliser exclusivement des éléments vectoriels natifs (`path`, `rect`, `circle`, `linearGradient`, `radialGradient`, etc.). Définir un `viewBox="0 0 256 256"`. Prévoir un fond transparent pour une intégration dans les interfaces Linux et Windows. Éviter les textes, les logos de marques et les détails trop fins. Limiter le nombre de chemins. Garantir une bonne lisibilité aux tailles 32 × 32, 64 × 64, 128 × 128 et 256 × 256 pixels. Compatible avec les moteurs de rendu SVG de Qt/QML. Fournir directement le code SVG complet, valide et autonome, prêt à être enregistré sous le nom `galleoncore-keyfx.svg`. L'icône doit évoquer immédiatement trois notions : clavier, éclairage RGB et effets lumineux dynamiques.
+
+- **Review** against the rules above (done when it was filed): no existing character, trademark, real person or footage.
 
 ## Where they go
 
