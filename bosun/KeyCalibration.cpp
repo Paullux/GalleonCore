@@ -139,10 +139,14 @@ void KeyCalibration::applyKey(galleon::keyboard::HidUsage key)
         return;
     const auto led = m_flow->currentLed();
     switch (m_flow->answerKey(key)) {
-    case AnswerOutcome::Recorded:
+    case AnswerOutcome::Recorded: {
         // Shown until the next answer replaces it, so that a slip is seen at once; it is not kept.
-        settle(tr("LED %1 = %2.").arg(led.value_or(0)).arg(QString::fromLatin1(galleon::keyboard::keyName(key).value_or("?"))));
+        // The names are those of a QWERTY keyboard: for a key whose engraving depends on the layout, the message says so.
+        const QString name = QString::fromLatin1(galleon::keyboard::keyName(key).value_or("?"));
+        settle(galleon::keyboard::isLayoutDependent(key) ? tr("LED %1 = %2 (as named on a QWERTY keyboard).").arg(led.value_or(0)).arg(name)
+                                                         : tr("LED %1 = %2.").arg(led.value_or(0)).arg(name));
         break;
+    }
     case AnswerOutcome::KeyAlreadyUsed:
         say(tr("That key already belongs to LED %1. Press the key that is lit now.").arg(m_flow->conflictingLed().value_or(0)));
         break;

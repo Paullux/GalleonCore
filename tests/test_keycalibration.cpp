@@ -129,9 +129,12 @@ private Q_SLOTS:
         KeyCalibration calibration(lights, dir.filePath("keymap.json"));
         QVERIFY(calibration.begin(false).isEmpty());
         calibration.handleKey(CodeA);
-        QCOMPARE(calibration.message(), QStringLiteral("LED 0 = A.")); // the key at the A of a QWERTY
+        // The name is that of a QWERTY keyboard (the key at the A of a QWERTY), and the message says so: on an AZERTY it is engraved Q.
+        QCOMPARE(calibration.message(), QStringLiteral("LED 0 = A (as named on a QWERTY keyboard)."));
         calibration.handleKey(CodeB);
-        QCOMPARE(calibration.message(), QStringLiteral("LED 1 = B.")); // replaced by the next one, not added to it
+        QCOMPARE(calibration.message(), QStringLiteral("LED 1 = B (as named on a QWERTY keyboard).")); // replaced by the next, not added to it
+        calibration.answerNamedKey(0xFF01);
+        QCOMPARE(calibration.message(), QStringLiteral("LED 2 = Fn.")); // a key that is the same on every layout: no remark
     }
 
     void aKeyTheSystemKeepsCanBeChosenFromTheListInsteadOfPressed()

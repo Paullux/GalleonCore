@@ -50,6 +50,11 @@ enum class QtScanCodeSystem : std::uint8_t { Linux, Windows };
 // The reverse, for the tables' own tests and for showing a key's name in the calibration tool.
 [[nodiscard]] std::optional<unsigned> evdevFromHidUsage(HidUsage usage);
 
+// True for the keys whose engraving depends on the layout of the keyboard: letters, digits and punctuation (0x04 to 0x27, 0x2D to 0x38) and
+// the ISO key next to the left Shift (0x64). The names of keyName() are those of a QWERTY keyboard, so for these keys they are not what is
+// written on an AZERTY one: whoever shows such a name says so.
+[[nodiscard]] bool isLayoutDependent(HidUsage usage);
+
 // A short English name of the key ("A", "F1", "Left Control"), for a person to read; nullopt for a usage not in the tables.
 [[nodiscard]] std::optional<const char *> keyName(HidUsage usage);
 

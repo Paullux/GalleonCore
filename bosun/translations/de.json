@@ -719,5 +719,6 @@
   "Fn": "Fn",
   "Copilot": "Copilot",
   "LED %1 = %2.": "LED %1 = %2.",
-  "A key that the system keeps from this window, or that sends no code of its own: choose it here.": "Eine Taste, die das System für sich behält oder die keinen eigenen Code sendet: Wählen Sie sie hier."
+  "A key that the system keeps from this window, or that sends no code of its own: choose it here.": "Eine Taste, die das System für sich behält oder die keinen eigenen Code sendet: Wählen Sie sie hier.",
+  "LED %1 = %2 (as named on a QWERTY keyboard).": "LED %1 = %2 (Name auf einer QWERTY-Tastatur)."
 }

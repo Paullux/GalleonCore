@@ -123,6 +123,16 @@ private slots:
         QVERIFY(FnKey != CopilotKey && FnKey > 0xFF);
     }
 
+    void lettersDigitsAndPunctuationDependOnTheLayoutAndTheOthersDoNot()
+    {
+        for (const HidUsage usage : {HidUsage{0x04}, HidUsage{0x1D}, HidUsage{0x1E}, HidUsage{0x27}, HidUsage{0x2D}, HidUsage{0x38}, HidUsage{0x64}})
+            QVERIFY2(isLayoutDependent(usage), qPrintable(QString::number(usage)));
+        // Enter, Escape, Backspace, Tab, Space, the function keys, the modifiers and the two keys of this keyboard are the same everywhere.
+        for (const HidUsage usage : {HidUsage{0x28}, HidUsage{0x29}, HidUsage{0x2A}, HidUsage{0x2B}, HidUsage{0x2C}, HidUsage{0x3A}, HidUsage{0x45},
+                                     HidUsage{0xE0}, HidUsage{0xE6}, FnKey, CopilotKey})
+            QVERIFY2(!isLayoutDependent(usage), qPrintable(QString::number(usage)));
+    }
+
     void aKeyHasAnEnglishNameForThePersonCalibrating()
     {
         QCOMPARE(QString::fromLatin1(keyName(0x04).value_or("")), QStringLiteral("A"));

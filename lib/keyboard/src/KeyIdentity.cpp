@@ -167,6 +167,11 @@ std::optional<unsigned> evdevFromHidUsage(HidUsage usage)
     return row == nullptr || row->evdev == 0 ? std::nullopt : std::optional<unsigned>(row->evdev); // 0 = no evdev code
 }
 
+bool isLayoutDependent(HidUsage usage)
+{
+    return (usage >= 0x04 && usage <= 0x27) || (usage >= 0x2D && usage <= 0x38) || usage == 0x64;
+}
+
 std::optional<const char *> keyName(HidUsage usage)
 {
     const KeyRow *row = findKey([usage](const KeyRow &key) { return key.usage == usage; });
