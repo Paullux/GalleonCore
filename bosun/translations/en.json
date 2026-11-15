@@ -738,5 +738,6 @@
   "Fast": "Fast",
   "The rainbow moves on the keyboard; the drawing shows it standing still.": "The rainbow moves on the keyboard; the drawing shows it standing still.",
   "Level of the colours: how strongly the colours above are shown, without changing the brightness of the keyboard itself.": "Level of the colours: how strongly the colours above are shown, without changing the brightness of the keyboard itself.",
-  "Level of the colours": "Level of the colours"
+  "Level of the colours": "Level of the colours",
+  "The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.": "The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is."
 }

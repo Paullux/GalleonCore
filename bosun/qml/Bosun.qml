@@ -43,6 +43,8 @@ Window {
     property int lastTheme: 0
     // The preview of the lamps of the keyboard (KeyboardMap): lamp id -> colour; only drawn, never sent anywhere.
     property var lampColors: ({})
+    // True only while the keys really show the appearance (galleond holds them). Otherwise the drawing is a preview of what they will show.
+    readonly property bool keysShowTheDrawing: daemon.lightingState === "holding"
     property int selectedCap: -1
     property var selectedLamps: []
     readonly property var lastThemeEntry: backend.themes.length > 0 ? backend.themes[Math.min(lastTheme, backend.themes.length - 1)] : null
@@ -928,6 +930,7 @@ Window {
                     id: keyboardMap
                     objectName: "keyboardMap"
                     width: Math.min(parent.width, 740)
+                    opacity: win.keysShowTheDrawing ? 1 : 0.4 // greyed: what the keyboard shows now is not this
                     colors: win.lampColors
                     selected: win.selectedCap
                     themeName: win.lastThemeEntry ? win.lastThemeEntry.name : ""
@@ -983,8 +986,10 @@ Window {
                     wrapMode: Text.Wrap
                     color: "#7d8591"
                     font.pixelSize: 13
-                    text: win.daemon.lightingActive
+                    text: win.keysShowTheDrawing
                           ? qsTr("The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.")
+                          : win.daemon.lightingActive
+                          ? qsTr("The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.")
                           : qsTr("This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff" }

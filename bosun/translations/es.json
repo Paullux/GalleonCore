@@ -738,5 +738,6 @@
   "Fast": "Rápido",
   "The rainbow moves on the keyboard; the drawing shows it standing still.": "El arcoíris se mueve en el teclado; el dibujo lo muestra quieto.",
   "Level of the colours: how strongly the colours above are shown, without changing the brightness of the keyboard itself.": "Nivel de los colores: con qué intensidad se muestran los colores de arriba, sin cambiar el brillo del propio teclado.",
-  "Level of the colours": "Nivel de los colores"
+  "Level of the colours": "Nivel de los colores",
+  "The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.": "El dibujo está en gris: el teclado no lo muestra ahora mismo (véase el estado de la iluminación en directo arriba). Lo que elija aquí se guarda y se mostrará en cuanto pueda."
 }

@@ -738,5 +738,6 @@
   "Fast": "Schnell",
   "The rainbow moves on the keyboard; the drawing shows it standing still.": "Der Regenbogen läuft über die Tastatur; die Zeichnung zeigt ihn stehend.",
   "Level of the colours: how strongly the colours above are shown, without changing the brightness of the keyboard itself.": "Stärke der Farben: wie kräftig die obigen Farben gezeigt werden, ohne die Helligkeit der Tastatur selbst zu ändern.",
-  "Level of the colours": "Stärke der Farben"
+  "Level of the colours": "Stärke der Farben",
+  "The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.": "Die Zeichnung ist ausgegraut: Die Tastatur zeigt sie gerade nicht (siehe den Zustand der Live-Beleuchtung oben). Was Sie hier wählen, wird gemerkt und gezeigt, sobald es möglich ist."
 }

@@ -738,5 +738,6 @@
   "Fast": "Rapide",
   "The rainbow moves on the keyboard; the drawing shows it standing still.": "L'arc-en-ciel défile sur le clavier ; le dessin le montre immobile.",
   "Level of the colours: how strongly the colours above are shown, without changing the brightness of the keyboard itself.": "Niveau des couleurs : l'intensité avec laquelle les couleurs ci-dessus sont montrées, sans changer la luminosité du clavier lui-même.",
-  "Level of the colours": "Niveau des couleurs"
+  "Level of the colours": "Niveau des couleurs",
+  "The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.": "Le dessin est grisé : le clavier ne le montre pas en ce moment (voir l’état de l’éclairage en direct plus haut). Ce que vous choisissez ici est gardé et montré dès qu’il le pourra."
 }

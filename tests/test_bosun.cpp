@@ -1968,6 +1968,9 @@ QtObject {
         auto *board = root->findChild<QQuickItem *>("keyboardMap");
         QVERIFY(board);
 
+        // The keys show the drawing: it is not greyed.
+        QCOMPARE(board->opacity(), 1.0);
+
         // The note under the brightness says that it is suspended.
         auto *note = root->findChild<QQuickItem *>("brightnessSuspendedNote");
         QVERIFY(note);
@@ -2249,6 +2252,9 @@ QtObject {
         QObject *root = engine.rootObjects().constFirst();
         auto *board = root->findChild<QQuickItem *>("keyboardMap");
         QVERIFY(board);
+        // The live lighting is off: the drawing is only a preview, and it is greyed.
+        QVERIFY(board->opacity() < 0.6);
+
         // A key with no colour is out: dark grey, not white (as on the keyboard when the live lighting is switched on).
         const auto noColour = namedItems(root, "cap0");
         QCOMPARE(noColour.size(), 1);
