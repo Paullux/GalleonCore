@@ -521,6 +521,30 @@ private Q_SLOTS:
         QCOMPARE(ledColour(rig.frame(), 4), (std::vector<std::uint8_t>{255, 255, 255}));
     }
 
+    void theFixedRainbowOfTheFileIsWhatTheKeysShowWithTheRealPositions()
+    {
+        // The file as the owner wrote it by hand, read from the disk, and the positions built into galleond.
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        QFile out(path);
+        QVERIFY(out.open(QIODevice::WriteOnly));
+        out.write(R"({"version":1,"base":{"type":"rainbow","speed":0},"overrides":[],"level":1000})");
+        out.close();
+        Rig rig;
+        const LightingAppearanceApplier applier(*rig.controller, path);
+        rig.hold();
+        QCOMPARE(rig.controller->state(), QStringLiteral("holding"));
+        QTRY_VERIFY_WITH_TIMEOUT(rig.frames() >= 1, 3000);
+        // F1 (LED 58) is lit with a colour of the rainbow, not dark; the left end is red-ish, the right end magenta-ish.
+        const auto f1 = ledColour(rig.frame(), 58);
+        QVERIFY(!f1.empty());
+        QVERIFY2(f1 != (std::vector<std::uint8_t>{0, 0, 0}), "F1 has to be lit by the rainbow");
+        int lit = 0;
+        for (int led = 0; led < 146; ++led)
+            lit += ledColour(rig.frame(), led) != std::vector<std::uint8_t>{0, 0, 0} ? 1 : 0;
+        QCOMPARE(lit, 95); // the 88 keys and the 7 sections of the strip
+    }
+
     void withoutAFileTheKeysAreDarkWhenTheLightingIsSwitchedOn()
     {
         const QTemporaryDir dir;

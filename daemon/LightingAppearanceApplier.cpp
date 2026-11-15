@@ -27,7 +27,16 @@ bool LightingAppearanceApplier::applyFile()
         qWarning().noquote() << "galleond: lighting: the appearance file is not used:" << why;
         return false;
     }
-    return m_controller.setAppearance(*appearance);
+    const bool applied = m_controller.setAppearance(*appearance);
+    // What was read, in a line (no key is involved): so that a person who sees the wrong lighting can tell whether the file was used.
+    const QString kind = appearance->base == galleon::keyboard::BaseType::Rainbow ? QStringLiteral("rainbow, speed %1").arg(appearance->rainbowSpeed)
+                                                                                   : QStringLiteral("one colour");
+    qInfo().noquote() << QStringLiteral("galleond: lighting: the appearance file was read: %1, %2 retouches, level %3 (%4)")
+                             .arg(kind)
+                             .arg(appearance->retouches.size())
+                             .arg(appearance->level)
+                             .arg(applied ? QStringLiteral("applied") : QStringLiteral("refused"));
+    return applied;
 }
 
 void LightingAppearanceApplier::onActiveChanged(bool active)

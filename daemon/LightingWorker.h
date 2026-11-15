@@ -152,8 +152,10 @@ private:
         if (m_tool) { // a tool is showing something: that is what the keyboard gets
             if (m_toolDirty) {
                 const auto frame = galleon::keyboard::sceneFrame(*m_tool);
-                if (frame && m_link->show(*frame, now) == LiveLink::ShowResult::Sent)
+                if (frame && m_link->show(*frame, now) == LiveLink::ShowResult::Sent) {
                     m_toolDirty = false; // dropped for pacing, or failed: it is tried again at the next tick
+                    noteSent(*frame);
+                }
             }
             return;
         }
@@ -162,8 +164,29 @@ private:
         if (!m_pending)
             return;
         const auto frame = galleon::keyboard::sceneFrame(*m_pending);
-        if (!frame || m_link->show(*frame, now) == LiveLink::ShowResult::Sent)
-            m_pending.reset(); // sent; or a scene that cannot be made into a frame, which is dropped (never sent half). Else it is kept for the next tick
+        if (!frame) {
+            m_pending.reset(); // a scene that cannot be made into a frame is dropped, never sent half
+            return;
+        }
+        if (m_link->show(*frame, now) == LiveLink::ShowResult::Sent) {
+            noteSent(*frame);
+            m_pending.reset(); // else it is kept for the next tick (dropped for pacing, or failed)
+        }
+    }
+
+    // The number of LEDs of a frame that are not black. Said in the log when it changes, so that a dark picture does not pass for a lit one.
+    void noteSent(const galleon::keyboard::LiveFrame &frame)
+    {
+        int lit = 0;
+        for (std::size_t led = 0; led < galleon::keyboard::LiveLedCount; ++led) {
+            const std::size_t at = 2 + 3 * led;
+            if (frame.at(at) != 0 || frame.at(at + 1) != 0 || frame.at(at + 2) != 0)
+                ++lit;
+        }
+        if (lit != m_loggedLit) {
+            m_loggedLit = lit;
+            qInfo() << "galleond: lighting: a picture of" << lit << "lit LEDs was sent";
+        }
     }
 
     [[nodiscard]] double secondsSince(LiveClock::time_point now) const { return std::chrono::duration<double>(now - m_origin).count(); }
@@ -180,6 +203,7 @@ private:
     std::optional<galleon::keyboard::LiveScene> m_pending; // a scene from the player that has not been sent yet
     std::optional<galleon::keyboard::LiveScene> m_tool;
     bool m_toolDirty = false;
+    int m_loggedLit = -1; // the number of lit LEDs last said in the log
 };
 
 
