@@ -7,6 +7,7 @@
 # <galleon/Transport.h> include resolves for callers of this target too); never includes
 # Protocol.h or StreamDeck.h.
 add_library(galleon_keyboard STATIC
+    include/galleon/keyboard/Appearance.h
     include/galleon/keyboard/BragiFrame.h
     include/galleon/keyboard/BragiReply.h
     include/galleon/keyboard/CalibrationFlow.h
@@ -23,6 +24,7 @@ add_library(galleon_keyboard STATIC
     include/galleon/keyboard/LiveScene.h
     include/galleon/keyboard/LiveYield.h
     include/galleon/keyboard/VendorInterface.h
+    src/Appearance.cpp
     src/BragiFrame.cpp
     src/BragiReply.cpp
     src/CalibrationFlow.cpp
