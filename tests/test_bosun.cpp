@@ -2009,6 +2009,46 @@ QtObject {
         QCOMPARE(endpoint.colours.constFirst(), (QList<int>{0, 0, 0}));
     }
 
+    void theWebHubButtonComesAfterTheToolsOfGalleonCoreOnTheKeyboardTab()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QVERIFY(root->setProperty("currentTab", 3));
+        auto *window = qobject_cast<QQuickWindow *>(root);
+        QVERIFY(window);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window)); // the layout of the tab is done once the window is on the screen
+        QTRY_VERIFY_WITH_TIMEOUT(namedItems(root, "openWebHub").size() == 1, 3000);
+        const auto sceneY = [root](const char *name) {
+            const auto found = namedItems(root, QString::fromLatin1(name));
+            return found.size() == 1 ? found.constFirst()->mapToScene(QPointF(0, 0)).y() : -1.0;
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(sceneY("openWebHub") > sceneY("keyboardMap"), 3000);
+        const double brightness = sceneY("keyboardBrightness");
+        const double lighting = sceneY("lightingToggle");
+        const double drawing = sceneY("keyboardMap");
+        const double webHub = sceneY("openWebHub");
+        QVERIFY(brightness >= 0 && lighting >= 0 && drawing >= 0 && webHub >= 0);
+        // The brightness, the live lighting and the keyboard drawing come first; Corsair's Web Hub is the last thing on the tab.
+        QVERIFY(brightness < lighting);
+        QVERIFY(lighting < drawing);
+        QVERIFY(drawing < webHub);
+    }
+
     void theLightStripIsSevenEqualSectionsEachLitByItsOwnLedAndColouredLikeAKey()
     {
         const QString connectionName = QStringLiteral("fake-galleond-for-the-strip");

@@ -829,39 +829,6 @@ Window {
                     color: "white"
                     font.pixelSize: 16
                     font.bold: true
-                    text: qsTr("Corsair keyboard · lighting and keys")
-                }
-                Text {
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    color: "#c9ced6"
-                    font.pixelSize: 14
-                    text: qsTr("Corsair's own page, the Web Hub, sets the keyboard's lighting and keys in your browser. It needs a Chromium-based browser (Chrome, Chromium, Edge, Opera).")
-                }
-                Pill {
-                    selected: true
-                    text: qsTr("Open the Corsair Web Hub in your browser")
-                    onClicked: Qt.openUrlExternally("https://www.corsair.com/web-hub")
-                }
-                Text {
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    color: "#9aa0a6"
-                    font.pixelSize: 13
-                    text: qsTr("It opens in your browser, not in this window. Careful: what the Web Hub saves into the keyboard's own memory is the keyboard's business, and this application never writes there. The screen, the 12 keys and the dials of the module are set from the other tabs.")
-                }
-                Text {
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    color: "#7d8591"
-                    font.pixelSize: 13
-                    text: qsTr("The lighting can also be driven from Linux with OpenRGB (the dials' rings already are, through this project's plugin); the per-key lighting of the keyboard is not available there yet.")
-                }
-                Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
-                Text {
-                    color: "white"
-                    font.pixelSize: 16
-                    font.bold: true
                     text: qsTr("Keyboard and module · preview")
                 }
                 Text {
@@ -936,6 +903,40 @@ Window {
                     text: win.daemon.lightingActive
                           ? qsTr("The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.")
                           : qsTr("This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
+                }
+                Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+                Text {
+                    color: "white"
+                    font.pixelSize: 16
+                    font.bold: true
+                    text: qsTr("Corsair keyboard · lighting and keys")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#c9ced6"
+                    font.pixelSize: 14
+                    text: qsTr("Corsair's own page, the Web Hub, sets the keyboard's lighting and keys in your browser. It needs a Chromium-based browser (Chrome, Chromium, Edge, Opera).")
+                }
+                Pill {
+                    objectName: "openWebHub"
+                    selected: true
+                    text: qsTr("Open the Corsair Web Hub in your browser")
+                    onClicked: Qt.openUrlExternally("https://www.corsair.com/web-hub")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: qsTr("It opens in your browser, not in this window. Careful: what the Web Hub saves into the keyboard's own memory is the keyboard's business, and this application never writes there. The screen, the 12 keys and the dials of the module are set from the other tabs.")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#7d8591"
+                    font.pixelSize: 13
+                    text: qsTr("The lighting can also be driven from Linux with OpenRGB (the dials' rings already are, through this project's plugin); the per-key lighting of the keyboard is not available there yet.")
                 }
     
             }
