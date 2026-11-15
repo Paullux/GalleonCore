@@ -897,6 +897,25 @@ Window {
                     }
                 }
                 Text {
+                    color: "#c9ced6"
+                    font.pixelSize: 13
+                    text: qsTr("Level of the colours: how strongly the colours above are shown, without changing the brightness of the keyboard itself.")
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                }
+                BrightnessSlider {
+                    objectName: "appearanceLevel"
+                    width: Math.min(parent.width, 560)
+                    accessibleName: qsTr("Level of the colours")
+                    value: win.appearance !== null ? win.appearance.level : 1000
+                    // The slider sets its own value when it commits, which cuts the binding: follow the appearance again after any change.
+                    Connections {
+                        target: win.appearance
+                        function onChanged() { if (win.appearance !== null) parent.value = win.appearance.level }
+                    }
+                    onCommitted: level => win.saved(win.appearance.setLevel(level))
+                }
+                Text {
                     width: parent.width
                     wrapMode: Text.Wrap
                     visible: win.appearance !== null && win.appearance.baseType === "rainbow" && win.appearance.rainbowSpeed > 0

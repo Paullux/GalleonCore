@@ -736,5 +736,7 @@
   "Slow": "Lento",
   "Medium": "Medio",
   "Fast": "Rápido",
-  "The rainbow moves on the keyboard; the drawing shows it standing still.": "El arcoíris se mueve en el teclado; el dibujo lo muestra quieto."
+  "The rainbow moves on the keyboard; the drawing shows it standing still.": "El arcoíris se mueve en el teclado; el dibujo lo muestra quieto.",
+  "Level of the colours: how strongly the colours above are shown, without changing the brightness of the keyboard itself.": "Nivel de los colores: con qué intensidad se muestran los colores de arriba, sin cambiar el brillo del propio teclado.",
+  "Level of the colours": "Nivel de los colores"
 }

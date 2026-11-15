@@ -2346,6 +2346,13 @@ QtObject {
         QVERIFY(medium->property("selected").toBool());
         QCOMPARE(galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).rainbowSpeed, 100);
 
+        // The level: a slider next to the base; a committed value is written to the file, and the file's value is shown at the start.
+        auto *level = root->findChild<QQuickItem *>("appearanceLevel");
+        QVERIFY(level);
+        QCOMPARE(level->property("value").toInt(), 1000);
+        QVERIFY(QMetaObject::invokeMethod(level, "committed", Q_ARG(int, 500)));
+        QCOMPARE(galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).level, 500);
+
         // Back to one colour: the base changes, the speed is no longer offered.
         QVERIFY(QMetaObject::invokeMethod(uniform, "clicked"));
         QVERIFY(uniform->property("selected").toBool());
