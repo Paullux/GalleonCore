@@ -15,8 +15,10 @@
 #include "ScreensaverController.h"
 #include "ScreensaverSplitter.h"
 #include "VideoThumbnails.h"
+#include "AppearanceFile.h"
 #include "BrightnessScheduler.h"
 #include "KeyboardController.h"
+#include "LightingAppearanceApplier.h"
 #include "LightingController.h"
 #include "LightingState.h"
 #include "LightingStatePublisher.h"
@@ -951,6 +953,9 @@ int main(int argc, char *argv[])
     QObject::connect(&lighting, &galleond::LightingController::activeChanged, &keyboard, [&keyboard](bool active) {
         keyboard.setPaused(active, QCoreApplication::translate("main", "The lighting holds the keyboard: switch it off to change the brightness."));
     });
+
+    // On Linux and on Windows. The appearance of the lighting (written by the settings window): read when the lighting is switched on, and again when the file changes while it is on.
+    const galleond::LightingAppearanceApplier lightingAppearance(lighting, galleond::appearancePath());
 
     // org.galleoncore.Deck on the session bus (the name was claimed at the start):
     // SetWallpaper, ClearWallpaper, Wallpapers.

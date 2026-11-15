@@ -4,6 +4,7 @@
 #include "KeyMapFile.h"
 
 #include "AtomicFile.h"
+#include "StrictJson.h"
 
 #include <QFile>
 #include <QJsonArray>
@@ -24,31 +25,10 @@ using galleon::keyboard::LedKind;
 constexpr int Version = 1;
 constexpr QLatin1String KeyboardDevice("1b1c:2b0c"); // the keyboard part (AGENTS.md, Hardware facts)
 
-bool plain(const QString &text)
-{
-    return std::ranges::all_of(text, [](QChar c) { return c.unicode() >= 0x20 && c.unicode() != 0x7f; });
-}
-
 void explain(QString *why, const QString &reason)
 {
     if (why != nullptr)
         *why = reason;
-}
-
-// A JSON number that is a whole number within [low, high]; nothing else (not "7", not 7.5, not 1e99).
-std::optional<int> wholeNumber(const QJsonValue &value, int low, int high)
-{
-    if (!value.isDouble())
-        return std::nullopt;
-    const double number = value.toDouble();
-    if (!std::isfinite(number) || number != std::floor(number) || number < low || number > high)
-        return std::nullopt;
-    return static_cast<int>(number);
-}
-
-bool hasExactlyKeys(const QJsonObject &object, const QStringList &keys)
-{
-    return object.size() == keys.size() && std::ranges::all_of(keys, [&object](const QString &key) { return object.contains(key); });
 }
 
 QJsonObject entryToJson(const LedAssignment &entry)
@@ -158,8 +138,8 @@ std::optional<KeyMapFile> parseKeyMap(const QByteArray &bytes, QString *why)
         explain(why, QStringLiteral("a header field has the wrong type or value"));
         return std::nullopt;
     }
-    if (source.toString().isEmpty() || source.toString().size() > MaxKeyMapSource || !plain(source.toString())
-        || firmware.toString().size() > MaxKeyMapFirmware || !plain(firmware.toString())) {
+    if (source.toString().isEmpty() || source.toString().size() > MaxKeyMapSource || !isPlainText(source.toString())
+        || firmware.toString().size() > MaxKeyMapFirmware || !isPlainText(firmware.toString())) {
         explain(why, QStringLiteral("the source or the firmware is empty, too long or not plain text"));
         return std::nullopt;
     }

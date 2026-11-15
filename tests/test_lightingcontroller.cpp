@@ -6,9 +6,14 @@
 // never starts a process, and proves nothing about a real keyboard.
 
 #include "FakeLiveKeyboard.h"
+#include "AppearanceFile.h"
+#include "LightingAppearanceApplier.h"
 #include "LightingController.h"
 
 #include <QSignalSpy>
+#include <QFile>
+#include <QRegularExpression>
+#include <QTemporaryDir>
 #include <QTest>
 
 #include <algorithm>
@@ -359,6 +364,297 @@ private Q_SLOTS:
         QVERIFY(!rig.controller->SetLed(-1, 1, 1, 1));
         QVERIFY(!rig.controller->SetLed(5, 256, 0, 0));
         QVERIFY(rig.controller->SetLed(145, 1, 1, 1));
+    }
+
+    void anAppearanceSetBeforeSwitchingOnIsWhatTheKeysShowWhenTheyAreTaken()
+    {
+        Rig rig;
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {10, 20, 30};
+        QVERIFY(rig.controller->setAppearance(appearance)); // asked for while the lighting is off: kept for the start
+        rig.hold();
+        QCOMPARE(rig.controller->state(), QStringLiteral("holding"));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{10, 20, 30}), 3000); // F1 lights something
+        QCOMPARE(ledColour(rig.frame(), 0), (std::vector<std::uint8_t>{0, 0, 0}));                             // LED 0 lights nothing: no place, dark
+    }
+
+    void changingTheAppearanceWhileTheLightingIsOnChangesTheKeys()
+    {
+        Rig rig;
+        rig.hold();
+        galleon::keyboard::Appearance first;
+        first.colour = {1, 2, 3};
+        QVERIFY(rig.controller->setAppearance(first));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{1, 2, 3}), 3000);
+        rig.advance(200); // the frames are paced on the test's clock
+        galleon::keyboard::Appearance second;
+        second.colour = {7, 8, 9};
+        second.retouches = {{4, {255, 255, 255}}};
+        QVERIFY(rig.controller->setAppearance(second));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{7, 8, 9}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 4), (std::vector<std::uint8_t>{255, 255, 255})); // the retouch is over the base
+    }
+
+    void aRainbowThatMovesChangesTheFramesWithTheClockAndAFixedOneDoesNot()
+    {
+        Rig rig;
+        rig.hold();
+        galleon::keyboard::Appearance moving;
+        moving.base = galleon::keyboard::BaseType::Rainbow;
+        moving.rainbowSpeed = 1000; // one turn a second
+        QVERIFY(rig.controller->setAppearance(moving));
+        QTRY_VERIFY_WITH_TIMEOUT(rig.frames() >= 1, 3000);
+        const auto before = rig.frame();
+        for (int i = 0; i < 6; ++i) { // 6 steps of 60 ms: a third of a turn
+            rig.advance(60);
+            QTest::qWait(120);
+        }
+        QVERIFY(rig.frame() != before);
+        // A fixed rainbow sends nothing more once it is shown.
+        rig.advance(200);
+        galleon::keyboard::Appearance fixed;
+        fixed.base = galleon::keyboard::BaseType::Rainbow;
+        QVERIFY(rig.controller->setAppearance(fixed));
+        QTest::qWait(200);
+        const int framesNow = rig.frames();
+        for (int i = 0; i < 5; ++i) {
+            rig.advance(100);
+            QTest::qWait(120);
+        }
+        QCOMPARE(rig.frames(), framesNow);
+    }
+
+    void theSceneOfAToolIsOverTheAppearanceUntilTheAppearanceIsSetAgain()
+    {
+        Rig rig;
+        rig.hold();
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {40, 50, 60};
+        QVERIFY(rig.controller->setAppearance(appearance));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{40, 50, 60}), 3000);
+        rig.advance(200);
+        QVERIFY(rig.controller->SetLed(0x3a, 1, 2, 3)); // a tool lights one LED alone
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 0x3a) == std::vector<std::uint8_t>{1, 2, 3}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 4), (std::vector<std::uint8_t>{0, 0, 0})); // and the rest is dark, not the appearance
+        rig.advance(200);
+        QVERIFY(rig.controller->setAppearance(appearance)); // asked for again: the tool is let go
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 4) == std::vector<std::uint8_t>{40, 50, 60}), 3000);
+    }
+
+    void anAppearanceThatIsNotValidIsRefusedAndTheOneBeforeStays()
+    {
+        Rig rig;
+        rig.hold();
+        galleon::keyboard::Appearance good;
+        good.colour = {9, 9, 9};
+        QVERIFY(rig.controller->setAppearance(good));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{9, 9, 9}), 3000);
+        galleon::keyboard::Appearance wild;
+        wild.level = 5000;
+        QVERIFY(!rig.controller->setAppearance(wild));
+        rig.advance(200);
+        QTest::qWait(150);
+        QCOMPARE(ledColour(rig.frame(), 58), (std::vector<std::uint8_t>{9, 9, 9}));
+        QCOMPARE(rig.controller->appearance().colour.red, std::uint8_t{9});
+    }
+
+    void theAppearanceIsShownAgainWhenTheKeysAreTakenBackAfterASleep()
+    {
+        Rig rig;
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {11, 22, 33};
+        QVERIFY(rig.controller->setAppearance(appearance));
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{11, 22, 33}), 3000);
+        rig.power.sleep();
+        QCOMPARE(rig.mode(), 1);
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.lastFrame.clear(); // what the keyboard showed is gone with the keys
+        }
+        rig.power.wake();
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("listening"), 3000);
+        rig.advance(4000);
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("holding"), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{11, 22, 33}), 3000);
+    }
+
+    void theAppearanceIsShownAgainWhenTheWebHubLeavesAndTheKeysAreTakenBack()
+    {
+        Rig rig;
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {70, 80, 90};
+        QVERIFY(rig.controller->setAppearance(appearance));
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{70, 80, 90}), 3000);
+        rig.device.webHubTakes(); // the Web Hub takes the keyboard to its own mode: it shows its own colours now
+        rig.device.otherHostSpeaks();
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("yielded"), 3000);
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.lastFrame.clear(); // what the keyboard shows is the Web Hub's now
+        }
+        // A minute of quiet: the keys are taken back, and the appearance is shown again (the player does not think it has already been shown).
+        for (int i = 0; i < 50 && rig.controller->state() != QStringLiteral("holding"); ++i) {
+            rig.advance(2000);
+            QTest::qWait(120);
+        }
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("holding"), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{70, 80, 90}), 3000);
+    }
+
+    // ---- the file of the appearance (lighting-appearance.json), applied by LightingAppearanceApplier
+
+    void aGoodFileIsWhatTheKeysShowWhenTheLightingIsSwitchedOn()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {10, 20, 30};
+        appearance.retouches = {{4, {255, 255, 255}}};
+        QVERIFY(writeAppearance(path, appearance));
+        Rig rig;
+        const LightingAppearanceApplier applier(*rig.controller, path);
+        QVERIFY(!rig.controller->active()); // a file never switches the lighting on
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{10, 20, 30}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 4), (std::vector<std::uint8_t>{255, 255, 255}));
+    }
+
+    void theFixedRainbowOfTheFileIsWhatTheKeysShowWithTheRealPositions()
+    {
+        // The file as the owner wrote it by hand, read from the disk, and the positions built into galleond.
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        QFile out(path);
+        QVERIFY(out.open(QIODevice::WriteOnly));
+        out.write(R"({"version":1,"base":{"type":"rainbow","speed":0},"overrides":[],"level":1000})");
+        out.close();
+        Rig rig;
+        const LightingAppearanceApplier applier(*rig.controller, path);
+        rig.hold();
+        QCOMPARE(rig.controller->state(), QStringLiteral("holding"));
+        QTRY_VERIFY_WITH_TIMEOUT(rig.frames() >= 1, 3000);
+        // F1 (LED 58) is lit with a colour of the rainbow, not dark; the left end is red-ish, the right end magenta-ish.
+        const auto f1 = ledColour(rig.frame(), 58);
+        QVERIFY(!f1.empty());
+        QVERIFY2(f1 != (std::vector<std::uint8_t>{0, 0, 0}), "F1 has to be lit by the rainbow");
+        int lit = 0;
+        for (int led = 0; led < 146; ++led)
+            lit += ledColour(rig.frame(), led) != std::vector<std::uint8_t>{0, 0, 0} ? 1 : 0;
+        QCOMPARE(lit, 95); // the 88 keys and the 7 sections of the strip
+    }
+
+    void withoutAFileTheKeysAreDarkWhenTheLightingIsSwitchedOn()
+    {
+        const QTemporaryDir dir;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression("the appearance file is not used"));
+        Rig rig;
+        const LightingAppearanceApplier applier(*rig.controller, dir.filePath("lighting-appearance.json"));
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT(rig.frames() >= 1, 3000);
+        QCOMPARE(ledColour(rig.frame(), 58), (std::vector<std::uint8_t>{0, 0, 0}));
+    }
+
+    void aFileThatChangesWhileTheLightingIsOnIsAppliedAtOnce()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        galleon::keyboard::Appearance first;
+        first.colour = {1, 2, 3};
+        QVERIFY(writeAppearance(path, first));
+        Rig rig;
+        const LightingAppearanceApplier applier(*rig.controller, path);
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{1, 2, 3}), 3000);
+        galleon::keyboard::Appearance second;
+        second.colour = {7, 8, 9};
+        QVERIFY(writeAppearance(path, second));
+        rig.advance(200);
+        // The watcher of the folder says so by itself; the clock moves on so that the frame is not held back for pacing.
+        for (int i = 0; i < 60 && ledColour(rig.frame(), 58) != std::vector<std::uint8_t>{7, 8, 9}; ++i) {
+            rig.advance(60);
+            QTest::qWait(100);
+        }
+        QCOMPARE(ledColour(rig.frame(), 58), (std::vector<std::uint8_t>{7, 8, 9}));
+    }
+
+    void aFileThatBecomesInvalidWhileTheLightingIsOnIsIgnoredAndWhatIsShownStays()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        galleon::keyboard::Appearance good;
+        good.colour = {40, 50, 60};
+        QVERIFY(writeAppearance(path, good));
+        Rig rig;
+        LightingAppearanceApplier applier(*rig.controller, path);
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{40, 50, 60}), 3000);
+        QFile broken(path);
+        QVERIFY(broken.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        broken.write("{ half a file");
+        broken.close();
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression("the appearance file is not used"));
+        applier.onFileMaybeChanged();
+        rig.advance(300);
+        QTest::qWait(200);
+        QCOMPARE(ledColour(rig.frame(), 58), (std::vector<std::uint8_t>{40, 50, 60})); // not dark: a damaged file does not make the keys flash
+        QCOMPARE(rig.controller->appearance().colour.red, std::uint8_t{40});
+    }
+
+    void aChangeOfTheFileWhileTheLightingIsOffIsReadWhenItIsSwitchedOn()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        Rig rig;
+        LightingAppearanceApplier applier(*rig.controller, path);
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {12, 13, 14};
+        QVERIFY(writeAppearance(path, appearance));
+        applier.onFileMaybeChanged();
+        QCOMPARE(rig.controller->appearance().colour.red, std::uint8_t{0}); // off: nothing was read
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{12, 13, 14}), 3000);
+    }
+
+    void anInvalidFileAtSwitchOnGivesDarkKeysAndNotWhatWasShownBefore()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {90, 91, 92};
+        QVERIFY(writeAppearance(path, appearance));
+        Rig rig;
+        const LightingAppearanceApplier applier(*rig.controller, path);
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{90, 91, 92}), 3000);
+        QCOMPARE(rig.controller->Enable(false), QString());
+        QFile broken(path);
+        QVERIFY(broken.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        broken.write("not json");
+        broken.close();
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.lastFrame.clear();
+        }
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression("the appearance file is not used"));
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{0, 0, 0}), 3000);
+    }
+
+    void aToolSceneIsNotCarriedOverASwitchingOff()
+    {
+        Rig rig;
+        rig.hold();
+        QVERIFY(rig.controller->SetLed(0x3a, 1, 2, 3));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 0x3a) == std::vector<std::uint8_t>{1, 2, 3}), 3000);
+        QCOMPARE(rig.controller->Enable(false), QString());
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.lastFrame.clear(); // only what is sent from now on counts
+        }
+        rig.hold(); // switched on again, nothing asked for since: what the tool showed is not there, the keys are dark
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 0x3a) == std::vector<std::uint8_t>{0, 0, 0}), 3000);
     }
 
     void oneColourPerLedShowsEachLedItsOwnColourAndTheOthersBlack()
