@@ -23,6 +23,7 @@ Window {
     property var languages: null
     property var filePicker: null
     property var updates: null
+    property var appearance: null // the appearance of the live lighting (AppearanceStore): written to lighting-appearance.json at every change
     property var keyCalibration: null // the calibration of the key map (KeyCalibration): off until the person starts it
     property bool updatesOpen: false
 
@@ -78,42 +79,57 @@ Window {
     readonly property var selected: selectedKey >= 0 && selectedKey < keys.length ? keys[selectedKey] : null
 
     // What an edit answered, for the status bar.
-    // The colours given to the keys of the drawing, as galleond takes them: groups of LED, red, green, blue. A key has the colour of its
-    // first lamp; the two parts of Enter are one key with one LED, which takes the first colour found. A key with no colour is not
-    // listed, so it is dark on the keyboard, as it is in the drawing. The seven sections of the light strip are keys of their own.
-    function drawnLedColours() {
-        const seen = {}
-        const values = []
-        for (const cap of keyboardMap.map.caps) {
-            if (cap.led === undefined || cap.lamps.length === 0 || seen[cap.led])
-                continue
-            const colour = win.lampColors[cap.lamps[0]]
-            if (colour === undefined)
-                continue
-            seen[cap.led] = true
-            const c = Qt.color(colour)
-            values.push(cap.led, Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255))
+    // The LED lit by a key of the drawing: a cap of the keyboard, or one of the seven sections of the light strip (index 100 + its position).
+    function ledOfCap(index) {
+        if (index >= 100) {
+            for (const section of keyboardMap.map.strip.sections) {
+                if (100 + section.position === index)
+                    return section.led
+            }
+            return -1
         }
-        // The sections of the light strip: one LED each, in the order of the strip.
-        for (const section of keyboardMap.map.strip.sections) {
-            const colour = win.lampColors[section.lamp]
-            if (colour === undefined)
-                continue
-            const c = Qt.color(colour)
-            values.push(section.led, Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255))
-        }
-        return values
+        const cap = keyboardMap.map.caps[index]
+        return cap !== undefined && cap.led !== undefined ? cap.led : -1
     }
 
-    // With the live lighting on, what the drawing shows is what the keyboard shows: every change of a colour sends all of them.
-    function sendDrawnColours() {
-        if (!win.daemon.lightingActive)
-            return
-        const values = win.drawnLedColours()
-        if (values.length === 0)
-            win.answered(win.daemon.setLightingColor(0, 0, 0), qsTr("All the keys are dark."))
-        else
-            win.answered(win.daemon.setLightingLeds(values), qsTr("%1 keys sent.").arg(values.length / 4))
+    // What the appearance looks like in the drawing: the base on every lamp (a black base is "no colour": dark grey), then the retouches
+    // over it, a key with the colour of its LED. The same description galleond plays, drawn once, not moving.
+    function previewOfAppearance() {
+        if (win.appearance === null)
+            return ({})
+        let colours = ({})
+        if (win.appearance.baseType === "rainbow") {
+            colours = keyboardMap.rainbow()
+        } else if (win.appearance.colour.toString() !== "#000000") {
+            for (const lamp of keyboardMap.allLamps)
+                colours[lamp] = win.appearance.colour.toString()
+            for (const section of keyboardMap.map.strip.sections)
+                colours[section.lamp] = win.appearance.colour.toString()
+        }
+        const byLed = {}
+        for (const retouch of win.appearance.retouches)
+            byLed[retouch.led] = retouch.colour
+        for (const cap of keyboardMap.map.caps) {
+            if (cap.led !== undefined && byLed[cap.led] !== undefined) {
+                for (const lamp of cap.lamps)
+                    colours[lamp] = byLed[cap.led]
+            }
+        }
+        for (const section of keyboardMap.map.strip.sections) {
+            if (byLed[section.led] !== undefined)
+                colours[section.lamp] = byLed[section.led]
+        }
+        return colours
+    }
+
+    function refreshPreview() {
+        win.lampColors = win.previewOfAppearance()
+    }
+
+    // Every change is written to the appearance file; with the live lighting on, galleond shows it at once.
+    function saved(error) {
+        if (error !== "")
+            win.answered(error, "")
     }
 
     function answered(error, done) {
@@ -661,8 +677,10 @@ Window {
                     color: "#ffffff"
                     onPicked: picked => {
                         const c = Qt.color(picked)
-                        win.answered(win.daemon.setLightingColor(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)),
-                                     qsTr("Keyboard colour sent to galleond: %1").arg(picked))
+                        win.saved(win.appearance.clearRetouches())
+                        win.answered(win.appearance.setUniform(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)),
+                                     win.daemon.lightingActive ? qsTr("Keyboard colour sent to galleond: %1").arg(picked)
+                                                               : qsTr("Keyboard colour kept for the next time the live lighting is on: %1").arg(picked))
                     }
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff"; visible: win.keyCalibration !== null }
@@ -850,6 +868,11 @@ Window {
                         ? "image://tiles/" + win.lastThemeEntry.page + "/" + index + "?r=" + win.backend.revision + "&theme=" + win.lastThemeEntry.page
                         : ""
                     onCapClicked: (index, lamps) => { win.selectedCap = index; win.selectedLamps = lamps }
+                    Component.onCompleted: win.refreshPreview()
+                    Connections {
+                        target: win.appearance
+                        function onChanged() { win.refreshPreview() }
+                    }
                 }
                 Text {
                     objectName: "keySelection"
@@ -862,11 +885,11 @@ Window {
                     objectName: "lampSwatches"
                     visible: win.selectedCap >= 0
                     onPicked: color => {
-                        const next = Object.assign({}, win.lampColors)
-                        for (const lamp of win.selectedLamps)
-                            next[lamp] = color
-                        win.lampColors = next
-                        win.sendDrawnColours()
+                        const led = win.ledOfCap(win.selectedCap)
+                        if (led < 0 || win.appearance === null)
+                            return
+                        const c = Qt.color(color)
+                        win.saved(win.appearance.retouch(led, Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)))
                     }
                 }
                 Row {
@@ -876,23 +899,20 @@ Window {
                         enabledLook: win.selectedCap >= 0 && win.selectedLamps.length > 0 && win.lampColors[win.selectedLamps[0]] !== undefined
                         text: qsTr("Give this colour to every key")
                         onClicked: {
-                            const colour = win.lampColors[win.selectedLamps[0]]
-                            const next = {}
-                            for (const lamp of keyboardMap.allLamps)
-                                next[lamp] = colour
-                            win.lampColors = next
-                            win.sendDrawnColours()
+                            const c = Qt.color(win.lampColors[win.selectedLamps[0]])
+                            win.saved(win.appearance.clearRetouches())
+                            win.saved(win.appearance.setUniform(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)))
                         }
                     }
                     Pill {
                         objectName: "lampsRainbow"
                         text: qsTr("Rainbow")
-                        onClicked: { win.lampColors = keyboardMap.rainbow(); win.sendDrawnColours() }
+                        onClicked: { win.saved(win.appearance.clearRetouches()); win.saved(win.appearance.setRainbow(0)) }
                     }
                     Pill {
                         objectName: "lampsClear"
                         text: qsTr("Clear the colours")
-                        onClicked: { win.lampColors = ({}); win.selectedCap = -1; win.selectedLamps = []; win.sendDrawnColours() }
+                        onClicked: { win.selectedCap = -1; win.selectedLamps = []; win.saved(win.appearance.reset()) }
                     }
                 }
                 Text {

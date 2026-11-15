@@ -10,6 +10,7 @@ add_library(bosun_core STATIC
     BosunBackend.h BosunBackend.cpp
     CropMath.h CropMath.cpp
     FileNames.h FileNames.cpp
+    AppearanceStore.h AppearanceStore.cpp
     DaemonStatus.h
     KeyCalibration.h KeyCalibration.cpp
     LedValues.h LedValues.cpp

@@ -724,5 +724,10 @@
   "The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.": "La iluminación en vivo está encendida: los colores que da aquí a las teclas van al teclado, un color por tecla; una tecla sin color permanece apagada.",
   "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "Esto es una vista previa: no se envía nada al teclado mientras la iluminación en vivo no esté encendida. Las teclas son una distribución francesa estándar dibujada como referencia; las lámparas de debajo están en las posiciones que indica el teclado.",
   "Light strip, section %1": "Franja luminosa, sección %1",
-  "%1 keys sent.": "%1 teclas enviadas."
+  "%1 keys sent.": "%1 teclas enviadas.",
+  "This appearance is not valid.": "Esta apariencia no es válida.",
+  "The appearance could not be saved.": "No se pudo guardar la apariencia.",
+  "A colour is made of three numbers from 0 to 255.": "Un color se compone de tres números de 0 a 255.",
+  "A LED is 0 to 145 and a colour is made of three numbers from 0 to 255.": "Un LED va de 0 a 145 y un color se compone de tres números de 0 a 255.",
+  "Keyboard colour kept for the next time the live lighting is on: %1": "Color del teclado guardado para la próxima vez que se encienda la iluminación en directo: %1"
 }

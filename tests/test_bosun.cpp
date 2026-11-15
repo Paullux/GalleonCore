@@ -4,10 +4,12 @@
 #include "BosunBackend.h"
 #include "LanguageSettings.h"
 #include "DaemonStatus.h"
+#include "AppearanceStore.h"
 #include "KeyCalibration.h"
 #include "WallpaperLibrary.h"
 #include "Required.h"
 
+#include <AppearanceFile.h>
 #include <AppsBackend.h>
 #include <BrightnessCurve.h>
 
@@ -1930,7 +1932,7 @@ QtObject {
         QVERIFY(!horizontal->property("needed").toBool());
     }
 
-    void withTheLiveLightingOnEachKeyColourOfTheDrawingGoesToTheKeyboardAndTheBrightnessSaysItIsSuspended()
+    void eachKeyColourOfTheDrawingIsWrittenToTheAppearanceFileAndTheBrightnessSaysItIsSuspendedWithTheLiveLightingOn()
     {
         const QString connectionName = QStringLiteral("fake-galleond-for-the-preview");
         QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, connectionName);
@@ -1954,8 +1956,10 @@ QtObject {
         engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
         engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
         engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        const QString appearanceFile = dir.filePath("lighting-appearance.json");
+        const bosun::AppearanceStore appearance(appearanceFile);
         engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
-                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
         engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
         QVERIFY(!engine.rootObjects().isEmpty());
         QObject *root = engine.rootObjects().constFirst();
@@ -1972,41 +1976,49 @@ QtObject {
         // A colour chosen for a key of the drawing goes to the keyboard at once, as that key's LED and nothing else.
         const auto caps = root->findChild<QQuickItem *>("keyboardMap")->property("map").toMap().value(QStringLiteral("caps")).toList();
         QVariantMap q; // the key engraved Q on this French drawing: it lights LED 4 (the A of a QWERTY)
-        for (const QVariant &cap : caps) {
-            if (cap.toMap().value(QStringLiteral("label")).toString() == QLatin1String("Q"))
-                q = cap.toMap();
+        int qIndex = -1;
+        for (int i = 0; i < caps.size(); ++i) {
+            if (caps.at(i).toMap().value(QStringLiteral("label")).toString() == QLatin1String("Q")) {
+                q = caps.at(i).toMap();
+                qIndex = i;
+            }
         }
+        QVERIFY(qIndex >= 0);
         QCOMPARE(q.value(QStringLiteral("led")).toInt(), 4);
         const QVariantList lamps = q.value(QStringLiteral("lamps")).toList();
         QVERIFY(!lamps.isEmpty());
-        QVERIFY(QMetaObject::invokeMethod(board, "capClicked", Q_ARG(int, 40), Q_ARG(QVariant, QVariant(lamps))));
+        QVERIFY(QMetaObject::invokeMethod(board, "capClicked", Q_ARG(int, qIndex), Q_ARG(QVariant, QVariant(lamps))));
         auto *swatches = root->findChild<QQuickItem *>("lampSwatches");
         QVERIFY(swatches);
         QVERIFY(QMetaObject::invokeMethod(swatches, "picked", Q_ARG(QString, QStringLiteral("#e53935"))));
-        QTRY_COMPARE_WITH_TIMEOUT(endpoint.ledLists.size(), 1, 3000);
-        QCOMPARE(endpoint.ledLists.constFirst(), (QList<int>{4, 229, 57, 53})); // LED 4, red 229, green 57, blue 53
-        QVERIFY(endpoint.colours.isEmpty());                                    // not the one colour for every key
+        // The key's LED and its colour are in the file, as a retouch over a dark base, and nothing else.
+        const auto oneKey = galleond::readAppearance(appearanceFile);
+        QVERIFY(oneKey.has_value());
+        QCOMPARE(oneKey.value_or(galleon::keyboard::Appearance{}).retouches.size(), std::size_t{1});
+        QCOMPARE(oneKey.value_or(galleon::keyboard::Appearance{}).retouches.front().led, 4);
+        QCOMPARE(oneKey.value_or(galleon::keyboard::Appearance{}).retouches.front().colour.red, 229);
+        QCOMPARE(oneKey.value_or(galleon::keyboard::Appearance{}).retouches.front().colour.green, 57);
+        QCOMPARE(oneKey.value_or(galleon::keyboard::Appearance{}).retouches.front().colour.blue, 53);
+        QCOMPARE(oneKey.value_or(galleon::keyboard::Appearance{}).colour.red, 0);
 
-        // Given to every key: every key of the drawing has its LED in the list (88 keys, each once), all that colour.
+        // Given to every key: one colour for the base, no retouch left.
         auto *all = root->findChild<QQuickItem *>("lampsColourAll");
         QVERIFY(all);
         QVERIFY(QMetaObject::invokeMethod(all, "clicked"));
-        QTRY_COMPARE_WITH_TIMEOUT(endpoint.ledLists.size(), 2, 3000);
-        const QList<int> everyKey = endpoint.ledLists.constLast();
-        QCOMPARE(everyKey.size(), 88 * 4);
-        QSet<int> leds;
-        for (int i = 0; i < everyKey.size(); i += 4) {
-            leds.insert(everyKey.at(i));
-            QCOMPARE(everyKey.mid(i + 1, 3), (QList<int>{229, 57, 53}));
-        }
-        QCOMPARE(leds.size(), 88); // the two parts of Enter are one LED
+        const auto everyKey = galleond::readAppearance(appearanceFile);
+        QVERIFY(everyKey.has_value());
+        QVERIFY(everyKey.value_or(galleon::keyboard::Appearance{}).retouches.empty());
+        QCOMPARE(everyKey.value_or(galleon::keyboard::Appearance{}).colour.red, 229);
 
-        // Cleared: every key is dark (one colour, black), nothing is left over.
+        // Cleared: dark keys, nothing left over.
         auto *clear = root->findChild<QQuickItem *>("lampsClear");
         QVERIFY(clear);
         QVERIFY(QMetaObject::invokeMethod(clear, "clicked"));
-        QTRY_COMPARE_WITH_TIMEOUT(endpoint.colours.size(), 1, 3000);
-        QCOMPARE(endpoint.colours.constFirst(), (QList<int>{0, 0, 0}));
+        const auto cleared = galleond::readAppearance(appearanceFile);
+        QVERIFY(cleared.has_value());
+        QVERIFY(cleared.value_or(galleon::keyboard::Appearance{}).retouches.empty());
+        QCOMPARE(cleared.value_or(galleon::keyboard::Appearance{}).colour.red, 0);
+        QVERIFY(endpoint.ledLists.isEmpty()); // the drawing no longer goes through the tool calls: the file is the way
     }
 
     void theWebHubButtonComesAfterTheToolsOfGalleonCoreOnTheKeyboardTab()
@@ -2072,8 +2084,10 @@ QtObject {
         engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
         engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
         engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        const QString appearanceFile = dir.filePath("lighting-appearance.json");
+        const bosun::AppearanceStore appearance(appearanceFile);
         engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
-                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
         engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
         QVERIFY(!engine.rootObjects().isEmpty());
         QObject *root = engine.rootObjects().constFirst();
@@ -2120,8 +2134,13 @@ QtObject {
         auto *swatches = root->findChild<QQuickItem *>("lampSwatches");
         QVERIFY(swatches);
         QVERIFY(QMetaObject::invokeMethod(swatches, "picked", Q_ARG(QString, QStringLiteral("#1e88e5"))));
-        QTRY_COMPARE_WITH_TIMEOUT(endpoint.ledLists.size(), 1, 3000);
-        QCOMPARE(endpoint.ledLists.constFirst(), (QList<int>{142, 30, 136, 229}));
+        const auto written = galleond::readAppearance(appearanceFile);
+        QVERIFY(written.has_value());
+        QCOMPARE(written.value_or(galleon::keyboard::Appearance{}).retouches.size(), std::size_t{1});
+        QCOMPARE(written.value_or(galleon::keyboard::Appearance{}).retouches.front().led, 142); // the fourth LED of the strip, alone
+        QCOMPARE(written.value_or(galleon::keyboard::Appearance{}).retouches.front().colour.red, 30);
+        QCOMPARE(written.value_or(galleon::keyboard::Appearance{}).retouches.front().colour.green, 136);
+        QCOMPARE(written.value_or(galleon::keyboard::Appearance{}).retouches.front().colour.blue, 229);
     }
 
     void theKeyCalibrationScreenReadsTheKeysOfItsWindowOnlyWhileItIsOpen()
@@ -2222,8 +2241,9 @@ QtObject {
         engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
         engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
         engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        const bosun::AppearanceStore appearance{QString()};
         engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
-                                     {QStringLiteral("library"), QVariant::fromValue(&library)}});
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
         engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
         QVERIFY(!engine.rootObjects().isEmpty());
         QObject *root = engine.rootObjects().constFirst();
@@ -2241,18 +2261,23 @@ QtObject {
         QCOMPARE(root->property("selectedCap").toInt(), -1);
 
         // Clicking a cap chooses it, with the lamps under it.
-        const QVariantList lamps{QVariant(23)};
+        const QVariantMap cap = board->property("map").toMap().value("caps").toList().at(40).toMap();
+        const QVariantList lamps = cap.value("lamps").toList();
+        QVERIFY(!lamps.isEmpty());
         QVERIFY(QMetaObject::invokeMethod(board, "capClicked", Q_ARG(int, 40), Q_ARG(QVariant, QVariant(lamps))));
         QCOMPARE(root->property("selectedCap").toInt(), 40);
         QCOMPARE(root->property("selectedLamps").toList(), lamps);
 
-        // A colour picked for it goes to its lamps and to no other.
+        // A colour picked for it goes to its lamps and to no other (it is a retouch of its LED over dark keys).
         auto *swatches = root->findChild<QQuickItem *>("lampSwatches");
         QVERIFY(swatches);
         QVERIFY(QMetaObject::invokeMethod(swatches, "picked", Q_ARG(QString, QStringLiteral("#e53935"))));
         const QVariantMap colours = root->property("lampColors").toMap();
-        QCOMPARE(colours.size(), 1);
-        QCOMPARE(colours.value("23").toString(), QStringLiteral("#e53935"));
+        QVERIFY(colours.size() >= lamps.size());
+        QVERIFY(colours.size() < 5); // a key and its other parts (Enter has two), not the keyboard
+        for (const QString &lamp : colours.keys())
+            QCOMPARE(colours.value(lamp).toString(), QStringLiteral("#e53935"));
+        QCOMPARE(colours.value(lamps.constFirst().toString()).toString(), QStringLiteral("#e53935"));
 
         // The rainbow gives every lamp a colour, a different one at each end of the keyboard.
         QVariant rainbow;

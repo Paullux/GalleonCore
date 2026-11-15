@@ -724,5 +724,10 @@
   "The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.": "The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.",
   "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.": "This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.",
   "Light strip, section %1": "Light strip, section %1",
-  "%1 keys sent.": "%1 keys sent."
+  "%1 keys sent.": "%1 keys sent.",
+  "This appearance is not valid.": "This appearance is not valid.",
+  "The appearance could not be saved.": "The appearance could not be saved.",
+  "A colour is made of three numbers from 0 to 255.": "A colour is made of three numbers from 0 to 255.",
+  "A LED is 0 to 145 and a colour is made of three numbers from 0 to 255.": "A LED is 0 to 145 and a colour is made of three numbers from 0 to 255.",
+  "Keyboard colour kept for the next time the live lighting is on: %1": "Keyboard colour kept for the next time the live lighting is on: %1"
 }
