@@ -2157,11 +2157,18 @@ QtObject {
         QVERIFY(scroll);
         auto *content = scroll->property("contentItem").value<QQuickItem *>();
         QVERIFY(content);
-        scroll->setProperty("contentY", qMax(0.0, sections.at(3)->mapToItem(content, QPointF(0, 0)).y() - 60));
-        const QPoint centre = sections.at(3)->mapToScene(QPointF(sections.at(3)->width() / 2, sections.at(3)->height() / 2)).toPoint();
-        QVERIFY(window->contentItem()->boundingRect().contains(centre)); // it is on the screen
-        // The drawing answers clicks only while galleond holds the keys: wait for the state that the fake daemon reports (it comes by the bus).
+        // The drawing answers clicks only while galleond holds the keys, and the state that the fake daemon reports (it comes by the bus) changes
+        // the text above the drawing, so the layout moves: wait for the state first, then scroll and aim until the aim holds still.
         QTRY_VERIFY_WITH_TIMEOUT(root->property("keysShowTheDrawing").toBool(), 5000);
+        QPoint centre;
+        const auto aim = [&] {
+            scroll->setProperty("contentY", qMax(0.0, sections.at(3)->mapToItem(content, QPointF(0, 0)).y() - 60));
+            const QPoint now = sections.at(3)->mapToScene(QPointF(sections.at(3)->width() / 2, sections.at(3)->height() / 2)).toPoint();
+            const bool still = now == centre;
+            centre = now;
+            return still && window->contentItem()->boundingRect().contains(centre) && sections.at(3)->isEnabled();
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(aim(), 5000);
         QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, centre);
         QCOMPARE(root->property("selectedCap").toInt(), 104);
         QCOMPARE(root->property("selectedLamps").toList(), (QVariantList{1004}));
