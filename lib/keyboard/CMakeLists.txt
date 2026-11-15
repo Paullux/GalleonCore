@@ -9,6 +9,7 @@
 add_library(galleon_keyboard STATIC
     include/galleon/keyboard/BragiFrame.h
     include/galleon/keyboard/BragiReply.h
+    include/galleon/keyboard/CalibrationFlow.h
     include/galleon/keyboard/Brightness.h
     include/galleon/keyboard/KeyboardLink.h
     include/galleon/keyboard/KeyIdentity.h
@@ -24,6 +25,7 @@ add_library(galleon_keyboard STATIC
     include/galleon/keyboard/VendorInterface.h
     src/BragiFrame.cpp
     src/BragiReply.cpp
+    src/CalibrationFlow.cpp
     src/Brightness.cpp
     src/KeyboardLink.cpp
     src/KeyIdentity.cpp

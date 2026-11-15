@@ -91,6 +91,27 @@ private slots:
         QCOMPARE(scanSeen.size(), std::size_t{87});
     }
 
+    void qtNativeScanCodesNameTheSamePhysicalKeyOnBothSystems()
+    {
+        // Linux: the XKB keycode is the evdev code plus 8 (A = evdev 30 = keycode 38).
+        QCOMPARE(hidUsageFromQtNativeScanCode(38, QtScanCodeSystem::Linux), std::optional<HidUsage>(0x04));
+        // Windows: the scan code of A is 1E; the extended flag, in either form, tells the right Control (E0 1D) from the left (1D).
+        QCOMPARE(hidUsageFromQtNativeScanCode(0x1E, QtScanCodeSystem::Windows), std::optional<HidUsage>(0x04));
+        QCOMPARE(hidUsageFromQtNativeScanCode(0x1D, QtScanCodeSystem::Windows), std::optional<HidUsage>(0xE0));
+        QCOMPARE(hidUsageFromQtNativeScanCode(0x11D, QtScanCodeSystem::Windows), std::optional<HidUsage>(0xE4));
+        QCOMPARE(hidUsageFromQtNativeScanCode(0xE01D, QtScanCodeSystem::Windows), std::optional<HidUsage>(0xE4));
+    }
+
+    void anUnknownQtScanCodeGivesNoIdentity()
+    {
+        QVERIFY(!hidUsageFromQtNativeScanCode(0, QtScanCodeSystem::Linux).has_value());
+        QVERIFY(!hidUsageFromQtNativeScanCode(8, QtScanCodeSystem::Linux).has_value()); // evdev 0 is not a key
+        QVERIFY(!hidUsageFromQtNativeScanCode(4000000, QtScanCodeSystem::Linux).has_value());
+        QVERIFY(!hidUsageFromQtNativeScanCode(0, QtScanCodeSystem::Windows).has_value());
+        QVERIFY(!hidUsageFromQtNativeScanCode(0x7F00 | 0x1E, QtScanCodeSystem::Windows).has_value()); // a high byte that is no flag
+        QVERIFY(!hidUsageFromQtNativeScanCode(0x1'0000, QtScanCodeSystem::Windows).has_value());
+    }
+
     void aKeyHasAnEnglishNameForThePersonCalibrating()
     {
         QCOMPARE(QString::fromLatin1(keyName(0x04).value_or("")), QStringLiteral("A"));

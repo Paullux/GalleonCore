@@ -34,6 +34,13 @@ using HidUsage = std::uint16_t;
 // Windows: the scan code of a key (bits 16 to 23 of lParam of WM_KEYDOWN) and whether the key is "extended" (bit 24).
 [[nodiscard]] std::optional<HidUsage> hidUsageFromWindowsScanCode(unsigned scanCode, bool extended);
 
+// What Qt's QKeyEvent::nativeScanCode holds, on each system, so a window can name the physical key without looking at the
+// characters. On Linux (X11 and Wayland) it is the XKB keycode, the evdev code plus 8. On Windows it is the scan code of the key,
+// with the "extended" (E0) flag read from bit 8 or from an 0xE0 high byte: both are accepted because the exact form is to be
+// confirmed on a Windows machine; an unknown or ambiguous value gives no identity rather than a wrong one.
+enum class QtScanCodeSystem : std::uint8_t { Linux, Windows };
+[[nodiscard]] std::optional<HidUsage> hidUsageFromQtNativeScanCode(unsigned code, QtScanCodeSystem system);
+
 // The reverse, for the tables' own tests and for showing a key's name in the calibration tool.
 [[nodiscard]] std::optional<unsigned> evdevFromHidUsage(HidUsage usage);
 

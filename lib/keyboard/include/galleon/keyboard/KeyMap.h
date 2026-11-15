@@ -56,6 +56,9 @@ public:
     // Sets what a LED is, replacing an earlier answer for that same LED. A refused assignment changes nothing.
     [[nodiscard]] std::optional<AssignError> assign(const LedAssignment &assignment);
 
+    // Forgets the answer of a LED (the person went back to answer again). False when there was none or the LED is out of range.
+    bool clear(std::uint16_t led);
+
     [[nodiscard]] std::optional<LedAssignment> assignmentFor(std::uint16_t led) const;
     [[nodiscard]] std::optional<std::uint16_t> ledForKey(HidUsage key) const;
     [[nodiscard]] std::vector<std::uint16_t> unassignedLeds() const;

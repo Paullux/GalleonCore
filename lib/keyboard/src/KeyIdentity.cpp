@@ -140,6 +140,23 @@ std::optional<HidUsage> hidUsageFromWindowsScanCode(unsigned scanCode, bool exte
     return row == nullptr ? std::nullopt : std::optional<HidUsage>(row->usage);
 }
 
+std::optional<HidUsage> hidUsageFromQtNativeScanCode(unsigned code, QtScanCodeSystem system)
+{
+    switch (system) {
+    case QtScanCodeSystem::Linux:
+        return code > 8 ? hidUsageFromEvdev(code - 8) : std::nullopt;
+    case QtScanCodeSystem::Windows: {
+        const unsigned high = code & 0xFF00U;
+        // Three forms are known: the bare scan code, with bit 8 set, or with an 0xE0 high byte (both of the last two mean "extended").
+        const bool knownForm = code <= 0xFFFFU && (high == 0 || high == 0x100U || high == 0xE000U);
+        if (!knownForm)
+            return std::nullopt;
+        return hidUsageFromWindowsScanCode(code & 0xFFU, high != 0);
+    }
+    }
+    return std::nullopt;
+}
+
 std::optional<unsigned> evdevFromHidUsage(HidUsage usage)
 {
     const KeyRow *row = findKey([usage](const KeyRow &key) { return key.usage == usage; });

@@ -47,6 +47,14 @@ std::optional<AssignError> KeyMap::assign(const LedAssignment &assignment)
     return std::nullopt;
 }
 
+bool KeyMap::clear(std::uint16_t led)
+{
+    if (led >= LiveLedCount || !m_leds.at(led).has_value())
+        return false;
+    m_leds.at(led).reset();
+    return true;
+}
+
 std::optional<LedAssignment> KeyMap::assignmentFor(std::uint16_t led) const
 {
     return led < LiveLedCount ? m_leds.at(led) : std::nullopt;
