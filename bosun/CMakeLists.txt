@@ -11,6 +11,7 @@ add_library(bosun_core STATIC
     CropMath.h CropMath.cpp
     FileNames.h FileNames.cpp
     DaemonStatus.h
+    KeyCalibration.h KeyCalibration.cpp
     KeyboardStateWatcher.h KeyboardStateWatcher.cpp
     LightingStateWatcher.h LightingStateWatcher.cpp
     BrightnessCurveModel.h BrightnessCurveModel.cpp
