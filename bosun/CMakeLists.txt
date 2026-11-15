@@ -12,6 +12,7 @@ add_library(bosun_core STATIC
     FileNames.h FileNames.cpp
     DaemonStatus.h
     KeyCalibration.h KeyCalibration.cpp
+    LedValues.h LedValues.cpp
     KeyboardStateWatcher.h KeyboardStateWatcher.cpp
     LightingStateWatcher.h LightingStateWatcher.cpp
     BrightnessCurveModel.h BrightnessCurveModel.cpp

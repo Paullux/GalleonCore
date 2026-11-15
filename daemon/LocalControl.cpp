@@ -7,6 +7,7 @@
 
 #include <QCryptographicHash>
 #include <QDir>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLocalSocket>
@@ -126,6 +127,34 @@ std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
         command.blue = *blue;
         return command;
     }
+    if (object.size() == 2 && action == QStringLiteral("lighting-leds")) {
+        const QJsonValue list = object.value(QStringLiteral("leds"));
+        if (!list.isArray())
+            return std::nullopt;
+        const QJsonArray groups = list.toArray();
+        if (groups.isEmpty() || groups.size() > static_cast<qsizetype>(LedCount))
+            return std::nullopt;
+        LocalCommand command{LocalAction::LightingLeds, {}, {}};
+        for (const auto &group : groups) {
+            // Each group is exactly [led, red, green, blue], whole numbers in their ranges.
+            const QJsonArray numbers = group.isArray() ? group.toArray() : QJsonArray();
+            if (numbers.size() != 4)
+                return std::nullopt;
+            QJsonObject asObject;
+            asObject.insert(QStringLiteral("led"), numbers.at(0));
+            asObject.insert(QStringLiteral("red"), numbers.at(1));
+            asObject.insert(QStringLiteral("green"), numbers.at(2));
+            asObject.insert(QStringLiteral("blue"), numbers.at(3));
+            const auto led = ledIndex(asObject, QStringLiteral("led"));
+            const auto red = colourChannel(asObject, QStringLiteral("red"));
+            const auto green = colourChannel(asObject, QStringLiteral("green"));
+            const auto blue = colourChannel(asObject, QStringLiteral("blue"));
+            if (!led || !red || !green || !blue)
+                return std::nullopt;
+            command.ledValues << *led << *red << *green << *blue;
+        }
+        return command;
+    }
     if (object.size() == 1 && action == QStringLiteral("stop"))
         return LocalCommand{LocalAction::Stop, {}, {}};
     if (object.size() != 2 || action != QStringLiteral("wallpaper"))
@@ -172,6 +201,14 @@ QByteArray encodeLocalCommand(const LocalCommand &command)
         object.insert(QStringLiteral("green"), command.green);
         object.insert(QStringLiteral("blue"), command.blue);
         break;
+    case LocalAction::LightingLeds: {
+        object.insert(QStringLiteral("action"), QStringLiteral("lighting-leds"));
+        QJsonArray groups;
+        for (qsizetype i = 0; i + 3 < command.ledValues.size(); i += 4)
+            groups.append(QJsonArray{command.ledValues.at(i), command.ledValues.at(i + 1), command.ledValues.at(i + 2), command.ledValues.at(i + 3)});
+        object.insert(QStringLiteral("leds"), groups);
+        break;
+    }
     case LocalAction::Stop: object.insert(QStringLiteral("action"), QStringLiteral("stop")); break;
     case LocalAction::Wallpaper:
         object.insert(QStringLiteral("action"), QStringLiteral("wallpaper"));
@@ -297,6 +334,7 @@ void LocalControl::acceptConnections()
             case LocalAction::LightingEnable: Q_EMIT lightingEnableRequested(command->on); break;
             case LocalAction::LightingColor: Q_EMIT lightingColorRequested(command->red, command->green, command->blue); break;
             case LocalAction::LightingLed: Q_EMIT lightingLedRequested(command->led, command->red, command->green, command->blue); break;
+            case LocalAction::LightingLeds: Q_EMIT lightingLedsRequested(command->ledValues); break;
             case LocalAction::Stop: Q_EMIT stopRequested(); break;
             }
         };

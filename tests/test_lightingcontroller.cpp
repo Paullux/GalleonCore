@@ -296,6 +296,16 @@ private Q_SLOTS:
         QCOMPARE(rig.mode(), 2);
     }
 
+    void everyKeyIsDarkUntilAColourIsAskedFor()
+    {
+        Rig rig;
+        rig.hold();
+        QCOMPARE(rig.controller->state(), QStringLiteral("holding"));
+        QTRY_VERIFY_WITH_TIMEOUT(rig.frames() >= 1, 3000);
+        for (const int led : {0, 0x3a, 100, 145})
+            QCOMPARE(ledColour(rig.frame(), led), (std::vector<std::uint8_t>{0, 0, 0}));
+    }
+
     void aColourIsShownOnEveryKey()
     {
         Rig rig;
@@ -349,6 +359,45 @@ private Q_SLOTS:
         QVERIFY(!rig.controller->SetLed(-1, 1, 1, 1));
         QVERIFY(!rig.controller->SetLed(5, 256, 0, 0));
         QVERIFY(rig.controller->SetLed(145, 1, 1, 1));
+    }
+
+    void oneColourPerLedShowsEachLedItsOwnColourAndTheOthersBlack()
+    {
+        Rig rig;
+        rig.hold();
+        QCOMPARE(rig.controller->state(), QStringLiteral("holding"));
+        QVERIFY(rig.controller->SetLeds({0x3a, 255, 0, 0, 4, 0, 255, 0, 145, 1, 2, 3}));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 0x3a) == std::vector<std::uint8_t>{255, 0, 0}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 4), (std::vector<std::uint8_t>{0, 255, 0}));
+        QCOMPARE(ledColour(rig.frame(), 145), (std::vector<std::uint8_t>{1, 2, 3}));
+        QCOMPARE(ledColour(rig.frame(), 0), (std::vector<std::uint8_t>{0, 0, 0}));
+        QCOMPARE(ledColour(rig.frame(), 0x3b), (std::vector<std::uint8_t>{0, 0, 0}));
+    }
+
+    void aListOfLedsThatIsNotWellFormedIsRefusedAndTheLastSceneStays()
+    {
+        Rig rig;
+        rig.hold();
+        QVERIFY(rig.controller->SetColor(7, 8, 9));
+        QVERIFY(!rig.controller->SetLeds({}));                       // nothing to show
+        QVERIFY(!rig.controller->SetLeds({1, 2, 3}));                // not groups of four
+        QVERIFY(!rig.controller->SetLeds({146, 1, 1, 1}));           // a LED beyond the frame
+        QVERIFY(!rig.controller->SetLeds({-1, 1, 1, 1}));
+        QVERIFY(!rig.controller->SetLeds({5, 256, 0, 0}));           // a colour out of range
+        QVERIFY(!rig.controller->SetLeds({5, 0, -1, 0}));
+        QList<int> tooMany;
+        for (int i = 0; i < 147; ++i)
+            tooMany << 3 << 1 << 1 << 1;
+        QVERIFY(!rig.controller->SetLeds(tooMany));                  // more groups than LEDs
+        rig.advance(200);
+        QTest::qWait(150);
+        QCOMPARE(ledColour(rig.frame(), 0x3a), (std::vector<std::uint8_t>{7, 8, 9})); // none of them changed what is shown
+    }
+
+    void oneColourPerLedIsRefusedWhileTheLightingIsOff()
+    {
+        Rig rig;
+        QVERIFY(!rig.controller->SetLeds({5, 1, 1, 1}));
     }
 
     void oneLedIsRefusedWhileTheLightingIsOff()

@@ -8,6 +8,7 @@
 #include <QTest>
 
 #include <array>
+#include <vector>
 
 using namespace galleon::keyboard;
 
@@ -74,6 +75,48 @@ private slots:
         QVERIFY(!singleLedScene(-1, 1, 1, 1));
         QVERIFY(!singleLedScene(5, 256, 0, 0));
         QVERIFY(uniformScene(0, 0, 0).has_value()); // black is a colour
+    }
+
+    void aPerLedSceneLightsEachLedWithItsOwnColourAndTheOthersStayBlack()
+    {
+        const std::vector<LedColor> leds{{0x3A, 255, 0, 0}, {0x04, 0, 255, 0}, {145, 1, 2, 3}};
+        const auto scene = perLedScene(leds);
+        QVERIFY(scene.has_value());
+        const auto frame = sceneFrame(scene.value_or(LiveScene{}));
+        QVERIFY(frame.has_value());
+        const LiveFrame &f = frame.value_or(LiveFrame{});
+        QCOMPARE(f.at(0), std::uint8_t{0x12});
+        QCOMPARE(ledOf(f, 0x3A), (std::array<std::uint8_t, 3>{255, 0, 0}));
+        QCOMPARE(ledOf(f, 0x04), (std::array<std::uint8_t, 3>{0, 255, 0}));
+        QCOMPARE(ledOf(f, 145), (std::array<std::uint8_t, 3>{1, 2, 3}));
+        int lit = 0;
+        for (std::size_t led = 0; led < LiveLedCount; ++led)
+            lit += ledOf(f, led) != std::array<std::uint8_t, 3>{0, 0, 0} ? 1 : 0;
+        QCOMPARE(lit, 3);
+    }
+
+    void aLaterEntryForTheSameLedReplacesTheEarlierOne()
+    {
+        const std::vector<LedColor> leds{{7, 1, 1, 1}, {7, 9, 9, 9}};
+        const auto frame = sceneFrame(perLedScene(leds).value_or(LiveScene{}));
+        QVERIFY(frame.has_value());
+        QCOMPARE(ledOf(frame.value_or(LiveFrame{}), 7), (std::array<std::uint8_t, 3>{9, 9, 9}));
+    }
+
+    void aPerLedSceneWithANonsensicalListMakesNoScene()
+    {
+        QVERIFY(!perLedScene({}).has_value());                                   // nothing to show
+        QVERIFY(!perLedScene(std::vector<LedColor>{{146, 1, 1, 1}}).has_value()); // beyond the 146 LEDs of the frame
+        QVERIFY(!perLedScene(std::vector<LedColor>{{65535, 1, 1, 1}}).has_value());
+        const std::vector<LedColor> tooMany(LiveLedCount + 1, LedColor{3, 1, 1, 1});
+        QVERIFY(!perLedScene(tooMany).has_value());                              // more entries than LEDs
+        const std::vector<LedColor> everyLed = [] {
+            std::vector<LedColor> all;
+            for (std::size_t led = 0; led < LiveLedCount; ++led)
+                all.push_back({static_cast<std::uint16_t>(led), 1, 2, 3});
+            return all;
+        }();
+        QVERIFY(perLedScene(everyLed).has_value());                              // 146 entries is the most
     }
 
     void aSceneMadeByHandWithAWildLedSendsNothing()

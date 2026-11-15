@@ -15,7 +15,7 @@ import "KeyboardMapData.js" as MapData
 Item {
     id: board
 
-    // lamp id -> "#rrggbb" for the lamps that have a colour; the others are drawn white, as a keyboard lit white.
+    // lamp id -> "#rrggbb" for the lamps that have a colour; the others are drawn dark grey, as a key that is out.
     property var colors: ({})
     // The index of the cap that was chosen, or -1.
     property int selected: -1
@@ -35,7 +35,8 @@ Item {
     // The thickness of the see-through outline of a cap, in millimetres.
     readonly property real rim: 0.55
     readonly property var allLamps: map.cells.map(cell => cell.id)
-    readonly property color unlit: "#e8eaed"
+    // A key with no colour is out, as on the keyboard when the live lighting starts: dark grey, not white.
+    readonly property color unlit: "#3b4048"
 
     implicitHeight: (map.body.h + 2 * margin) * scale
     height: implicitHeight
@@ -51,6 +52,9 @@ Item {
         const colours = {}
         for (const cell of map.cells)
             colours[cell.id] = Qt.hsla(0.85 * (cell.x - low) / span, 0.9, 0.55, 1).toString()
+        // The light strip is part of it: each section takes the colour of the keys under it.
+        for (const section of map.strip.sections)
+            colours[section.lamp] = Qt.hsla(0.85 * Math.min(1, Math.max(0, (section.x + section.w / 2 - low) / span)), 0.9, 0.55, 1).toString()
         return colours
     }
 
@@ -68,19 +72,37 @@ Item {
         border.color: "#3a3f47"
     }
 
-    // The light bar above the function row: decoration, drawn like a cap whose light is white.
-    Rectangle {
-        x: board.xp(board.map.strip.x)
-        y: board.yp(board.map.strip.y)
-        width: board.map.strip.w * board.scale
-        height: board.map.strip.h * board.scale
-        radius: 2.4 * board.scale
-        color: board.unlit
+    // The light bar above the function row: seven equal sections, the first at the left end, the fourth in the middle and the seventh at the
+    // right end, each lit by its own LED. Clicked and coloured like a key; its "lamp" is the drawing's own id (1001 to 1007), outside the
+    // 94 real lamps, and its index in `capClicked` is 100 + its position, outside the indices of the caps.
+    Repeater {
+        model: board.map.strip.sections
         Rectangle {
-            anchors.fill: parent
-            anchors.margins: Math.max(1, board.rim * board.scale)
-            radius: parent.radius - board.rim * board.scale
-            color: "#1c1e22"
+            id: section
+            required property var modelData
+            readonly property color light: board.colors[modelData.lamp] !== undefined ? board.colors[modelData.lamp] : board.unlit
+            objectName: "stripSection" + modelData.position
+            x: board.xp(modelData.x)
+            y: board.yp(modelData.y)
+            width: modelData.w * board.scale
+            height: modelData.h * board.scale
+            radius: 2.4 * board.scale
+            color: light
+            border.width: board.selected === 100 + modelData.position ? 2 : 0
+            border.color: "#64b5f6"
+            Accessible.role: Accessible.Button
+            Accessible.name: qsTr("Light strip, section %1").arg(modelData.position)
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: Math.max(1, board.rim * board.scale)
+                radius: Math.max(0, parent.radius - board.rim * board.scale)
+                color: "#1c1e22"
+            }
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: board.capClicked(100 + section.modelData.position, [section.modelData.lamp])
+            }
         }
     }
 
@@ -91,7 +113,7 @@ Item {
             id: cap
             required property var modelData
             required property int index
-            // The light of a cap is the colour of its first lamp; a cap with no colour is lit white.
+            // The light of a cap is the colour of its first lamp; a cap with no colour is out (dark grey).
             readonly property color light: modelData.lamps.length > 0 && board.colors[modelData.lamps[0]] !== undefined
                                            ? board.colors[modelData.lamps[0]] : board.unlit
             objectName: "cap" + index

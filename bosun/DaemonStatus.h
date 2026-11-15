@@ -4,6 +4,7 @@
 #pragma once
 
 #include <QObject>
+#include <QVariantList>
 #include <QString>
 #ifdef Q_OS_WIN
 #include <QTimer>
@@ -84,6 +85,9 @@ public:
     // ONE lit LED (0 to 145, the LEDs of the live frame) with every other LED black, for the calibration of the key map;
     // setLightingColor goes back to one colour for every key. "" when sent, else why not. Output only: this reads no key.
     Q_INVOKABLE [[nodiscard]] QString setLightingLed(int led, int red, int green, int blue);
+    // One colour PER LED (the keyboard drawing, the effects): `values` is a flat list of groups of four whole numbers, LED (0 to 145), red,
+    // green, blue (0 to 255), at most 146 groups; every LED not listed is black. "" when sent, else why not. Output only.
+    Q_INVOKABLE [[nodiscard]] QString setLightingLeds(const QVariantList &values);
     // Asks galleond for its lighting state (when it appears, or to look again).
     Q_INVOKABLE [[nodiscard]] QString refreshLighting();
 

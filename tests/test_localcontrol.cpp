@@ -108,6 +108,47 @@ private slots:
         QVERIFY(parseLocalCommand(R"({"action":"lighting-led","led":145,"red":0,"green":0,"blue":0})").has_value()); // the last LED of the frame
     }
 
+    void aCommandForOneColourPerLedRoundTripsThroughItsEncoding()
+    {
+        LocalCommand command{LocalAction::LightingLeds, {}, {}};
+        command.ledValues = {58, 255, 0, 0, 4, 0, 255, 0, 145, 1, 2, 3};
+        const auto parsed = parseLocalCommand(encodeLocalCommand(command));
+        if (!parsed)
+            QFAIL("the command was not parsed");
+        QCOMPARE(parsed->action, LocalAction::LightingLeds);
+        QCOMPARE(parsed->ledValues, command.ledValues);
+    }
+
+    void theBiggestListOfLedsFitsInOneFrame()
+    {
+        LocalCommand command{LocalAction::LightingLeds, {}, {}};
+        for (int led = 0; led < 146; ++led)
+            command.ledValues << led << 255 << 255 << 255;
+        const QByteArray frame = encodeLocalCommand(command);
+        QVERIFY2(frame.size() <= 4096, "the biggest list has to fit in the 4096 bytes of one frame");
+        const auto parsed = parseLocalCommand(frame);
+        QVERIFY(parsed.has_value());
+        QCOMPARE(parsed.value_or(LocalCommand{}).ledValues.size(), 146 * 4);
+    }
+
+    void aListOfLedsWithAnythingOutOfShapeIsRefused()
+    {
+        for (const char *frame : {R"({"action":"lighting-leds"})", R"({"action":"lighting-leds","leds":[]})", R"({"action":"lighting-leds","leds":5})",
+                                  R"({"action":"lighting-leds","leds":[[1,2,3]]})", R"({"action":"lighting-leds","leds":[[1,2,3,4,5]]})",
+                                  R"({"action":"lighting-leds","leds":[1,2,3,4]})", R"({"action":"lighting-leds","leds":[[146,0,0,0]]})",
+                                  R"({"action":"lighting-leds","leds":[[-1,0,0,0]]})", R"({"action":"lighting-leds","leds":[[1,256,0,0]]})",
+                                  R"({"action":"lighting-leds","leds":[[1,0,-1,0]]})", R"({"action":"lighting-leds","leds":[[1.5,0,0,0]]})",
+                                  R"({"action":"lighting-leds","leds":[["1",0,0,0]]})", R"({"action":"lighting-leds","leds":[[1,0,0,null]]})",
+                                  R"({"action":"lighting-leds","leds":[[1,0,0,0]],"extra":1})"})
+            QVERIFY2(!parseLocalCommand(frame), frame);
+        QByteArray tooMany = R"({"action":"lighting-leds","leds":[)";
+        for (int i = 0; i < 147; ++i)
+            tooMany += (i != 0 ? "," : "") + QByteArray("[3,1,1,1]");
+        tooMany += "]}";
+        QVERIFY(!parseLocalCommand(tooMany)); // more groups than LEDs
+        QVERIFY(parseLocalCommand(R"({"action":"lighting-leds","leds":[[145,255,255,255]]})").has_value());
+    }
+
     void aLightingCommandWithAnythingOutOfShapeIsRefused()
     {
         for (const char *frame : {R"({"action":"lighting-enable"})", R"({"action":"lighting-enable","on":1})", R"({"action":"lighting-enable","on":"true"})",

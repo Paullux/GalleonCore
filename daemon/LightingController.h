@@ -9,6 +9,7 @@
 #include <galleon/keyboard/LivePolicy.h>
 #include <galleon/keyboard/LiveScene.h>
 
+#include <QList>
 #include <QObject>
 #include <QString>
 #include <QThread>
@@ -75,6 +76,11 @@ public Q_SLOTS:
     // which key a LED belongs to. False when the lighting is off or a value is out of range. SetColor goes back to one colour
     // for every key. Output only: nothing here reads a key.
     bool SetLed(int led, int red, int green, int blue);
+    // One colour PER LED, for the keyboard drawing of Bosun and the effects: `values` is a flat list of groups of four numbers, LED (0 to
+    // 145), red, green, blue (0 to 255 each), at most one group per LED of the frame; every LED not listed is black. False when the
+    // lighting is off, the list is empty, its length is not a multiple of four, it holds more than 146 groups or a value is out of
+    // range: nothing is changed then. Output only.
+    bool SetLeds(const QList<int> &values);
     [[nodiscard]] QString State() const { return m_state; }
 
 Q_SIGNALS:
@@ -102,7 +108,7 @@ private:
     int m_resumeTriesLeft = 0;
     int m_resumeRetryMs = ResumeRetryMs;
     int m_resumeAttempts = ResumeAttempts;
-    galleon::keyboard::LiveScene m_scene = galleon::keyboard::uniformScene(90, 90, 90).value_or(galleon::keyboard::LiveScene{});
+    galleon::keyboard::LiveScene m_scene = galleon::keyboard::uniformScene(0, 0, 0).value_or(galleon::keyboard::LiveScene{}); // dark until a colour is asked for
 };
 
 } // namespace galleond

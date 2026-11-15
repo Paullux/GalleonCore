@@ -95,6 +95,27 @@ bool LightingController::SetLed(int led, int red, int green, int blue)
     return scene && showScene(*scene);
 }
 
+bool LightingController::SetLeds(const QList<int> &values)
+{
+    constexpr qsizetype Group = 4;
+    if (values.isEmpty() || values.size() % Group != 0 || values.size() / Group > static_cast<qsizetype>(galleon::keyboard::LiveLedCount))
+        return false;
+    std::vector<galleon::keyboard::LedColor> leds;
+    leds.reserve(static_cast<std::size_t>(values.size() / Group));
+    for (qsizetype i = 0; i < values.size(); i += Group) {
+        const int led = values.at(i);
+        const int red = values.at(i + 1);
+        const int green = values.at(i + 2);
+        const int blue = values.at(i + 3);
+        const auto inRange = [](int value) { return value >= 0 && value <= 255; };
+        if (led < 0 || led >= static_cast<int>(galleon::keyboard::LiveLedCount) || !inRange(red) || !inRange(green) || !inRange(blue))
+            return false;
+        leds.push_back({static_cast<std::uint16_t>(led), static_cast<std::uint8_t>(red), static_cast<std::uint8_t>(green), static_cast<std::uint8_t>(blue)});
+    }
+    const auto scene = galleon::keyboard::perLedScene(leds);
+    return scene && showScene(*scene);
+}
+
 bool LightingController::showScene(const galleon::keyboard::LiveScene &scene)
 {
     m_scene = scene; // kept even while off, so the next start shows it

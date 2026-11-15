@@ -5,6 +5,8 @@
 
 #include <KeyMapFile.h>
 
+#include <array>
+
 #include <galleon/keyboard/KeyIdentity.h>
 #include <galleon/keyboard/LiveFrame.h>
 
@@ -17,9 +19,9 @@ using galleon::keyboard::AnswerOutcome;
 constexpr int LitRed = 255; // the LED being asked about: plain white, the easiest to see
 constexpr int LitGreen = 255;
 constexpr int LitBlue = 255;
-constexpr int RestRed = 90; // the colour the lighting starts with when calibrating is over
-constexpr int RestGreen = 90;
-constexpr int RestBlue = 90;
+constexpr int RestRed = 0; // when calibrating is over every key is dark again, as when the live lighting is switched on
+constexpr int RestGreen = 0;
+constexpr int RestBlue = 0;
 
 constexpr galleon::keyboard::QtScanCodeSystem nativeSystem()
 {
@@ -99,8 +101,52 @@ void KeyCalibration::handleKey(unsigned nativeScanCode)
         say(tr("This key is not known to the calibration: try another key, or use \"Nothing lit up\"."));
         return;
     }
-    switch (m_flow->answerKey(*key)) {
-    case AnswerOutcome::Recorded: settle(tr("Recorded.")); break;
+    applyKey(*key);
+}
+
+QVariantList KeyCalibration::specialKeys()
+{
+    // Print Screen, Pause, the Windows keys and Alt Gr are taken by the system on at least one of the two systems; Fn and Copilot send
+    // no code of their own. The identities are those of KeyIdentity.h.
+    struct Entry
+    {
+        QString label;
+        galleon::keyboard::HidUsage usage;
+    };
+    const std::array<Entry, 9> entries{{{tr("Print Screen"), 0x46}, {tr("Pause"), 0x48}, {tr("Left Windows"), 0xE3}, {tr("Right Windows"), 0xE7},
+                             {tr("Right Shift"), 0xE5}, {tr("Alt Gr"), 0xE6}, {tr("Right Control"), 0xE4},
+                             {tr("Fn"), galleon::keyboard::FnKey}, {tr("Copilot"), galleon::keyboard::CopilotKey}}};
+    QVariantList list;
+    for (const Entry &entry : entries)
+        list.append(QVariantMap{{QStringLiteral("label"), entry.label}, {QStringLiteral("usage"), static_cast<int>(entry.usage)}});
+    return list;
+}
+
+void KeyCalibration::answerNamedKey(int usage)
+{
+    if (!m_flow || m_flow->finished())
+        return;
+    if (usage < 0 || usage > 0xFFFF) {
+        say(tr("That answer was not accepted."));
+        return;
+    }
+    applyKey(static_cast<galleon::keyboard::HidUsage>(usage));
+}
+
+void KeyCalibration::applyKey(galleon::keyboard::HidUsage key)
+{
+    if (!m_flow)
+        return;
+    const auto led = m_flow->currentLed();
+    switch (m_flow->answerKey(key)) {
+    case AnswerOutcome::Recorded: {
+        // Shown until the next answer replaces it, so that a slip is seen at once; it is not kept.
+        // The names are those of a QWERTY keyboard: for a key whose engraving depends on the layout, the message says so.
+        const QString name = QString::fromLatin1(galleon::keyboard::keyName(key).value_or("?"));
+        settle(galleon::keyboard::isLayoutDependent(key) ? tr("LED %1 = %2 (as named on a QWERTY keyboard).").arg(led.value_or(0)).arg(name)
+                                                         : tr("LED %1 = %2.").arg(led.value_or(0)).arg(name));
+        break;
+    }
     case AnswerOutcome::KeyAlreadyUsed:
         say(tr("That key already belongs to LED %1. Press the key that is lit now.").arg(m_flow->conflictingLed().value_or(0)));
         break;

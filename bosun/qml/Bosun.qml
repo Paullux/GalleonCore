@@ -78,6 +78,44 @@ Window {
     readonly property var selected: selectedKey >= 0 && selectedKey < keys.length ? keys[selectedKey] : null
 
     // What an edit answered, for the status bar.
+    // The colours given to the keys of the drawing, as galleond takes them: groups of LED, red, green, blue. A key has the colour of its
+    // first lamp; the two parts of Enter are one key with one LED, which takes the first colour found. A key with no colour is not
+    // listed, so it is dark on the keyboard, as it is in the drawing. The seven sections of the light strip are keys of their own.
+    function drawnLedColours() {
+        const seen = {}
+        const values = []
+        for (const cap of keyboardMap.map.caps) {
+            if (cap.led === undefined || cap.lamps.length === 0 || seen[cap.led])
+                continue
+            const colour = win.lampColors[cap.lamps[0]]
+            if (colour === undefined)
+                continue
+            seen[cap.led] = true
+            const c = Qt.color(colour)
+            values.push(cap.led, Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255))
+        }
+        // The sections of the light strip: one LED each, in the order of the strip.
+        for (const section of keyboardMap.map.strip.sections) {
+            const colour = win.lampColors[section.lamp]
+            if (colour === undefined)
+                continue
+            const c = Qt.color(colour)
+            values.push(section.led, Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255))
+        }
+        return values
+    }
+
+    // With the live lighting on, what the drawing shows is what the keyboard shows: every change of a colour sends all of them.
+    function sendDrawnColours() {
+        if (!win.daemon.lightingActive)
+            return
+        const values = win.drawnLedColours()
+        if (values.length === 0)
+            win.answered(win.daemon.setLightingColor(0, 0, 0), qsTr("All the keys are dark."))
+        else
+            win.answered(win.daemon.setLightingLeds(values), qsTr("%1 keys sent.").arg(values.length / 4))
+    }
+
     function answered(error, done) {
         message = error === "" ? done : error
         messageIsError = error !== ""
@@ -764,40 +802,27 @@ Window {
                                 onClicked: { win.keyCalibration.answerStrip(calibrationPanel.stripPosition); calibrationPanel.forceActiveFocus() }
                             }
                         }
+                        Text {
+                            width: parent.width
+                            wrapMode: Text.Wrap
+                            color: "#c9ced6"
+                            font.pixelSize: 13
+                            text: qsTr("A key that the system keeps from this window, or that sends no code of its own: choose it here.")
+                        }
+                        Flow {
+                            width: parent.width
+                            spacing: 8
+                            Repeater {
+                                model: win.keyCalibration !== null ? win.keyCalibration.specialKeys() : []
+                                delegate: Pill {
+                                    required property var modelData
+                                    objectName: "calibrationSpecial" + modelData.usage
+                                    text: modelData.label
+                                    onClicked: { win.keyCalibration.answerNamedKey(modelData.usage); calibrationPanel.forceActiveFocus() }
+                                }
+                            }
+                        }
                     }
-                }
-                Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
-                Text {
-                    color: "white"
-                    font.pixelSize: 16
-                    font.bold: true
-                    text: qsTr("Corsair keyboard · lighting and keys")
-                }
-                Text {
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    color: "#c9ced6"
-                    font.pixelSize: 14
-                    text: qsTr("Corsair's own page, the Web Hub, sets the keyboard's lighting and keys in your browser. It needs a Chromium-based browser (Chrome, Chromium, Edge, Opera).")
-                }
-                Pill {
-                    selected: true
-                    text: qsTr("Open the Corsair Web Hub in your browser")
-                    onClicked: Qt.openUrlExternally("https://www.corsair.com/web-hub")
-                }
-                Text {
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    color: "#9aa0a6"
-                    font.pixelSize: 13
-                    text: qsTr("It opens in your browser, not in this window. Careful: what the Web Hub saves into the keyboard's own memory is the keyboard's business, and this application never writes there. The screen, the 12 keys and the dials of the module are set from the other tabs.")
-                }
-                Text {
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    color: "#7d8591"
-                    font.pixelSize: 13
-                    text: qsTr("The lighting can also be driven from Linux with OpenRGB (the dials' rings already are, through this project's plugin); the per-key lighting of the keyboard is not available there yet.")
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
                 Text {
@@ -841,6 +866,7 @@ Window {
                         for (const lamp of win.selectedLamps)
                             next[lamp] = color
                         win.lampColors = next
+                        win.sendDrawnColours()
                     }
                 }
                 Row {
@@ -855,23 +881,18 @@ Window {
                             for (const lamp of keyboardMap.allLamps)
                                 next[lamp] = colour
                             win.lampColors = next
-                            // The live lighting holds one colour for all the keys: when it is on, this is what goes to the keyboard.
-                            if (win.daemon.lightingActive) {
-                                const c = Qt.color(colour)
-                                win.answered(win.daemon.setLightingColor(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)),
-                                             qsTr("Keyboard colour sent to galleond: %1").arg(colour))
-                            }
+                            win.sendDrawnColours()
                         }
                     }
                     Pill {
                         objectName: "lampsRainbow"
                         text: qsTr("Rainbow")
-                        onClicked: win.lampColors = keyboardMap.rainbow()
+                        onClicked: { win.lampColors = keyboardMap.rainbow(); win.sendDrawnColours() }
                     }
                     Pill {
                         objectName: "lampsClear"
                         text: qsTr("Clear the colours")
-                        onClicked: { win.lampColors = ({}); win.selectedCap = -1; win.selectedLamps = [] }
+                        onClicked: { win.lampColors = ({}); win.selectedCap = -1; win.selectedLamps = []; win.sendDrawnColours() }
                     }
                 }
                 Text {
@@ -880,8 +901,42 @@ Window {
                     color: "#7d8591"
                     font.pixelSize: 13
                     text: win.daemon.lightingActive
-                          ? qsTr("The live lighting is on: “Give this colour to every key” sends that colour to the keyboard (one colour for all the keys: a colour for each key is not available yet). Everything else here is a preview.")
-                          : qsTr("This is a preview: nothing is sent to the keyboard, because the per-key lighting is not available yet. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
+                          ? qsTr("The live lighting is on: the colours you give to the keys here go to the keyboard, one colour for each key; a key with no colour stays dark.")
+                          : qsTr("This is a preview: nothing is sent to the keyboard until the live lighting is switched on. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
+                }
+                Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
+                Text {
+                    color: "white"
+                    font.pixelSize: 16
+                    font.bold: true
+                    text: qsTr("Corsair keyboard · lighting and keys")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#c9ced6"
+                    font.pixelSize: 14
+                    text: qsTr("Corsair's own page, the Web Hub, sets the keyboard's lighting and keys in your browser. It needs a Chromium-based browser (Chrome, Chromium, Edge, Opera).")
+                }
+                Pill {
+                    objectName: "openWebHub"
+                    selected: true
+                    text: qsTr("Open the Corsair Web Hub in your browser")
+                    onClicked: Qt.openUrlExternally("https://www.corsair.com/web-hub")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: qsTr("It opens in your browser, not in this window. Careful: what the Web Hub saves into the keyboard's own memory is the keyboard's business, and this application never writes there. The screen, the 12 keys and the dials of the module are set from the other tabs.")
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#7d8591"
+                    font.pixelSize: 13
+                    text: qsTr("The lighting can also be driven from Linux with OpenRGB (the dials' rings already are, through this project's plugin); the per-key lighting of the keyboard is not available there yet.")
                 }
     
             }

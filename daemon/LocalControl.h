@@ -7,12 +7,13 @@
 #include <QLockFile>
 #include <memory>
 #include <QObject>
+#include <QList>
 #include <QString>
 #include <optional>
 
 namespace galleond {
 
-enum class LocalAction : unsigned char { Ping, Wallpaper, Stop, Gaming, Theme, KeyboardBrightness, KeyboardBrightnessRead, LightingEnable, LightingColor, LightingLed };
+enum class LocalAction : unsigned char { Ping, Wallpaper, Stop, Gaming, Theme, KeyboardBrightness, KeyboardBrightnessRead, LightingEnable, LightingColor, LightingLed, LightingLeds };
 struct LocalCommand
 {
     LocalAction action = LocalAction::Ping;
@@ -23,6 +24,7 @@ struct LocalCommand
     int red = 0;        // LightingColor: one colour for every key, 0 to 255 each
     int green = 0;
     int blue = 0;
+    QList<int> ledValues{}; // NOLINT(readability-redundant-member-init): braced initializers elsewhere leave it out. LightingLeds: one colour PER LED, as groups of four numbers (LED 0 to 145, red, green, blue), 1 to 146 groups
     int led = 0;        // LightingLed: ONE lit LED, 0 to 145 (the live frame), with red/green/blue; every other LED is black
 };
 
@@ -48,6 +50,7 @@ Q_SIGNALS:
     void lightingEnableRequested(bool on);
     void lightingColorRequested(int red, int green, int blue);
     void lightingLedRequested(int led, int red, int green, int blue);
+    void lightingLedsRequested(const QList<int> &values);
 private:
     void acceptConnections();
     std::unique_ptr<QLockFile> m_lock;

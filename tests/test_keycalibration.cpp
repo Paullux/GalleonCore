@@ -122,6 +122,75 @@ private Q_SLOTS:
         QCOMPARE(calibration.currentLed(), 2);
     }
 
+    void theMessageNamesTheKeyThatWasRecordedSoASlipIsSeen()
+    {
+        const QTemporaryDir dir;
+        FakeLights lights;
+        KeyCalibration calibration(lights, dir.filePath("keymap.json"));
+        QVERIFY(calibration.begin(false).isEmpty());
+        calibration.handleKey(CodeA);
+        // The name is that of a QWERTY keyboard (the key at the A of a QWERTY), and the message says so: on an AZERTY it is engraved Q.
+        QCOMPARE(calibration.message(), QStringLiteral("LED 0 = A (as named on a QWERTY keyboard)."));
+        calibration.handleKey(CodeB);
+        QCOMPARE(calibration.message(), QStringLiteral("LED 1 = B (as named on a QWERTY keyboard).")); // replaced by the next, not added to it
+        calibration.answerNamedKey(0xFF01);
+        QCOMPARE(calibration.message(), QStringLiteral("LED 2 = Fn.")); // a key that is the same on every layout: no remark
+    }
+
+    void aKeyTheSystemKeepsCanBeChosenFromTheListInsteadOfPressed()
+    {
+        const QTemporaryDir dir;
+        FakeLights lights;
+        KeyCalibration calibration(lights, dir.filePath("keymap.json"));
+        QVERIFY(calibration.begin(false).isEmpty());
+        const QVariantList list = KeyCalibration::specialKeys();
+        QVERIFY(list.size() >= 9);
+        QSet<int> usages;
+        for (const QVariant &entry : list) {
+            const QVariantMap map = entry.toMap();
+            QVERIFY(!map.value(QStringLiteral("label")).toString().isEmpty());
+            const int usage = map.value(QStringLiteral("usage")).toInt();
+            QVERIFY(!usages.contains(usage)); // no key offered twice
+            usages.insert(usage);
+        }
+        QVERIFY(usages.contains(0xFF01)); // Fn
+        QVERIFY(usages.contains(0xFF02)); // Copilot
+        calibration.answerNamedKey(0xFF02);
+        QCOMPARE(calibration.currentLed(), 1);
+        QVERIFY(calibration.message().contains(QStringLiteral("Copilot")));
+        const auto saved = galleond::readKeyMap(dir.filePath("keymap.json"));
+        QVERIFY(saved.has_value());
+        QCOMPARE(saved.value_or(galleond::KeyMapFile{}).map.ledForKey(0xFF02), std::optional<std::uint16_t>(0));
+    }
+
+    void aChosenKeyThatIsTakenOrNotAKeyIsNotRecorded()
+    {
+        const QTemporaryDir dir;
+        FakeLights lights;
+        KeyCalibration calibration(lights, dir.filePath("keymap.json"));
+        QVERIFY(calibration.begin(false).isEmpty());
+        calibration.answerNamedKey(0x46);
+        QCOMPARE(calibration.currentLed(), 1);
+        calibration.answerNamedKey(0x46); // Print Screen already belongs to LED 0
+        QCOMPARE(calibration.currentLed(), 1);
+        QVERIFY(calibration.message().contains(QStringLiteral("LED 0")));
+        calibration.answerNamedKey(3);     // not a key
+        calibration.answerNamedKey(-1);
+        calibration.answerNamedKey(70000);
+        QCOMPARE(calibration.currentLed(), 1);
+        QCOMPARE(calibration.passed(), 1);
+    }
+
+    void choosingAKeyDoesNothingWhenTheCalibrationIsNotRunning()
+    {
+        const QTemporaryDir dir;
+        FakeLights lights;
+        KeyCalibration calibration(lights, dir.filePath("keymap.json"));
+        calibration.answerNamedKey(0x46);
+        QCOMPARE(calibration.passed(), 0);
+        QVERIFY(!QFile::exists(dir.filePath("keymap.json")));
+    }
+
     void nothingLitSkipAndBackWork()
     {
         const QTemporaryDir dir;
