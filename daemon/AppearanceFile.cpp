@@ -66,6 +66,22 @@ QJsonArray colourToJson(const Rgb &colour)
     return QJsonArray{colour.red, colour.green, colour.blue};
 }
 
+// The keys that the base of the sky may have: its type, and optionally `animate`, `follow_sun`, and a place (`latitude` and `longitude`, together, and only
+// with `follow_sun`). Nothing else.
+bool isSkyBase(const QJsonObject &base)
+{
+    const bool follows = base.contains(QStringLiteral("follow_sun"));
+    const bool latitude = base.contains(QStringLiteral("latitude"));
+    const bool longitude = base.contains(QStringLiteral("longitude"));
+    if (latitude != longitude || (latitude && !follows))
+        return false;
+    int allowed = 1; // "type"
+    allowed += base.contains(QStringLiteral("animate")) ? 1 : 0;
+    allowed += follows ? 1 : 0;
+    allowed += latitude ? 2 : 0;
+    return base.size() == allowed;
+}
+
 } // namespace
 
 QByteArray encodeAppearance(const Appearance &appearance)
@@ -76,6 +92,8 @@ QByteArray encodeAppearance(const Appearance &appearance)
         base.insert(QStringLiteral("speed"), appearance.rainbowSpeed);
     } else if (appearance.base == BaseType::Sky) {
         base.insert(QStringLiteral("type"), QStringLiteral("sky"));
+        if (!appearance.skyAnimated)
+            base.insert(QStringLiteral("animate"), false); // the default (on) is not written: a file of someone who never asked says nothing more
         if (appearance.followSun || appearance.skyPlace) {
             base.insert(QStringLiteral("follow_sun"), appearance.followSun);
             if (appearance.skyPlace) {
@@ -149,10 +167,15 @@ std::optional<Appearance> parseAppearance(const QByteArray &bytes, QString *why)
         }
         appearance.base = BaseType::Rainbow;
         appearance.rainbowSpeed = *speed;
-    } else if (type == QLatin1String("sky")
-               && (hasExactlyKeys(base, {QStringLiteral("type")}) || hasExactlyKeys(base, {QStringLiteral("type"), QStringLiteral("follow_sun")})
-                   || hasExactlyKeys(base, {QStringLiteral("type"), QStringLiteral("follow_sun"), QStringLiteral("latitude"), QStringLiteral("longitude")}))) {
+    } else if (type == QLatin1String("sky") && isSkyBase(base)) {
         appearance.base = BaseType::Sky;
+        if (base.contains(QStringLiteral("animate"))) {
+            if (!base.value(QStringLiteral("animate")).isBool()) {
+                explain(why, QStringLiteral("animate is not true or false"));
+                return std::nullopt;
+            }
+            appearance.skyAnimated = base.value(QStringLiteral("animate")).toBool();
+        }
         if (base.contains(QStringLiteral("follow_sun"))) {
             if (!base.value(QStringLiteral("follow_sun")).isBool()) {
                 explain(why, QStringLiteral("follow_sun is not true or false"));

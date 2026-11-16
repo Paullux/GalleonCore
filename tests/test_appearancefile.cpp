@@ -115,6 +115,31 @@ private Q_SLOTS:
         QVERIFY(refused(R"({"type":"uniform","colour":[0,0,0],"follow_sun":true})"));               // the sun belongs to the sky only
     }
 
+    void theShimmerAndTheStarsAreOnByDefaultAndWrittenOnlyWhenSwitchedOff()
+    {
+        Appearance sky;
+        sky.base = BaseType::Sky;
+        QVERIFY(sky.skyAnimated); // as in the mockup
+        QVERIFY(!encodeAppearance(sky).contains("animate")); // nothing more in the file of someone who never asked
+        QVERIFY(parseAppearance(withBase(R"({"type":"sky"})")).value_or(Appearance{}).skyAnimated); // a file written before this existed keeps the default
+        sky.skyAnimated = false;
+        QVERIFY(encodeAppearance(sky).contains(R"("animate": false)"));
+        const auto parsed = parseAppearance(encodeAppearance(sky));
+        QVERIFY(parsed.has_value());
+        QVERIFY(!parsed.value_or(Appearance{}).skyAnimated);
+        QVERIFY(parsed.value_or(Appearance{}) == sky);
+        // With the sun and a place too, in any case.
+        sky.followSun = true;
+        sky.skyPlace = galleon::keyboard::GeoPlace{48.8566, 2.3522};
+        QVERIFY(parseAppearance(encodeAppearance(sky)).value_or(Appearance{}) == sky);
+        // Out of shape: not a boolean, or on another base.
+        QVERIFY(!parseAppearance(withBase(R"({"type":"sky","animate":"no"})")).has_value());
+        QVERIFY(!parseAppearance(withBase(R"({"type":"sky","animate":0})")).has_value());
+        QVERIFY(!parseAppearance(withBase(R"({"type":"uniform","colour":[0,0,0],"animate":false})")).has_value());
+        QVERIFY(!parseAppearance(withBase(R"({"type":"sky","animate":false,"city":"Paris"})")).has_value());
+        QVERIFY(parseAppearance(withBase(R"({"type":"sky","animate":false,"follow_sun":true,"latitude":48.8,"longitude":2.3})")).has_value());
+    }
+
     void anythingOutOfShapeIsRefused()
     {
         const auto refused = [](const QByteArray &json) { return !parseAppearance(json).has_value(); };

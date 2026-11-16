@@ -210,6 +210,7 @@ galleon::keyboard::Appearance skyAppearance(bool followSun, std::optional<galleo
 {
     galleon::keyboard::Appearance appearance;
     appearance.base = galleon::keyboard::BaseType::Sky;
+    appearance.skyAnimated = false; // the colours of the hour alone: the shimmer and the stars have their own tests
     appearance.followSun = followSun;
     appearance.skyPlace = place;
     return appearance;
@@ -650,6 +651,7 @@ private Q_SLOTS:
         rig.controller->setDayHours([&hour] { return hour; });
         galleon::keyboard::Appearance appearance;
         appearance.base = galleon::keyboard::BaseType::Sky;
+        appearance.skyAnimated = false; // the colours of the hour alone
         QVERIFY(rig.controller->setAppearance(appearance));
         rig.hold();
         // F1 (LED 58) is on the top row, the A key of a QWERTY (LED 4) on the fourth: at noon the colours of the day.

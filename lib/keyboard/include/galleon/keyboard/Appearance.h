@@ -53,6 +53,8 @@ struct Appearance
     // sky, used when the weather widget has none. A place is personal data: it is never logged.
     bool followSun = false;
     std::optional<GeoPlace> skyPlace;
+    // Sky only: the shimmer by day and the stars by night of the mockup (on by default, as in the mockup; SkyEffects.h). They only move by themselves.
+    bool skyAnimated = true;
 
     friend bool operator==(const Appearance &, const Appearance &) = default;
 };

@@ -56,6 +56,7 @@ private slots:
         const std::vector<LedPosition> sky{{0, 0, 16.8}, {1, 10, 43}, {2, 20, 84}, {3, 30, 146}};
         Appearance appearance;
         appearance.base = BaseType::Sky;
+        appearance.skyAnimated = false; // the colours of the hour alone, without the shimmer and the stars
         const auto day = renderAppearance(appearance, sky, 0.0, 12.0).value_or(LiveScene{});
         QCOMPARE(colourOf(day, 1), (Bytes{26, 70, 170}));  // the top row at noon
         QCOMPARE(colourOf(day, 2), (Bytes{36, 95, 200}));  // the third row
@@ -71,6 +72,7 @@ private slots:
         const std::vector<LedPosition> sky{{1, 10, 43}, {3, 30, 146}};
         Appearance appearance;
         appearance.base = BaseType::Sky;
+        appearance.skyAnimated = false;
         appearance.retouches = {{3, {255, 255, 255}}};
         appearance.level = 500;
         const auto scene = renderAppearance(appearance, sky, 0.0, 12.0).value_or(LiveScene{});

@@ -67,6 +67,7 @@ private slots:
     {
         Appearance sky;
         sky.base = BaseType::Sky;
+        sky.skyAnimated = false; // without the shimmer and the stars, the sky changes only with the colours of the hour
         AppearancePlayer player = ready(sky);
         QVERIFY(player.sceneAt(0.0, 12.0).has_value()); // the first one
         QVERIFY(!player.sceneAt(1.0, 12.0).has_value()); // the same noon: nothing new, whatever the seconds
