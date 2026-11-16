@@ -47,6 +47,8 @@ Window {
     readonly property bool keysShowTheDrawing: daemon.lightingState === "holding"
     // Which half of the Keyboard tab is shown: "brightness" (the keyboard's own) or "lighting" (the live lighting, experimental).
     property string keyboardView: "brightness"
+    // Where the sunrise of the sky comes from now (AppearanceStore::sunSource): "off", "weather", "sky" or "none". Read again when the drawing is.
+    property string sunSource: "off"
     property int selectedCap: -1
     property var selectedLamps: []
     readonly property var lastThemeEntry: backend.themes.length > 0 ? backend.themes[Math.min(lastTheme, backend.themes.length - 1)] : null
@@ -162,6 +164,7 @@ Window {
 
     function refreshPreview() {
         win.lampColors = win.previewOfAppearance()
+        win.sunSource = win.appearance !== null ? win.appearance.sunSource() : "off"
     }
 
     // Every change is written to the appearance file; with the live lighting on, galleond shows it at once.
@@ -823,6 +826,65 @@ Window {
                     color: "#7d8591"
                     font.pixelSize: 13
                     text: qsTr("The sky follows the hour of this computer: night, dawn, day, dusk, one colour for each row of keys and the light strip dimmed. The palette comes from the mockup of Aaryush1 (issue #111); the shimmer and the stars of the mockup are not there yet, and the colours are not tuned on the real LEDs.")
+                }
+                Pill {
+                    objectName: "sunFollow"
+                    visible: win.appearance !== null && win.appearance.baseType === "sky"
+                    selected: win.appearance !== null && win.appearance.followSun
+                    text: qsTr("Follow the sunrise and the sunset")
+                    onClicked: win.saved(win.appearance.setFollowSun(!win.appearance.followSun))
+                }
+                Column {
+                    objectName: "sunPlace"
+                    width: parent.width
+                    spacing: 8
+                    visible: win.appearance !== null && win.appearance.baseType === "sky" && win.appearance.followSun
+                    Text {
+                        objectName: "sunSourceNote"
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        color: win.sunSource === "none" ? "#ffb74d" : "#c9ced6"
+                        font.pixelSize: 13
+                        text: win.sunSource === "weather" ? qsTr("The place of the weather widget is used to find the sunrise and the sunset.")
+                              : win.sunSource === "sky" ? qsTr("The place typed below is used to find the sunrise and the sunset.")
+                              : qsTr("No place is known: the fixed hours (dawn at 6 h 15, dusk at 18 h) are used. Type a place below, or set one for the weather widget.")
+                    }
+                    Row {
+                        spacing: 8
+                        Field {
+                            id: skyLatitude
+                            objectName: "skyLatitude"
+                            value: win.appearance !== null ? win.appearance.skyLatitude : ""
+                            placeholder: qsTr("Latitude (e.g. 48.85)")
+                        }
+                        Field {
+                            id: skyLongitude
+                            objectName: "skyLongitude"
+                            value: win.appearance !== null ? win.appearance.skyLongitude : ""
+                            placeholder: qsTr("Longitude (e.g. 2.35)")
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        Pill {
+                            objectName: "skyPlaceSet"
+                            text: qsTr("Use this place")
+                            onClicked: win.answered(win.appearance.setSkyPlace(skyLatitude.input.text, skyLongitude.input.text), qsTr("The place of the sky is saved on this computer."))
+                        }
+                        Pill {
+                            objectName: "skyPlaceForget"
+                            enabledLook: win.appearance !== null && win.appearance.hasSkyPlace
+                            text: qsTr("Forget this place")
+                            onClicked: win.saved(win.appearance.clearSkyPlace())
+                        }
+                    }
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        color: "#7d8591"
+                        font.pixelSize: 13
+                        text: qsTr("A place is personal data. The one typed here stays in the appearance file on this computer, is only used to compute the sunrise and the sunset, and is never sent anywhere. The place of the weather widget is read only while this is on, and it comes first.")
+                    }
                 }
                 Text {
                     width: parent.width

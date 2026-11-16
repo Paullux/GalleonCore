@@ -26,6 +26,17 @@ namespace galleond {
     return static_cast<int>(number);
 }
 
+// A JSON number (not a string) that is finite and within [low, high], whole or not.
+[[nodiscard]] inline std::optional<double> boundedNumber(const QJsonValue &value, double low, double high)
+{
+    if (!value.isDouble())
+        return std::nullopt;
+    const double number = value.toDouble();
+    if (!std::isfinite(number) || number < low || number > high)
+        return std::nullopt;
+    return number;
+}
+
 [[nodiscard]] inline bool hasExactlyKeys(const QJsonObject &object, const QStringList &keys)
 {
     return object.size() == keys.size() && std::ranges::all_of(keys, [&object](const QString &key) { return object.contains(key); });

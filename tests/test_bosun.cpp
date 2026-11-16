@@ -2422,6 +2422,89 @@ QtObject {
         QCOMPARE(galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).base, galleon::keyboard::BaseType::Uniform);
     }
 
+    void theSkyCanFollowTheSunWithAPlaceFromTheWeatherWidgetOrTypedInItsOwnSettings()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        const QString appearanceFile = dir.filePath("lighting-appearance.json");
+        const bosun::AppearanceStore appearance(appearanceFile, dir.filePath("widgets.json"));
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        const QVariantList tabs = root->property("tabs").toList();
+        for (int i = 0; i < tabs.size(); ++i) {
+            if (tabs.at(i).toMap().value(QStringLiteral("kind")).toString() == QLatin1String("keyboard"))
+                root->setProperty("currentTab", i);
+        }
+        root->setProperty("keyboardView", QStringLiteral("lighting"));
+        auto *follow = root->findChild<QQuickItem *>("sunFollow");
+        QVERIFY(follow);
+        auto *place = root->findChild<QQuickItem *>("sunPlace");
+        QVERIFY(place);
+
+        // One colour: nothing about the sun is offered.
+        QVERIFY(!follow->property("visible").toBool());
+        QVERIFY(!place->property("visible").toBool());
+        // The sky: the choice is offered, off, and no place is asked yet.
+        auto *sky = root->findChild<QQuickItem *>("appearanceSky");
+        QVERIFY(sky);
+        QVERIFY(QMetaObject::invokeMethod(sky, "clicked"));
+        QVERIFY(follow->property("visible").toBool());
+        QVERIFY(!follow->property("selected").toBool());
+        QVERIFY(!place->property("visible").toBool());
+        QVERIFY(!appearance.followSun());
+
+        // Followed: the place fields appear, and with no place anywhere the note says that the fixed hours are used.
+        QVERIFY(QMetaObject::invokeMethod(follow, "clicked"));
+        QVERIFY(follow->property("selected").toBool());
+        QVERIFY(place->property("visible").toBool());
+        QVERIFY(galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).followSun);
+        auto *note = root->findChild<QQuickItem *>("sunSourceNote");
+        QVERIFY(note);
+        QVERIFY(note->property("text").toString().contains(QStringLiteral("fixed hours")));
+
+        // A place typed here is saved and used.
+        auto *latitude = root->findChild<QQuickItem *>("skyLatitude");
+        auto *longitude = root->findChild<QQuickItem *>("skyLongitude");
+        QVERIFY(latitude);
+        QVERIFY(longitude);
+        QVERIFY(latitude->property("input").value<QObject *>()->setProperty("text", QStringLiteral("48.8566")));
+        QVERIFY(longitude->property("input").value<QObject *>()->setProperty("text", QStringLiteral("2.3522")));
+        auto *use = root->findChild<QQuickItem *>("skyPlaceSet");
+        QVERIFY(use);
+        QVERIFY(QMetaObject::invokeMethod(use, "clicked"));
+        QCOMPARE(galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).skyPlace.value_or(galleon::keyboard::GeoPlace{}),
+                 (galleon::keyboard::GeoPlace{48.8566, 2.3522}));
+        QVERIFY(note->property("text").toString().contains(QStringLiteral("typed below")));
+
+        // The place of the weather widget comes first: once it exists, the note says so.
+        QFile widgets(dir.filePath("widgets.json"));
+        QVERIFY(widgets.open(QIODevice::WriteOnly));
+        widgets.write(R"({"location":{"latitude":-33.8688,"longitude":151.2093}})");
+        widgets.close();
+        QVERIFY(QMetaObject::invokeMethod(root, "refreshPreview"));
+        QVERIFY(note->property("text").toString().contains(QStringLiteral("weather widget")));
+
+        // Forgotten, and the sun no longer followed: the place leaves the file.
+        auto *forget = root->findChild<QQuickItem *>("skyPlaceForget");
+        QVERIFY(forget);
+        QVERIFY(QMetaObject::invokeMethod(forget, "clicked"));
+        QVERIFY(!galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).skyPlace.has_value());
+        QVERIFY(QMetaObject::invokeMethod(follow, "clicked"));
+        QVERIFY(!place->property("visible").toBool());
+    }
+
     void theLiveLightingHalfSaysWhatTheKeyboardBrightnessIsAndThatItIsNotChangedThere()
     {
         const QTemporaryDir dir;

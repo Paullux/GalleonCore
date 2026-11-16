@@ -43,8 +43,8 @@ public:
     // one (the calibration, the keyboard drawing): the tool wins until the appearance is set again.
     LightingWorker(LightingController::Opener opener, LightingController::Clock clock, const galleon::keyboard::Appearance &appearance,
                    std::optional<galleon::keyboard::LiveScene> tool, std::vector<galleon::keyboard::LedPosition> positions,
-                   std::function<double()> dayHours = [] { return 12.0; })
-        : m_opener(std::move(opener)), m_clock(std::move(clock)), m_dayHours(std::move(dayHours)), m_tool(tool), m_toolDirty(tool.has_value())
+                   std::function<double()> dayHours = [] { return 12.0; }, std::function<galleon::keyboard::SkyDay()> skyDay = [] { return galleon::keyboard::SkyDay{}; })
+        : m_opener(std::move(opener)), m_clock(std::move(clock)), m_dayHours(std::move(dayHours)), m_skyDay(std::move(skyDay)), m_tool(tool), m_toolDirty(tool.has_value())
     {
         m_player.setPositions(std::move(positions));
         static_cast<void>(m_player.setAppearance(appearance, 0.0)); // the controller only hands over valid appearances
@@ -165,7 +165,7 @@ private:
             return;
         }
         if (!m_pending)
-            m_pending = m_player.sceneAt(secondsSince(now), m_dayHours()); // nothing when it is the scene already shown
+            m_pending = m_player.sceneAt(secondsSince(now), m_dayHours(), m_skyDay()); // nothing when it is the scene already shown
         if (!m_pending)
             return;
         const auto frame = galleon::keyboard::sceneFrame(*m_pending);
@@ -199,6 +199,7 @@ private:
     LightingController::Opener m_opener;
     LightingController::Clock m_clock;
     std::function<double()> m_dayHours; // the hour of the day (0 to 24), for the sky
+    std::function<galleon::keyboard::SkyDay()> m_skyDay; // when the sky changes (the sun, or the fixed schedule), called from this thread
     std::unique_ptr<galleon::Transport> m_transport;
     std::unique_ptr<LiveLink> m_link;
     std::unique_ptr<QTimer> m_timer;

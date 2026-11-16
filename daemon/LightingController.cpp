@@ -133,6 +133,7 @@ bool LightingController::setAppearance(const galleon::keyboard::Appearance &appe
         return false;
     m_appearance = appearance; // kept even while off, so the next start shows it
     m_tool.reset();
+    Q_EMIT appearanceSet(appearance);
     if (m_worker) {
         galleon::keyboard::Appearance shown = appearance;
         shown.level = effectiveLevel();
@@ -169,7 +170,7 @@ galleon::keyboard::Appearance LightingController::shownAppearance() const
 void LightingController::startWorker()
 {
     setState(QStringLiteral("starting"), {});
-    m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, shownAppearance(), m_tool, m_positions, m_dayHours);
+    m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, shownAppearance(), m_tool, m_positions, m_dayHours, m_skyDay);
     m_worker->moveToThread(&m_thread);
     connect(m_worker.get(), &LightingWorker::reported, this, &LightingController::onWorkerState);
     m_thread.start();

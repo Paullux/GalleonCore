@@ -38,11 +38,11 @@ void AppearancePlayer::resend()
     m_resend = true;
 }
 
-std::optional<LiveScene> AppearancePlayer::sceneAt(double seconds, double dayHours)
+std::optional<LiveScene> AppearancePlayer::sceneAt(double seconds, double dayHours, const SkyDay &skyDay)
 {
     if (!ready() || !m_appearance)
         return std::nullopt;
-    auto scene = renderAppearance(*m_appearance, m_positions, seconds - m_origin, dayHours);
+    auto scene = renderAppearance(*m_appearance, m_positions, seconds - m_origin, dayHours, skyDay);
     if (!scene)
         return std::nullopt;
     if (!m_resend && m_last && *m_last == *scene)

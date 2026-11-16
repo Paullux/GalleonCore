@@ -76,6 +76,13 @@ QByteArray encodeAppearance(const Appearance &appearance)
         base.insert(QStringLiteral("speed"), appearance.rainbowSpeed);
     } else if (appearance.base == BaseType::Sky) {
         base.insert(QStringLiteral("type"), QStringLiteral("sky"));
+        if (appearance.followSun || appearance.skyPlace) {
+            base.insert(QStringLiteral("follow_sun"), appearance.followSun);
+            if (appearance.skyPlace) {
+                base.insert(QStringLiteral("latitude"), appearance.skyPlace->latitude);
+                base.insert(QStringLiteral("longitude"), appearance.skyPlace->longitude);
+            }
+        }
     } else {
         base.insert(QStringLiteral("type"), QStringLiteral("uniform"));
         base.insert(QStringLiteral("colour"), colourToJson(appearance.colour));
@@ -142,8 +149,26 @@ std::optional<Appearance> parseAppearance(const QByteArray &bytes, QString *why)
         }
         appearance.base = BaseType::Rainbow;
         appearance.rainbowSpeed = *speed;
-    } else if (type == QLatin1String("sky") && hasExactlyKeys(base, {QStringLiteral("type")})) {
+    } else if (type == QLatin1String("sky")
+               && (hasExactlyKeys(base, {QStringLiteral("type")}) || hasExactlyKeys(base, {QStringLiteral("type"), QStringLiteral("follow_sun")})
+                   || hasExactlyKeys(base, {QStringLiteral("type"), QStringLiteral("follow_sun"), QStringLiteral("latitude"), QStringLiteral("longitude")}))) {
         appearance.base = BaseType::Sky;
+        if (base.contains(QStringLiteral("follow_sun"))) {
+            if (!base.value(QStringLiteral("follow_sun")).isBool()) {
+                explain(why, QStringLiteral("follow_sun is not true or false"));
+                return std::nullopt;
+            }
+            appearance.followSun = base.value(QStringLiteral("follow_sun")).toBool();
+        }
+        if (base.contains(QStringLiteral("latitude"))) {
+            const auto latitude = boundedNumber(base.value(QStringLiteral("latitude")), -90.0, 90.0);
+            const auto longitude = boundedNumber(base.value(QStringLiteral("longitude")), -180.0, 180.0);
+            if (!latitude || !longitude) {
+                explain(why, QStringLiteral("the place of the sky is not a latitude from -90 to 90 and a longitude from -180 to 180"));
+                return std::nullopt;
+            }
+            appearance.skyPlace = galleon::keyboard::GeoPlace{*latitude, *longitude};
+        }
     } else {
         explain(why, QStringLiteral("an unknown type of base, or the wrong keys for it"));
         return std::nullopt;

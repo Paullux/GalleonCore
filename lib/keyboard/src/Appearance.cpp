@@ -86,6 +86,8 @@ bool isValid(const Appearance &appearance)
         return false;
     if (appearance.retouches.size() > LiveLedCount)
         return false;
+    if (appearance.skyPlace && !isValidPlace(appearance.skyPlace->latitude, appearance.skyPlace->longitude))
+        return false;
     std::array<bool, LiveLedCount> seen{};
     for (const Retouch &retouch : appearance.retouches) {
         if (retouch.led >= LiveLedCount || seen.at(retouch.led))
@@ -95,7 +97,8 @@ bool isValid(const Appearance &appearance)
     return true;
 }
 
-std::optional<LiveScene> renderAppearance(const Appearance &appearance, std::span<const LedPosition> positions, double seconds, double dayHours)
+std::optional<LiveScene> renderAppearance(const Appearance &appearance, std::span<const LedPosition> positions, double seconds, double dayHours,
+                                           const SkyDay &skyDay)
 {
     if (!isValid(appearance) || positions.empty())
         return std::nullopt;
@@ -111,7 +114,7 @@ std::optional<LiveScene> renderAppearance(const Appearance &appearance, std::spa
     }
     const double span = high - low;
     const double turn = std::fmod(seconds * appearance.rainbowSpeed / 1000.0, 1.0);
-    const auto sky = skyRowColours(dayHours);
+    const auto sky = skyRowColours(dayHours, skyDay);
     for (const LedPosition &position : positions) {
         const double place = span > 0.0 ? (position.x - low) / span : 0.0;
         colours.at(position.led) = baseColour(appearance, position, place, turn, sky);
