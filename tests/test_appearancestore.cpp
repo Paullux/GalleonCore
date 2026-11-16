@@ -70,7 +70,7 @@ private Q_SLOTS:
         QCOMPARE(written.value_or(galleon::keyboard::Appearance{}).retouches.size(), std::size_t{1});
 
         // The colours of noon, as the keyboard gets them (the day palette of the mockup), and the strip dimmed.
-        const QVariantMap noon = store.skyAt(12.0);
+        const QVariantMap noon = AppearanceStore::skyAt(12.0);
         const QVariantList rows = noon.value(QStringLiteral("rows")).toList();
         QCOMPARE(rows.size(), 6);
         QCOMPARE(rows.constFirst().toString(), QStringLiteral("#1a46aa")); // 26, 70, 170
