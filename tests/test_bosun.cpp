@@ -2411,6 +2411,54 @@ QtObject {
         QCOMPARE(galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).base, galleon::keyboard::BaseType::Uniform);
     }
 
+    void theLiveLightingHalfSaysWhatTheKeyboardBrightnessIsAndThatItIsNotChangedThere()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        const bosun::AppearanceStore appearance{QString()};
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        const auto say = [root](int value) {
+            QVariant text;
+            [&] { QVERIFY(QMetaObject::invokeMethod(root, "liveBrightnessText", Q_RETURN_ARG(QVariant, text), Q_ARG(QVariant, value))); }();
+            return text.toString();
+        };
+
+        // The value in the keyboard's unit is shown as a percentage, with the rule that it is not changed while the lighting is on.
+        const QString twenty = say(200);
+        QVERIFY(twenty.contains(QStringLiteral("20 %")));
+        QVERIFY(twenty.contains(QStringLiteral("stays as it is")));
+        QVERIFY(say(1000).contains(QStringLiteral("100 %")));
+        QVERIFY(say(0).contains(QStringLiteral("0 %"))); // a keyboard at 0 is a value, not an unknown one
+        const QString unknown = say(-1);
+        QVERIFY(unknown.contains(QStringLiteral("not known yet")));
+        QVERIFY(!unknown.contains(QStringLiteral("%1")));
+
+        // The note is in the live lighting half, and only there.
+        const QVariantList tabs = root->property("tabs").toList();
+        for (int i = 0; i < tabs.size(); ++i) {
+            if (tabs.at(i).toMap().value(QStringLiteral("kind")).toString() == QLatin1String("keyboard"))
+                root->setProperty("currentTab", i);
+        }
+        auto *note = root->findChild<QQuickItem *>("liveBrightnessNote");
+        QVERIFY(note);
+        QVERIFY(!note->property("visible").toBool());
+        root->setProperty("keyboardView", QStringLiteral("lighting"));
+        QVERIFY(note->property("visible").toBool());
+    }
+
     void theLevelOfTheColoursHasItsOwnCurveSeparateFromTheKeyboardBrightnessCurve()
     {
         const QTemporaryDir dir;

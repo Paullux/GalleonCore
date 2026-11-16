@@ -126,6 +126,14 @@ Window {
         return colours
     }
 
+    // What the live lighting half says about the keyboard's own brightness: it is not touched while the lighting is on (galleond does not write it
+    // then), so what is shown is the value read or set before. `value` is the keyboard's unit, 0 to 1000; -1 when it is not known.
+    function liveBrightnessText(value) {
+        if (value < 0)
+            return qsTr("The keyboard's own brightness is not known yet. It stays as it is while the live lighting is on; to change it, switch the live lighting off and use the “brightness” half.")
+        return qsTr("The keyboard's own brightness is %1 %. It stays as it is while the live lighting is on; to change it, switch the live lighting off and use the “brightness” half. The level of the colours below is a separate setting.").arg(Math.round(value / 10))
+    }
+
     function refreshPreview() {
         win.lampColors = win.previewOfAppearance()
     }
@@ -699,6 +707,15 @@ Window {
                         const base = names[win.daemon.lightingState] !== undefined ? names[win.daemon.lightingState] : win.daemon.lightingState
                         return win.daemon.lightingDetail !== "" ? base + " · " + win.daemon.lightingDetail : base
                     }
+                }
+                Text {
+                    objectName: "liveBrightnessNote"
+                    visible: win.daemon.lightingSupported
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: win.liveBrightnessText(win.daemon.keyboardBrightness)
                 }
                 Swatches {
                     objectName: "lightingSwatches"
