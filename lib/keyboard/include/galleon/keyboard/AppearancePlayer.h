@@ -35,7 +35,7 @@ public:
 
     // The scene to show at `seconds` and at `dayHours` (the hour of the day, which only the sky depends on), or nothing when it is the one already
     // given (and no resend was asked for).
-    [[nodiscard]] std::optional<LiveScene> sceneAt(double seconds, double dayHours = 12.0);
+    [[nodiscard]] std::optional<LiveScene> sceneAt(double seconds, double dayHours = 12.0, const SkyDay &skyDay = {});
 
 private:
     std::vector<LedPosition> m_positions;

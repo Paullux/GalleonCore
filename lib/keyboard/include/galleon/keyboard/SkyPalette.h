@@ -21,16 +21,6 @@ namespace galleon::keyboard {
 
 inline constexpr int SkyRowCount = 6;
 
-// When the sky changes, on a 24 h clock: the sunrise, and how long the day lasts (so the sunset is the sunrise plus that, which may pass midnight).
-// The default is the schedule of the mockup, a dawn at 6 h 15 and a dusk at 18 h: what is used when no place is known.
-struct SkyDay
-{
-    double sunriseHours = 6.25;
-    double dayLengthHours = 11.75;
-
-    friend bool operator==(const SkyDay &, const SkyDay &) = default;
-};
-
 // The sky of a day of the sun: its real sunrise and sunset when the sun rises and sets, the schedule of the mockup when it does not (a polar day or
 // night) .
 [[nodiscard]] SkyDay skyDayFrom(const SunDay &sun);

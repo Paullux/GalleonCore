@@ -85,6 +85,9 @@ public:
     bool setLevelOverride(std::optional<int> level);
     // Where the sky gets the hour of the day (0 to 24, the clock of the computer): a test gives another.
     void setDayHours(std::function<double()> dayHours) { m_dayHours = std::move(dayHours); }
+    // When the sky changes (the real sunrise and sunset, or the fixed schedule of the mockup): called from the thread of the lighting, so it must be
+    // safe to call from there. Given before the lighting is switched on.
+    void setSkyDay(std::function<galleon::keyboard::SkyDay()> skyDay) { m_skyDay = std::move(skyDay); }
     [[nodiscard]] int effectiveLevel() const { return m_levelOverride.value_or(m_appearance.level); }
 
 public Q_SLOTS:
@@ -106,6 +109,8 @@ public Q_SLOTS:
 Q_SIGNALS:
     void stateChanged(const QString &state, const QString &detail);
     void activeChanged(bool active);
+    // An appearance was accepted (what the keys will show, and what the sky needs to know: whether it follows the sun and from where).
+    void appearanceSet(const galleon::keyboard::Appearance &appearance);
 
 private:
     bool showScene(const galleon::keyboard::LiveScene &scene);
@@ -132,6 +137,7 @@ private:
     galleon::keyboard::Appearance m_appearance; // dark until something is asked for
     std::optional<int> m_levelOverride;
     std::function<double()> m_dayHours = [] { return systemDayHours(); };
+    std::function<galleon::keyboard::SkyDay()> m_skyDay = [] { return galleon::keyboard::SkyDay{}; };
     std::optional<galleon::keyboard::LiveScene> m_tool; // what a tool shows over it, if one does
     std::vector<galleon::keyboard::LedPosition> m_positions;
 };

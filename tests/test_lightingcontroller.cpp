@@ -11,11 +11,15 @@
 #include "LightingAppearanceApplier.h"
 #include "LightingController.h"
 #include "LightingLevelScheduler.h"
+#include "LightingSkyDay.h"
+#include "SkySun.h"
 
 #include <QSignalSpy>
 #include <QFile>
 #include <QRegularExpression>
 #include <QTemporaryDir>
+#include <QDateTime>
+#include <QTimeZone>
 #include <QTest>
 
 #include <algorithm>
@@ -189,6 +193,34 @@ std::vector<std::uint8_t> ledColour(const std::vector<std::uint8_t> &frame, int 
         return {};
     const std::size_t at = 2 + 3 * static_cast<std::size_t>(led);
     return {frame[at], frame[at + 1], frame[at + 2]};
+}
+
+// The clock of the sky for the tests: noon of the summer solstice in Paris (UTC+2).
+QDateTime parisSolstice()
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    const QTimeZone summerTimeInParis = QTimeZone::fromSecondsAheadOfUtc(7200); // the form of Qt 6.5 and later
+#else
+    const QTimeZone summerTimeInParis(7200); // the form of Qt 6.4, which the CI builds with
+#endif
+    return QDateTime(QDate(2026, 6, 21), QTime(12, 0), summerTimeInParis);
+}
+
+galleon::keyboard::Appearance skyAppearance(bool followSun, std::optional<galleon::keyboard::GeoPlace> place = std::nullopt)
+{
+    galleon::keyboard::Appearance appearance;
+    appearance.base = galleon::keyboard::BaseType::Sky;
+    appearance.followSun = followSun;
+    appearance.skyPlace = place;
+    return appearance;
+}
+
+void writeWidgetsPlace(const QString &path, double latitude, double longitude)
+{
+    QFile out(path);
+    if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        return;
+    out.write(QStringLiteral(R"({"version":1,"location":{"latitude":%1,"longitude":%2}})").arg(latitude, 0, 'f', 6).arg(longitude, 0, 'f', 6).toUtf8());
 }
 
 } // namespace
@@ -629,6 +661,101 @@ private Q_SLOTS:
         hour = 18.0;
         QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{30, 22, 90}), 3000);
         QCOMPARE(ledColour(rig.frame(), 4), (std::vector<std::uint8_t>{210, 60, 90}));
+    }
+
+    // ---- the sky that follows the sun: the place of the weather widget first, then the one of the sky, the fixed hours when there is none
+
+    void theSkyFollowsTheRealSunriseAndSunsetWhenAskedAndAPlaceIsKnown()
+    {
+        const QTemporaryDir dir;
+        writeWidgetsPlace(dir.filePath("widgets.json"), 48.8566, 2.3522); // Paris
+        Rig rig;
+        const LightingSkyDay skyDay(*rig.controller, dir.filePath("widgets.json"), parisSolstice);
+        const double sunset = galleon::keyboard::sunDay(48.8566, 2.3522, 2026, 6, 21, 2.0).sunsetHours;
+        double hour = sunset;
+        rig.controller->setDayHours([&hour] { return hour; });
+        QVERIFY(rig.controller->setAppearance(skyAppearance(true)));
+        rig.hold();
+        // At the real sunset of Paris, the top row (F1, LED 58) has the colours of the dusk, not those of the night that the fixed hours would give.
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{30, 22, 90}), 3000);
+    }
+
+    void theSkyDoesNotFollowTheSunUnlessAskedAndThenKeepsTheFixedHours()
+    {
+        const QTemporaryDir dir;
+        writeWidgetsPlace(dir.filePath("widgets.json"), 48.8566, 2.3522);
+        Rig rig;
+        const LightingSkyDay skyDay(*rig.controller, dir.filePath("widgets.json"), parisSolstice);
+        const double sunset = galleon::keyboard::sunDay(48.8566, 2.3522, 2026, 6, 21, 2.0).sunsetHours;
+        rig.controller->setDayHours([sunset] { return sunset; });
+        QVERIFY(rig.controller->setAppearance(skyAppearance(false)));
+        rig.hold();
+        // The fixed hours: 21 h 58 is well into the night of the mockup.
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{10, 14, 38}), 3000);
+        QCOMPARE(skyDay.weatherReads(), 0); // privacy: the file of the weather widget was not even read
+    }
+
+    void theWeatherPlaceComesBeforeThePlaceOfTheSkySettingsAndTheSkyPlaceIsUsedWhenThereIsNone()
+    {
+        const QTemporaryDir dir;
+        const double sunsetParis = galleon::keyboard::sunDay(48.8566, 2.3522, 2026, 6, 21, 2.0).sunsetHours;
+        // The place of the sky settings alone (the weather was never used: no widgets.json): Paris.
+        {
+            Rig rig;
+            const LightingSkyDay skyDay(*rig.controller, dir.filePath("none.json"), parisSolstice);
+            rig.controller->setDayHours([sunsetParis] { return sunsetParis; });
+            QVERIFY(rig.controller->setAppearance(skyAppearance(true, galleon::keyboard::GeoPlace{48.8566, 2.3522})));
+            QCOMPARE(skyDay.day(), galleond::skyDayFor(true, galleon::keyboard::GeoPlace{48.8566, 2.3522}, QDate(2026, 6, 21), 2.0));
+            QVERIFY(skyDay.day() != galleon::keyboard::SkyDay{}); // the real sun, not the fixed schedule
+        }
+        // Both: the weather widget wins (Sydney in the file, Paris in the settings of the sky).
+        {
+            writeWidgetsPlace(dir.filePath("widgets.json"), -33.8688, 151.2093);
+            Rig rig;
+            const LightingSkyDay skyDay(*rig.controller, dir.filePath("widgets.json"), parisSolstice);
+            QVERIFY(rig.controller->setAppearance(skyAppearance(true, galleon::keyboard::GeoPlace{48.8566, 2.3522})));
+            QCOMPARE(skyDay.day(), galleond::skyDayFor(true, galleon::keyboard::GeoPlace{-33.8688, 151.2093}, QDate(2026, 6, 21), 2.0));
+        }
+        // A weather place that is not a place (damaged file) is as good as none: the one of the sky settings.
+        {
+            QFile out(dir.filePath("widgets.json"));
+            QVERIFY(out.open(QIODevice::WriteOnly | QIODevice::Truncate));
+            out.write(R"({"location":{"latitude":999,"longitude":2.3}})");
+            out.close();
+            Rig rig;
+            const LightingSkyDay skyDay(*rig.controller, dir.filePath("widgets.json"), parisSolstice);
+            QVERIFY(rig.controller->setAppearance(skyAppearance(true, galleon::keyboard::GeoPlace{48.8566, 2.3522})));
+            QCOMPARE(skyDay.day(), galleond::skyDayFor(true, galleon::keyboard::GeoPlace{48.8566, 2.3522}, QDate(2026, 6, 21), 2.0));
+        }
+        // No place at all: the fixed schedule, even though the sky asks to follow the sun.
+        {
+            Rig rig;
+            const LightingSkyDay skyDay(*rig.controller, dir.filePath("absent.json"), parisSolstice);
+            QVERIFY(rig.controller->setAppearance(skyAppearance(true)));
+            QCOMPARE(skyDay.day(), galleon::keyboard::SkyDay{});
+        }
+    }
+
+    void theWeatherFileIsReadAgainWhenItChangesButOnlyWhileTheSkyFollowsTheSun()
+    {
+        const QTemporaryDir dir;
+        const QString widgets = dir.filePath("widgets.json");
+        writeWidgetsPlace(widgets, 48.8566, 2.3522);
+        Rig rig;
+        const LightingSkyDay skyDay(*rig.controller, widgets, parisSolstice);
+        QCOMPARE(skyDay.weatherReads(), 0);
+        QVERIFY(rig.controller->setAppearance(skyAppearance(true)));
+        QCOMPARE(skyDay.weatherReads(), 1); // read when the sky starts to follow the sun
+        writeWidgetsPlace(widgets, -33.8688, 151.2093);
+        QTRY_VERIFY_WITH_TIMEOUT(skyDay.weatherReads() >= 2, 5000); // the file was replaced: the new place is read
+        QCOMPARE(skyDay.day(), galleond::skyDayFor(true, galleon::keyboard::GeoPlace{-33.8688, 151.2093}, QDate(2026, 6, 21), 2.0));
+        // The sky stops following the sun: the place is forgotten and the file is not read any more.
+        QVERIFY(rig.controller->setAppearance(skyAppearance(false)));
+        const int reads = skyDay.weatherReads();
+        writeWidgetsPlace(widgets, 35.6762, 139.6503);
+        QTest::qWait(600);
+        QCOMPARE(skyDay.weatherReads(), reads);
+        QCOMPARE(skyDay.day(), galleon::keyboard::SkyDay{});
     }
 
     void theFixedRainbowOfTheFileIsWhatTheKeysShowWithTheRealPositions()

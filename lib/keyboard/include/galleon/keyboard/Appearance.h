@@ -69,10 +69,11 @@ struct LedPosition
 [[nodiscard]] bool isValid(const Appearance &appearance);
 
 // The colours of every LED that has a position at `seconds` (the time only matters to a moving rainbow) and at `dayHours` (the hour of the day, 0 to
-// 24, which only the sky depends on), as a scene of one colour per LED.
+// 24, which only the sky depends on; `skyDay` says when the sky changes: the sunrise and the length of the day, the fixed schedule of the mockup by
+// default), as a scene of one colour per LED.
 // nullopt for an appearance that is not valid or for no position at all: nothing is sent then.
 [[nodiscard]] std::optional<LiveScene> renderAppearance(const Appearance &appearance, std::span<const LedPosition> positions, double seconds,
-                                                        double dayHours = 12.0);
+                                                        double dayHours = 12.0, const SkyDay &skyDay = {});
 
 // One colour of the rainbow, by the place along the keyboard (0 at the left end, 1 at the right end) and the turn it has made (0 to 1, from the
 // time): the same function whoever draws it, the keyboard and the preview of the settings window.

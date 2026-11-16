@@ -36,6 +36,16 @@ struct SunDay
 // True for a finite latitude from -90 to 90 and a finite longitude from -180 to 180.
 [[nodiscard]] bool isValidPlace(double latitude, double longitude);
 
+// When the sky changes, on a 24 h clock: the sunrise, and how long the day lasts (so the sunset is the sunrise plus that, which may pass midnight).
+// The default is the schedule of the mockup, a dawn at 6 h 15 and a dusk at 18 h: what is used when no place is known.
+struct SkyDay
+{
+    double sunriseHours = 6.25;
+    double dayLengthHours = 11.75;
+
+    friend bool operator==(const SkyDay &, const SkyDay &) = default;
+};
+
 // A place on Earth, in degrees. It is personal data: it is never logged, and a value of this type is only given to the code that needs it.
 struct GeoPlace
 {

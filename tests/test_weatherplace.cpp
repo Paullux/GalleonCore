@@ -4,6 +4,7 @@
 // The place of the weather widget, read from widgets.json for the sky that follows the sun: only the two numbers of the place are taken, and
 // anything out of shape gives no place. The file is the person's own, so it is untrusted input.
 
+#include "SkySun.h"
 #include "WeatherPlace.h"
 
 #include <QFile>
@@ -65,6 +66,23 @@ private Q_SLOTS:
         QByteArray big = widgets(R"({"latitude":48.8,"longitude":2.3})");
         big.append(QByteArray(MaxWidgetsBytes, ' ')); // a good file made too large
         QVERIFY(!parseWeatherPlace(big).has_value());
+    }
+
+    void theSkyOfADayIsTheRealSunWhenItFollowsTheSunAndHasAPlaceAndTheFixedScheduleOtherwise()
+    {
+        const GeoPlace paris{48.8566, 2.3522};
+        const QDate solstice(2026, 6, 21);
+        const auto sun = galleon::keyboard::sunDay(paris.latitude, paris.longitude, 2026, 6, 21, 2.0);
+        const auto followed = skyDayFor(true, paris, solstice, 2.0);
+        QCOMPARE(followed.sunriseHours, sun.sunriseHours);
+        QCOMPARE(followed.dayLengthHours, sun.dayLengthHours);
+        const galleon::keyboard::SkyDay fixed; // the schedule of the mockup
+        QCOMPARE(skyDayFor(false, paris, solstice, 2.0), fixed);          // the sky does not follow the sun
+        QCOMPARE(skyDayFor(true, std::nullopt, solstice, 2.0), fixed);    // no place known
+        QCOMPARE(skyDayFor(true, GeoPlace{95.0, 0.0}, solstice, 2.0), fixed); // a place out of range
+        QCOMPARE(skyDayFor(true, paris, QDate(), 2.0), fixed);            // no date
+        QCOMPARE(skyDayFor(true, GeoPlace{69.6496, 18.956}, QDate(2026, 12, 21), 1.0), fixed); // polar night
+        QCOMPARE(skyDayFor(true, GeoPlace{69.6496, 18.956}, solstice, 2.0), fixed);            // midnight sun
     }
 
     void theFileIsReadFromTheDiskAndAMissingOneGivesNoPlace()

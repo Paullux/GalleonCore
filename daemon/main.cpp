@@ -18,6 +18,8 @@
 #include "AppearanceFile.h"
 #include "BrightnessScheduler.h"
 #include "LightingLevelScheduler.h"
+#include "LightingSkyDay.h"
+#include "WeatherPlace.h"
 #include "KeyboardController.h"
 #include "LightingAppearanceApplier.h"
 #include "LightingController.h"
@@ -957,6 +959,8 @@ int main(int argc, char *argv[])
 
     // On Linux and on Windows. The appearance of the lighting (written by the settings window): read when the lighting is switched on, and again when the file changes while it is on.
     const galleond::LightingAppearanceApplier lightingAppearance(lighting, galleond::appearancePath());
+    // When the sky changes: the real sunrise and sunset if the sky follows the sun (off by default), else the fixed schedule of the mockup.
+    const galleond::LightingSkyDay lightingSkyDay(lighting, galleond::widgetsPath());
     // The curve of the level of the colours through the day (a software factor, not the keyboard's brightness).
     const galleond::LightingLevelScheduler lightingLevel(lighting, galleond::lightingLevelCurvePath(), [] { return QTime::currentTime(); });
 
