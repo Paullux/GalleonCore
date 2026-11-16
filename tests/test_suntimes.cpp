@@ -140,6 +140,19 @@ private Q_SLOTS:
         QVERIFY(sunDay(-33.8688, 151.2093, 2026, 12, 21, 11.0).sunriseHours < sunDay(-33.8688, 151.2093, 2026, 6, 21, 10.0).sunriseHours);
     }
 
+    void theWeatherPlaceComesFirstThenTheOneOfTheSkyThenNothing()
+    {
+        const GeoPlace weather{48.8566, 2.3522};
+        const GeoPlace sky{35.6762, 139.6503};
+        QCOMPARE(choosePlace(weather, sky).value_or(GeoPlace{}), weather);   // the weather widget wins
+        QCOMPARE(choosePlace(std::nullopt, sky).value_or(GeoPlace{}), sky);  // the weather was never used: the place of the sky
+        QCOMPARE(choosePlace(weather, std::nullopt).value_or(GeoPlace{}), weather);
+        QVERIFY(!choosePlace(std::nullopt, std::nullopt).has_value());       // no place: the fixed hours of the mockup
+        // A place that is not valid is as good as none: the next one is used.
+        QCOMPARE(choosePlace(GeoPlace{95.0, 0.0}, sky).value_or(GeoPlace{}), sky);
+        QVERIFY(!choosePlace(GeoPlace{95.0, 0.0}, GeoPlace{0.0, 200.0}).has_value());
+    }
+
     void theClockOffsetOnlyMovesBothTimesAlong()
     {
         const SunDay at0 = sunDay(48.8566, 2.3522, 2026, 6, 21, 0.0);

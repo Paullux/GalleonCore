@@ -78,6 +78,43 @@ private Q_SLOTS:
         QVERIFY(parseAppearance(withBase(R"({"type":"sky"})", "[]", "1000")).has_value());
     }
 
+    void theSkyCanFollowTheSunAndCarryItsOwnPlace()
+    {
+        Appearance sky;
+        sky.base = BaseType::Sky;
+        sky.followSun = true;
+        sky.skyPlace = galleon::keyboard::GeoPlace{48.8566, 2.3522};
+        const auto parsed = parseAppearance(encodeAppearance(sky));
+        QVERIFY(parsed.has_value());
+        QVERIFY(parsed.value_or(Appearance{}) == sky);
+        sky.skyPlace.reset(); // following the sun with no place of its own: the weather widget's place is looked for
+        const auto parsedWithout = parseAppearance(encodeAppearance(sky));
+        QVERIFY(parsedWithout.has_value());
+        QVERIFY(parsedWithout.value_or(Appearance{}) == sky);
+        QVERIFY(parsedWithout.value_or(Appearance{}).followSun);
+        // The default writes nothing more than before: no place and no choice in the file of someone who never asked.
+        Appearance plain;
+        plain.base = BaseType::Sky;
+        QVERIFY(!encodeAppearance(plain).contains("follow_sun"));
+        QVERIFY(!encodeAppearance(plain).contains("latitude"));
+    }
+
+    void aSkyPlaceThatIsNotWellFormedRefusesTheWholeFile()
+    {
+        const auto refused = [](const char *base) { return !parseAppearance(withBase(base)).has_value(); };
+        QVERIFY(!refused(R"({"type":"sky","follow_sun":true,"latitude":48.8,"longitude":2.3})"));
+        QVERIFY(refused(R"({"type":"sky","follow_sun":"yes"})"));                                    // not a boolean
+        QVERIFY(refused(R"({"type":"sky","follow_sun":1})"));
+        QVERIFY(refused(R"({"type":"sky","follow_sun":true,"latitude":48.8})"));                    // half a place
+        QVERIFY(refused(R"({"type":"sky","follow_sun":true,"longitude":2.3})"));
+        QVERIFY(refused(R"({"type":"sky","latitude":48.8,"longitude":2.3})"));                      // a place without the choice
+        QVERIFY(refused(R"({"type":"sky","follow_sun":true,"latitude":91,"longitude":2.3})"));      // out of range
+        QVERIFY(refused(R"({"type":"sky","follow_sun":true,"latitude":48.8,"longitude":-181})"));
+        QVERIFY(refused(R"({"type":"sky","follow_sun":true,"latitude":"48.8","longitude":"2.3"})")); // text
+        QVERIFY(refused(R"({"type":"sky","follow_sun":true,"latitude":48.8,"longitude":2.3,"city":"Paris"})")); // a key too many
+        QVERIFY(refused(R"({"type":"uniform","colour":[0,0,0],"follow_sun":true})"));               // the sun belongs to the sky only
+    }
+
     void anythingOutOfShapeIsRefused()
     {
         const auto refused = [](const QByteArray &json) { return !parseAppearance(json).has_value(); };

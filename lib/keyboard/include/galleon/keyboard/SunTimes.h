@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <optional>
+
 namespace galleon::keyboard {
 
 // When the sun rises and sets on a day, for a place on Earth, computed here with no network: from the latitude, the longitude and the date only.
@@ -33,5 +35,18 @@ struct SunDay
 
 // True for a finite latitude from -90 to 90 and a finite longitude from -180 to 180.
 [[nodiscard]] bool isValidPlace(double latitude, double longitude);
+
+// A place on Earth, in degrees. It is personal data: it is never logged, and a value of this type is only given to the code that needs it.
+struct GeoPlace
+{
+    double latitude = 0.0;
+    double longitude = 0.0;
+
+    friend bool operator==(const GeoPlace &, const GeoPlace &) = default;
+};
+
+// Where the sky finds the place (decision of the owner): the one of the weather widget if there is one, else the one typed in the settings of the
+// sky, else none (the fixed hours of the mockup). A place that is not valid is as good as none.
+[[nodiscard]] std::optional<GeoPlace> choosePlace(const std::optional<GeoPlace> &weather, const std::optional<GeoPlace> &sky);
 
 } // namespace galleon::keyboard

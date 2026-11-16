@@ -162,6 +162,13 @@ private slots:
     {
         const auto refused = [](const Appearance &appearance) { return !renderAppearance(appearance, fivePositions(), 0.0).has_value() && !isValid(appearance); };
         Appearance a;
+        a.base = BaseType::Sky;
+        a.followSun = true;
+        a.skyPlace = GeoPlace{91.0, 0.0}; // the place of the sky is out of range
+        QVERIFY(refused(a));
+        a.skyPlace = GeoPlace{48.8566, 2.3522};
+        QVERIFY(isValid(a));
+        a = {};
         a.level = 1001;
         QVERIFY(refused(a));
         a = {};

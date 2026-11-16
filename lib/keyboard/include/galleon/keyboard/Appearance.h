@@ -4,6 +4,7 @@
 #pragma once
 
 #include "galleon/keyboard/LiveScene.h"
+#include "galleon/keyboard/SunTimes.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -48,6 +49,10 @@ struct Appearance
     int rainbowSpeed = 0;     // Rainbow: 0 = fixed, up to MaxRainbowSpeed
     std::vector<Retouch> retouches; // at most LiveLedCount, one per LED
     int level = LevelFull;    // 0 to LevelFull
+    // Sky only: follow the real sunrise and sunset instead of the fixed hours of the mockup (off by default), and the place typed in the settings of the
+    // sky, used when the weather widget has none. A place is personal data: it is never logged.
+    bool followSun = false;
+    std::optional<GeoPlace> skyPlace;
 
     friend bool operator==(const Appearance &, const Appearance &) = default;
 };

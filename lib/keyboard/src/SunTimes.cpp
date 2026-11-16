@@ -73,6 +73,15 @@ bool isValidPlace(double latitude, double longitude)
     return std::isfinite(latitude) && std::isfinite(longitude) && std::abs(latitude) <= 90.0 && std::abs(longitude) <= 180.0;
 }
 
+std::optional<GeoPlace> choosePlace(const std::optional<GeoPlace> &weather, const std::optional<GeoPlace> &sky)
+{
+    for (const auto &candidate : {weather, sky}) {
+        if (candidate && isValidPlace(candidate->latitude, candidate->longitude))
+            return candidate;
+    }
+    return std::nullopt;
+}
+
 SunDay sunDay(double latitude, double longitude, int year, int month, int day, double utcOffsetHours)
 {
     constexpr SunDay Fallback{SunDay::Kind::Normal, 6.0, 18.0, 12.0};

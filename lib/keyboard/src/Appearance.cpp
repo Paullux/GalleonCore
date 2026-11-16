@@ -86,6 +86,8 @@ bool isValid(const Appearance &appearance)
         return false;
     if (appearance.retouches.size() > LiveLedCount)
         return false;
+    if (appearance.skyPlace && !isValidPlace(appearance.skyPlace->latitude, appearance.skyPlace->longitude))
+        return false;
     std::array<bool, LiveLedCount> seen{};
     for (const Retouch &retouch : appearance.retouches) {
         if (retouch.led >= LiveLedCount || seen.at(retouch.led))
