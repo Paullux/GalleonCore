@@ -4,6 +4,7 @@
 #include "galleon/keyboard/Appearance.h"
 
 #include "galleon/keyboard/LiveFrame.h"
+#include "galleon/keyboard/SkyEffects.h"
 #include "galleon/keyboard/SkyPalette.h"
 
 #include <algorithm>
@@ -120,6 +121,8 @@ std::optional<LiveScene> renderAppearance(const Appearance &appearance, std::spa
         colours.at(position.led) = baseColour(appearance, position, place, turn, sky);
         lit.at(position.led) = true;
     }
+    if (appearance.base == BaseType::Sky && appearance.skyAnimated)
+        animateSky(positions, colours, seconds, skyNightness(dayHours, skyDay)); // before the retouches: they keep their own colour
     for (const Retouch &retouch : appearance.retouches) {
         colours.at(retouch.led) = retouch.colour;
         lit.at(retouch.led) = true; // a retouch lights a LED even where there is no position for it

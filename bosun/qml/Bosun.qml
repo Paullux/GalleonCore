@@ -825,7 +825,14 @@ Window {
                     visible: win.appearance !== null && win.appearance.baseType === "sky"
                     color: "#7d8591"
                     font.pixelSize: 13
-                    text: qsTr("The sky follows the hour of this computer: night, dawn, day, dusk, one colour for each row of keys and the light strip dimmed. The palette comes from the mockup of Aaryush1 (issue #111); the shimmer and the stars of the mockup are not there yet, and the colours are not tuned on the real LEDs.")
+                    text: qsTr("The sky follows the hour of this computer: night, dawn, day, dusk, one colour for each row of keys and the light strip dimmed. By day the keys shimmer a little; by night a few stars drift along the rows and some keys twinkle. The palette, the shimmer and the stars come from the mockup of Aaryush1 (issue #111). The drawing shows the sky standing still, and the colours are not tuned on the real LEDs.")
+                }
+                Pill {
+                    objectName: "skyAnimated"
+                    visible: win.appearance !== null && win.appearance.baseType === "sky"
+                    selected: win.appearance !== null && win.appearance.skyAnimated
+                    text: qsTr("Shimmer and stars")
+                    onClicked: win.saved(win.appearance.setSkyAnimated(!win.appearance.skyAnimated))
                 }
                 Pill {
                     objectName: "sunFollow"

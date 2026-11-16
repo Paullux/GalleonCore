@@ -83,6 +83,20 @@ private Q_SLOTS:
         QCOMPARE(AppearanceStore::skyRowOf(16.8), -1); // the strip
     }
 
+    void theShimmerAndTheStarsAreOnByDefaultAndOnlyTheSkyHasThem()
+    {
+        const QTemporaryDir dir;
+        AppearanceStore store(dir.filePath("lighting-appearance.json"));
+        QVERIFY(store.skyAnimated());
+        QVERIFY(!store.setSkyAnimated(false).isEmpty()); // one colour: refused, with a reason
+        QVERIFY(store.setSky().isEmpty());
+        QVERIFY(store.setSkyAnimated(false).isEmpty());
+        QVERIFY(!store.skyAnimated());
+        QVERIFY(!galleond::readAppearance(dir.filePath("lighting-appearance.json")).value_or(galleon::keyboard::Appearance{}).skyAnimated);
+        QVERIFY(store.setSkyAnimated(true).isEmpty());
+        QVERIFY(galleond::readAppearance(dir.filePath("lighting-appearance.json")).value_or(galleon::keyboard::Appearance{}).skyAnimated);
+    }
+
     void followingTheSunIsOffByDefaultAndOnlyTheSkyCanFollowIt()
     {
         const QTemporaryDir dir;

@@ -124,6 +124,15 @@ int AppearanceStore::skyRowOf(double y)
     return place.strip ? -1 : place.row;
 }
 
+QString AppearanceStore::setSkyAnimated(bool animated)
+{
+    if (m_appearance.base != BaseType::Sky)
+        return tr("Choose the sky first: only the sky has a shimmer and stars.");
+    Appearance next = m_appearance;
+    next.skyAnimated = animated;
+    return commit(next);
+}
+
 QString AppearanceStore::setFollowSun(bool follow)
 {
     if (m_appearance.base != BaseType::Sky)

@@ -30,6 +30,7 @@ class AppearanceStore : public QObject
     Q_PROPERTY(int rainbowSpeed READ rainbowSpeed NOTIFY changed)  // thousandths of a turn per second, 0 = fixed
     Q_PROPERTY(int level READ level NOTIFY changed)                // 0 to 1000
     Q_PROPERTY(QVariantList retouches READ retouches NOTIFY changed) // [{led, colour}, ...]
+    Q_PROPERTY(bool skyAnimated READ skyAnimated NOTIFY changed)     // the shimmer by day and the stars by night of the sky (on by default)
     Q_PROPERTY(bool followSun READ followSun NOTIFY changed)         // the sky follows the real sunrise and sunset (off by default)
     Q_PROPERTY(bool hasSkyPlace READ hasSkyPlace NOTIFY changed)     // a place was typed in the settings of the sky
     Q_PROPERTY(QString skyLatitude READ skyLatitude NOTIFY changed)  // "" when there is none (a decimal point, as the weather page)
@@ -48,6 +49,7 @@ public:
     [[nodiscard]] int rainbowSpeed() const { return m_appearance.rainbowSpeed; }
     [[nodiscard]] int level() const { return m_appearance.level; }
     [[nodiscard]] QVariantList retouches() const;
+    [[nodiscard]] bool skyAnimated() const { return m_appearance.skyAnimated; }
     [[nodiscard]] bool followSun() const { return m_appearance.followSun; }
     [[nodiscard]] bool hasSkyPlace() const { return m_appearance.skyPlace.has_value(); }
     [[nodiscard]] QString skyLatitude() const;
@@ -59,6 +61,8 @@ public:
     Q_INVOKABLE [[nodiscard]] QString setUniform(int red, int green, int blue); // the base becomes this colour; the retouches stay
     Q_INVOKABLE [[nodiscard]] QString setRainbow(int speed);                    // the base becomes the rainbow; the retouches stay
     Q_INVOKABLE [[nodiscard]] QString setSky();                                 // the base becomes the sky of the hour of the day; the retouches stay
+    // The shimmer and the stars of the sky on or off. Refused unless the sky is the base.
+    Q_INVOKABLE [[nodiscard]] QString setSkyAnimated(bool animated);
     // The sky follows the real sunrise and sunset (or goes back to the fixed hours). Refused unless the sky is the base.
     Q_INVOKABLE [[nodiscard]] QString setFollowSun(bool follow);
     // The place typed in the settings of the sky, as text with a decimal point (what the weather page takes). Refused when it is not a latitude from

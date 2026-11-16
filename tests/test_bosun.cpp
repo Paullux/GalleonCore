@@ -2465,6 +2465,17 @@ QtObject {
         QVERIFY(!place->property("visible").toBool());
         QVERIFY(!appearance.followSun());
 
+        // The shimmer and the stars: offered with the sky, on at first, switched off by a click.
+        auto *animatedPill = root->findChild<QQuickItem *>("skyAnimated");
+        QVERIFY(animatedPill);
+        QVERIFY(animatedPill->property("visible").toBool());
+        QVERIFY(animatedPill->property("selected").toBool());
+        QVERIFY(QMetaObject::invokeMethod(animatedPill, "clicked"));
+        QVERIFY(!animatedPill->property("selected").toBool());
+        QVERIFY(!galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).skyAnimated);
+        QVERIFY(QMetaObject::invokeMethod(animatedPill, "clicked"));
+        QVERIFY(animatedPill->property("selected").toBool());
+
         // Followed: the place fields appear, and with no place anywhere the note says that the fixed hours are used.
         QVERIFY(QMetaObject::invokeMethod(follow, "clicked"));
         QVERIFY(follow->property("selected").toBool());

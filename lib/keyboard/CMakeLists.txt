@@ -24,6 +24,7 @@ add_library(galleon_keyboard STATIC
     include/galleon/keyboard/LiveRequests.h
     include/galleon/keyboard/LiveScene.h
     include/galleon/keyboard/LiveYield.h
+    include/galleon/keyboard/SkyEffects.h
     include/galleon/keyboard/SkyPalette.h
     include/galleon/keyboard/SunTimes.h
     include/galleon/keyboard/VendorInterface.h
@@ -48,6 +49,7 @@ add_library(galleon_keyboard STATIC
     src/CheckedLink.h
     src/CheckedLink.cpp
     src/LiveYield.cpp
+    src/SkyEffects.cpp
     src/SkyPalette.cpp
     src/SunTimes.cpp
     src/VendorInterface.cpp
