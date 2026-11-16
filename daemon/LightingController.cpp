@@ -10,6 +10,7 @@
 #include <QDebug>
 #include <QMetaObject>
 #include <QRandomGenerator>
+#include <QTime>
 #include <QTimer>
 
 #include <chrono>
@@ -152,6 +153,12 @@ bool LightingController::setLevelOverride(std::optional<int> level)
     return true;
 }
 
+double systemDayHours()
+{
+    const QTime now = QTime::currentTime();
+    return now.hour() + now.minute() / 60.0 + now.second() / 3600.0;
+}
+
 galleon::keyboard::Appearance LightingController::shownAppearance() const
 {
     galleon::keyboard::Appearance shown = m_appearance;
@@ -162,7 +169,7 @@ galleon::keyboard::Appearance LightingController::shownAppearance() const
 void LightingController::startWorker()
 {
     setState(QStringLiteral("starting"), {});
-    m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, shownAppearance(), m_tool, m_positions);
+    m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, shownAppearance(), m_tool, m_positions, m_dayHours);
     m_worker->moveToThread(&m_thread);
     connect(m_worker.get(), &LightingWorker::reported, this, &LightingController::onWorkerState);
     m_thread.start();

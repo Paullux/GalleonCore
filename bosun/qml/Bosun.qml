@@ -104,6 +104,8 @@ Window {
         let colours = ({})
         if (win.appearance.baseType === "rainbow") {
             colours = keyboardMap.rainbow()
+        } else if (win.appearance.baseType === "sky") {
+            colours = win.skyPreview()
         } else if (win.appearance.colour.toString() !== "#000000") {
             for (const lamp of keyboardMap.allLamps)
                 colours[lamp] = win.appearance.colour.toString()
@@ -132,6 +134,30 @@ Window {
         if (value < 0)
             return qsTr("The keyboard's own brightness is not known yet. It stays as it is while the live lighting is on; to change it, switch the live lighting off and use the “brightness” half.")
         return qsTr("The keyboard's own brightness is %1 %. It stays as it is while the live lighting is on; to change it, switch the live lighting off and use the “brightness” half. The level of the colours below is a separate setting.").arg(Math.round(value / 10))
+    }
+
+    // The sky at the hour of the computer, as the keyboard shows it: each key takes the colour of its row (the row of the mean height of its
+    // lamps), the light strip the dimmed top row. One standing picture: the drawing is redrawn each minute while the sky is the base.
+    function skyPreview() {
+        const now = new Date()
+        const sky = win.appearance.skyAt(now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600)
+        const heightOf = {}
+        for (const cell of keyboardMap.map.cells)
+            heightOf[cell.id] = cell.y
+        const colours = ({})
+        for (const cap of keyboardMap.map.caps) {
+            if (cap.lamps.length === 0)
+                continue
+            let total = 0
+            for (const lamp of cap.lamps)
+                total += heightOf[lamp]
+            const row = win.appearance.skyRowOf(total / cap.lamps.length)
+            for (const lamp of cap.lamps)
+                colours[lamp] = row < 0 ? sky.strip : sky.rows[row]
+        }
+        for (const section of keyboardMap.map.strip.sections)
+            colours[section.lamp] = sky.strip
+        return colours
     }
 
     function refreshPreview() {
@@ -761,6 +787,12 @@ Window {
                         }
                     }
                     Pill {
+                        objectName: "appearanceSky"
+                        selected: win.appearance !== null && win.appearance.baseType === "sky"
+                        text: qsTr("Sky by the hour")
+                        onClicked: win.saved(win.appearance.setSky())
+                    }
+                    Pill {
                         objectName: "appearanceRainbow"
                         selected: win.appearance !== null && win.appearance.baseType === "rainbow"
                         text: qsTr("Rainbow")
@@ -782,6 +814,15 @@ Window {
                             onClicked: win.saved(win.appearance.setRainbow(modelData.speed))
                         }
                     }
+                }
+                Text {
+                    objectName: "skyNote"
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    visible: win.appearance !== null && win.appearance.baseType === "sky"
+                    color: "#7d8591"
+                    font.pixelSize: 13
+                    text: qsTr("The sky follows the hour of this computer: night, dawn, day, dusk, one colour for each row of keys and the light strip dimmed. The palette comes from the mockup of Aaryush1 (issue #111); the shimmer and the stars of the mockup are not there yet, and the colours are not tuned on the real LEDs.")
                 }
                 Text {
                     width: parent.width
@@ -809,6 +850,12 @@ Window {
                     Connections {
                         target: win.appearance
                         function onChanged() { win.refreshPreview() }
+                    }
+                    Timer { // the sky changes with the hour: the drawing follows each minute
+                        interval: 60000
+                        repeat: true
+                        running: win.appearance !== null && win.appearance.baseType === "sky"
+                        onTriggered: win.refreshPreview()
                     }
                 }
                 Text {

@@ -2404,6 +2404,17 @@ QtObject {
         QVERIFY(QMetaObject::invokeMethod(level, "committed", Q_ARG(int, 500)));
         QCOMPARE(galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).level, 500);
 
+        // The sky of the hour: written, no speed to choose, the drawing takes its colours (the top row and the strip are not the same colour).
+        auto *sky = root->findChild<QQuickItem *>("appearanceSky");
+        QVERIFY(sky);
+        QVERIFY(QMetaObject::invokeMethod(sky, "clicked"));
+        QVERIFY(sky->property("selected").toBool());
+        QVERIFY(!speeds->property("visible").toBool());
+        QCOMPARE(galleond::readAppearance(appearanceFile).value_or(galleon::keyboard::Appearance{}).base, galleon::keyboard::BaseType::Sky);
+        const QVariantMap skyColours = root->property("lampColors").toMap();
+        QVERIFY(skyColours.size() >= 94 + 7); // every lamp of the keys and the seven sections of the strip
+        QVERIFY(skyColours.value(QStringLiteral("0")) != skyColours.value(QStringLiteral("1001"))); // the top row and the strip differ
+
         // Back to one colour: the base changes, the speed is no longer offered.
         QVERIFY(QMetaObject::invokeMethod(uniform, "clicked"));
         QVERIFY(uniform->property("selected").toBool());
