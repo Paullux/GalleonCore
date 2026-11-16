@@ -203,7 +203,7 @@ QDateTime parisSolstice()
 #else
     const QTimeZone summerTimeInParis(7200); // the form of Qt 6.4, which the CI builds with
 #endif
-    return QDateTime(QDate(2026, 6, 21), QTime(12, 0), summerTimeInParis);
+    return {QDate(2026, 6, 21), QTime(12, 0), summerTimeInParis};
 }
 
 galleon::keyboard::Appearance skyAppearance(bool followSun, std::optional<galleon::keyboard::GeoPlace> place = std::nullopt)
