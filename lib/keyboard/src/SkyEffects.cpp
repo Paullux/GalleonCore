@@ -31,7 +31,6 @@ constexpr int StarRows = 5;                     // the stars are in rows 1 to 5 
 constexpr double KeysPerRow = 14.0;             // a star crosses about a row of keys at that speed: the lap is the width over (speed / 14) per second
 constexpr double TwinkleChancePerSecond = 0.0012 * 60.0; // the mockup draws at about 60 pictures a second, with a chance of 0.0012 for each key
 constexpr double TwinkleFadePerStep = 0.45;     // the mockup fades by 0.06 a picture, about 7.5 pictures in a step of 1/8 second
-constexpr double AdjacentLedsFarthest = 45.0;   // millimetres: two LEDs of a row farther apart than this are not neighbours (a star does not light across a gap)
 
 [[nodiscard]] std::uint8_t mixChannel(std::uint8_t from, std::uint8_t to, double fraction)
 {
@@ -94,47 +93,44 @@ void shimmer(const Rows &rows, std::span<Rgb, LiveLedCount> colours, double seco
 }
 
 // The light that the stars give to each LED, 0 to 1.
-[[nodiscard]] std::array<double, LiveLedCount> starLight(const Rows &rows, double low, double high, double seconds)
+[[nodiscard]] std::array<double, LiveLedCount> starLight(const Rows &rows, double seconds)
 {
     std::array<double, LiveLedCount> light{};
-    const double width = high - low;
-    if (width <= 0.0)
-        return light;
     for (std::uint64_t star = 0; star < static_cast<std::uint64_t>(SkyStarCount); ++star) {
         const double speed = StarSpeedLow + unitHash(star, 1, 0) * StarSpeedSpread; // keys a second
         const double brightness = StarBrightnessLow + unitHash(star, 2, 0) * StarBrightnessSpread;
-        const double start = unitHash(star, 3, 0);                                   // where in the width it begins, 0 to 1
-        const double travelled = start + seconds * speed / KeysPerRow;              // in widths
+        const double start = unitHash(star, 3, 0);                                   // where in the first walk it begins, 0 to 1
+        const double travelled = start + seconds * speed / KeysPerRow;              // in walks
         const double lap = std::floor(travelled);
-        const double along = travelled - lap;                                        // 0 to 1 along the width in this lap
+        const double along = travelled - lap;                                        // 0 to 1 along the row in this walk
         const std::size_t row = 1 + static_cast<std::size_t>(unitHash(star, 4, static_cast<std::uint64_t>(std::max(0.0, lap))) * StarRows) % StarRows;
         const auto &leds = rows.at(row);
-        const double x = low + along * width;
+        if (leds.size() < 2)
+            continue;
+        // The walk goes from the first key of the row to the last one, so no stretch of it is spent where there is no key. It fades in at the beginning and
+        // out at the end, over a time that is the same in seconds for every star.
+        const double fadeLength = std::min(0.5, SkyStarFadeSeconds * speed / KeysPerRow);
+        const double envelope = std::min({1.0, along / fadeLength, (1.0 - along) / fadeLength});
+        const double x = leds.front().x + along * (leds.back().x - leds.front().x);
         for (std::size_t i = 0; i + 1 < leds.size(); ++i) {
             const RowLed &a = leds.at(i);
             const RowLed &b = leds.at(i + 1);
-            if (x < a.x || x > b.x || b.x - a.x > AdjacentLedsFarthest)
+            if (x < a.x || x > b.x)
                 continue;
-            const double f = b.x > a.x ? (x - a.x) / (b.x - a.x) : 0.0;
-            light.at(a.led) = std::max(light.at(a.led), (1.0 - f) * brightness);
-            light.at(b.led) = std::max(light.at(b.led), f * brightness);
+            const double f = b.x > a.x ? (x - a.x) / (b.x - a.x) : 0.0; // however far apart the two keys are: the star crosses the gap
+            light.at(a.led) = std::max(light.at(a.led), (1.0 - f) * brightness * envelope);
+            light.at(b.led) = std::max(light.at(b.led), f * brightness * envelope);
             break;
         }
     }
     return light;
 }
 
-void stars(const Rows &rows, std::span<const LedPosition> positions, std::span<Rgb, LiveLedCount> colours, double seconds, double nightness)
+void stars(const Rows &rows, std::span<Rgb, LiveLedCount> colours, double seconds, double nightness)
 {
     if (nightness <= 0.0)
         return;
-    double low = positions.front().x;
-    double high = positions.front().x;
-    for (const LedPosition &position : positions) {
-        low = std::min(low, position.x);
-        high = std::max(high, position.x);
-    }
-    const auto light = starLight(rows, low, high, seconds);
+    const auto light = starLight(rows, seconds);
     const auto slot = static_cast<std::int64_t>(std::floor(seconds / SkyEffectStep));
     const double chance = TwinkleChancePerSecond * SkyEffectStep;
     for (std::size_t row = 1; row < rows.size(); ++row) { // not the top row, as in the mockup
@@ -156,6 +152,13 @@ void stars(const Rows &rows, std::span<const LedPosition> positions, std::span<R
 
 } // namespace
 
+std::array<double, LiveLedCount> starLights(std::span<const LedPosition> positions, double seconds)
+{
+    if (positions.empty())
+        return {};
+    return starLight(rowsOf(positions), seconds);
+}
+
 void animateSky(std::span<const LedPosition> positions, std::span<Rgb, LiveLedCount> colours, double seconds, double nightness)
 {
     if (positions.empty())
@@ -164,7 +167,7 @@ void animateSky(std::span<const LedPosition> positions, std::span<Rgb, LiveLedCo
     const double night = std::clamp(nightness, 0.0, 1.0);
     const Rows rows = rowsOf(positions);
     shimmer(rows, colours, stepped, night);
-    stars(rows, positions, colours, stepped, night);
+    stars(rows, colours, stepped, night);
 }
 
 } // namespace galleon::keyboard

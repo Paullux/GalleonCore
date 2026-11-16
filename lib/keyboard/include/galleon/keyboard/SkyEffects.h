@@ -23,6 +23,13 @@ namespace galleon::keyboard {
 inline constexpr double SkyEffectStep = 0.125;
 
 inline constexpr int SkyStarCount = 9; // as in the mockup
+inline constexpr double SkyStarFadeSeconds = 2.5; // the time that a star takes to appear, and to vanish, at the two ends of its walk
+
+// The light that the stars give to each LED at `seconds`, from 0 to 1 (rows 1 to 5 only). It is what animateSky uses, given on its own so that it can be
+// tested and drawn. Each star walks its row from the first key to the last, lights the two keys that it is between whatever the distance between them (it
+// crosses the big keys, such as the space bar, rather than vanishing), fades in over the first seconds of its walk and fades out over the last ones (so it
+// does not appear or vanish with a jump), and then begins a new walk on another row.
+[[nodiscard]] std::array<double, LiveLedCount> starLights(std::span<const LedPosition> positions, double seconds);
 
 // Animates `colours` (one colour for each LED of the frame, as the base of the sky left them) at `seconds`: by day the shimmer, by night the stars and
 // the twinkling, in the proportion `nightness` (0 in the day, 1 in the night, as skyNightness gives it). Only the LEDs that have a position are
