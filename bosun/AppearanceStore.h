@@ -20,7 +20,7 @@ namespace bosun {
 class AppearanceStore : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString baseType READ baseType NOTIFY changed)      // "uniform" or "rainbow"
+    Q_PROPERTY(QString baseType READ baseType NOTIFY changed)      // "uniform", "rainbow" or "sky"
     Q_PROPERTY(QColor colour READ colour NOTIFY changed)           // the colour of a uniform base (black = the keys are dark)
     Q_PROPERTY(int rainbowSpeed READ rainbowSpeed NOTIFY changed)  // thousandths of a turn per second, 0 = fixed
     Q_PROPERTY(int level READ level NOTIFY changed)                // 0 to 1000
@@ -41,10 +41,17 @@ public:
     // when the file cannot be written, so that the drawing stays coherent.
     Q_INVOKABLE [[nodiscard]] QString setUniform(int red, int green, int blue); // the base becomes this colour; the retouches stay
     Q_INVOKABLE [[nodiscard]] QString setRainbow(int speed);                    // the base becomes the rainbow; the retouches stay
+    Q_INVOKABLE [[nodiscard]] QString setSky();                                 // the base becomes the sky of the hour of the day; the retouches stay
     Q_INVOKABLE [[nodiscard]] QString retouch(int led, int red, int green, int blue); // this LED has its own colour over the base
     Q_INVOKABLE [[nodiscard]] QString clearRetouches();
     Q_INVOKABLE [[nodiscard]] QString setLevel(int level);
     Q_INVOKABLE [[nodiscard]] QString reset();                                  // dark keys, no retouch, full level
+
+    // For the drawing: the colours of the sky at this hour (0 to 24), as the keyboard gets them: `rows` has the six rows from the top, `strip` the
+    // light strip. The same functions as galleond's (SkyPalette.h), so the drawing and the keyboard cannot disagree.
+    Q_INVOKABLE [[nodiscard]] static QVariantMap skyAt(double hours);
+    // The row of the sky (0 to 5) of a key at this height (millimetres, y downwards), or -1 for the light strip.
+    Q_INVOKABLE [[nodiscard]] static int skyRowOf(double y);
 
 Q_SIGNALS:
     void changed();

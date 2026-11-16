@@ -63,6 +63,18 @@ private slots:
         QVERIFY(!player.setLevel(1001));
     }
 
+    void theSkyGivesANewSceneOnlyWhenTheColoursOfTheHourHaveChanged()
+    {
+        Appearance sky;
+        sky.base = BaseType::Sky;
+        AppearancePlayer player = ready(sky);
+        QVERIFY(player.sceneAt(0.0, 12.0).has_value()); // the first one
+        QVERIFY(!player.sceneAt(1.0, 12.0).has_value()); // the same noon: nothing new, whatever the seconds
+        QVERIFY(!player.sceneAt(2.0, 13.0).has_value()); // the day lasts from 7 h 30 to 16 h 30: the colours do not change
+        QVERIFY(player.sceneAt(3.0, 17.25).has_value()); // the dusk is coming
+        QVERIFY(!player.sceneAt(4.0, 17.25).has_value());
+    }
+
     void aStillAppearanceGivesOneSceneAndThenNothing()
     {
         Appearance still;

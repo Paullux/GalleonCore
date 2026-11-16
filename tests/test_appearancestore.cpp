@@ -56,6 +56,31 @@ private Q_SLOTS:
         QCOMPARE(written.value_or(galleon::keyboard::Appearance{}).retouches.size(), std::size_t{1});
     }
 
+    void theSkyIsWrittenAndKeepsTheRetouchesAndGivesTheColoursOfTheHourForTheDrawing()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        AppearanceStore store(path);
+        QVERIFY(store.retouch(58, 255, 255, 255).isEmpty());
+        QVERIFY(store.setSky().isEmpty());
+        QCOMPARE(store.baseType(), QStringLiteral("sky"));
+        const auto written = galleond::readAppearance(path);
+        QVERIFY(written.has_value());
+        QCOMPARE(written.value_or(galleon::keyboard::Appearance{}).base, BaseType::Sky);
+        QCOMPARE(written.value_or(galleon::keyboard::Appearance{}).retouches.size(), std::size_t{1});
+
+        // The colours of noon, as the keyboard gets them (the day palette of the mockup), and the strip dimmed.
+        const QVariantMap noon = store.skyAt(12.0);
+        const QVariantList rows = noon.value(QStringLiteral("rows")).toList();
+        QCOMPARE(rows.size(), 6);
+        QCOMPARE(rows.constFirst().toString(), QStringLiteral("#1a46aa")); // 26, 70, 170
+        QCOMPARE(rows.constLast().toString(), QStringLiteral("#3c87e6"));  // 60, 135, 230
+        QCOMPARE(noon.value(QStringLiteral("strip")).toString(), QStringLiteral("#102a66")); // 16, 42, 102
+        QCOMPARE(AppearanceStore::skyRowOf(43.0), 0);
+        QCOMPARE(AppearanceStore::skyRowOf(146.0), 5);
+        QCOMPARE(AppearanceStore::skyRowOf(16.8), -1); // the strip
+    }
+
     void aSecondRetouchOfTheSameLedReplacesTheFirst()
     {
         const QTemporaryDir dir;

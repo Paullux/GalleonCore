@@ -17,7 +17,7 @@ namespace galleond {
 // every file read from disk it is untrusted input: a bounded size, exactly the keys below, whole numbers in range, no LED twice, or nothing at all.
 //
 //   {"version":1,
-//    "base":{"type":"uniform","colour":[0,0,0]},          or  {"type":"rainbow","speed":0}
+//    "base":{"type":"uniform","colour":[0,0,0]},          or  {"type":"rainbow","speed":0}   or  {"type":"sky"}
 //    "overrides":[[58,255,255,255],[4,0,0,255]],           LED (0 to 145), red, green, blue
 //    "level":1000}
 //

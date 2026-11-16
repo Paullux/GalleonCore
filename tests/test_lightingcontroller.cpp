@@ -609,6 +609,28 @@ private Q_SLOTS:
         QCOMPARE(rig.controller->effectiveLevel(), 400); // a half-written file changes nothing: the curve in force stays
     }
 
+    // ---- the sky of the hour
+
+    void theSkyShowsTheColoursOfTheHourOnTheRealKeysAndFollowsTheHour()
+    {
+        Rig rig;
+        double hour = 12.0;
+        rig.controller->setDayHours([&hour] { return hour; });
+        galleon::keyboard::Appearance appearance;
+        appearance.base = galleon::keyboard::BaseType::Sky;
+        QVERIFY(rig.controller->setAppearance(appearance));
+        rig.hold();
+        // F1 (LED 58) is on the top row, the A key of a QWERTY (LED 4) on the fourth: at noon the colours of the day.
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{26, 70, 170}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 4), (std::vector<std::uint8_t>{44, 110, 215}));
+        QCOMPARE(ledColour(rig.frame(), 141), (std::vector<std::uint8_t>{16, 42, 102})); // a section of the strip: the top row dimmed
+        // The dusk comes: the next frame is the colours of 18 h, the keys follow the clock of the computer.
+        rig.advance(500);
+        hour = 18.0;
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{30, 22, 90}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 4), (std::vector<std::uint8_t>{210, 60, 90}));
+    }
+
     void theFixedRainbowOfTheFileIsWhatTheKeysShowWithTheRealPositions()
     {
         // The file as the owner wrote it by hand, read from the disk, and the positions built into galleond.

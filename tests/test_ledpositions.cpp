@@ -8,10 +8,12 @@
 #include "LedPositions.h"
 
 #include <galleon/keyboard/Appearance.h>
+#include <galleon/keyboard/SkyPalette.h>
 
 #include <QTest>
 
 #include <algorithm>
+#include <array>
 #include <set>
 
 using namespace galleond;
@@ -46,6 +48,25 @@ private Q_SLOTS:
             leds.insert(p.led);
         QCOMPARE(leds.size(), std::size_t{95}); // none twice
         QVERIFY(*leds.rbegin() <= 145);
+    }
+
+    void theSkyPutsTheSevenStripSectionsOnTheStripAndTheKeysInSixRowsOfTheDrawing()
+    {
+        // The keys of the keyboard take 6 rows of the sky; the seven sections of the strip (LEDs 139 to 145) are the strip and nothing else does.
+        std::array<int, galleon::keyboard::SkyRowCount> perRow{};
+        int strip = 0;
+        for (const LedPosition &p : builtInLedPositions()) {
+            const auto place = galleon::keyboard::skyPlaceOf(p.y);
+            QCOMPARE(place.strip, p.led >= 139 && p.led <= 145);
+            if (place.strip)
+                ++strip;
+            else
+                ++perRow.at(static_cast<std::size_t>(place.row));
+        }
+        QCOMPARE(strip, 7);
+        for (const int count : perRow)
+            QVERIFY(count >= 11); // no row is empty: the function row 16 keys, the last row 11
+        QCOMPARE(perRow.at(0) + perRow.at(1) + perRow.at(2) + perRow.at(3) + perRow.at(4) + perRow.at(5), 88);
     }
 
     void everyLedThatLightsSomethingInTheKeyMapHasAPlaceAndTheOthersHaveNone()

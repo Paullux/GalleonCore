@@ -5,6 +5,8 @@
 
 #include "AppearanceFile.h"
 
+#include <galleon/keyboard/SkyPalette.h>
+
 #include <algorithm>
 #include <utility>
 
@@ -33,7 +35,15 @@ AppearanceStore::AppearanceStore(QString path, QObject *parent) : QObject(parent
 
 QString AppearanceStore::baseType() const
 {
-    return m_appearance.base == BaseType::Rainbow ? QStringLiteral("rainbow") : QStringLiteral("uniform");
+    switch (m_appearance.base) {
+    case BaseType::Rainbow:
+        return QStringLiteral("rainbow");
+    case BaseType::Sky:
+        return QStringLiteral("sky");
+    case BaseType::Uniform:
+        break;
+    }
+    return QStringLiteral("uniform");
 }
 
 QColor AppearanceStore::colour() const
@@ -77,6 +87,29 @@ QString AppearanceStore::setRainbow(int speed)
     next.base = BaseType::Rainbow;
     next.rainbowSpeed = speed;
     return commit(next);
+}
+
+QString AppearanceStore::setSky()
+{
+    Appearance next = m_appearance;
+    next.base = BaseType::Sky;
+    return commit(next);
+}
+
+QVariantMap AppearanceStore::skyAt(double hours)
+{
+    const auto colourName = [](const galleon::keyboard::Rgb &c) { return QColor(c.red, c.green, c.blue).name(); };
+    const auto rows = galleon::keyboard::skyRowColours(hours);
+    QVariantList names;
+    for (const auto &row : rows)
+        names.append(colourName(row));
+    return {{QStringLiteral("rows"), names}, {QStringLiteral("strip"), colourName(galleon::keyboard::skyStripColour(rows.front()))}};
+}
+
+int AppearanceStore::skyRowOf(double y)
+{
+    const auto place = galleon::keyboard::skyPlaceOf(y);
+    return place.strip ? -1 : place.row;
 }
 
 QString AppearanceStore::retouch(int led, int red, int green, int blue)

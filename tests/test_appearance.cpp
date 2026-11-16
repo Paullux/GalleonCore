@@ -50,6 +50,34 @@ private slots:
         QCOMPARE(colourOf(scene, 9), (Bytes{0, 0, 0})); // no position: dark
     }
 
+    void theSkyGivesEachRowOfKeysTheColourOfTheHourAndTheStripTheTopRowDimmed()
+    {
+        // A strip LED (y = 16.8), a LED of the top row (43), one of the third row (84) and one of the last row (146).
+        const std::vector<LedPosition> sky{{0, 0, 16.8}, {1, 10, 43}, {2, 20, 84}, {3, 30, 146}};
+        Appearance appearance;
+        appearance.base = BaseType::Sky;
+        const auto day = renderAppearance(appearance, sky, 0.0, 12.0).value_or(LiveScene{});
+        QCOMPARE(colourOf(day, 1), (Bytes{26, 70, 170}));  // the top row at noon
+        QCOMPARE(colourOf(day, 2), (Bytes{36, 95, 200}));  // the third row
+        QCOMPARE(colourOf(day, 3), (Bytes{60, 135, 230})); // the last row
+        QCOMPARE(colourOf(day, 0), (Bytes{16, 42, 102}));  // the strip: the top row 40 % of the way to black
+        const auto dusk = renderAppearance(appearance, sky, 0.0, 18.0).value_or(LiveScene{});
+        QCOMPARE(colourOf(dusk, 1), (Bytes{30, 22, 90}));
+        QCOMPARE(colourOf(dusk, 3), (Bytes{255, 120, 40}));
+    }
+
+    void theSkyIsAppliedBeforeTheRetouchesAndTheLevel()
+    {
+        const std::vector<LedPosition> sky{{1, 10, 43}, {3, 30, 146}};
+        Appearance appearance;
+        appearance.base = BaseType::Sky;
+        appearance.retouches = {{3, {255, 255, 255}}};
+        appearance.level = 500;
+        const auto scene = renderAppearance(appearance, sky, 0.0, 12.0).value_or(LiveScene{});
+        QCOMPARE(colourOf(scene, 1), (Bytes{13, 35, 85}));      // the sky of noon at half level
+        QCOMPARE(colourOf(scene, 3), (Bytes{128, 128, 128}));   // the retouch over the sky, at half level
+    }
+
     void aBlackBaseWithRetouchesIsOneColourPerKey()
     {
         Appearance appearance; // black base

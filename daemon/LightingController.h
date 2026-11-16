@@ -17,6 +17,7 @@
 #include <QTimer>
 
 #include <functional>
+#include <utility>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -42,6 +43,9 @@ class LightingWorker;
 // - While it is on, brightness requests of KeyboardController are paused by whoever wires the two (main.cpp).
 // - After a sleep it takes the keys again, going through the 3 s of listening of the link.
 // Nothing is saved to the keyboard's own memory and nothing is sent that LiveCommandGuard does not allow.
+// The local time as hours, 0 to 24 (what the sky follows).
+[[nodiscard]] double systemDayHours();
+
 class LightingController : public QObject
 {
     Q_OBJECT
@@ -79,6 +83,8 @@ public:
     // A level that takes the place of the appearance's own (the curve of the day, LightingLevelScheduler), or none to go back to it. Kept while the
     // lighting is off and over later appearances; the rainbow does not restart. False, and nothing changed, for a level outside 0 to 1000.
     bool setLevelOverride(std::optional<int> level);
+    // Where the sky gets the hour of the day (0 to 24, the clock of the computer): a test gives another.
+    void setDayHours(std::function<double()> dayHours) { m_dayHours = std::move(dayHours); }
     [[nodiscard]] int effectiveLevel() const { return m_levelOverride.value_or(m_appearance.level); }
 
 public Q_SLOTS:
@@ -125,6 +131,7 @@ private:
     int m_resumeAttempts = ResumeAttempts;
     galleon::keyboard::Appearance m_appearance; // dark until something is asked for
     std::optional<int> m_levelOverride;
+    std::function<double()> m_dayHours = [] { return systemDayHours(); };
     std::optional<galleon::keyboard::LiveScene> m_tool; // what a tool shows over it, if one does
     std::vector<galleon::keyboard::LedPosition> m_positions;
 };

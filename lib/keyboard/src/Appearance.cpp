@@ -4,6 +4,7 @@
 #include "galleon/keyboard/Appearance.h"
 
 #include "galleon/keyboard/LiveFrame.h"
+#include "galleon/keyboard/SkyPalette.h"
 
 #include <algorithm>
 #include <array>
@@ -53,6 +54,22 @@ constexpr double Lightness = 0.55;
     return static_cast<std::uint8_t>((static_cast<int>(channel) * level + LevelFull / 2) / LevelFull); // rounded to the nearest
 }
 
+// The colour the base gives to one LED.
+[[nodiscard]] Rgb baseColour(const Appearance &appearance, const LedPosition &position, double place, double turn, const std::array<Rgb, SkyRowCount> &sky)
+{
+    switch (appearance.base) {
+    case BaseType::Rainbow:
+        return rainbowColour(place, turn);
+    case BaseType::Sky: {
+        const SkyPlace where = skyPlaceOf(position.y);
+        return where.strip ? skyStripColour(sky.front()) : sky.at(static_cast<std::size_t>(where.row));
+    }
+    case BaseType::Uniform:
+        break;
+    }
+    return appearance.colour;
+}
+
 } // namespace
 
 Rgb rainbowColour(double place, double turn)
@@ -78,7 +95,7 @@ bool isValid(const Appearance &appearance)
     return true;
 }
 
-std::optional<LiveScene> renderAppearance(const Appearance &appearance, std::span<const LedPosition> positions, double seconds)
+std::optional<LiveScene> renderAppearance(const Appearance &appearance, std::span<const LedPosition> positions, double seconds, double dayHours)
 {
     if (!isValid(appearance) || positions.empty())
         return std::nullopt;
@@ -94,9 +111,10 @@ std::optional<LiveScene> renderAppearance(const Appearance &appearance, std::spa
     }
     const double span = high - low;
     const double turn = std::fmod(seconds * appearance.rainbowSpeed / 1000.0, 1.0);
+    const auto sky = skyRowColours(dayHours);
     for (const LedPosition &position : positions) {
         const double place = span > 0.0 ? (position.x - low) / span : 0.0;
-        colours.at(position.led) = appearance.base == BaseType::Rainbow ? rainbowColour(place, turn) : appearance.colour;
+        colours.at(position.led) = baseColour(appearance, position, place, turn, sky);
         lit.at(position.led) = true;
     }
     for (const Retouch &retouch : appearance.retouches) {

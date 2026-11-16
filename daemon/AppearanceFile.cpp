@@ -74,6 +74,8 @@ QByteArray encodeAppearance(const Appearance &appearance)
     if (appearance.base == BaseType::Rainbow) {
         base.insert(QStringLiteral("type"), QStringLiteral("rainbow"));
         base.insert(QStringLiteral("speed"), appearance.rainbowSpeed);
+    } else if (appearance.base == BaseType::Sky) {
+        base.insert(QStringLiteral("type"), QStringLiteral("sky"));
     } else {
         base.insert(QStringLiteral("type"), QStringLiteral("uniform"));
         base.insert(QStringLiteral("colour"), colourToJson(appearance.colour));
@@ -140,6 +142,8 @@ std::optional<Appearance> parseAppearance(const QByteArray &bytes, QString *why)
         }
         appearance.base = BaseType::Rainbow;
         appearance.rainbowSpeed = *speed;
+    } else if (type == QLatin1String("sky") && hasExactlyKeys(base, {QStringLiteral("type")})) {
+        appearance.base = BaseType::Sky;
     } else {
         explain(why, QStringLiteral("an unknown type of base, or the wrong keys for it"));
         return std::nullopt;

@@ -65,6 +65,19 @@ private Q_SLOTS:
         QVERIFY(parsedDark.value_or(Appearance{}).retouches.empty());
     }
 
+    void aSkyAppearanceSurvivesBeingEncodedAndParsedAndTakesNoParameter()
+    {
+        Appearance sky;
+        sky.base = BaseType::Sky;
+        sky.retouches = {{58, {255, 255, 255}}};
+        const auto parsed = parseAppearance(encodeAppearance(sky));
+        QVERIFY(parsed.has_value());
+        QVERIFY(parsed.value_or(Appearance{}) == sky);
+        QVERIFY(!parseAppearance(withBase(R"({"type":"sky","speed":0})", "[]", "1000")).has_value()); // nothing else is allowed in the base
+        QVERIFY(!parseAppearance(withBase(R"({"type":"sky","colour":[0,0,0]})", "[]", "1000")).has_value());
+        QVERIFY(parseAppearance(withBase(R"({"type":"sky"})", "[]", "1000")).has_value());
+    }
+
     void anythingOutOfShapeIsRefused()
     {
         const auto refused = [](const QByteArray &json) { return !parseAppearance(json).has_value(); };
