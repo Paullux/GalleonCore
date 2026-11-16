@@ -825,7 +825,7 @@ Window {
                     visible: win.appearance !== null && win.appearance.baseType === "sky"
                     color: "#7d8591"
                     font.pixelSize: 13
-                    text: qsTr("The sky follows the hour of this computer: night, dawn, day, dusk, one colour for each row of keys and the light strip dimmed. By day the keys shimmer a little; by night a few stars drift along the rows and some keys twinkle. The palette, the shimmer and the stars come from the mockup of Aaryush1 (issue #111). The drawing shows the sky standing still, and the colours are not tuned on the real LEDs.")
+                    text: qsTr("The sky follows the hour of this computer: night, dawn, day, dusk, one colour for each row of keys and the light strip dimmed. By day the keys shimmer a little; by night a few stars drift along the rows, some keys twinkle, and now and then a shooting star crosses the keyboard on a diagonal, white at its head and blue at its tail. The palette, the shimmer and the stars come from the mockup of Aaryush1 (issue #111); the shooting stars are an idea of the owner. The drawing shows the sky standing still, and the colours are not tuned on the real LEDs.")
                 }
                 Pill {
                     objectName: "skyAnimated"

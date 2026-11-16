@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <numbers>
 #include <vector>
 
 namespace galleon::keyboard {
@@ -22,6 +23,9 @@ constexpr double ShimmerPerKey = 0.5;           // the phase that one more key i
 constexpr double ShimmerBrightening = 1.2;      // the key goes towards its colour times 1.2
 constexpr Rgb StarColour{235, 238, 255};
 constexpr Rgb TwinkleColour{255, 255, 255};
+constexpr Rgb MeteorHead{255, 255, 255};
+constexpr Rgb MeteorTail{60, 110, 255};   // the blue that the tail goes to
+constexpr double MeteorGlowAheadMm = 60.0; // the faint glow in front of the head
 constexpr double TwinkleStrength = 0.85;
 constexpr double StarSpeedLow = 0.25;           // keys a second
 constexpr double StarSpeedSpread = 0.25;        // up to 0.5 keys a second
@@ -58,6 +62,7 @@ struct RowLed
 {
     std::uint16_t led;
     double x;
+    double y;
 };
 
 // The LEDs of the keys of each of the six rows, from left to right (the strip is not part of the sky effects).
@@ -69,7 +74,7 @@ using Rows = std::array<std::vector<RowLed>, SkyRowCount>;
     for (const LedPosition &position : positions) {
         const SkyPlace place = skyPlaceOf(position.y);
         if (!place.strip)
-            rows.at(static_cast<std::size_t>(place.row)).push_back({position.led, position.x});
+            rows.at(static_cast<std::size_t>(place.row)).push_back({position.led, position.x, position.y});
     }
     for (auto &row : rows)
         std::ranges::sort(row, [](const RowLed &a, const RowLed &b) { return a.x < b.x; });
@@ -126,11 +131,79 @@ void shimmer(const Rows &rows, std::span<Rgb, LiveLedCount> colours, double seco
     return light;
 }
 
+// One shooting star of a cycle: where it starts, the direction (a unit vector) and the speed.
+struct Meteor
+{
+    double startX = 0.0;
+    double startY = 0.0;
+    double directionX = 1.0;
+    double directionY = 1.0;
+    double speed = 100.0; // millimetres a second
+    double begins = 0.0;  // seconds from the start of the cycle
+};
+
+[[nodiscard]] std::array<MeteorLight, LiveLedCount> meteorLight(const Rows &rows, double seconds)
+{
+    std::array<MeteorLight, LiveLedCount> light{};
+    // The area of the keys of rows 1 to 5.
+    double left = 1e9;
+    double right = -1e9;
+    double top = 0.0;
+    double bottom = 0.0;
+    for (std::size_t row = 1; row < rows.size(); ++row) {
+        for (const RowLed &key : rows.at(row)) {
+            left = std::min(left, key.x);
+            right = std::max(right, key.x);
+        }
+    }
+    if (right <= left || rows.at(1).empty() || rows.at(rows.size() - 1).empty())
+        return light;
+    top = rows.at(1).front().y;
+    bottom = rows.back().front().y;
+    const double width = right - left;
+    const auto cycle = static_cast<std::uint64_t>(std::max(0.0, std::floor(seconds / SkyMeteorCycle)));
+    const double into = seconds - static_cast<double>(cycle) * SkyMeteorCycle;
+    const double begins = 2.0 + unitHash(cycle, 11, 0) * (SkyMeteorCycle - SkyMeteorDuration - 4.0);
+    const double age = into - begins;
+    if (age < 0.0 || age > SkyMeteorDuration)
+        return light;
+    const double angle = (20.0 + unitHash(cycle, 12, 0) * 10.0) * std::numbers::pi / 180.0;
+    const double toRight = unitHash(cycle, 13, 0) < 0.5 ? 1.0 : -1.0;
+    const double downwards = unitHash(cycle, 14, 0) < 0.5 ? 1.0 : -1.0;
+    const double ux = std::cos(angle) * toRight;
+    const double uy = std::sin(angle) * downwards;
+    const double speed = 0.85 * width / (SkyMeteorDuration * std::cos(angle)); // the head crosses about 85 % of the width
+    const double slide = unitHash(cycle, 15, 0) * 0.3 * (bottom - top);
+    const double startX = toRight > 0.0 ? left - 12.0 : right + 12.0;
+    const double startY = downwards > 0.0 ? top - 8.0 + slide : bottom + 8.0 - slide;
+    const double headX = startX + ux * speed * age;
+    const double headY = startY + uy * speed * age;
+    const double envelope = std::min({1.0, age / 0.3, (SkyMeteorDuration - age) / 0.3});
+    for (std::size_t row = 1; row < rows.size(); ++row) {
+        for (const RowLed &key : rows.at(row)) {
+            const double dx = headX - key.x;
+            const double dy = headY - key.y;
+            const double behind = dx * ux + dy * uy;           // how far behind the head the key is, along the streak
+            const double aside = std::abs(dx * uy - dy * ux);  // how far from the line of the streak
+            if (behind < -MeteorGlowAheadMm || behind > SkyMeteorTailMm || aside > SkyMeteorWidthMm)
+                continue;
+            const double along = std::max(0.0, behind) / SkyMeteorTailMm; // 0 at the head, 1 at the end of the tail
+            // A faint glow runs ahead of the head, so that a key does not light up with a jump when the head comes to it.
+            const double glow = 1.0 + std::min(0.0, behind) / MeteorGlowAheadMm; // 0 far ahead, 1 at the head
+            const double ahead = glow * glow * (3.0 - 2.0 * glow);                // smooth: no sudden change of a key as the head comes by
+            const double strength = std::pow(1.0 - along, 1.1) * std::pow(1.0 - aside / SkyMeteorWidthMm, 0.9) * envelope * ahead;
+            light.at(key.led) = {strength, mixColour(MeteorHead, MeteorTail, along * 1.1)};
+        }
+    }
+    return light;
+}
+
 void stars(const Rows &rows, std::span<Rgb, LiveLedCount> colours, double seconds, double nightness)
 {
     if (nightness <= 0.0)
         return;
     const auto light = starLight(rows, seconds);
+    const auto meteors = meteorLight(rows, seconds);
     const auto slot = static_cast<std::int64_t>(std::floor(seconds / SkyEffectStep));
     const double chance = TwinkleChancePerSecond * SkyEffectStep;
     for (std::size_t row = 1; row < rows.size(); ++row) { // not the top row, as in the mockup
@@ -146,6 +219,9 @@ void stars(const Rows &rows, std::span<Rgb, LiveLedCount> colours, double second
             }
             if (twinkle > 0.0)
                 colour = mixColour(colour, TwinkleColour, twinkle * TwinkleStrength * nightness);
+            const MeteorLight &meteor = meteors.at(key.led);
+            if (meteor.strength > 0.0)
+                colour = mixColour(colour, meteor.colour, meteor.strength * nightness);
         }
     }
 }
@@ -157,6 +233,13 @@ std::array<double, LiveLedCount> starLights(std::span<const LedPosition> positio
     if (positions.empty())
         return {};
     return starLight(rowsOf(positions), seconds);
+}
+
+std::array<MeteorLight, LiveLedCount> meteorLights(std::span<const LedPosition> positions, double seconds)
+{
+    if (positions.empty())
+        return {};
+    return meteorLight(rowsOf(positions), seconds);
 }
 
 void animateSky(std::span<const LedPosition> positions, std::span<Rgb, LiveLedCount> colours, double seconds, double nightness)

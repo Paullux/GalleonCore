@@ -288,6 +288,138 @@ private Q_SLOTS:
         }
     }
 
+    // ---- the shooting stars
+
+    void aShootingStarComesAboutOnceAHalfMinuteAndLastsAboutThreeSeconds()
+    {
+        const auto positions = uneven();
+        int secondsLit = 0;
+        for (int step = 0; step < 4800; ++step) { // ten minutes in eighths of a second
+            const auto light = meteorLights(positions, step * SkyEffectStep);
+            for (const LedPosition &p : positions) {
+                if (light.at(p.led).strength > 0.0) {
+                    ++secondsLit;
+                    break;
+                }
+            }
+        }
+        // Twenty cycles of thirty seconds, one streak in each, of three seconds, with a few steps of the fade where no key is close enough to the line.
+        const double seconds = secondsLit * SkyEffectStep;
+        QVERIFY2(seconds > 35.0 && seconds < 75.0, qPrintable(QStringLiteral("%1 s with a shooting star in ten minutes").arg(seconds)));
+    }
+
+    void aShootingStarIsAStreakOfAFewKeysAlongALineWithAWhiteHeadAndABlueTail()
+    {
+        // The keyboard of the test is small (260 mm) but the streak is the same; find a moment in the middle of one and look at it.
+        const auto positions = uneven();
+        bool seen = false;
+        for (int step = 0; step < 4800 && !seen; ++step) {
+            const auto light = meteorLights(positions, step * SkyEffectStep);
+            std::vector<const LedPosition *> lit;
+            for (const LedPosition &p : positions) {
+                if (light.at(p.led).strength > 0.2)
+                    lit.push_back(&p);
+            }
+            if (lit.size() < 6)
+                continue;
+            seen = true;
+            QVERIFY2(lit.size() <= 16, "a streak of at most a dozen keys");
+            // From the head to the end of the tail the colour goes from white to blue: along the streak the reds are far apart.
+            int highest = 0;
+            int lowest = 255;
+            for (const auto *p : lit) {
+                highest = std::max<int>(highest, light.at(p->led).colour.red);
+                lowest = std::min<int>(lowest, light.at(p->led).colour.red);
+            }
+            QVERIFY2(highest - lowest >= 60, qPrintable(QStringLiteral("reds from %1 to %2").arg(lowest).arg(highest)));
+            for (const auto *p : lit) {
+                QVERIFY(light.at(p->led).colour.blue >= 250); // blue is high everywhere, white or blue
+                QVERIFY(light.at(p->led).colour.red >= 60);
+            }
+        }
+        QVERIFY2(seen, "no streak of six keys in ten minutes");
+    }
+
+    void aShootingStarFadesInAndOutAndIsNeverOnTheTopRowNorByDay()
+    {
+        const auto positions = uneven();
+        double largestFirst = 0.0;
+        bool wasLit = false;
+        for (int step = 0; step < 4800; ++step) {
+            const auto light = meteorLights(positions, step * SkyEffectStep);
+            double strongest = 0.0;
+            for (const LedPosition &p : positions) {
+                strongest = std::max(strongest, light.at(p.led).strength);
+                if (p.y == 43.0)
+                    QCOMPARE(light.at(p.led).strength, 0.0); // not the top row
+            }
+            if (strongest > 0.0 && !wasLit)
+                largestFirst = std::max(largestFirst, strongest); // the first step of each streak
+            wasLit = strongest > 0.0;
+        }
+        QVERIFY2(largestFirst < 0.4, qPrintable(QStringLiteral("a streak began at %1 of its strength").arg(largestFirst)));
+        // By day: no key goes towards the blue of a streak, nor to the white of one, whatever the moment (the shimmer only brightens the colour of the day).
+        const Rgb day{60, 135, 230};
+        for (int step = 0; step < 4800; step += 7) {
+            Colours colours = flat(day);
+            animateSky(positions, colours, step * SkyEffectStep, 0.0);
+            for (const LedPosition &p : positions) {
+                QVERIFY(colours.at(p.led).red <= 70); // a streak (white) would have raised the red a lot
+            }
+        }
+    }
+
+    void noKeyJumpsInBrightnessWhenAShootingStarComesToItOrLeavesIt()
+    {
+        const auto positions = uneven();
+        double largest = 0.0;
+        auto previous = meteorLights(positions, 0.0);
+        for (int step = 1; step < 9600; ++step) { // twenty minutes
+            const auto now = meteorLights(positions, step * SkyEffectStep);
+            for (const LedPosition &p : positions)
+                largest = std::max(largest, std::abs(now.at(p.led).strength - previous.at(p.led).strength));
+            previous = now;
+        }
+        QVERIFY2(largest < 0.5, qPrintable(QStringLiteral("a key changed by %1 in one step").arg(largest))); // the head moves about 13 mm a step
+    }
+
+    void theShootingStarsGoInBothDirectionsAndEveryKeyOfTheFiveRowsIsReachedInTheEnd()
+    {
+        const auto positions = uneven();
+        std::array<double, LiveLedCount> strongest{};
+        int leftToRight = 0;
+        int rightToLeft = 0;
+        double previousCentre = -1.0;
+        for (int step = 0; step < 86400; step += 2) { // 3 hours, every quarter of a second
+            const double seconds = step * 0.125;
+            const auto light = meteorLights(positions, seconds);
+            double sum = 0.0;
+            double weighted = 0.0;
+            for (const LedPosition &p : positions) {
+                const double s = light.at(p.led).strength;
+                strongest.at(p.led) = std::max(strongest.at(p.led), s);
+                sum += s;
+                weighted += s * p.x;
+            }
+            if (sum > 0.5) {
+                const double centre = weighted / sum;
+                if (previousCentre >= 0.0)
+                    (centre > previousCentre ? leftToRight : rightToLeft) += 1;
+                previousCentre = centre;
+            } else {
+                previousCentre = -1.0;
+            }
+        }
+        QVERIFY(leftToRight > 100);
+        QVERIFY(rightToLeft > 100); // the direction changes from one streak to the next
+        int unreached = 0;
+        for (const LedPosition &p : positions) {
+            if (p.y != 43.0 && strongest.at(p.led) < 0.3)
+                ++unreached;
+        }
+        QVERIFY2(unreached <= 3, qPrintable(QStringLiteral("%1 keys never lit well by a shooting star in three hours").arg(unreached)));
+    }
+
     void withoutPositionsNothingIsDone()
     {
         Colours colours = flat({1, 2, 3});

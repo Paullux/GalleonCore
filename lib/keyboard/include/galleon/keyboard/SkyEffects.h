@@ -31,6 +31,23 @@ inline constexpr double SkyStarFadeSeconds = 2.5; // the time that a star takes 
 // does not appear or vanish with a jump), and then begins a new walk on another row.
 [[nodiscard]] std::array<double, LiveLedCount> starLights(std::span<const LedPosition> positions, double seconds);
 
+// The shooting stars of the night (an idea of the owner, not in the mockup): now and then a streak crosses the keys on a diagonal, from one side to the
+// other, white at its head and going to blue along its tail, fading in and out. They are drawn on rows 1 to 5 only, at night only, one at a time, in a
+// direction (left to right or right to left, downwards or upwards) and at an angle that a fixed hash chooses, about one every half minute.
+struct MeteorLight
+{
+    double strength = 0.0; // 0 to 1: how much of the colour below is mixed into the key
+    Rgb colour;            // white at the head, blue at the end of the tail
+};
+
+inline constexpr double SkyMeteorCycle = 30.0;    // seconds: one shooting star in each cycle, at a moment that the hash chooses
+inline constexpr double SkyMeteorDuration = 3.0;  // seconds from the first light to the last
+inline constexpr double SkyMeteorTailMm = 130.0;  // the length of the tail, in millimetres
+inline constexpr double SkyMeteorWidthMm = 17.0;  // a key is lit when it is closer than this to the line of the streak
+
+// The light of the shooting star at `seconds`, for each LED (nothing outside rows 1 to 5, nothing between two shooting stars).
+[[nodiscard]] std::array<MeteorLight, LiveLedCount> meteorLights(std::span<const LedPosition> positions, double seconds);
+
 // Animates `colours` (one colour for each LED of the frame, as the base of the sky left them) at `seconds`: by day the shimmer, by night the stars and
 // the twinkling, in the proportion `nightness` (0 in the day, 1 in the night, as skyNightness gives it). Only the LEDs that have a position are
 // touched, and not those of the light strip (as in the mockup). `positions` are those of the LEDs that light something.
