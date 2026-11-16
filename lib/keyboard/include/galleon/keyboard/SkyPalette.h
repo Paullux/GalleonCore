@@ -4,6 +4,7 @@
 #pragma once
 
 #include "galleon/keyboard/Appearance.h"
+#include "galleon/keyboard/SunTimes.h"
 
 #include <array>
 #include <cstdint>
@@ -20,11 +21,30 @@ namespace galleon::keyboard {
 
 inline constexpr int SkyRowCount = 6;
 
+// When the sky changes, on a 24 h clock: the sunrise, and how long the day lasts (so the sunset is the sunrise plus that, which may pass midnight).
+// The default is the schedule of the mockup, a dawn at 6 h 15 and a dusk at 18 h: what is used when no place is known.
+struct SkyDay
+{
+    double sunriseHours = 6.25;
+    double dayLengthHours = 11.75;
+
+    friend bool operator==(const SkyDay &, const SkyDay &) = default;
+};
+
+// The sky of a day of the sun: its real sunrise and sunset when the sun rises and sets, the schedule of the mockup when it does not (a polar day or
+// night) .
+[[nodiscard]] SkyDay skyDayFrom(const SunDay &sun);
+
+// The keyframes are anchored on the sunrise and on the sunset with the gaps of the mockup: night until 1 h 15 before the sunrise, dawn at the
+// sunrise, day 1 h 15 after it, day until 1 h 30 before the sunset, dusk at the sunset, night 1 h 15 after it. With the default `SkyDay` that is
+// exactly the table of the mockup. When the day is too short or the night too short for the gaps (high latitudes), the gaps shrink in proportion so
+// that the keyframes stay in order.
+//
 // One colour for each of the six rows (row 0 is the top row of the keys, the function row), at `hours` on a 24 h clock (any real number: it wraps).
-[[nodiscard]] std::array<Rgb, SkyRowCount> skyRowColours(double hours);
+[[nodiscard]] std::array<Rgb, SkyRowCount> skyRowColours(double hours, const SkyDay &day = {});
 
 // 1 in the night, 0 in the day, between at dusk and at dawn (the mockup's `nightness`): how much the stars would show.
-[[nodiscard]] double skyNightness(double hours);
+[[nodiscard]] double skyNightness(double hours, const SkyDay &day = {});
 
 // Where a LED is in the sky: a row of the keys (0 to 5) or the light strip above them.
 struct SkyPlace

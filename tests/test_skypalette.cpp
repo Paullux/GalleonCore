@@ -9,6 +9,7 @@
 #include <QTest>
 
 #include <array>
+#include <cmath>
 #include <utility>
 
 using namespace galleon::keyboard;
@@ -105,6 +106,99 @@ private Q_SLOTS:
         QVERIFY(!skyPlaceOf(500.0).strip);
         QCOMPARE(skyPlaceOf(30.0).row, 0);
         QVERIFY(!skyPlaceOf(30.0).strip); // just under the strip line it is the top row
+    }
+
+    // ---- anchored on the sun: the keyframes follow the sunrise and the sunset, with the gaps of the mockup
+
+    void theDefaultDayIsTheScheduleOfTheMockup()
+    {
+        const SkyDay mockup;
+        QCOMPARE(mockup.sunriseHours, 6.25);
+        QCOMPARE(mockup.dayLengthHours, 11.75); // the dusk at 18 h
+        for (const double hours : {0.0, 5.0, 5.625, 6.25, 7.0, 12.0, 17.25, 18.0, 18.625, 19.25, 23.0})
+            QCOMPARE(skyRowColours(hours), skyRowColours(hours, SkyDay{6.25, 11.75}));
+    }
+
+    void theKeyframesFollowTheSunriseAndTheSunsetWithTheSameGaps()
+    {
+        const SkyDay late{8.25, 9.0}; // the sun rises at 8 h 15 and sets at 17 h 15
+        QCOMPARE(skyRowColours(8.25, late).front(), (Rgb{34, 30, 92}));  // the dawn is at the sunrise
+        QCOMPARE(skyRowColours(9.5, late).front(), (Rgb{26, 70, 170}));  // the day 1 h 15 after it
+        QCOMPARE(skyRowColours(15.75, late).front(), (Rgb{26, 70, 170})); // the day until 1 h 30 before the sunset
+        QCOMPARE(skyRowColours(17.25, late).front(), (Rgb{30, 22, 90})); // the dusk is at the sunset
+        QCOMPARE(skyRowColours(18.5, late).front(), (Rgb{10, 14, 38}));  // the night 1 h 15 after it
+        QCOMPARE(skyRowColours(7.0, late).front(), (Rgb{10, 14, 38}));   // the night until 1 h 15 before the sunrise
+        QCOMPARE(skyRowColours(7.625, late).front(), (Rgb{22, 22, 65})); // halfway between: the same blend as the mockup
+    }
+
+    void aDayThatIsTheMockupMovedAlongGivesTheSameColoursMovedAlong()
+    {
+        for (const double shift : {-3.0, 1.5, 4.0}) {
+            for (const double hours : {1.0, 5.7, 6.25, 7.0, 12.0, 17.4, 18.3, 22.0})
+                QCOMPARE(skyRowColours(hours + shift, SkyDay{6.25 + shift, 11.75}), skyRowColours(hours));
+        }
+    }
+
+    void theSunSettingAfterMidnightKeepsTheKeyframesInOrder()
+    {
+        // Reykjavik at the summer solstice: sunrise at 2 h 56, a day of 21 h 06, so the sunset is at 0 h 02 of the next day.
+        const SkyDay north{2.939, 21.1};
+        QCOMPARE(skyRowColours(2.939, north).front(), (Rgb{34, 30, 92}));          // the dawn
+        QCOMPARE(skyRowColours(2.939 + 21.1, north).front(), (Rgb{30, 22, 90}));    // the dusk, at 24.04 h
+        QCOMPARE(skyRowColours(0.039, north).front(), (Rgb{30, 22, 90}));           // the same instant, on the clock
+        const auto atNight = skyRowColours(2.939 + 21.1 + 1.25 * 0.48, north).front(); // the short night: the gaps shrink in proportion
+        QVERIFY(atNight.blue < 90);
+    }
+
+    void aShortNightAndAShortDayShrinkTheGapsInsteadOfBreakingTheOrder()
+    {
+        // A night of 2 h (a day of 22 h): the night is there for an instant, at 23 h 00 after the sunrise.
+        const SkyDay shortNight{4.0, 22.0};
+        QCOMPARE(skyRowColours(4.0 + 23.0, shortNight), skyRowColours(4.0 + 23.0 - 24.0, shortNight));
+        QCOMPARE(skyRowColours(4.0 + 23.0, shortNight).front(), (Rgb{10, 14, 38}));
+        // A day of 1 h (near the polar night): the day is there for an instant, in the middle of the gaps.
+        const SkyDay shortDay{11.0, 1.0};
+        QCOMPARE(skyRowColours(11.0, shortDay).front(), (Rgb{34, 30, 92}));
+        QCOMPARE(skyRowColours(12.0, shortDay).front(), (Rgb{30, 22, 90}));
+        // Every colour of every hour is a colour (no value out of the palette), and the sky has no jump: a thousandth of an hour changes little.
+        for (const SkyDay &day : {SkyDay{6.25, 11.75}, shortNight, shortDay, SkyDay{0.0, 12.0}, SkyDay{23.5, 12.0}, SkyDay{2.9, 21.1}}) {
+            for (int step = 0; step < 2400; ++step) {
+                const double hours = step * 0.01;
+                const auto a = skyRowColours(hours, day);
+                const auto b = skyRowColours(hours + 0.001, day);
+                for (std::size_t row = 0; row < a.size(); ++row) {
+                    QVERIFY(std::abs(int(a.at(row).red) - int(b.at(row).red)) <= 2);
+                    QVERIFY(std::abs(int(a.at(row).green) - int(b.at(row).green)) <= 2);
+                    QVERIFY(std::abs(int(a.at(row).blue) - int(b.at(row).blue)) <= 2);
+                }
+            }
+        }
+    }
+
+    void theNightnessFollowsTheSunToo()
+    {
+        const SkyDay late{8.25, 9.0};
+        QCOMPARE(skyNightness(7.0, late), 1.0);
+        QCOMPARE(skyNightness(7.625, late), 0.5);
+        QCOMPARE(skyNightness(8.25, late), 0.0);
+        QCOMPARE(skyNightness(12.0, late), 0.0);
+        QCOMPARE(skyNightness(17.25, late), 0.0);
+        QCOMPARE(skyNightness(17.875, late), 0.5);
+        QCOMPARE(skyNightness(18.5, late), 1.0);
+        QCOMPARE(skyNightness(2.0, late), 1.0);
+    }
+
+    void theSkyOfADayOfTheSunIsItsRealTimesAndAPolarDayFallsBackToTheMockup()
+    {
+        const SunDay paris = sunDay(48.8566, 2.3522, 2026, 6, 21, 2.0);
+        const SkyDay parisSky = skyDayFrom(paris);
+        QCOMPARE(parisSky.sunriseHours, paris.sunriseHours);
+        QCOMPARE(parisSky.dayLengthHours, paris.dayLengthHours);
+        QCOMPARE(skyRowColours(paris.sunriseHours, parisSky).front(), (Rgb{34, 30, 92})); // dawn at the real sunrise
+        QCOMPARE(skyRowColours(paris.sunsetHours, parisSky).front(), (Rgb{30, 22, 90}));  // dusk at the real sunset
+        // No sunrise or no sunset: the schedule of the mockup, whatever the other fields hold.
+        QCOMPARE(skyDayFrom(sunDay(69.6496, 18.956, 2026, 12, 21, 1.0)), SkyDay{});
+        QCOMPARE(skyDayFrom(sunDay(69.6496, 18.956, 2026, 6, 21, 2.0)), SkyDay{});
     }
 
     void theStripIsTheTopRowMixedFortyPercentTowardsBlack()
