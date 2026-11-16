@@ -8,6 +8,7 @@
 #include "AppearanceStore.h"
 #include "KeyCalibration.h"
 #include <AppearanceFile.h>
+#include <WeatherPlace.h>
 #include <KeyMapFile.h>
 #include "FilePicker.h"
 #include "UpdateChecker.h"
@@ -118,7 +119,7 @@ int main(int argc, char *argv[])
     bosun::DaemonStatus daemon;
     bosun::DaemonCalibrationLights calibrationLights(daemon);
     // The appearance of the live lighting: read from its file at the start, written after every change (nothing in a preview run).
-    bosun::AppearanceStore appearance(preview ? QString() : galleond::appearancePath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
+    bosun::AppearanceStore appearance(preview ? QString() : galleond::appearancePath(), preview ? QString() : galleond::widgetsPath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
     bosun::KeyCalibration keyCalibration(calibrationLights, galleond::keyMapPath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
 #ifdef Q_OS_WIN
     if (!parser.isSet(shotOption) && !parser.isSet(pagesOption) && !parser.isSet(simulateUpdateOption) && !parser.isSet(oldFirmwareOption)) {

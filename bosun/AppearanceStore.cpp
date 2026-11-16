@@ -5,9 +5,15 @@
 
 #include "AppearanceFile.h"
 
+#include "SkySun.h"
+#include "WeatherPlace.h"
+
 #include <galleon/keyboard/SkyPalette.h>
 
+#include <QLocale>
+
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace bosun {
@@ -25,12 +31,18 @@ using galleon::keyboard::Retouch;
 
 } // namespace
 
-AppearanceStore::AppearanceStore(QString path, QObject *parent) : QObject(parent), m_path(std::move(path))
+AppearanceStore::AppearanceStore(QString path, QString widgetsPath, Clock clock, QObject *parent)
+    : QObject(parent), m_path(std::move(path)), m_widgetsPath(std::move(widgetsPath)), m_clock(std::move(clock))
 {
     if (m_path.isEmpty())
         return;
     if (const auto stored = galleond::readAppearance(m_path))
         m_appearance = *stored;
+}
+
+QDateTime AppearanceStore::systemClock()
+{
+    return QDateTime::currentDateTime();
 }
 
 QString AppearanceStore::baseType() const
@@ -96,10 +108,10 @@ QString AppearanceStore::setSky()
     return commit(next);
 }
 
-QVariantMap AppearanceStore::skyAt(double hours)
+QVariantMap AppearanceStore::skyAt(double hours) const
 {
     const auto colourName = [](const galleon::keyboard::Rgb &c) { return QColor(c.red, c.green, c.blue).name(); };
-    const auto rows = galleon::keyboard::skyRowColours(hours);
+    const auto rows = galleon::keyboard::skyRowColours(hours, skyDay());
     QVariantList names;
     for (const auto &row : rows)
         names.append(colourName(row));
@@ -110,6 +122,71 @@ int AppearanceStore::skyRowOf(double y)
 {
     const auto place = galleon::keyboard::skyPlaceOf(y);
     return place.strip ? -1 : place.row;
+}
+
+QString AppearanceStore::setFollowSun(bool follow)
+{
+    if (m_appearance.base != BaseType::Sky)
+        return tr("Choose the sky first: only the sky follows the sun.");
+    Appearance next = m_appearance;
+    next.followSun = follow;
+    return commit(next);
+}
+
+QString AppearanceStore::setSkyPlace(const QString &latitude, const QString &longitude)
+{
+    bool latitudeOk = false;
+    bool longitudeOk = false;
+    const double lat = QLocale::c().toDouble(latitude.trimmed(), &latitudeOk);
+    const double lon = QLocale::c().toDouble(longitude.trimmed(), &longitudeOk);
+    if (!latitudeOk || !longitudeOk || !galleon::keyboard::isValidPlace(lat, lon))
+        return tr("Enter latitude (-90…90) and longitude (-180…180), using a decimal point.");
+    Appearance next = m_appearance;
+    next.skyPlace = galleon::keyboard::GeoPlace{lat, lon};
+    return commit(next);
+}
+
+QString AppearanceStore::clearSkyPlace()
+{
+    Appearance next = m_appearance;
+    next.skyPlace.reset();
+    return commit(next);
+}
+
+QString AppearanceStore::skyLatitude() const
+{
+    return m_appearance.skyPlace ? QString::number(m_appearance.skyPlace->latitude, 'g', 12) : QString();
+}
+
+QString AppearanceStore::skyLongitude() const
+{
+    return m_appearance.skyPlace ? QString::number(m_appearance.skyPlace->longitude, 'g', 12) : QString();
+}
+
+std::optional<galleon::keyboard::GeoPlace> AppearanceStore::placeInUse() const
+{
+    if (m_appearance.base != BaseType::Sky || !m_appearance.followSun)
+        return std::nullopt; // nothing about a place is read unless the sky follows the sun
+    const auto weather = m_widgetsPath.isEmpty() ? std::nullopt : galleond::readWeatherPlace(m_widgetsPath);
+    return galleon::keyboard::choosePlace(weather, m_appearance.skyPlace);
+}
+
+QString AppearanceStore::sunSource() const
+{
+    if (m_appearance.base != BaseType::Sky || !m_appearance.followSun)
+        return QStringLiteral("off");
+    const auto weather = m_widgetsPath.isEmpty() ? std::nullopt : galleond::readWeatherPlace(m_widgetsPath);
+    if (weather && galleon::keyboard::isValidPlace(weather->latitude, weather->longitude))
+        return QStringLiteral("weather");
+    if (m_appearance.skyPlace)
+        return QStringLiteral("sky");
+    return QStringLiteral("none");
+}
+
+galleon::keyboard::SkyDay AppearanceStore::skyDay() const
+{
+    const QDateTime now = m_clock();
+    return galleond::skyDayFor(m_appearance.base == BaseType::Sky && m_appearance.followSun, placeInUse(), now.date(), now.offsetFromUtc() / 3600.0);
 }
 
 QString AppearanceStore::retouch(int led, int red, int green, int blue)
