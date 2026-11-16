@@ -746,5 +746,7 @@
   "In curve mode galleond shows the colours at the level of the point nearest to the time of day, instead of the slider above. It only dims the colours: nothing is written to the memory of the keyboard. This curve is separate from the one of the keyboard brightness.": "En mode courbe, galleond montre les couleurs au niveau du point le plus proche de l’heure, à la place du curseur ci-dessus. Cela ne fait qu’atténuer les couleurs : rien n’est écrit dans la mémoire du clavier. Cette courbe est distincte de celle de la luminosité du clavier.",
   "Level of the colours through the day": "Niveau des couleurs au fil de la journée",
   "Level at %1 h": "Niveau à %1 h",
-  "Level at %1 h: %2 %": "Niveau à %1 h : %2 %"
+  "Level at %1 h: %2 %": "Niveau à %1 h : %2 %",
+  "The keyboard's own brightness is not known yet. It stays as it is while the live lighting is on; to change it, switch the live lighting off and use the “brightness” half.": "La luminosité propre du clavier n’est pas encore connue. Elle reste telle quelle tant que l’éclairage en direct est allumé ; pour la changer, éteignez l’éclairage en direct et utilisez la moitié « luminosité ».",
+  "The keyboard's own brightness is %1 %. It stays as it is while the live lighting is on; to change it, switch the live lighting off and use the “brightness” half. The level of the colours below is a separate setting.": "La luminosité propre du clavier est de %1 %. Elle reste telle quelle tant que l’éclairage en direct est allumé ; pour la changer, éteignez l’éclairage en direct et utilisez la moitié « luminosité ». Le niveau des couleurs, plus bas, est un réglage distinct."
 }
