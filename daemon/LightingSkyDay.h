@@ -16,6 +16,7 @@
 
 #include <atomic>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <optional>
 
@@ -56,18 +57,13 @@ private:
     void onAppearanceSet(const galleon::keyboard::Appearance &appearance);
     void readWeatherPlace();
 
-    QString m_widgetsPath;
-    Clock m_clock;
-    ReplacedFileWatcher m_watcher;
+    // What the worker thread reads, kept alive by the function that the controller was given (a shared pointer, not `this`): the controller
+    // calls that function from its own thread, and it may outlive this object (this one is destroyed first at the end of main).
+    struct State;
 
-    mutable std::mutex m_mutex;
-    bool m_follow = false;
-    std::optional<galleon::keyboard::GeoPlace> m_skyPlace;
-    std::optional<galleon::keyboard::GeoPlace> m_weatherPlace;
-    mutable QDate m_cachedDate;
-    mutable std::optional<galleon::keyboard::GeoPlace> m_cachedPlace;
-    mutable bool m_cacheValid = false;
-    mutable galleon::keyboard::SkyDay m_cachedDay;
+    QString m_widgetsPath;
+    ReplacedFileWatcher m_watcher;
+    std::shared_ptr<State> m_state;
     std::atomic<int> m_weatherReads{0};
 };
 

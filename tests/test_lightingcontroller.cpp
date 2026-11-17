@@ -744,6 +744,27 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{30, 22, 90}), 3000);
     }
 
+    void theSkyOfTheWorkerThreadStaysValidWhenTheObjectThatMadeItIsDestroyedFirst()
+    {
+        // At the end of main() the object is destroyed before the controller, whose worker thread still calls the function it was given each step:
+        // that function must not depend on the object. (Under the sanitizers the old version failed here with a call on a destroyed object.)
+        const QTemporaryDir dir;
+        writeWidgetsPlace(dir.filePath("widgets.json"), 48.8566, 2.3522); // Paris
+        const double sunset = galleon::keyboard::sunDay(48.8566, 2.3522, 2026, 6, 21, 2.0).sunsetHours;
+        const std::atomic<double> hour{sunset}; // declared before the rig: the worker reads it until the rig is gone
+        Rig rig;
+        rig.controller->setDayHours([&hour] { return hour.load(); });
+        {
+            const LightingSkyDay skyDay(*rig.controller, dir.filePath("widgets.json"), parisSolstice);
+            QVERIFY(rig.controller->setAppearance(skyAppearance(true)));
+            rig.hold();
+            QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{30, 22, 90}), 3000); // the real dusk of Paris
+        } // destroyed: the worker is still running
+        rig.advance(500);
+        QTest::qWait(300); // a few steps of the worker with the object gone
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{30, 22, 90}), 3000); // still the dusk
+    }
+
     void theSkyDoesNotFollowTheSunUnlessAskedAndThenKeepsTheFixedHours()
     {
         const QTemporaryDir dir;
