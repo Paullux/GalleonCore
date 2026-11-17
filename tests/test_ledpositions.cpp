@@ -69,6 +69,22 @@ private Q_SLOTS:
         QCOMPARE(perRow.at(0) + perRow.at(1) + perRow.at(2) + perRow.at(3) + perRow.at(4) + perRow.at(5), 88);
     }
 
+    void theWholeFunctionRowWithEscAndTheKeysBesideItIsTheTopRowOfTheSkyAndNothingElseIs()
+    {
+        // Aaryush1 (issue #111): the F row is where signals live, so it must always be the cool top of the sky. Esc is LED 41, F1 to F12 are 58 to 69
+        // (the HID usage of the key is the number of its LED), and the three keys beside the F row (70 to 72) are on the same line.
+        std::set<int> topRow;
+        for (const LedPosition &p : builtInLedPositions()) {
+            const auto place = galleon::keyboard::skyPlaceOf(p.y);
+            if (!place.strip && place.row == 0)
+                topRow.insert(p.led);
+        }
+        std::set<int> expected{41};
+        for (int led = 58; led <= 72; ++led)
+            expected.insert(led);
+        QCOMPARE(topRow, expected);
+    }
+
     void everyLedThatLightsSomethingInTheKeyMapHasAPlaceAndTheOthersHaveNone()
     {
         const auto &positions = builtInLedPositions();
