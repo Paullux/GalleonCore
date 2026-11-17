@@ -53,6 +53,7 @@ QString AppearanceStore::baseType() const
     case BaseType::Sky:
         return QStringLiteral("sky");
     case BaseType::Uniform:
+    case BaseType::Matrix: // the hidden rain is the daemon's: Bosun never holds it
         break;
     }
     return QStringLiteral("uniform");

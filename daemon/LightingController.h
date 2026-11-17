@@ -88,6 +88,11 @@ public:
     // When the sky changes (the real sunrise and sunset, or the fixed schedule of the mockup): called from the thread of the lighting, so it must be
     // safe to call from there. Given before the lighting is switched on.
     void setSkyDay(std::function<galleon::keyboard::SkyDay()> skyDay) { m_skyDay = std::move(skyDay); }
+    // The hidden green rain (the easter egg) takes the keys' picture while it runs, and the appearance is shown again when it stops. It only starts when the
+    // lighting is already on (the person switched it on: nothing is lit for it), is let go when the lighting is switched off, and is never saved.
+    // False, and nothing done, when the lighting is off.
+    bool setMatrixRain(bool on);
+    [[nodiscard]] bool matrixRain() const { return m_matrix; }
     [[nodiscard]] int effectiveLevel() const { return m_levelOverride.value_or(m_appearance.level); }
 
 public Q_SLOTS:
@@ -136,6 +141,7 @@ private:
     int m_resumeAttempts = ResumeAttempts;
     galleon::keyboard::Appearance m_appearance; // dark until something is asked for
     std::optional<int> m_levelOverride;
+    bool m_matrix = false; // the hidden rain is showing
     std::function<double()> m_dayHours = [] { return systemDayHours(); };
     std::function<galleon::keyboard::SkyDay()> m_skyDay = [] { return galleon::keyboard::SkyDay{}; };
     std::optional<galleon::keyboard::LiveScene> m_tool; // what a tool shows over it, if one does

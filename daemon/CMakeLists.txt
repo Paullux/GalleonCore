@@ -59,6 +59,7 @@ add_library(galleond_core STATIC
     LedPositions.h LedPositions.cpp
     WeatherPlace.h WeatherPlace.cpp
     SkySun.h SkySun.cpp
+    InputActivity.h InputActivity.cpp
     LightingSkyDay.h LightingSkyDay.cpp
     StrictJson.h
     KeyMapFile.h KeyMapFile.cpp

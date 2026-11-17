@@ -29,7 +29,7 @@ struct Rgb
     friend bool operator==(const Rgb &, const Rgb &) = default;
 };
 
-enum class BaseType : std::uint8_t { Uniform, Rainbow, Sky }; // Sky: the colours of the hour of the day (SkyPalette.h), six rows
+enum class BaseType : std::uint8_t { Uniform, Rainbow, Sky, Matrix }; // Sky: the colours of the hour of the day (SkyPalette.h), six rows; Matrix: the hidden green rain (MatrixRain.h), given by the daemon while the easter egg runs and never written to a file
 
 struct Retouch
 {

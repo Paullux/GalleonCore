@@ -29,6 +29,16 @@ class TestAppearanceFile : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void theHiddenRainIsNeverWrittenToAFile()
+    {
+        const QTemporaryDir dir;
+        Appearance rain;
+        rain.base = BaseType::Matrix;
+        QVERIFY(!writeAppearance(dir.filePath("lighting-appearance.json"), rain));
+        QVERIFY(!QFile::exists(dir.filePath("lighting-appearance.json")));
+        QVERIFY(!parseAppearance(withBase(R"({"type":"matrix"})")).has_value()); // and no file can ask for it
+    }
+
     void aUniformAppearanceSurvivesBeingEncodedAndParsed()
     {
         Appearance appearance;

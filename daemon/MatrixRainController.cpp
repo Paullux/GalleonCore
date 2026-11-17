@@ -14,8 +14,10 @@ namespace galleond {
 namespace {
 
 constexpr int MaxSendFailures = 20; // consecutive frames the module did not take
-constexpr int ScreenCell = 18;      // pixels per letter on the screen (720 x 384)
-constexpr int KeyCell = 20;         // and on a key (160 x 160)
+constexpr int ScreenCell = 30;      // pixels per letter on the screen (720 x 384): bigger than before (18), so that it looks like the keyboard's rain
+constexpr int ScreenTrail = 8;      // the fading trail, in letters (the screen is 13 letters high)
+constexpr int KeyTrail = 3;         // and on a key, which is four letters high
+constexpr int KeyCell = 40;         // and on a key (160 x 160), four letters wide (it was 20)
 
 } // namespace
 
@@ -72,6 +74,16 @@ void MatrixRainController::setInhibited(bool inhibited)
         m_trigger.reset();
         stop();
     }
+}
+
+void MatrixRainController::endNow()
+{
+    QMetaObject::invokeMethod(this, [this] {
+        if (!m_trigger.isRunning())
+            return;
+        m_trigger.reset();
+        stop();
+    }, Qt::QueuedConnection);
 }
 
 void MatrixRainController::onEvent(MatrixTrigger::Kind kind, int index)
@@ -147,10 +159,10 @@ void MatrixRainController::drawFrame()
     constexpr QSize KeySize(galleon::protocol::KeyImageSize, galleon::protocol::KeyImageSize);
     bool ok = true;
     // Surfaces are drawn by number: 0 is the screen, 1..12 the keys (each rains differently).
-    const QImage screen = m_renderer->render({{QStringLiteral("tick"), m_tick}, {QStringLiteral("seed"), 0}, {QStringLiteral("cell"), ScreenCell}}, ScreenSize);
+    const QImage screen = m_renderer->render({{QStringLiteral("tick"), m_tick}, {QStringLiteral("seed"), 0}, {QStringLiteral("cell"), ScreenCell}, {QStringLiteral("trailLength"), ScreenTrail}}, ScreenSize);
     ok = !screen.isNull() && m_deck->setScreenImage(screen, 80, false);
     for (int key = 0; key < galleon::protocol::KeyCount; ++key) {
-        const QImage image = m_renderer->render({{QStringLiteral("tick"), m_tick}, {QStringLiteral("seed"), key + 1}, {QStringLiteral("cell"), KeyCell}}, KeySize);
+        const QImage image = m_renderer->render({{QStringLiteral("tick"), m_tick}, {QStringLiteral("seed"), key + 1}, {QStringLiteral("cell"), KeyCell}, {QStringLiteral("trailLength"), KeyTrail}}, KeySize);
         ok = !image.isNull() && m_deck->setKeyImage(key, image, false) && ok;
     }
     if (ok) {

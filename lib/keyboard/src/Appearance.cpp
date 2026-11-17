@@ -4,6 +4,7 @@
 #include "galleon/keyboard/Appearance.h"
 
 #include "galleon/keyboard/LiveFrame.h"
+#include "galleon/keyboard/MatrixRain.h"
 #include "galleon/keyboard/SkyEffects.h"
 #include "galleon/keyboard/SkyPalette.h"
 
@@ -66,6 +67,7 @@ constexpr double Lightness = 0.55;
         return where.strip ? skyStripColour(sky.front()) : sky.at(static_cast<std::size_t>(where.row));
     }
     case BaseType::Uniform:
+    case BaseType::Matrix: // the rain is drawn as a whole, below
         break;
     }
     return appearance.colour;
@@ -120,6 +122,11 @@ std::optional<LiveScene> renderAppearance(const Appearance &appearance, std::spa
         const double place = span > 0.0 ? (position.x - low) / span : 0.0;
         colours.at(position.led) = baseColour(appearance, position, place, turn, sky);
         lit.at(position.led) = true;
+    }
+    if (appearance.base == BaseType::Matrix) {
+        const auto rain = matrixRainColours(positions, seconds); // the whole picture of the rain: every LED that has a place, the dark ones too
+        for (const LedPosition &position : positions)
+            colours.at(position.led) = rain.at(position.led);
     }
     if (appearance.base == BaseType::Sky && appearance.skyAnimated)
         animateSky(positions, colours, seconds, skyNightness(dayHours, skyDay)); // before the retouches: they keep their own colour
