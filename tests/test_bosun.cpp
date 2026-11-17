@@ -6,6 +6,7 @@
 #include "LanguageSettings.h"
 #include "DaemonStatus.h"
 #include "AppearanceStore.h"
+#include "RingStore.h"
 #include "KeyCalibration.h"
 #include "WallpaperLibrary.h"
 #include "Required.h"
@@ -446,7 +447,7 @@ QtObject {
         engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
         QVERIFY(!engine.rootObjects().isEmpty());
         auto *root = engine.rootObjects().constFirst();
-        root->setProperty("currentTab", root->property("tabs").toList().size() - 4);
+        root->setProperty("currentTab", root->property("tabs").toList().size() - 5); // the wallpapers: before the widgets, gaming, screensavers and dials
         auto *pictureButton = root->findChild<QQuickItem *>("browseWallpaper");
         auto *videoButton = root->findChild<QQuickItem *>("browseScreensaver");
         QVERIFY(pictureButton);
@@ -466,7 +467,7 @@ QtObject {
         picker.picturePath.clear(); // cancel preserves the existing preview
         QVERIFY(QMetaObject::invokeMethod(pictureButton, "clicked"));
         QCOMPARE(library->candidate().value("chosen").toString(), picture);
-        root->setProperty("currentTab", root->property("tabs").toList().size() - 1);
+        root->setProperty("currentTab", root->property("tabs").toList().size() - 2); // the screensavers: before the dials
         QVERIFY(QMetaObject::invokeMethod(videoButton, "clicked"));
         QCOMPARE(backend->candidate().value("path").toString(), video);
         picker.videoPath.clear();
@@ -2158,6 +2159,59 @@ QtObject {
         QVERIFY(!clock->property("running").toBool());
     }
 
+    void theDialsTabPutsTheRingsOutOrSetsTheirLevelAndWritesTheFileThatGalleondReads()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        const QString ringsFile = dir.filePath("dial-rings.json");
+        const bosun::RingStore rings(ringsFile);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("rings"), QVariant::fromValue(&rings)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        const auto tabs = root->property("tabs").toList();
+        QCOMPARE(tabs.constLast().toMap().value("kind").toString(), QStringLiteral("dials")); // after the screensavers
+        auto *page = root->findChild<QQuickItem *>("dialsPage");
+        QVERIFY(page);
+        QVERIFY(!page->isVisible()); // only on its own tab
+        QVERIFY(root->setProperty("currentTab", static_cast<int>(tabs.size()) - 1));
+        QVERIFY(page->isVisible());
+
+        auto *lit = root->findChild<QQuickItem *>("ringsLit");
+        auto *out = root->findChild<QQuickItem *>("ringsOut");
+        auto *level = root->findChild<QQuickItem *>("ringsLevel");
+        QVERIFY(lit);
+        QVERIFY(out);
+        QVERIFY(level);
+        QVERIFY(lit->property("selected").toBool()); // as they always were
+        QVERIFY(!out->property("selected").toBool());
+        QCOMPARE(level->property("value").toInt(), 1000);
+        QVERIFY(level->property("enabledLook").toBool());
+
+        QVERIFY(QMetaObject::invokeMethod(level, "committed", Q_ARG(int, 400)));
+        QCOMPARE(galleond::readRingSettings(ringsFile).value_or(galleond::RingSettings{}), (galleond::RingSettings{.lit = true, .level = 400}));
+
+        QVERIFY(QMetaObject::invokeMethod(out, "clicked"));
+        QVERIFY(out->property("selected").toBool());
+        QVERIFY(!lit->property("selected").toBool());
+        QVERIFY(!level->property("enabledLook").toBool()); // a level means nothing while they are out
+        QCOMPARE(galleond::readRingSettings(ringsFile).value_or(galleond::RingSettings{}), (galleond::RingSettings{.lit = false, .level = 400}));
+
+        QVERIFY(QMetaObject::invokeMethod(lit, "clicked"));
+        QCOMPARE(galleond::readRingSettings(ringsFile).value_or(galleond::RingSettings{}), (galleond::RingSettings{.lit = true, .level = 400}));
+        QCOMPARE(level->property("value").toInt(), 400); // the file's level is shown again
+    }
+
     void theLightStripIsSevenEqualSectionsEachLitByItsOwnLedAndColouredLikeAKey()
     {
         const QString connectionName = QStringLiteral("fake-galleond-for-the-strip");
@@ -2705,7 +2759,7 @@ QtObject {
         // The window must be able to call what it is given (the daemon's start, the backend's edits).
         QVERIFY(qvariant_cast<QObject *>(window->property("daemon")) != nullptr);
         QVERIFY(qvariant_cast<QObject *>(window->property("backend")) != nullptr);
-        QCOMPARE(window->property("tabs").toList().size(), 2 + 6); // themes, new tab, keyboard, wallpapers, widgets, gaming, screensavers
+        QCOMPARE(window->property("tabs").toList().size(), 2 + 7); // themes, new tab, keyboard, wallpapers, widgets, gaming, screensavers, dials
         auto *firmware = window->findChild<QObject *>("firmwareVersion");
         auto *firmwareWarning = window->findChild<QObject *>("firmwareWarning");
         QVERIFY(firmware);

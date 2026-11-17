@@ -4,6 +4,7 @@
 #include "Bytes.h"
 #include "Required.h"
 #include "FakeTransport.h"
+#include "RingSettingsApplier.h"
 
 #include <PagesController.h>
 #include <SteamLibrary.h>
@@ -787,6 +788,77 @@ private Q_SLOTS:
         f.pressDial(0, false);
         QVERIFY(!f.controller->currentTheme());
         QCOMPARE(f.controller->currentPage(), QStringLiteral("main"));
+    }
+
+    void theRingSettingsDimOrPutOutTheAmbientColoursAndTheWallpaperChoiceIsAlwaysShown()
+    {
+        const auto parsed = parsePagesConfig(QJsonDocument(QJsonObject{
+            {"version", 1},
+            {"home", "main"},
+            {"screen", QJsonObject{{"wallpaper_validate_seconds", 60}, {"wallpaper_step_delay_ms", 0}}},
+            {"pages", QJsonObject{{"main", page({keyJson(0, "A", mediaAction("previous"))})}}},
+            {"themes", QJsonArray{QJsonObject{{"name", "Red"}, {"page", "main"}, {"color", "#e53935"}}}},
+            {"dials", QJsonObject{{"1", QJsonObject{{"press", QJsonObject{{"type", "wallpaper-mode"}}}}}}}}).toJson());
+        QVERIFY2(parsed.config.has_value(), qPrintable(parsed.errors.join('\n')));
+        Fixture f;
+        f.controller->setConfig(required(parsed.config));
+        const auto lastRing = [&](bool left) {
+            for (auto &report : std::ranges::reverse_view(f.transport->featureReports)) {
+                if (report.size() > 5 && report[1] == 0x24 && (report[2] >= 4) == left)
+                    return std::array<int, 3>{report[3], report[4], report[5]};
+            }
+            return std::array<int, 3>{-1, -1, -1};
+        };
+        QCOMPARE(lastRing(true), (std::array<int, 3>{0xe5, 0x39, 0x35})); // the theme
+        QCOMPARE(lastRing(false), (std::array<int, 3>{255, 255, 255}));   // white
+
+        // Half the level: both colours at half (to the nearest).
+        f.controller->setRingSettings({.lit = true, .level = 500});
+        QCOMPARE(lastRing(true), (std::array<int, 3>{115, 29, 27}));
+        QCOMPARE(lastRing(false), (std::array<int, 3>{128, 128, 128}));
+
+        // Put out: both dark, whatever the level.
+        f.controller->setRingSettings({.lit = false, .level = 1000});
+        QCOMPARE(lastRing(true), (std::array<int, 3>{0, 0, 0}));
+        QCOMPARE(lastRing(false), (std::array<int, 3>{0, 0, 0}));
+
+        // The wallpaper choice answers an action of the person: magenta, at full level, even with the rings put out. The left one stays dark.
+        f.pressDial(1, true);
+        f.pressDial(1, false);
+        QVERIFY(f.controller->wallpaperMode());
+        f.controller->wallpaperLabelShown();
+        QCOMPARE(lastRing(false), (std::array<int, 3>{255, 0, 255}));
+        QCOMPARE(lastRing(true), (std::array<int, 3>{0, 0, 0}));
+
+        // Back to the defaults: the theme and white again.
+        f.pressDial(1, true);
+        f.pressDial(1, false);
+        QVERIFY(!f.controller->wallpaperMode());
+        f.controller->setRingSettings({});
+        QCOMPARE(lastRing(true), (std::array<int, 3>{0xe5, 0x39, 0x35}));
+        QCOMPARE(lastRing(false), (std::array<int, 3>{255, 255, 255}));
+    }
+
+    void theRingSettingsFileIsReadAtTheStartAndAgainWhenItChangesAndADamagedFileIsIgnored()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("dial-rings.json");
+        Fixture f;
+        QVERIFY(writeRingSettings(path, {.lit = false, .level = 700}));
+        RingSettingsApplier applier(*f.controller, path);
+        QCOMPARE(f.controller->ringSettings(), (RingSettings{.lit = false, .level = 700})); // read at the start
+
+        QVERIFY(writeFile(path, "{ broken"));
+        applier.onFileMaybeChanged();
+        QCOMPARE(f.controller->ringSettings(), (RingSettings{.lit = false, .level = 700})); // damaged: what is applied stays
+
+        QVERIFY(writeRingSettings(path, {.lit = true, .level = 200}));
+        applier.onFileMaybeChanged();
+        QCOMPARE(f.controller->ringSettings(), (RingSettings{.lit = true, .level = 200}));
+
+        QVERIFY(QFile::remove(path));
+        applier.onFileMaybeChanged();
+        QCOMPARE(f.controller->ringSettings(), (RingSettings{.lit = true, .level = 200})); // removed: nothing changes, nothing is guessed
     }
 
     void theRightDialPressSwitchesToChoosingTheWallpaper()
