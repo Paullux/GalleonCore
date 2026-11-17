@@ -24,6 +24,7 @@ Window {
     property var filePicker: null
     property var updates: null
     property var appearance: null // the appearance of the live lighting (AppearanceStore): written to lighting-appearance.json at every change
+    property var rings: null // the settings of the rings of the dials (RingStore): written to dial-rings.json at every change
     property var keyCalibration: null // the calibration of the key map (KeyCalibration): off until the person starts it
     property bool updatesOpen: false
 
@@ -75,7 +76,8 @@ Window {
         {title: qsTr("Wallpapers"), kind: "wallpapers", page: "", color: "#ff00ff"},
         {title: qsTr("Widgets"), kind: "widgets", page: "", color: "#4fc3f7"},
         {title: qsTr("Gaming"), kind: "gaming", page: "", color: "#80e5d1"},
-        {title: qsTr("Screensavers"), kind: "screensavers", page: "", color: "#b388ff"}
+        {title: qsTr("Screensavers"), kind: "screensavers", page: "", color: "#b388ff"},
+        {title: qsTr("Dials"), kind: "dials", page: "", color: "#ffb74d"}
     ])
     readonly property var tab: tabs[Math.min(currentTab, tabs.length - 1)]
     readonly property string page: tab.kind === "theme" ? (shownPage !== "" && backend.pageNames.indexOf(shownPage) >= 0 ? shownPage : tab.page) : ""
@@ -1284,6 +1286,18 @@ Window {
         x: screensaversPage.x + screensaversPage.width + 8
         y: screensaversPage.y
         height: screensaversPage.height
+    }
+
+    DialsPage {
+        id: dialsPage
+        objectName: "dialsPage"
+        visible: win.tab.kind === "dials" && win.backend.problem === ""
+        x: 30
+        y: 84
+        width: win.width - 78
+        height: win.height - 104 - statusBar.height
+        rings: win.rings
+        onAnswered: error => win.saved(error)
     }
 
     // ---- the status bar: does the module follow, and what was done

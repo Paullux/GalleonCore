@@ -9,6 +9,7 @@
 #endif
 #include "KeyInjector.h"
 #include "RecordingController.h"
+#include "RingSettings.h"
 #include "PageOrder.h"
 #include "MediaController.h"
 #include "PagesConfig.h"
@@ -124,6 +125,10 @@ public:
     // a theme) and the right one white. Also done by every theme change; call it again
     // when the module was plugged in again.
     void applyRings();
+    // The settings of the rings (RingSettings.h): the ambient colours (theme on the left, white on the right) are put out or dimmed; what a ring shows
+    // to answer an action (magenta while the wallpaper is chosen) is always shown at full level. Applied at once when the module is open.
+    void setRingSettings(const RingSettings &settings);
+    [[nodiscard]] RingSettings ringSettings() const { return m_rings; }
 
 Q_SIGNALS:
     // The validation countdown of the wallpaper choice: seconds left (N .. 1), then 0 when it
@@ -165,6 +170,7 @@ private:
     int m_beforeGameTheme = -1;
     QStringList m_beforeGameStack;
     galleon::StreamDeck *m_deck;
+    RingSettings m_rings;
     MediaController *m_media;
     TileRenderer m_tiles;
     PagesConfig m_config;

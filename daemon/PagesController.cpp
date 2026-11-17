@@ -784,19 +784,28 @@ void PagesController::applyTheme()
     Q_EMIT themeChanged();
 }
 
+void PagesController::setRingSettings(const RingSettings &settings)
+{
+    if (settings == m_rings)
+        return;
+    m_rings = settings;
+    applyRings();
+}
+
 void PagesController::applyRings()
 {
     if (!m_deck->isOpen() || m_suspended)
         return;
     // The left ring shows the theme (dark without one); the right ring stays
-    // white, for the music player control.
+    // white, for the music player control. Both are ambient colours: the settings of the rings put them out or dim them.
     const Theme *theme = currentTheme();
-    const std::uint32_t rgb = theme ? theme->rgb : 0;
-    if (!m_deck->setDialRing(0, static_cast<std::uint8_t>(rgb >> 16), static_cast<std::uint8_t>(rgb >> 8),
-                            static_cast<std::uint8_t>(rgb)))
+    const std::uint32_t left = ambientRingColour(theme ? theme->rgb : 0, m_rings);
+    if (!m_deck->setDialRing(0, static_cast<std::uint8_t>(left >> 16), static_cast<std::uint8_t>(left >> 8),
+                            static_cast<std::uint8_t>(left)))
         qWarning() << "galleond: could not update the left dial ring";
-    // The right ring: white for the player control, magenta while it chooses the wallpaper.
-    const std::uint32_t right = wallpaperMode() ? WallpaperModeRgb : 0xffffff;
+    // The right ring: white for the player control, magenta while it chooses the wallpaper. The magenta answers an action of the
+    // person: it is shown whatever the settings of the rings.
+    const std::uint32_t right = wallpaperMode() ? WallpaperModeRgb : ambientRingColour(0xffffff, m_rings);
     if (!m_deck->setDialRing(1, static_cast<std::uint8_t>(right >> 16), static_cast<std::uint8_t>(right >> 8),
                             static_cast<std::uint8_t>(right)))
         qWarning() << "galleond: could not update the right dial ring";

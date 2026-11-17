@@ -23,6 +23,8 @@
 #include "WeatherPlace.h"
 #include "KeyboardController.h"
 #include "LightingAppearanceApplier.h"
+#include "RingSettings.h"
+#include "RingSettingsApplier.h"
 #include "LightingController.h"
 #include "LightingState.h"
 #include "LightingStatePublisher.h"
@@ -828,6 +830,7 @@ int main(int argc, char *argv[])
     auto keypad = galleond::createKeyInjector();
     galleond::RecordingController recording;
     std::unique_ptr<galleond::PagesController> pages;
+    std::unique_ptr<galleond::RingSettingsApplier> ringSettings; // the rings of the dials, as the settings window left them (dial-rings.json)
     if (usePages) {
         const QString pagesFile = defaultPagesFile(parser.value(pagesOption));
         pages = std::make_unique<galleond::PagesController>(&deck, media.get(),
@@ -838,6 +841,7 @@ int main(int argc, char *argv[])
         pages->setUsageFile(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
                             + QStringLiteral("/galleoncore/usage.json"));
         galleond::connectPagesToScreen(*pages, controller);
+        ringSettings = std::make_unique<galleond::RingSettingsApplier>(*pages, galleond::ringSettingsPath());
         pages->loadFile(pagesFile);
         // A module plugged in again shows its old icons: send everything.
         QObject::connect(&controller, &galleond::ScreenController::deckAvailableChanged, pages.get(),

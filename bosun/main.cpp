@@ -6,6 +6,7 @@
 #include "DaemonCalibrationLights.h"
 #include "DaemonStatus.h"
 #include "AppearanceStore.h"
+#include "RingStore.h"
 #include "KeyCalibration.h"
 #include <AppearanceFile.h>
 #include <WeatherPlace.h>
@@ -120,6 +121,8 @@ int main(int argc, char *argv[])
     bosun::DaemonCalibrationLights calibrationLights(daemon);
     // The appearance of the live lighting: read from its file at the start, written after every change (nothing in a preview run).
     bosun::AppearanceStore appearance(preview ? QString() : galleond::appearancePath(), preview ? QString() : galleond::widgetsPath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
+    // The rings of the dials: read from their file at the start, written after every change (nothing in a preview run).
+    bosun::RingStore rings(preview ? QString() : galleond::ringSettingsPath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
     bosun::KeyCalibration keyCalibration(calibrationLights, galleond::keyMapPath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
 #ifdef Q_OS_WIN
     if (!parser.isSet(shotOption) && !parser.isSet(pagesOption) && !parser.isSet(simulateUpdateOption) && !parser.isSet(oldFirmwareOption)) {
@@ -171,6 +174,7 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("backend"), QVariant::fromValue(&backend)},
                                  {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
                                  {QStringLiteral("appearance"), QVariant::fromValue(&appearance)},
+                                 {QStringLiteral("rings"), QVariant::fromValue(&rings)},
                                  {QStringLiteral("keyCalibration"), QVariant::fromValue(&keyCalibration)},
                                  {QStringLiteral("library"), QVariant::fromValue(&library)}});
     engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));

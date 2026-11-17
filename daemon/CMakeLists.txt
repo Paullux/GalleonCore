@@ -56,6 +56,8 @@ add_library(galleond_core STATIC
     KeyboardStatePublisher.h KeyboardStatePublisher.cpp
     AppearanceFile.h AppearanceFile.cpp
     LightingAppearanceApplier.h LightingAppearanceApplier.cpp
+    RingSettings.h RingSettings.cpp
+    RingSettingsApplier.h RingSettingsApplier.cpp
     LedPositions.h LedPositions.cpp
     WeatherPlace.h WeatherPlace.cpp
     SkySun.h SkySun.cpp
