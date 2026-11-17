@@ -80,6 +80,10 @@ public:
     // For the drawing: the colours of the sky at this hour (0 to 24), as the keyboard gets them: `rows` has the six rows from the top, `strip` the
     // light strip. The same functions as galleond's (SkyPalette.h), so the drawing and the keyboard cannot disagree.
     Q_INVOKABLE [[nodiscard]] QVariantMap skyAt(double hours) const;
+    // For the drawing: the colour of every LED at this moment, as galleond gets it from the same file: the base (the rainbow turns with `seconds`, the
+    // sky follows `dayHours` and shimmers), the retouches, then the level. A map "LED number" -> "#rrggbb"; empty when there is nothing to draw. The
+    // same function as the keyboard's (renderAppearance), so the drawing and the keys cannot disagree. Pure: nothing is sent to the keyboard.
+    Q_INVOKABLE [[nodiscard]] QVariantMap previewAt(double seconds, double dayHours) const;
     // The row of the sky (0 to 5) of a key at this height (millimetres, y downwards), or -1 for the light strip.
     Q_INVOKABLE [[nodiscard]] static int skyRowOf(double y);
 
