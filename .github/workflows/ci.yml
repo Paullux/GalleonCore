@@ -55,6 +55,9 @@ jobs:
 
   lint:
     runs-on: ubuntu-24.04
+    # Normally about 25 minutes. The build step has twice stayed "in progress" for 47 minutes before the job was cut (a runner that stopped answering);
+    # a limit makes it fail sooner, and a re-run of the failed job is then enough.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
@@ -65,7 +68,8 @@ jobs:
       - name: Configure
         run: cmake -B build
       - name: Build (generates moc files)
-        run: cmake --build build -j
+        # A number of jobs, not a bare -j (as many compilations as there are files ready): perhaps the cause of the hangs above, not proven.
+        run: cmake --build build -j"$(nproc)"
       - name: clang-tidy
         run: run-clang-tidy -quiet -p build '(lib/src|daemon|bosun|tests|media)/[^/]+\.cpp$'
       - name: qmllint
