@@ -708,9 +708,10 @@ private Q_SLOTS:
 
     void theSkyShowsTheColoursOfTheHourOnTheRealKeysAndFollowsTheHour()
     {
+        // Declared before the rig: the worker thread reads it until the rig is gone.
+        std::atomic<double> hour{12.0};
         Rig rig;
-        double hour = 12.0;
-        rig.controller->setDayHours([&hour] { return hour; });
+        rig.controller->setDayHours([&hour] { return hour.load(); });
         galleon::keyboard::Appearance appearance;
         appearance.base = galleon::keyboard::BaseType::Sky;
         appearance.skyAnimated = false; // the colours of the hour alone
@@ -736,8 +737,7 @@ private Q_SLOTS:
         Rig rig;
         const LightingSkyDay skyDay(*rig.controller, dir.filePath("widgets.json"), parisSolstice);
         const double sunset = galleon::keyboard::sunDay(48.8566, 2.3522, 2026, 6, 21, 2.0).sunsetHours;
-        double hour = sunset;
-        rig.controller->setDayHours([&hour] { return hour; });
+        rig.controller->setDayHours([sunset] { return sunset; }); // a copy: the worker thread outlives this function's locals
         QVERIFY(rig.controller->setAppearance(skyAppearance(true)));
         rig.hold();
         // At the real sunset of Paris, the top row (F1, LED 58) has the colours of the dusk, not those of the night that the fixed hours would give.
