@@ -4,6 +4,7 @@
 #include "AppearanceStore.h"
 
 #include "AppearanceFile.h"
+#include "LedPositions.h"
 
 #include "SkySun.h"
 #include "WeatherPlace.h"
@@ -117,6 +118,18 @@ QVariantMap AppearanceStore::skyAt(double hours) const
     for (const auto &row : rows)
         names.append(colourName(row));
     return {{QStringLiteral("rows"), names}, {QStringLiteral("strip"), colourName(galleon::keyboard::skyStripColour(rows.front()))}};
+}
+
+QVariantMap AppearanceStore::previewAt(double seconds, double dayHours) const
+{
+    const auto scene = galleon::keyboard::renderAppearance(m_appearance, galleond::builtInLedPositions(), seconds, dayHours, skyDay());
+    QVariantMap colours;
+    if (!scene || scene->kind != galleon::keyboard::LiveScene::Kind::PerLed)
+        return colours;
+    for (std::size_t led = 0; led < galleon::keyboard::LiveLedCount; ++led) {
+        colours.insert(QString::number(led), QColor(scene->colours.at(3 * led), scene->colours.at(3 * led + 1), scene->colours.at(3 * led + 2)).name());
+    }
+    return colours;
 }
 
 int AppearanceStore::skyRowOf(double y)

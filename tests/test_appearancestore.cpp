@@ -83,6 +83,45 @@ private Q_SLOTS:
         QCOMPARE(AppearanceStore::skyRowOf(16.8), -1); // the strip
     }
 
+    // ---- the drawing of the keyboard, moving as the keys do
+
+    void thePreviewGivesAColourToEveryLedAndTheLevelDimsIt()
+    {
+        const QTemporaryDir dir;
+        AppearanceStore store(dir.filePath("lighting-appearance.json"));
+        QVERIFY(store.setUniform(200, 100, 50).isEmpty());
+        const QVariantMap full = store.previewAt(0.0, 12.0);
+        QVERIFY(full.size() >= 94 + 7); // every key and the seven sections of the strip
+        QCOMPARE(full.value(QStringLiteral("58")).toString(), QStringLiteral("#c86432"));
+        QVERIFY(store.setLevel(500).isEmpty());
+        QCOMPARE(store.previewAt(0.0, 12.0).value(QStringLiteral("58")).toString(), QStringLiteral("#643219")); // half of it, as the keyboard shows it
+    }
+
+    void theRainbowPreviewMovesWithTheTimeOnlyWhenItHasASpeed()
+    {
+        const QTemporaryDir dir;
+        AppearanceStore store(dir.filePath("lighting-appearance.json"));
+        QVERIFY(store.setRainbow(100).isEmpty());
+        QVERIFY(store.previewAt(0.0, 12.0).value(QStringLiteral("58")) != store.previewAt(2.0, 12.0).value(QStringLiteral("58")));
+        QVERIFY(store.setRainbow(0).isEmpty());
+        QCOMPARE(store.previewAt(0.0, 12.0), store.previewAt(2.0, 12.0));
+    }
+
+    void theSkyPreviewFollowsTheHourAndShimmersOnlyWhenAnimated()
+    {
+        const QTemporaryDir dir;
+        AppearanceStore store(dir.filePath("lighting-appearance.json"));
+        QVERIFY(store.setSky().isEmpty());
+        QVERIFY(store.setSkyAnimated(false).isEmpty());
+        QVERIFY(store.previewAt(0.0, 12.0).value(QStringLiteral("58")) != store.previewAt(0.0, 22.0).value(QStringLiteral("58"))); // noon and night
+        QCOMPARE(store.previewAt(0.0, 12.0), store.previewAt(7.0, 12.0)); // still at a given hour
+        QVERIFY(store.setSkyAnimated(true).isEmpty());
+        bool moved = false;
+        for (int step = 1; step < 40 && !moved; ++step)
+            moved = store.previewAt(0.0, 12.0) != store.previewAt(0.125 * step, 12.0); // the shimmer of the day
+        QVERIFY(moved);
+    }
+
     void theShimmerAndTheStarsAreOnByDefaultAndOnlyTheSkyHasThem()
     {
         const QTemporaryDir dir;

@@ -98,37 +98,36 @@ Window {
         return cap !== undefined && cap.led !== undefined ? cap.led : -1
     }
 
-    // What the appearance looks like in the drawing: the base on every lamp (a black base is "no colour": dark grey), then the retouches
-    // over it, a key with the colour of its LED. The same description galleond plays, drawn once, not moving.
+    // What the appearance looks like in the drawing: the colour of each LED at this moment, from the same function galleond plays (the base, the
+    // retouches, the level), each key taking the colour of its LED. A black LED is "no colour": dark grey, as on the keyboard when the lighting is
+    // switched on. Redrawn by the clock below while the appearance moves.
     function previewOfAppearance() {
         if (win.appearance === null)
             return ({})
-        let colours = ({})
-        if (win.appearance.baseType === "rainbow") {
-            colours = keyboardMap.rainbow()
-        } else if (win.appearance.baseType === "sky") {
-            colours = win.skyPreview()
-        } else if (win.appearance.colour.toString() !== "#000000") {
-            for (const lamp of keyboardMap.allLamps)
-                colours[lamp] = win.appearance.colour.toString()
-            for (const section of keyboardMap.map.strip.sections)
-                colours[section.lamp] = win.appearance.colour.toString()
-        }
-        const byLed = {}
-        for (const retouch of win.appearance.retouches)
-            byLed[retouch.led] = retouch.colour
+        const now = new Date()
+        const scene = win.appearance.previewAt(now.getTime() / 1000, now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600)
+        const colours = ({})
         for (const cap of keyboardMap.map.caps) {
-            if (cap.led !== undefined && byLed[cap.led] !== undefined) {
+            const colour = cap.led !== undefined ? scene[cap.led] : undefined
+            if (colour !== undefined && colour !== "#000000") {
                 for (const lamp of cap.lamps)
-                    colours[lamp] = byLed[cap.led]
+                    colours[lamp] = colour
             }
         }
         for (const section of keyboardMap.map.strip.sections) {
-            if (byLed[section.led] !== undefined)
-                colours[section.lamp] = byLed[section.led]
+            const colour = scene[section.led]
+            if (colour !== undefined && colour !== "#000000")
+                colours[section.lamp] = colour
         }
         return colours
     }
+
+    // Does the appearance move (a rainbow with a speed, the shimmer and the stars of the sky)? Then the drawing is redrawn eight times a second, which is
+    // the step of the effects; the sky alone follows the hour, once a minute. Only while the drawing is on screen and shows what the keys show.
+    readonly property bool previewMoves: win.appearance !== null
+        && ((win.appearance.baseType === "rainbow" && win.appearance.rainbowSpeed > 0) || (win.appearance.baseType === "sky" && win.appearance.skyAnimated))
+    readonly property bool previewRuns: win.appearance !== null && (win.previewMoves || win.appearance.baseType === "sky") && win.visible && win.visibility !== Window.Minimized
+        && win.tab.kind === "keyboard" && win.keyboardView === "lighting" && win.keysShowTheDrawing
 
     // What the live lighting half says about the keyboard's own brightness: it is not touched while the lighting is on (galleond does not write it
     // then), so what is shown is the value read or set before. `value` is the keyboard's unit, 0 to 1000; -1 when it is not known.
@@ -136,30 +135,6 @@ Window {
         if (value < 0)
             return qsTr("The keyboard's own brightness is not known yet. It stays as it is while the live lighting is on; to change it, switch the live lighting off and use the “brightness” half.")
         return qsTr("The keyboard's own brightness is %1 %. It stays as it is while the live lighting is on; to change it, switch the live lighting off and use the “brightness” half. The level of the colours below is a separate setting.").arg(Math.round(value / 10))
-    }
-
-    // The sky at the hour of the computer, as the keyboard shows it: each key takes the colour of its row (the row of the mean height of its
-    // lamps), the light strip the dimmed top row. One standing picture: the drawing is redrawn each minute while the sky is the base.
-    function skyPreview() {
-        const now = new Date()
-        const sky = win.appearance.skyAt(now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600)
-        const heightOf = {}
-        for (const cell of keyboardMap.map.cells)
-            heightOf[cell.id] = cell.y
-        const colours = ({})
-        for (const cap of keyboardMap.map.caps) {
-            if (cap.lamps.length === 0)
-                continue
-            let total = 0
-            for (const lamp of cap.lamps)
-                total += heightOf[lamp]
-            const row = win.appearance.skyRowOf(total / cap.lamps.length)
-            for (const lamp of cap.lamps)
-                colours[lamp] = row < 0 ? sky.strip : sky.rows[row]
-        }
-        for (const section of keyboardMap.map.strip.sections)
-            colours[section.lamp] = sky.strip
-        return colours
     }
 
     function refreshPreview() {
@@ -825,7 +800,7 @@ Window {
                     visible: win.appearance !== null && win.appearance.baseType === "sky"
                     color: "#7d8591"
                     font.pixelSize: 13
-                    text: qsTr("The sky follows the hour of this computer: night, dawn, day, dusk, one colour for each row of keys and the light strip dimmed. By day the keys shimmer a little; by night a few stars drift along the rows, some keys twinkle, and now and then a shooting star crosses the keyboard on a diagonal, white at its head and blue at its tail. The palette, the shimmer and the stars come from the mockup of Aaryush1 (issue #111); the shooting stars are an idea of the owner. The drawing shows the sky standing still, and the colours are not tuned on the real LEDs.")
+                    text: qsTr("The sky follows the hour of this computer: night, dawn, day, dusk, one colour for each row of keys and the light strip dimmed. By day the keys shimmer a little; by night a few stars drift along the rows, some keys twinkle, and now and then a shooting star crosses the keyboard on a diagonal, white at its head and blue at its tail. The palette, the shimmer and the stars come from the mockup of Aaryush1 (issue #111); the shooting stars are an idea of the owner. The drawing moves as the keys do, and the colours are not tuned on the real LEDs.")
                 }
                 Pill {
                     objectName: "skyAnimated"
@@ -893,14 +868,6 @@ Window {
                         text: qsTr("A place is personal data. The one typed here stays in the appearance file on this computer, is only used to compute the sunrise and the sunset, and is never sent anywhere. The place of the weather widget is read only while this is on, and it comes first.")
                     }
                 }
-                Text {
-                    width: parent.width
-                    wrapMode: Text.Wrap
-                    visible: win.appearance !== null && win.appearance.baseType === "rainbow" && win.appearance.rainbowSpeed > 0
-                    color: "#7d8591"
-                    font.pixelSize: 13
-                    text: qsTr("The rainbow moves on the keyboard; the drawing shows it standing still.")
-                }
                 KeyboardMap {
                     id: keyboardMap
                     objectName: "keyboardMap"
@@ -920,10 +887,12 @@ Window {
                         target: win.appearance
                         function onChanged() { win.refreshPreview() }
                     }
-                    Timer { // the sky changes with the hour: the drawing follows each minute
-                        interval: 60000
+                    Timer { // the drawing moves as the keys do (eight images a second), or follows the hour of the sky (once a minute)
+                        objectName: "previewClock"
+                        interval: win.previewMoves ? 125 : 60000
                         repeat: true
-                        running: win.appearance !== null && win.appearance.baseType === "sky"
+                        triggeredOnStart: true
+                        running: win.previewRuns
                         onTriggered: win.refreshPreview()
                     }
                 }

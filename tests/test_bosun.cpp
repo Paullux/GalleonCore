@@ -2092,6 +2092,72 @@ QtObject {
         QVERIFY(calibrationY < webHub);
     }
 
+    void theDrawingOfTheKeyboardMovesAsTheKeysDoAndOnlyWhileItIsOnScreenAndShowsWhatTheKeysShow()
+    {
+        const QString connectionName = QStringLiteral("fake-galleond-for-the-moving-drawing");
+        QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, connectionName);
+        LightingEndpoint endpoint;
+        QVERIFY(bus.registerObject("/org/galleoncore/Lighting", &endpoint, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(bus.registerService(bosun::DaemonStatus::BusName));
+        const auto cleanUp = qScopeGuard([&] {
+            bus.unregisterObject("/org/galleoncore/Lighting");
+            bus.unregisterService(bosun::DaemonStatus::BusName);
+            QDBusConnection::disconnectFromBus(connectionName);
+        });
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        bosun::AppearanceStore appearance(dir.filePath("lighting-appearance.json"));
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QTRY_VERIFY_WITH_TIMEOUT(daemon.lightingState() == QStringLiteral("holding"), 3000);
+        QVERIFY(root->setProperty("currentTab", 3)); // the keyboard tab
+        QVERIFY(root->setProperty("keyboardView", QStringLiteral("lighting")));
+        auto *clock = root->findChild<QObject *>(QStringLiteral("previewClock"));
+        QVERIFY(clock);
+
+        // One colour: a still drawing, no clock.
+        QVERIFY(appearance.setUniform(10, 20, 30).isEmpty());
+        QVERIFY(!clock->property("running").toBool());
+
+        // A rainbow with a speed: eight images a second, and the colours really change.
+        QVERIFY(appearance.setRainbow(300).isEmpty());
+        QTRY_VERIFY_WITH_TIMEOUT(clock->property("running").toBool(), 2000);
+        QCOMPARE(clock->property("interval").toInt(), 125);
+        const QVariantMap first = root->property("lampColors").toMap();
+        QTRY_VERIFY_WITH_TIMEOUT(root->property("lampColors").toMap() != first, 3000);
+
+        // A rainbow standing still does not need a clock; the sky follows the hour each minute, or shimmers eight times a second.
+        QVERIFY(appearance.setRainbow(0).isEmpty());
+        QVERIFY(!clock->property("running").toBool());
+        QVERIFY(appearance.setSky().isEmpty());
+        QVERIFY(clock->property("running").toBool());
+        QCOMPARE(clock->property("interval").toInt(), 125);
+        QVERIFY(appearance.setSkyAnimated(false).isEmpty());
+        QCOMPARE(clock->property("interval").toInt(), 60000);
+        QVERIFY(appearance.setSkyAnimated(true).isEmpty());
+        QCOMPARE(clock->property("interval").toInt(), 125);
+
+        // The other half of the tab, or another tab: nothing to draw, nothing to redraw.
+        QVERIFY(root->setProperty("keyboardView", QStringLiteral("brightness")));
+        QVERIFY(!clock->property("running").toBool());
+        QVERIFY(root->setProperty("keyboardView", QStringLiteral("lighting")));
+        QVERIFY(clock->property("running").toBool());
+        QVERIFY(root->setProperty("currentTab", 0));
+        QVERIFY(!clock->property("running").toBool());
+    }
+
     void theLightStripIsSevenEqualSectionsEachLitByItsOwnLedAndColouredLikeAKey()
     {
         const QString connectionName = QStringLiteral("fake-galleond-for-the-strip");
