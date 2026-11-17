@@ -642,13 +642,76 @@ private Q_SLOTS:
         QCOMPARE(rig.controller->effectiveLevel(), 400); // a half-written file changes nothing: the curve in force stays
     }
 
+    // ---- the hidden green rain on the keys (the easter egg)
+
+    void theGreenRainTakesTheKeysWhileItRunsAndTheAppearanceComesBackAfterwards()
+    {
+        Rig rig;
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {10, 20, 30};
+        QVERIFY(rig.controller->setAppearance(appearance));
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{10, 20, 30}), 3000);
+        QVERIFY(rig.controller->setMatrixRain(true));
+        QVERIFY(rig.controller->matrixRain());
+        // Some key has the almost white head of the rain and some others the greens of its trail (the picture moves, so look for a few moments).
+        const auto hasHeadAndTrail = [&rig] {
+            rig.advance(120);
+            const auto frame = rig.frame();
+            bool head = false;
+            bool trail = false;
+            for (int led = 0; led < 146; ++led) {
+                const auto c = ledColour(frame, led);
+                if (c.size() == 3 && c[0] == 216 && c[1] == 255 && c[2] == 224)
+                    head = true;
+                if (c.size() == 3 && c[0] == 0 && c[1] > 0 && c[1] < 213 && c[2] <= c[1])
+                    trail = true;
+            }
+            return head && trail;
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(hasHeadAndTrail(), 5000);
+        // It stops: the keys show the appearance again.
+        rig.advance(500);
+        QVERIFY(rig.controller->setMatrixRain(false));
+        QVERIFY(!rig.controller->matrixRain());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{10, 20, 30}), 3000);
+    }
+
+    void theGreenRainDoesNothingWhileTheLightingIsOffAndIsLetGoWhenItIsSwitchedOff()
+    {
+        Rig rig;
+        QVERIFY(!rig.controller->setMatrixRain(true)); // the person did not switch the lighting on: nothing is lit for the easter egg
+        QVERIFY(!rig.controller->matrixRain());
+        rig.hold();
+        QVERIFY(rig.controller->setMatrixRain(true));
+        QVERIFY(rig.controller->Enable(false).isEmpty());
+        QVERIFY(!rig.controller->matrixRain()); // let go with the lighting
+        rig.hold();                             // switched on again: the appearance, not the rain
+        QVERIFY(!rig.controller->matrixRain());
+    }
+
+    void anAppearanceSetWhileTheRainRunsIsKeptForWhenItStops()
+    {
+        Rig rig;
+        rig.hold();
+        QVERIFY(rig.controller->setMatrixRain(true));
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {70, 80, 90};
+        QVERIFY(rig.controller->setAppearance(appearance));
+        QVERIFY(rig.controller->matrixRain()); // still raining
+        rig.advance(500);
+        QVERIFY(rig.controller->setMatrixRain(false));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{70, 80, 90}), 3000);
+    }
+
     // ---- the sky of the hour
 
     void theSkyShowsTheColoursOfTheHourOnTheRealKeysAndFollowsTheHour()
     {
+        // Declared before the rig: the worker thread reads it until the rig is gone.
+        std::atomic<double> hour{12.0};
         Rig rig;
-        double hour = 12.0;
-        rig.controller->setDayHours([&hour] { return hour; });
+        rig.controller->setDayHours([&hour] { return hour.load(); });
         galleon::keyboard::Appearance appearance;
         appearance.base = galleon::keyboard::BaseType::Sky;
         appearance.skyAnimated = false; // the colours of the hour alone
@@ -674,8 +737,7 @@ private Q_SLOTS:
         Rig rig;
         const LightingSkyDay skyDay(*rig.controller, dir.filePath("widgets.json"), parisSolstice);
         const double sunset = galleon::keyboard::sunDay(48.8566, 2.3522, 2026, 6, 21, 2.0).sunsetHours;
-        double hour = sunset;
-        rig.controller->setDayHours([&hour] { return hour; });
+        rig.controller->setDayHours([sunset] { return sunset; }); // a copy: the worker thread outlives this function's locals
         QVERIFY(rig.controller->setAppearance(skyAppearance(true)));
         rig.hold();
         // At the real sunset of Paris, the top row (F1, LED 58) has the colours of the dusk, not those of the night that the fixed hours would give.

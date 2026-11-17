@@ -42,6 +42,8 @@ public:
     [[nodiscard]] bool isActive() const { return m_trigger.isRunning(); }
     // A live game (or anything that owns the screen) keeps the easter egg from starting.
     void setInhibited(bool inhibited);
+    // The easter egg ends now (an action at the computer was seen). Nothing when it is not running. Safe from any signal: it ends from the event loop.
+    void endNow();
     // For the tests: a shorter hold.
     void setHoldMs(qint64 ms);
 

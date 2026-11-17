@@ -223,7 +223,9 @@ QString appearancePath()
 
 bool writeAppearance(const QString &path, const Appearance &appearance)
 {
-    return galleon::keyboard::isValid(appearance) && writeFileAtomically(path, encodeAppearance(appearance));
+    // The hidden rain is given by the daemon while the easter egg runs: it is never a saved appearance.
+    return appearance.base != galleon::keyboard::BaseType::Matrix && galleon::keyboard::isValid(appearance)
+           && writeFileAtomically(path, encodeAppearance(appearance));
 }
 
 std::optional<Appearance> readAppearance(const QString &path, QString *why)

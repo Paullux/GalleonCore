@@ -80,6 +80,7 @@ QString LightingController::Enable(bool on)
     }
     m_power.holdSleep();
     m_tool.reset(); // what a tool showed before is not carried over a switching off
+    m_matrix = false;
     m_active = true;
     Q_EMIT activeChanged(true);
     startWorker();
@@ -134,9 +135,24 @@ bool LightingController::setAppearance(const galleon::keyboard::Appearance &appe
     m_appearance = appearance; // kept even while off, so the next start shows it
     m_tool.reset();
     Q_EMIT appearanceSet(appearance);
+    if (m_worker && !m_matrix) { // while the rain shows, the appearance is kept for when it stops
+        const galleon::keyboard::Appearance shown = shownAppearance();
+        QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), shown] { worker->setAppearance(shown); }, Qt::QueuedConnection);
+    }
+    return true;
+}
+
+bool LightingController::setMatrixRain(bool on)
+{
+    if (!m_active)
+        return false;
+    if (on == m_matrix)
+        return true;
+    m_matrix = on;
+    if (on)
+        m_tool.reset(); // the rain is what the keys show: a tool's scene is let go
     if (m_worker) {
-        galleon::keyboard::Appearance shown = appearance;
-        shown.level = effectiveLevel();
+        const galleon::keyboard::Appearance shown = shownAppearance(); // the rain, or the appearance again
         QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), shown] { worker->setAppearance(shown); }, Qt::QueuedConnection);
     }
     return true;
@@ -163,6 +179,10 @@ double systemDayHours()
 galleon::keyboard::Appearance LightingController::shownAppearance() const
 {
     galleon::keyboard::Appearance shown = m_appearance;
+    if (m_matrix) {
+        shown = {};
+        shown.base = galleon::keyboard::BaseType::Matrix; // the hidden rain: no retouch, the level of the person
+    }
     shown.level = effectiveLevel();
     return shown;
 }
@@ -197,6 +217,7 @@ void LightingController::finish(const QString &detail)
 {
     m_resumeTimer.stop();
     m_resumeTriesLeft = 0;
+    m_matrix = false;
     const bool released = stopWorker();
     if (!m_active)
         return;
