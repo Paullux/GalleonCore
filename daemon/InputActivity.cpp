@@ -3,6 +3,10 @@
 
 #include "InputActivity.h"
 
+#ifdef GALLEON_WAYLAND_IDLE
+#include "WaylandInputActivity.h"
+#endif
+
 #ifdef Q_OS_WIN
 #include <windows.h>
 #else
@@ -100,7 +104,7 @@ IdleReader systemIdleReader()
 }
 
 InputActivityWatcher::InputActivityWatcher(IdleReader reader, int intervalMs, QObject *parent)
-    : QObject(parent), m_reader(std::move(reader))
+    : InputActivitySource(parent), m_reader(std::move(reader))
 {
     m_timer.setInterval(intervalMs);
     connect(&m_timer, &QTimer::timeout, this, &InputActivityWatcher::poll);
@@ -146,6 +150,71 @@ void InputActivityWatcher::poll()
             Q_EMIT activity();
         }
     });
+}
+
+namespace {
+
+// The way that this system has: the compositor of a Wayland session when it has the idle notification (KDE Plasma), else the idle time that is read (GNOME,
+// KDE on X11, Windows). Which one is chosen at each start(), so that a compositor that answers late is still used.
+class SystemInputActivity final : public InputActivitySource
+{
+public:
+    SystemInputActivity()
+    {
+        forward(m_polling);
+#ifdef GALLEON_WAYLAND_IDLE
+        if (qEnvironmentVariableIsSet("WAYLAND_DISPLAY")) {
+            m_wayland = WaylandInputActivity::connectToSession();
+            if (m_wayland)
+                forward(*m_wayland);
+        }
+#endif
+    }
+
+    void start() override
+    {
+        if (m_active != nullptr)
+            return;
+        m_active = &m_polling;
+#ifdef GALLEON_WAYLAND_IDLE
+        if (m_wayland && m_wayland->supported())
+            m_active = m_wayland.get();
+#endif
+        m_active->start();
+    }
+
+    void stop() override
+    {
+        if (m_active == nullptr)
+            return;
+        m_active->stop();
+        m_active = nullptr;
+    }
+
+    [[nodiscard]] bool watching() const override { return m_active != nullptr && m_active->watching(); }
+
+private:
+    void forward(InputActivitySource &source)
+    {
+        connect(&source, &InputActivitySource::activity, this, [this] {
+            m_active = nullptr; // the watch that said it is over
+            Q_EMIT activity();
+        });
+        connect(&source, &InputActivitySource::unavailable, this, &InputActivitySource::unavailable);
+    }
+
+    InputActivityWatcher m_polling;
+#ifdef GALLEON_WAYLAND_IDLE
+    std::unique_ptr<WaylandInputActivity> m_wayland;
+#endif
+    InputActivitySource *m_active = nullptr;
+};
+
+} // namespace
+
+std::unique_ptr<InputActivitySource> makeInputActivitySource()
+{
+    return std::make_unique<SystemInputActivity>();
 }
 
 } // namespace galleond

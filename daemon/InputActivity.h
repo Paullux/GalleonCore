@@ -8,6 +8,7 @@
 #include <QtGlobal>
 
 #include <functional>
+#include <memory>
 #include <optional>
 
 namespace galleond {
@@ -40,22 +41,36 @@ private:
 using IdleReader = std::function<void(std::function<void(std::optional<qint64>)> done)>;
 [[nodiscard]] IdleReader systemIdleReader();
 
-// While it watches, it reads the idle time every `intervalMs` and says `activity()` once when an action is seen, then stops watching. It starts and stops
-// on demand (the hidden rain only), and says `unavailable()` once, with no detail, if the system does not give an idle time.
-class InputActivityWatcher : public QObject
+// Something that says once that "something was done at the computer", while it watches, and that watches only on demand (the hidden rain only): nothing
+// is observed between stop() and start(). It says `unavailable()` once, with no detail, when the system cannot tell.
+class InputActivitySource : public QObject
+{
+    Q_OBJECT
+
+public:
+    using QObject::QObject;
+
+    virtual void start() = 0;
+    virtual void stop() = 0;
+    [[nodiscard]] virtual bool watching() const = 0;
+
+Q_SIGNALS:
+    void activity(); // once per watch: the watch is over when it is said
+    void unavailable();
+};
+
+// Watching by reading the idle time every `intervalMs` (D-Bus on KDE X11 and GNOME, GetLastInputInfo on Windows) and saying `activity()` when an action is
+// seen, then stopping.
+class InputActivityWatcher : public InputActivitySource
 {
     Q_OBJECT
 
 public:
     explicit InputActivityWatcher(IdleReader reader = systemIdleReader(), int intervalMs = 250, QObject *parent = nullptr);
 
-    void start();
-    void stop();
-    [[nodiscard]] bool watching() const { return m_timer.isActive(); }
-
-Q_SIGNALS:
-    void activity();
-    void unavailable();
+    void start() override;
+    void stop() override;
+    [[nodiscard]] bool watching() const override { return m_timer.isActive(); }
 
 private:
     void poll();
@@ -67,5 +82,10 @@ private:
     bool m_reportedMissing = false;
     int m_generation = 0;        // a reading that comes after stop() is not for the current watch
 };
+
+// The best way that this system has to tell: on a Wayland session whose compositor has the idle notification protocol (KDE Plasma, where the idle time
+// is not given by D-Bus), the compositor says when the session was idle and when it is used again; otherwise the idle time is read. Either way, only
+// "an action" is known, never which one.
+[[nodiscard]] std::unique_ptr<InputActivitySource> makeInputActivitySource();
 
 } // namespace galleond

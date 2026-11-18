@@ -121,6 +121,22 @@ function(galleond_add_test name)
 endfunction()
 
 galleond_add_test(test_initialpages)
+# The idle notification of Wayland, against a small compositor of our own (libwayland-server): only when galleond is built with it.
+if(GALLEON_WAYLAND_IDLE)
+    find_package(PkgConfig QUIET)
+    pkg_check_modules(WAYLAND_SERVER QUIET IMPORTED_TARGET wayland-server)
+    if(WAYLAND_SERVER_FOUND)
+        set(_idle_server_header ${GALLEON_WAYLAND_GEN_DIR}/ext-idle-notify-v1-server-protocol.h)
+        add_custom_command(OUTPUT ${_idle_server_header}
+            COMMAND ${GALLEON_WAYLAND_SCANNER} server-header ${GALLEON_WAYLAND_IDLE_XML} ${_idle_server_header}
+            DEPENDS ${GALLEON_WAYLAND_IDLE_XML} VERBATIM)
+        add_custom_target(galleond_wayland_server_header DEPENDS ${_idle_server_header})
+        galleond_add_test(test_waylandinput)
+        add_dependencies(test_waylandinput galleond_wayland_server_header)
+        target_include_directories(test_waylandinput SYSTEM PRIVATE ${GALLEON_WAYLAND_GEN_DIR})
+        target_link_libraries(test_waylandinput PRIVATE PkgConfig::WAYLAND_SERVER)
+    endif()
+endif()
 galleond_add_test(test_wellknownapps)
 
 add_executable(galleon_test_decoder FakeDecoder.cpp)
