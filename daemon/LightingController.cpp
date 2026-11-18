@@ -134,7 +134,7 @@ bool LightingController::setAppearance(const galleon::keyboard::Appearance &appe
         return false;
     m_appearance = appearance; // kept even while off, so the next start shows it
     m_tool.reset();
-    Q_EMIT appearanceSet(appearance);
+    Q_EMIT m_announcer.appearanceSet(appearance);
     if (m_worker && !m_matrix) { // while the rain shows, the appearance is kept for when it stops
         const galleon::keyboard::Appearance shown = shownAppearance();
         QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), shown] { worker->setAppearance(shown); }, Qt::QueuedConnection);

@@ -20,6 +20,9 @@ jobs:
   build-test:
     name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
+    # Normally 8 to 15 minutes. The runner has several times been cut or left stuck in the middle of the build (always at about 80 %, when the last
+    # files of Bosun and many tests are compiled together); a limit makes a stuck job fail sooner, and a re-run of the failed job is then enough.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -41,7 +44,9 @@ jobs:
       - name: Configure
         run: cmake -B build -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} -DGALLEON_WERROR=ON ${{ matrix.flags }}
       - name: Build
-        run: cmake --build build -j
+        # A number of jobs, not a bare -j (as many compilations as there are files ready): perhaps the cause of the cuts above, not proven. The lint job
+        # builds this way and has not been cut since.
+        run: cmake --build build -j"$(nproc)"
       - name: Test
         run: ctest --test-dir build --output-on-failure
       - name: Fuzz (60 s)

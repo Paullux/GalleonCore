@@ -29,8 +29,12 @@ bool LightingAppearanceApplier::applyFile()
     }
     const bool applied = m_controller.setAppearance(*appearance);
     // What was read, in a line (no key is involved): so that a person who sees the wrong lighting can tell whether the file was used.
-    const QString kind = appearance->base == galleon::keyboard::BaseType::Rainbow ? QStringLiteral("rainbow, speed %1").arg(appearance->rainbowSpeed)
-                                                                                   : QStringLiteral("one colour");
+    // Which base, and nothing about where the person is (a place of the sky is never written to the journal).
+    QString kind = QStringLiteral("one colour");
+    if (appearance->base == galleon::keyboard::BaseType::Rainbow)
+        kind = QStringLiteral("rainbow, speed %1").arg(appearance->rainbowSpeed);
+    else if (appearance->base == galleon::keyboard::BaseType::Sky)
+        kind = appearance->followSun ? QStringLiteral("sky, following the sun") : QStringLiteral("sky");
     qInfo().noquote() << QStringLiteral("galleond: lighting: the appearance file was read: %1, %2 retouches, level %3 (%4)")
                              .arg(kind)
                              .arg(appearance->retouches.size())
