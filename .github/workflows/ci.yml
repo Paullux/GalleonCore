@@ -20,9 +20,10 @@ jobs:
   build-test:
     name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
-    # Normally 8 to 15 minutes. The runner has several times been cut or left stuck in the middle of the build (always at about 80 %, when the last
-    # files of Bosun and many tests are compiled together); a limit makes a stuck job fail sooner, and a re-run of the failed job is then enough.
-    timeout-minutes: 30
+    # Normally 8 to 25 minutes (the installation of the packages alone has taken 12 minutes on a slow day). The runner has several times been cut or left
+    # stuck in the middle of the build (always at about 80 %, when the last files of Bosun and many tests are compiled together); a limit makes a stuck job
+    # fail sooner than the 6 hours of the default, and a re-run of the failed job is then enough.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -60,9 +61,10 @@ jobs:
 
   lint:
     runs-on: ubuntu-24.04
-    # Normally about 25 minutes. The build step has twice stayed "in progress" for 47 minutes before the job was cut (a runner that stopped answering);
-    # a limit makes it fail sooner, and a re-run of the failed job is then enough.
-    timeout-minutes: 40
+    # Normally 27 to 36 minutes, and more than 40 on a slow day: a limit of 40 cut two runs of clang-tidy that were going on normally (PR #130). The build step
+    # has twice stayed "in progress" for 47 minutes before the job was cut (a runner that stopped answering); a limit well above the slowest normal run still
+    # fails such a job sooner than the 6 hours of the default, and a re-run of the failed job is then enough.
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
