@@ -33,6 +33,9 @@ class MatrixRainController : public QObject
 public:
     static constexpr int MaxRunMs = 5 * 60 * 1000;
     static constexpr int FrameIntervalMs = 90; // about 11 pictures per second at most
+    // `handsFree()` is said this long after the fingers that started the rain left the dials: the dials of the module are also input devices of the
+    // system, so their release is seen by it as an action, and must be over before anything watches the computer.
+    static constexpr int HandsFreeGraceMs = 300;
 
     // `deck` and `renderer` are not owned and must outlive the controller.
     // `renderer` shows MatrixRain.qml; a null or invalid one disables the easter egg.
@@ -49,6 +52,8 @@ public:
 
 Q_SIGNALS:
     void activeChanged(bool active);
+    // The rain runs and the fingers that started it have left the dials (and a moment passed): from now on an action at the computer is the person's.
+    void handsFree();
 
 private:
     void onEvent(MatrixTrigger::Kind kind, int index);
@@ -63,6 +68,7 @@ private:
     MatrixTrigger m_trigger;
     QElapsedTimer m_clock; // the time given to the trigger
     QTimer m_holdTimer;    // fires when the hold is long enough
+    QTimer m_handsTimer;   // fires HandsFreeGraceMs after the fingers left the dials that started the rain
     QTimer m_frameTimer;
     QElapsedTimer m_run;
     QElapsedTimer m_sinceFrame; // since the last picture was sent

@@ -159,6 +159,22 @@ private Q_SLOTS:
         QVERIFY(trigger.isRunning());
     }
 
+    void theStartingDialsAreHeldUntilBothAreReleased()
+    {
+        MatrixTrigger trigger;
+        QVERIFY(!trigger.startingDialsHeld()); // nothing runs
+        trigger.onEvent(Kind::DialPressed, 0, 0);
+        trigger.onEvent(Kind::DialPressed, 1, 0);
+        QVERIFY(!trigger.startingDialsHeld()); // not started yet
+        trigger.tick(5000);
+        QVERIFY(trigger.startingDialsHeld());
+        trigger.onEvent(Kind::DialReleased, 0, 5100);
+        QVERIFY(trigger.startingDialsHeld()); // one finger is still on
+        trigger.onEvent(Kind::DialReleased, 1, 5200);
+        QVERIFY(!trigger.startingDialsHeld());
+        QVERIFY(trigger.isRunning()); // and it goes on
+    }
+
     void anyInputAfterTheStartStopsIt()
     {
         const std::array<std::pair<Kind, int>, 4> inputs{{{Kind::KeyPressed, 3}, {Kind::KeyReleased, 3}, {Kind::DialRotated, 1},
@@ -290,6 +306,57 @@ private Q_SLOTS:
         QTRY_COMPARE_WITH_TIMEOUT(active.count(), 2, 3000);
         QVERIFY(!active.at(1).at(0).toBool());
         QVERIFY(!f.controller->isActive());
+    }
+
+    void theComputerIsWatchedOnlyAfterTheFingersLeftTheDialsThatStartedTheRain()
+    {
+        // The dials of the module are input devices of the system too: their release is seen as an action, so nothing may watch the computer before it.
+        Fixture f;
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        const QSignalSpy free(f.controller.get(), &MatrixRainController::handsFree);
+        f.transport->pendingReads.push_back(dialButtons(true, true));
+        QTRY_COMPARE_WITH_TIMEOUT(active.count(), 1, 3000);
+        QTest::qWait(MatrixRainController::HandsFreeGraceMs + 300);
+        QCOMPARE(free.count(), 0); // the fingers are still on the dials, however long
+        f.transport->pendingReads.push_back(dialButtons(false, true)); // one finger leaves
+        QTest::qWait(MatrixRainController::HandsFreeGraceMs + 300);
+        QCOMPARE(free.count(), 0);
+        f.transport->pendingReads.push_back(dialButtons(false, false)); // the other one
+        QTest::qWait(MatrixRainController::HandsFreeGraceMs / 2);
+        QCOMPARE(free.count(), 0); // a moment of grace, for what the system says of the release
+        QTRY_COMPARE_WITH_TIMEOUT(free.count(), 1, 2000);
+        QVERIFY(f.controller->isActive());
+        QTest::qWait(MatrixRainController::HandsFreeGraceMs + 300);
+        QCOMPARE(free.count(), 1); // once
+    }
+
+    void nothingIsSaidFreeWhenTheRainEndsBeforeTheFingersLeft()
+    {
+        Fixture f;
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        const QSignalSpy free(f.controller.get(), &MatrixRainController::handsFree);
+        f.transport->pendingReads.push_back(dialButtons(true, true));
+        QTRY_COMPARE_WITH_TIMEOUT(active.count(), 1, 3000);
+        f.controller->endNow();
+        QTRY_COMPARE_WITH_TIMEOUT(active.count(), 2, 3000);
+        f.transport->pendingReads.push_back(dialButtons(false, false));
+        QTest::qWait(MatrixRainController::HandsFreeGraceMs + 400);
+        QCOMPARE(free.count(), 0);
+    }
+
+    void aSecondRainSaysItsOwnFreeAgain()
+    {
+        Fixture f;
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        const QSignalSpy free(f.controller.get(), &MatrixRainController::handsFree);
+        for (int round = 1; round <= 2; ++round) {
+            f.transport->pendingReads.push_back(dialButtons(true, true));
+            QTRY_COMPARE_WITH_TIMEOUT(active.count(), round + round - 1, 3000);
+            f.transport->pendingReads.push_back(dialButtons(false, false));
+            QTRY_COMPARE_WITH_TIMEOUT(free.count(), round, 2000);
+            f.controller->endNow();
+            QTRY_COMPARE_WITH_TIMEOUT(active.count(), round + round, 3000);
+        }
     }
 
     void nothingStartsWhileInhibited()
