@@ -967,23 +967,24 @@ int main(int argc, char *argv[])
     // When the sky changes: the real sunrise and sunset if the sky follows the sun (off by default), else the fixed schedule of the mockup.
     const galleond::LightingSkyDay lightingSkyDay(lighting, galleond::widgetsPath());
     // The hidden green rain also falls on the keys of the keyboard, if the lighting is already on (the person switched it on): it takes the picture of the keys
-    // while it runs and the appearance comes back when it ends. It ends at the first action at the computer (mouse or keyboard), seen only from the idle time
-    // that the system gives, only while it runs; the keys and the dials of the module end it as before.
-    galleond::InputActivityWatcher matrixActivity;
+    // while it runs and the appearance comes back when it ends. It ends at the first action at the computer (mouse or keyboard), seen only as "the session was
+    // idle, then used again" (the compositor of a Wayland session, or the idle time that the system gives), only while the rain runs; the keys and the dials
+    // of the module end it as before.
+    const std::unique_ptr<galleond::InputActivitySource> matrixActivity = galleond::makeInputActivitySource();
     if (matrixRain) {
         QObject::connect(matrixRain.get(), &galleond::MatrixRainController::activeChanged, &lighting, [&lighting, &matrixActivity](bool active) {
             const bool onKeys = lighting.setMatrixRain(active);
             if (active && onKeys)
-                matrixActivity.start();
+                matrixActivity->start();
             else
-                matrixActivity.stop();
+                matrixActivity->stop();
         });
-        QObject::connect(&matrixActivity, &galleond::InputActivityWatcher::activity, matrixRain.get(), [&matrixRain] { matrixRain->endNow(); });
-        QObject::connect(&matrixActivity, &galleond::InputActivityWatcher::unavailable, &lighting,
-                         [] { qWarning() << "galleond: the system gives no idle time: the green rain on the keys does not end at the first action, only on its own limit"; });
-        QObject::connect(&lighting, &galleond::LightingController::activeChanged, &matrixActivity, [&matrixActivity](bool active) {
+        QObject::connect(matrixActivity.get(), &galleond::InputActivitySource::activity, matrixRain.get(), [&matrixRain] { matrixRain->endNow(); });
+        QObject::connect(matrixActivity.get(), &galleond::InputActivitySource::unavailable, &lighting,
+                         [] { qWarning() << "galleond: the system says nothing of the activity of the person: the green rain on the keys does not end at the first action, only on its own limit"; });
+        QObject::connect(&lighting, &galleond::LightingController::activeChanged, matrixActivity.get(), [&matrixActivity](bool active) {
             if (!active)
-                matrixActivity.stop();
+                matrixActivity->stop();
         });
     }
     // The curve of the level of the colours through the day (a software factor, not the keyboard's brightness).

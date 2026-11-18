@@ -12,6 +12,7 @@ BuildRequires:  qt6-qtbase-devel >= 6.4
 BuildRequires:  qt6-qtwebsockets-devel >= 6.4
 BuildRequires:  qt6-qtdeclarative-devel >= 6.4
 BuildRequires:  hidapi-devel dbus-daemon
+BuildRequires:  wayland-devel wayland-protocols-devel
 Requires:       qt6-qtdeclarative >= 6.4
 Requires:       systemd udev glib2 xdg-utils python3
 Recommends:     ffmpeg-free
