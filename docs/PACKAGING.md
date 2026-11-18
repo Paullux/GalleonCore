@@ -53,6 +53,14 @@ Build (names for Ubuntu 24.04 / Debian 13; Qt **6.4 or newer**):
 `cmake g++ pkg-config qt6-base-dev qt6-declarative-dev libhidapi-dev` (Qt Core, Gui, Widgets, Qml, Quick, DBus,
 Network; `hidapi-hidraw`).
 
+Optional, Linux only: `libwayland-dev libwayland-bin wayland-protocols` (Fedora: `wayland-devel wayland-protocols-devel`; Arch: `wayland
+wayland-protocols`). With them, `galleond` is built with the idle notification of Wayland (`ext-idle-notify-v1`, generated at build time from the XML of
+`wayland-protocols`, never copied into the project), which lets the hidden green rain end at the first action of the person on KDE Plasma under
+Wayland, where the idle time is not given by D-Bus. Without them everything builds as before and the rain ends by the keys and the dials of the module, by
+its time limit, or by the idle time that D-Bus gives on GNOME and on KDE with X11. CMake says which case it is (`galleond: the idle notification of
+Wayland ... is built in`). The packages built by the CI have it; the tests of it use a small compositor of their own (`libwayland-server`, part of
+`libwayland-dev`).
+
 Runtime:
 - the Qt libraries above, and the QML modules `qml6-module-qtquick`, `qml6-module-qtquick-window`,
   `qml6-module-qtqml`, `qml6-module-qtqml-workerscript` (no Qt Quick Controls, no Kirigami);

@@ -61,6 +61,7 @@ jobs:
           apt-get update -qq
           DEBIAN_FRONTEND=noninteractive apt-get install -y git build-essential debhelper devscripts \
             cmake pkg-config qt6-base-dev qt6-declarative-dev qt6-websockets-dev libhidapi-dev dbus \
+            libwayland-dev libwayland-bin wayland-protocols \
             qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtqml qml6-module-qtqml-workerscript
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -97,7 +98,7 @@ jobs:
     container: fedora:${{ matrix.fedora }}
     steps:
       - name: Install tools
-        run: dnf install -y git rpm-build rpmdevtools gcc-c++ cmake make pkgconf-pkg-config qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtwebsockets-devel hidapi-devel dbus-daemon
+        run: dnf install -y git rpm-build rpmdevtools gcc-c++ cmake make pkgconf-pkg-config qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtwebsockets-devel hidapi-devel wayland-devel wayland-protocols-devel dbus-daemon
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
@@ -130,7 +131,7 @@ jobs:
     container: archlinux:base-devel
     steps:
       - name: Install tools
-        run: pacman -Syu --noconfirm --needed git cmake qt6-base qt6-declarative qt6-websockets hidapi dbus python ttf-dejavu
+        run: pacman -Syu --noconfirm --needed git cmake qt6-base qt6-declarative qt6-websockets hidapi wayland wayland-protocols dbus python ttf-dejavu
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
@@ -174,7 +175,7 @@ jobs:
       - name: Install dependencies
         run: |
           bash tools/ci/install-ubuntu-deps.sh cmake g++ pkg-config qt6-base-dev qt6-declarative-dev qt6-websockets-dev \
-            qt6-wayland qt6-svg-dev libhidapi-dev libxkbcommon-x11-0 patchelf \
+            qt6-wayland qt6-svg-dev libhidapi-dev libwayland-dev libwayland-bin wayland-protocols libxkbcommon-x11-0 patchelf \
             qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtqml qml6-module-qtqml-workerscript
       - name: Build and smoke-test AppImage
         run: bash tools/packaging/appimage/build.sh build-deb/appimage
