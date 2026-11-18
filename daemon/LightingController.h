@@ -46,6 +46,20 @@ class LightingWorker;
 // The local time as hours, 0 to 24 (what the sky follows).
 [[nodiscard]] double systemDayHours();
 
+// Says that an appearance was accepted (what the keys will show, and what the sky needs to know: whether it follows the sun and from where). It is a
+// separate object ON PURPOSE: the controller is put on the D-Bus with all its signals, and an appearance may hold a place (a latitude and a longitude,
+// personal data), which must never be offered to the bus. Nothing of this object is ever registered there.
+class AppearanceAnnouncer : public QObject
+{
+    Q_OBJECT
+
+public:
+    using QObject::QObject;
+
+Q_SIGNALS:
+    void appearanceSet(const galleon::keyboard::Appearance &appearance);
+};
+
 class LightingController : public QObject
 {
     Q_OBJECT
@@ -80,6 +94,8 @@ public:
     bool setAppearance(const galleon::keyboard::Appearance &appearance);
     void setPositions(std::vector<galleon::keyboard::LedPosition> positions) { m_positions = std::move(positions); }
     [[nodiscard]] const galleon::keyboard::Appearance &appearance() const { return m_appearance; }
+    // Says each time an appearance is accepted (for the sky, which needs the place). Not a signal of the controller: see AppearanceAnnouncer.
+    [[nodiscard]] AppearanceAnnouncer &announcer() { return m_announcer; }
     // A level that takes the place of the appearance's own (the curve of the day, LightingLevelScheduler), or none to go back to it. Kept while the
     // lighting is off and over later appearances; the rainbow does not restart. False, and nothing changed, for a level outside 0 to 1000.
     bool setLevelOverride(std::optional<int> level);
@@ -114,8 +130,6 @@ public Q_SLOTS:
 Q_SIGNALS:
     void stateChanged(const QString &state, const QString &detail);
     void activeChanged(bool active);
-    // An appearance was accepted (what the keys will show, and what the sky needs to know: whether it follows the sun and from where).
-    void appearanceSet(const galleon::keyboard::Appearance &appearance);
 
 private:
     bool showScene(const galleon::keyboard::LiveScene &scene);
@@ -141,6 +155,7 @@ private:
     int m_resumeAttempts = ResumeAttempts;
     galleon::keyboard::Appearance m_appearance; // dark until something is asked for
     std::optional<int> m_levelOverride;
+    AppearanceAnnouncer m_announcer; // not a child, and never put on the bus
     bool m_matrix = false; // the hidden rain is showing
     std::function<double()> m_dayHours = [] { return systemDayHours(); };
     std::function<galleon::keyboard::SkyDay()> m_skyDay = [] { return galleon::keyboard::SkyDay{}; };

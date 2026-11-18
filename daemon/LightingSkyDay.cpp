@@ -30,7 +30,7 @@ LightingSkyDay::LightingSkyDay(LightingController &controller, QString widgetsPa
     : QObject(parent), m_widgetsPath(std::move(widgetsPath)), m_watcher(m_widgetsPath), m_state(std::make_shared<State>())
 {
     m_state->clock = std::move(clock);
-    connect(&controller, &LightingController::appearanceSet, this, &LightingSkyDay::onAppearanceSet);
+    connect(&controller.announcer(), &AppearanceAnnouncer::appearanceSet, this, &LightingSkyDay::onAppearanceSet);
     // The file is only watched (its being replaced), not read, until the sky follows the sun.
     connect(&m_watcher, &ReplacedFileWatcher::maybeChanged, this, [this] {
         bool follow = false;
