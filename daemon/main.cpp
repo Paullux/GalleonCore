@@ -972,12 +972,15 @@ int main(int argc, char *argv[])
     // of the module end it as before.
     const std::unique_ptr<galleond::InputActivitySource> matrixActivity = galleond::makeInputActivitySource();
     if (matrixRain) {
+        // The computer is watched only once the fingers have left the dials that started the rain: the dials of the module are input devices of the
+        // system too, and their release would be taken for an action at the computer (the rain ended as soon as the dials were let go).
         QObject::connect(matrixRain.get(), &galleond::MatrixRainController::activeChanged, &lighting, [&lighting, &matrixActivity](bool active) {
-            const bool onKeys = lighting.setMatrixRain(active);
-            if (active && onKeys)
+            static_cast<void>(lighting.setMatrixRain(active));
+            matrixActivity->stop();
+        });
+        QObject::connect(matrixRain.get(), &galleond::MatrixRainController::handsFree, &lighting, [&lighting, &matrixActivity] {
+            if (lighting.matrixRain())
                 matrixActivity->start();
-            else
-                matrixActivity->stop();
         });
         QObject::connect(matrixActivity.get(), &galleond::InputActivitySource::activity, matrixRain.get(), [&matrixRain] { matrixRain->endNow(); });
         QObject::connect(matrixActivity.get(), &galleond::InputActivitySource::unavailable, &lighting,

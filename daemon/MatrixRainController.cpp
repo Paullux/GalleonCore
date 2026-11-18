@@ -35,6 +35,12 @@ MatrixRainController::MatrixRainController(galleon::StreamDeck *deck, ScreenRend
         apply(m_trigger.tick(m_clock.elapsed()));
         armTimer();
     });
+    m_handsTimer.setSingleShot(true);
+    m_handsTimer.setInterval(HandsFreeGraceMs);
+    connect(&m_handsTimer, &QTimer::timeout, this, [this] {
+        if (m_trigger.isRunning() && !m_trigger.startingDialsHeld())
+            Q_EMIT handsFree();
+    });
     m_frameTimer.setInterval(FrameIntervalMs);
     connect(&m_frameTimer, &QTimer::timeout, this, &MatrixRainController::drawFrame);
 
@@ -91,6 +97,7 @@ void MatrixRainController::onEvent(MatrixTrigger::Kind kind, int index)
     if (m_inhibited || !m_renderer || !m_renderer->isValid())
         return;
     const bool wasRunning = m_trigger.isRunning();
+    const bool heldBefore = m_trigger.startingDialsHeld();
     const MatrixTrigger::Action action = m_trigger.onEvent(kind, index, m_clock.elapsed());
     if (wasRunning && action == MatrixTrigger::Action::Stop) {
         // The press or turn that ends it must not also act on the page it was meant for: the
@@ -98,6 +105,8 @@ void MatrixRainController::onEvent(MatrixTrigger::Kind kind, int index)
         QMetaObject::invokeMethod(this, [this] { stop(); }, Qt::QueuedConnection);
         return;
     }
+    if (wasRunning && heldBefore && !m_trigger.startingDialsHeld())
+        m_handsTimer.start(); // the last of the starting fingers left the dials
     apply(action);
     armTimer();
 }
@@ -127,6 +136,10 @@ void MatrixRainController::start()
     m_run.start();
     qInfo() << "galleond: matrix rain on";
     Q_EMIT activeChanged(true);
+    if (m_trigger.startingDialsHeld())
+        m_handsTimer.stop(); // said when they leave the dials
+    else
+        m_handsTimer.start();
     drawFrame();
     m_frameTimer.start();
 }
@@ -134,6 +147,7 @@ void MatrixRainController::start()
 void MatrixRainController::stop()
 {
     m_frameTimer.stop();
+    m_handsTimer.stop();
     qInfo() << "galleond: matrix rain off";
     // The controllers draw their page again when they hear this.
     Q_EMIT activeChanged(false);

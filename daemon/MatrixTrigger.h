@@ -7,6 +7,7 @@
 
 #include <QtGlobal>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 
@@ -38,6 +39,8 @@ public:
     [[nodiscard]] qint64 msUntilStart(qint64 nowMs) const;
 
     [[nodiscard]] bool isRunning() const { return m_running; }
+    // While it runs: the fingers that started it are still on a dial (the release of each is still to come, and ignored).
+    [[nodiscard]] bool startingDialsHeld() const { return m_running && std::ranges::any_of(m_ignoreRelease, [](bool held) { return held; }); }
     // The device went away or the daemon stops: forget everything.
     void reset();
 
