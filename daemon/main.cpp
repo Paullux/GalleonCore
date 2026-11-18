@@ -165,6 +165,38 @@ int measureThroughput(galleon::StreamDeck &deck)
     return 0;
 }
 
+// Lights ONE segment of a dial ring at a time, white, for two seconds each, to see where each of the four segments is around the ring (which is at the top, and
+// the way they go): the report numbers them 0 to 3 but does not say where they are. Sends only ring colours (what the daemon sends all the time). Stop the
+// galleond service first.
+int walkRingSegments(galleon::StreamDeck &deck)
+{
+    const auto wait = [](int ms) {
+        QElapsedTimer t;
+        t.start();
+        while (t.elapsed() < ms) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 20); // keeps the keep-alive going
+            QThread::msleep(5);
+        }
+    };
+    qInfo() << "galleond: look at the rings: each segment lights white for 2 s, one at a time. Note, for each, where it is on the ring (top, right, bottom, left or between).";
+    for (int dial = 0; dial < galleon::protocol::DialCount; ++dial) {
+        for (int segment = 0; segment < galleon::protocol::DialRingLeds; ++segment) {
+            deck.setDialRing(0, 0, 0, 0);
+            deck.setDialRing(1, 0, 0, 0);
+            deck.setDialRingSegment(dial, segment, 255, 255, 255);
+            qInfo().noquote() << QStringLiteral("dial %1 (%2), segment %3 of 0 to 3 is lit now")
+                                     .arg(dial)
+                                     .arg(dial == 0 ? QStringLiteral("left") : QStringLiteral("right"))
+                                     .arg(segment);
+            wait(2000);
+        }
+    }
+    deck.setDialRing(0, 0, 0, 0);
+    deck.setDialRing(1, 0, 0, 0);
+    qInfo() << "galleond: done: the rings are dark again";
+    return 0;
+}
+
 // Flips the dial rings and the screen together, back and forth, to film: the gap between
 // the two on the video is how late the screen shows what it was sent. Sends only pictures
 // and ring colours (what the daemon sends all the time). Stop the galleond service first.
@@ -484,6 +516,8 @@ int main(int argc, char *argv[])
                                            QStringLiteral("Send bursts of pictures to the screen and the keys, print the frame rates and exit. Stop the galleond service first."));
     const QCommandLineOption displayLagOption(QStringLiteral("measure-display-lag"),
                                               QStringLiteral("Flip the dial rings and the screen together 8 times, to film how late the screen shows a picture. Stop the galleond service first."));
+    const QCommandLineOption ringWalkOption(QStringLiteral("ring-walk"),
+                                            QStringLiteral("Light one segment of each dial ring at a time (white, 2 s), to see where the four segments are around the ring, then exit. Stop the galleond service first."));
     const QCommandLineOption renderSaverOption(QStringLiteral("render-saver"),
                                                QStringLiteral("Draw one picture of a screensaver video, cut for the screen and the keys, into this PNG file and exit. Does not touch the hardware."),
                                                QStringLiteral("file"));
@@ -527,7 +561,7 @@ int main(int argc, char *argv[])
                                             QStringLiteral("number"));
     parser.addOptions({previewOption, wallpapersOption, widgetsOption, wallpaperOption, renderOption, traceOption, testKeysOption,
                        pagesOption, noPagesOption, renderKeysOption, stateOption, renderNowPlayingOption, appsOption,
-                       listAppsOption, filterOption, assignOption, keyOption, pageOption, clearKeyOption, measureOption, displayLagOption, renderSaverOption, saverVideoOption, saverAtOption, calibrationOption});
+                       listAppsOption, filterOption, assignOption, keyOption, pageOption, clearKeyOption, measureOption, displayLagOption, ringWalkOption, renderSaverOption, saverVideoOption, saverAtOption, calibrationOption});
     const QCommandLineOption launcherInfo(QStringLiteral("launcher-info"),
         QStringLiteral("Read bounded launcher metadata and exit without opening HID."), QStringLiteral("reference"));
     parser.addOption(launcherInfo);
@@ -739,7 +773,7 @@ int main(int argc, char *argv[])
     // Normal Windows startup opens HID on the controller's timer after exec():
     // QML, Core Audio and SMTC setup must finish before host-mode timers start.
 #ifdef Q_OS_WIN
-    const bool openImmediately = parser.isSet(calibrationOption) || parser.isSet(displayLagOption)
+    const bool openImmediately = parser.isSet(calibrationOption) || parser.isSet(displayLagOption) || parser.isSet(ringWalkOption)
         || parser.isSet(measureOption) || parser.isSet(testKeysOption);
 #else
     constexpr bool openImmediately = true;
@@ -763,6 +797,14 @@ int main(int argc, char *argv[])
             return 1;
         }
         return measureDisplayLag(deck);
+    }
+
+    if (parser.isSet(ringWalkOption)) {
+        if (!deck.isOpen()) {
+            qCritical() << "galleond: no Galleon 100 SD found";
+            return 1;
+        }
+        return walkRingSegments(deck);
     }
 
     if (parser.isSet(measureOption)) {

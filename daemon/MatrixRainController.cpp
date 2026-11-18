@@ -133,6 +133,8 @@ void MatrixRainController::start()
     m_sendFailures = 0;
     m_lastCostMs = 0;
     m_sinceFrame.invalidate();
+    for (auto &ring : m_ringSent)
+        ring.fill(std::nullopt); // the rings were dark (the pages are suspended): every segment is sent at the first picture
     m_run.start();
     qInfo() << "galleond: matrix rain on";
     Q_EMIT activeChanged(true);
@@ -151,6 +153,21 @@ void MatrixRainController::stop()
     qInfo() << "galleond: matrix rain off";
     // The controllers draw their page again when they hear this.
     Q_EMIT activeChanged(false);
+}
+
+void MatrixRainController::drawRings()
+{
+    for (int dial = 0; dial < galleon::protocol::DialCount; ++dial) {
+        const auto colours = matrixRingSegments(dial, m_tick);
+        auto &sent = m_ringSent.at(static_cast<std::size_t>(dial));
+        for (int segment = 0; segment < galleon::protocol::DialRingLeds; ++segment) {
+            const auto index = static_cast<std::size_t>(segment);
+            if (sent.at(index) == colours.at(index))
+                continue;
+            if (m_deck->setDialRingSegment(dial, segment, colours.at(index).red, colours.at(index).green, colours.at(index).blue))
+                sent.at(index) = colours.at(index);
+        }
+    }
 }
 
 void MatrixRainController::drawFrame()
@@ -179,6 +196,7 @@ void MatrixRainController::drawFrame()
         const QImage image = m_renderer->render({{QStringLiteral("tick"), m_tick}, {QStringLiteral("seed"), key + 1}, {QStringLiteral("cell"), KeyCell}, {QStringLiteral("trailLength"), KeyTrail}}, KeySize);
         ok = !image.isNull() && m_deck->setKeyImage(key, image, false) && ok;
     }
+    drawRings();
     if (ok) {
         m_sendFailures = 0;
     } else if (++m_sendFailures >= MaxSendFailures) {

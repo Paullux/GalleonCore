@@ -359,6 +359,86 @@ private Q_SLOTS:
         }
     }
 
+    // The reports that light the segments of the rings: `03 24 <led> <red> <green> <blue>`.
+    static std::vector<std::vector<std::uint8_t>> ringReports(const FakeTransport &transport)
+    {
+        std::vector<std::vector<std::uint8_t>> reports;
+        for (const auto &report : transport.featureReports) {
+            if (report.size() > 5 && report[0] == 0x03 && report[1] == 0x24)
+                reports.push_back(report);
+        }
+        return reports;
+    }
+
+    void theRingsOfTheDialsShowTheRainToo()
+    {
+        const Fixture f;
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        f.transport->featureReports.clear();
+        f.transport->pendingReads.push_back(dialButtons(true, true));
+        QTRY_COMPARE_WITH_TIMEOUT(active.count(), 1, 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(ringReports(*f.transport).size() >= 8, 3000); // every segment of both rings is given at the first picture
+        bool leftHead = false;
+        std::array<bool, 8> ledSeen{};
+        for (const auto &report : ringReports(*f.transport)) {
+            QVERIFY(report[2] < 8); // the four segments of the two rings, and no other LED
+            ledSeen.at(report[2]) = true;
+            leftHead = leftHead || (report[2] >= 4 && report[3] == 216 && report[4] == 255 && report[5] == 224);
+        }
+        QVERIFY(std::all_of(ledSeen.begin(), ledSeen.end(), [](bool seen) { return seen; }));
+        QVERIFY(leftHead); // the almost white head, on the left ring (LEDs 4 to 7)
+    }
+
+    void aSegmentIsSentAgainOnlyWhenItsColourChanged()
+    {
+        const Fixture f;
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        f.transport->pendingReads.push_back(dialButtons(true, true));
+        QTRY_COMPARE_WITH_TIMEOUT(active.count(), 1, 3000);
+        QTest::qWait(2500); // a few dozen pictures of the rain
+        const auto reports = ringReports(*f.transport);
+        QVERIFY(reports.size() > 8);
+        std::array<std::array<int, 3>, 8> last{};
+        std::array<bool, 8> known{};
+        for (const auto &report : reports) {
+            const std::array<int, 3> colour{report[3], report[4], report[5]};
+            if (known.at(report[2]))
+                QVERIFY2(colour != last.at(report[2]), "a segment was sent again with the colour it already had");
+            last.at(report[2]) = colour;
+            known.at(report[2]) = true;
+        }
+    }
+
+    void aRingThatCannotBeWrittenDoesNotEndTheRain()
+    {
+        Fixture f;
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        // The reports of the rings are refused, and only they (the keep-alive between the pictures still goes through).
+        f.transport->refuseFeature = [](std::span<const std::uint8_t> report) { return report.size() > 1 && report[0] == 0x03 && report[1] == 0x24; };
+        f.transport->pendingReads.push_back(dialButtons(true, true));
+        QTRY_COMPARE_WITH_TIMEOUT(active.count(), 1, 3000);
+        QTest::qWait(1500);
+        QVERIFY(f.controller->isActive()); // the screen and the keys are what the rain is about
+        QCOMPARE(active.count(), 1);
+    }
+
+    void theRingsStartFromNothingAtEachNewRain()
+    {
+        Fixture f;
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        f.transport->pendingReads.push_back(dialButtons(true, true));
+        QTRY_COMPARE_WITH_TIMEOUT(active.count(), 1, 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(ringReports(*f.transport).size() >= 8, 3000);
+        f.transport->pendingReads.push_back(dialButtons(false, false));
+        QTest::qWait(MatrixRainController::HandsFreeGraceMs + 200);
+        f.controller->endNow();
+        QTRY_COMPARE_WITH_TIMEOUT(active.count(), 2, 3000);
+        f.transport->featureReports.clear();
+        f.transport->pendingReads.push_back(dialButtons(true, true));
+        QTRY_COMPARE_WITH_TIMEOUT(active.count(), 3, 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(ringReports(*f.transport).size() >= 8, 3000); // the pages had put the rings back: all of them are sent again
+    }
+
     void nothingStartsWhileInhibited()
     {
         Fixture f;

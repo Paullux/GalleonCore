@@ -128,7 +128,8 @@ private Q_SLOTS:
         // The module has its own copy of the palette (the two parts of galleond do not call each other): it must stay the keyboard's.
         const auto &positions = builtInLedPositions();
         bool headSeen = false;
-        for (double seconds = 0.0; seconds < 60.0 && !headSeen; seconds += galleon::keyboard::MatrixTickSeconds) {
+        for (int step = 0; step < 700 && !headSeen; ++step) { // about a minute of the rain
+            const double seconds = step * galleon::keyboard::MatrixTickSeconds;
             for (const galleon::keyboard::Rgb &colour : galleon::keyboard::matrixRainColours(positions, seconds)) {
                 if (colour.red > 200) {
                     QCOMPARE(int(colour.red), int(MatrixRingHead.red));

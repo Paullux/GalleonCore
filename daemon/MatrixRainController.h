@@ -3,11 +3,15 @@
 
 #pragma once
 
+#include "MatrixRing.h"
 #include "MatrixTrigger.h"
 
 #include <QElapsedTimer>
 #include <QObject>
 #include <QTimer>
+
+#include <array>
+#include <optional>
 
 namespace galleon {
 class StreamDeck;
@@ -62,6 +66,9 @@ private:
     void start();
     void stop();
     void drawFrame();
+    // The rings of the dials show the rain too: only the segments whose colour changed since the last picture are sent (a step of the head lasts several
+    // pictures), and a ring that cannot be written does not end the rain (the screen and the keys are what it is about).
+    void drawRings();
 
     galleon::StreamDeck *m_deck;
     ScreenRenderer *m_renderer;
@@ -75,6 +82,8 @@ private:
     qint64 m_lastCostMs = 0;
     int m_tick = 0;
     int m_sendFailures = 0;
+    // What each segment of each ring was last given (nothing: not known, so the next picture sends it).
+    std::array<std::array<std::optional<RingRgb>, galleon::protocol::DialRingLeds>, galleon::protocol::DialCount> m_ringSent;
     bool m_inhibited = false;
 };
 
