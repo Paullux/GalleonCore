@@ -14,12 +14,16 @@
 #include "LightingSkyDay.h"
 #include "SkySun.h"
 
+#include <QMetaMethod>
 #include <QSignalSpy>
 #include <QFile>
 #include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QDateTime>
 #include <QTimeZone>
+#ifndef Q_OS_WIN
+#include <QDBusMetaType>
+#endif
 #include <QTest>
 
 #include <algorithm>
@@ -555,6 +559,49 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{10, 20, 30}), 3000);
         QCOMPARE(ledColour(rig.frame(), 4), (std::vector<std::uint8_t>{255, 255, 255}));
     }
+
+    void theJournalNamesTheSkyAndNeverWritesItsPlace()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("lighting-appearance.json");
+        QVERIFY(writeAppearance(path, skyAppearance(true, galleon::keyboard::GeoPlace{47.4147, 0.6828})));
+        Rig rig;
+        const LightingAppearanceApplier applier(*rig.controller, path);
+        // The whole line, anchored: a place (or anything else) added to it would not match and the test would fail.
+        QTest::ignoreMessage(QtInfoMsg, QRegularExpression(QStringLiteral(
+            "^galleond: lighting: the appearance file was read: sky, following the sun, 0 retouches, level 1000 \\((applied|refused)\\)$")));
+        rig.controller->Enable(true);
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->active(), 3000);
+    }
+
+    void theAnnouncerSaysEachAppearanceThatIsAcceptedAndNoneThatIsNot()
+    {
+        Rig rig;
+        const QSignalSpy announced(&rig.controller->announcer(), &AppearanceAnnouncer::appearanceSet);
+        QVERIFY(rig.controller->setAppearance(skyAppearance(true, galleon::keyboard::GeoPlace{48.8566, 2.3522})));
+        QCOMPARE(announced.count(), 1);
+        galleon::keyboard::Appearance invalid;
+        invalid.level = 5000; // out of range
+        QVERIFY(!rig.controller->setAppearance(invalid));
+        QCOMPARE(announced.count(), 1);
+    }
+
+#ifndef Q_OS_WIN
+    void noSignalOfTheControllerCarriesATypeThatTheBusDoesNotKnow()
+    {
+        // The controller is put on the D-Bus with all its signals: one with another type (an appearance, which may hold a place) would be refused with a
+        // warning at each emission, and must never be offered to the bus.
+        const QMetaObject &meta = LightingController::staticMetaObject;
+        for (int index = meta.methodOffset(); index < meta.methodCount(); ++index) {
+            const QMetaMethod method = meta.method(index);
+            if (method.methodType() != QMetaMethod::Signal)
+                continue;
+            for (int parameter = 0; parameter < method.parameterCount(); ++parameter) {
+                QVERIFY2(QDBusMetaType::typeToSignature(method.parameterMetaType(parameter)) != nullptr, method.methodSignature().constData());
+            }
+        }
+    }
+#endif
 
     // ---- the level in force (a curve of the day), over the level of the appearance
 
