@@ -182,6 +182,14 @@ bool StreamDeck::setDialRing(int dial, std::uint8_t red, std::uint8_t green, std
     return ok;
 }
 
+bool StreamDeck::setDialRingSegment(int dial, int segment, std::uint8_t red, std::uint8_t green, std::uint8_t blue)
+{
+    if (!isOpen())
+        return false;
+    const auto report = protocol::dialRingSegmentReport(dial, segment, red, green, blue);
+    return !report.empty() && m_transport->sendFeatureReport(report);
+}
+
 void StreamDeck::setTraceInput(bool enabled)
 {
     m_traceInput = enabled;

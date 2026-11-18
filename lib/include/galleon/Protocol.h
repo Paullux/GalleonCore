@@ -150,6 +150,11 @@ inline constexpr int DialRingLeds = 4;
 // on the hardware. Empty if `dial` is outside 0..DialCount-1.
 std::vector<std::vector<std::uint8_t>> dialRingReports(int dial, std::uint8_t red, std::uint8_t green, std::uint8_t blue);
 
+// The same report for ONE segment of the ring (0 to DialRingLeds - 1), so that a ring can show a gradient: `03 24 <led> <red> <green> <blue>`, led =
+// (1 - dial) * 4 + segment. Same source and same status as dialRingReports (it is one of its reports). Empty if `dial` or `segment` is out of range.
+// Which segment is where around the ring (which is at the top, and the way they go) is NOT known yet: the numbers are the report's, not a place.
+std::vector<std::uint8_t> dialRingSegmentReport(int dial, int segment, std::uint8_t red, std::uint8_t green, std::uint8_t blue);
+
 // Cuts a JPEG into the output reports that draw it on the top screen.
 // Header of 16 bytes (galleon-deck, "Top screen output report"):
 //   02 0c  x(u16le) y(u16le) w(u16le) h(u16le)  last(u8)  part(u16le)  len(u16le)  00

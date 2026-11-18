@@ -191,19 +191,25 @@ std::vector<std::uint8_t> brightnessReport(int percent)
     return featureReport(BrightnessCommand, static_cast<std::uint8_t>(percent));
 }
 
+std::vector<std::uint8_t> dialRingSegmentReport(int dial, int segment, std::uint8_t red, std::uint8_t green, std::uint8_t blue)
+{
+    if (dial < 0 || dial >= DialCount || segment < 0 || segment >= DialRingLeds)
+        return {};
+    auto report = featureReport(DialRingCommand, static_cast<std::uint8_t>(((1 - dial) * DialRingLeds) + segment));
+    report[3] = red;
+    report[4] = green;
+    report[5] = blue;
+    return report;
+}
+
 std::vector<std::vector<std::uint8_t>> dialRingReports(int dial, std::uint8_t red, std::uint8_t green, std::uint8_t blue)
 {
     if (dial < 0 || dial >= DialCount)
         return {};
     std::vector<std::vector<std::uint8_t>> reports;
     reports.reserve(DialRingLeds);
-    for (int segment = 0; segment < DialRingLeds; ++segment) {
-        auto report = featureReport(DialRingCommand, static_cast<std::uint8_t>(((1 - dial) * DialRingLeds) + segment));
-        report[3] = red;
-        report[4] = green;
-        report[5] = blue;
-        reports.push_back(std::move(report));
-    }
+    for (int segment = 0; segment < DialRingLeds; ++segment)
+        reports.push_back(dialRingSegmentReport(dial, segment, red, green, blue));
     return reports;
 }
 

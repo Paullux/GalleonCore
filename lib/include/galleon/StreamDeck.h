@@ -65,6 +65,9 @@ public:
     bool setBrightness(int percent);
     // Lights the ring around a dial (0 or 1) with one colour; see protocol::dialRingReports.
     bool setDialRing(int dial, std::uint8_t red, std::uint8_t green, std::uint8_t blue);
+    // Lights ONE segment of the ring around a dial (see protocol::dialRingSegmentReport): one report. False when the module is not open or a number is
+    // out of range, or when the report was not sent.
+    bool setDialRingSegment(int dial, int segment, std::uint8_t red, std::uint8_t green, std::uint8_t blue);
 
     // Sends the keep-alive report now, outside its timer (used to test whether it makes the module
     // show a picture it already received). The timer keeps its own rhythm.

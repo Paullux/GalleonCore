@@ -203,6 +203,29 @@ private Q_SLOTS:
         QVERIFY(std::all_of(report.begin() + 2, report.end(), [](auto b) { return b == 0; }));
     }
 
+    void aSingleSegmentReportIsTheSameReportAsThatOfTheWholeRing()
+    {
+        for (int dial = 0; dial < DialCount; ++dial) {
+            const auto whole = dialRingReports(dial, 10, 20, 30);
+            for (int segment = 0; segment < DialRingLeds; ++segment)
+                QCOMPARE(dialRingSegmentReport(dial, segment, 10, 20, 30), whole.at(static_cast<size_t>(segment)));
+        }
+        const auto report = dialRingSegmentReport(0, 2, 216, 255, 224);
+        QCOMPARE(report.size(), FeatureReportSize);
+        QCOMPARE(int(report[1]), 0x24);
+        QCOMPARE(int(report[2]), 6); // the left dial: LEDs 4 to 7, the third one
+        QCOMPARE(int(report[3]), 216);
+        QCOMPARE(int(report[5]), 224);
+    }
+
+    void aSegmentOrADialOutOfRangeGivesNoReport()
+    {
+        QVERIFY(dialRingSegmentReport(-1, 0, 0, 0, 0).empty());
+        QVERIFY(dialRingSegmentReport(DialCount, 0, 0, 0, 0).empty());
+        QVERIFY(dialRingSegmentReport(0, -1, 0, 0, 0).empty());
+        QVERIFY(dialRingSegmentReport(0, DialRingLeds, 0, 0, 0).empty());
+    }
+
     void dialRingReportsCoverTheFourLedsOfTheRightDial()
     {
         // dial 0 -> LEDs 4..7, dial 1 -> LEDs 0..3 (rust-elgato-streamdeck PR 63).
