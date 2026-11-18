@@ -39,6 +39,8 @@ public:
     bool sendFeatureReport(std::span<const std::uint8_t> report) override
     {
         featureReports.emplace_back(report.begin(), report.end());
+        if (refuseFeature && refuseFeature(report))
+            return false; // this one report is refused, the others are not
         return m_open && featureSucceeds;
     }
 
@@ -64,6 +66,7 @@ public:
     }
 
     std::function<void()> beforeWrite;
+    std::function<bool(std::span<const std::uint8_t>)> refuseFeature; // true: this feature report is refused
     int openAttempts = 0;
     int featureReads = 0;
     Report firmware;

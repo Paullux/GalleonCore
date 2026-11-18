@@ -57,6 +57,7 @@ add_library(galleond_core STATIC
     AppearanceFile.h AppearanceFile.cpp
     LightingAppearanceApplier.h LightingAppearanceApplier.cpp
     RingSettings.h RingSettings.cpp
+    MatrixRing.h MatrixRing.cpp
     RingSettingsApplier.h RingSettingsApplier.cpp
     LedPositions.h LedPositions.cpp
     WeatherPlace.h WeatherPlace.cpp

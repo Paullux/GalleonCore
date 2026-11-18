@@ -340,6 +340,20 @@ private Q_SLOTS:
         QCOMPARE(f.transport->featureReports.size(), before + 4);
     }
 
+    void aSingleSegmentOfTheRingIsOneFeatureReport()
+    {
+        Fixture f;
+        QVERIFY(f.deck->open());
+        const auto before = f.transport->featureReports.size();
+        QVERIFY(f.deck->setDialRingSegment(0, 3, 0, 212, 58));
+        QCOMPARE(f.transport->featureReports.size(), before + 1);
+        QCOMPARE(int(f.transport->featureReports.back()[2]), 7); // the left dial, its fourth segment
+        QCOMPARE(int(f.transport->featureReports.back()[4]), 212);
+        QVERIFY(!f.deck->setDialRingSegment(0, 4, 0, 0, 0)); // no such segment
+        QVERIFY(!f.deck->setDialRingSegment(2, 0, 0, 0, 0)); // no such dial
+        QCOMPARE(f.transport->featureReports.size(), before + 1);
+    }
+
     void everyWaitingReportIsReadInOneTick()
     {
         Fixture f;
