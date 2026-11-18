@@ -80,7 +80,7 @@ public:
     std::uint32_t lastTimeout = 0;
 
 private:
-    static void bindSeat(wl_client *client, void *, std::uint32_t version, std::uint32_t id)
+    static void bindSeat(wl_client *client, void * /*data*/, std::uint32_t version, std::uint32_t id)
     {
         wl_resource *resource = wl_resource_create(client, &wl_seat_interface, static_cast<int>(version), id);
         wl_resource_set_implementation(resource, nullptr, nullptr, nullptr);
@@ -97,7 +97,7 @@ private:
         wl_resource_set_implementation(resource, &implementation, data, nullptr);
     }
 
-    static void destroyResource(wl_client *, wl_resource *resource) { wl_resource_destroy(resource); }
+    static void destroyResource(wl_client * /*client*/, wl_resource *resource) { wl_resource_destroy(resource); }
 
     static void notificationGone(wl_resource *resource)
     {
@@ -119,12 +119,12 @@ private:
         lastTimeout = timeout;
     }
 
-    static void getIdle(wl_client *client, wl_resource *notifier, std::uint32_t id, std::uint32_t timeout, wl_resource *)
+    static void getIdle(wl_client *client, wl_resource *notifier, std::uint32_t id, std::uint32_t timeout, wl_resource * /*seat*/)
     {
         static_cast<FakeCompositor *>(wl_resource_get_user_data(notifier))->makeNotification(client, notifier, id, timeout, false);
     }
 
-    static void getInputIdle(wl_client *client, wl_resource *notifier, std::uint32_t id, std::uint32_t timeout, wl_resource *)
+    static void getInputIdle(wl_client *client, wl_resource *notifier, std::uint32_t id, std::uint32_t timeout, wl_resource * /*seat*/)
     {
         static_cast<FakeCompositor *>(wl_resource_get_user_data(notifier))->makeNotification(client, notifier, id, timeout, true);
     }
@@ -155,7 +155,7 @@ private Q_SLOTS:
 
     void nothingIsAskedOfTheCompositorUntilAWatchBegins()
     {
-        FakeCompositor compositor(2);
+        const FakeCompositor compositor(2);
         const auto source = WaylandInputActivity::connectToSession(compositor.socket().c_str());
         QVERIFY(source);
         QTest::qWait(150);
@@ -242,7 +242,7 @@ private Q_SLOTS:
 
     void startingBeforeTheCompositorHasSaidWhatItHasArmsTheNotificationWhenItHas()
     {
-        FakeCompositor compositor(2);
+        const FakeCompositor compositor(2);
         const auto source = WaylandInputActivity::connectToSession(compositor.socket().c_str());
         QVERIFY(source);
         source->start(); // the globals are not known yet
@@ -252,7 +252,7 @@ private Q_SLOTS:
 
     void aCompositorWithTheFirstVersionIsAskedForTheOrdinaryNotification()
     {
-        FakeCompositor compositor(1);
+        const FakeCompositor compositor(1);
         const auto source = WaylandInputActivity::connectToSession(compositor.socket().c_str());
         QVERIFY(source);
         QTest::qWait(150);
@@ -263,7 +263,7 @@ private Q_SLOTS:
 
     void aCompositorWithoutTheIdleNotifierIsKnownAsUnsupportedAndSaysSoOnceWhenAskedToWatch()
     {
-        FakeCompositor compositor(0);
+        const FakeCompositor compositor(0);
         const auto source = WaylandInputActivity::connectToSession(compositor.socket().c_str());
         QVERIFY(source);
         QTRY_VERIFY_WITH_TIMEOUT(!source->supported(), 2000);
@@ -277,7 +277,7 @@ private Q_SLOTS:
 
     void aCompositorWithoutASeatIsUnsupportedToo()
     {
-        FakeCompositor compositor(2, false);
+        const FakeCompositor compositor(2, false);
         const auto source = WaylandInputActivity::connectToSession(compositor.socket().c_str());
         QVERIFY(source);
         QTRY_VERIFY_WITH_TIMEOUT(!source->supported(), 2000);
@@ -322,7 +322,7 @@ private Q_SLOTS:
     void theSystemSourceReadsTheIdleTimeInsteadWhenTheCompositorHasNoNotification()
     {
         // No notifier in the compositor, and no service that gives the idle time on the bus of the test: the reading says it cannot, once.
-        FakeCompositor compositor(0);
+        const FakeCompositor compositor(0);
         qputenv("WAYLAND_DISPLAY", compositor.socket().c_str());
         const auto source = galleond::makeInputActivitySource();
         QTest::qWait(150);

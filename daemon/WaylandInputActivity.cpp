@@ -97,9 +97,9 @@ private:
         }
     }
 
-    static void onGlobalRemove(void *, wl_registry *, std::uint32_t) {}
+    static void onGlobalRemove(void * /*data*/, wl_registry * /*registry*/, std::uint32_t /*name*/) {}
 
-    static void onSynced(void *data, wl_callback *, std::uint32_t)
+    static void onSynced(void *data, wl_callback * /*callback*/, std::uint32_t /*serial*/)
     {
         Impl &self = from(data);
         self.m_known = true;
@@ -114,10 +114,10 @@ private:
         }
     }
 
-    static void onIdled(void *data, ext_idle_notification_v1 *) { from(data).m_idled = true; }
+    static void onIdled(void *data, ext_idle_notification_v1 * /*notification*/) { from(data).m_idled = true; }
 
     // Used again after having been idle: that is the action. The watch is over (the notification is destroyed before anyone is told).
-    static void onResumed(void *data, ext_idle_notification_v1 *)
+    static void onResumed(void *data, ext_idle_notification_v1 * /*notification*/)
     {
         Impl &self = from(data);
         if (!self.m_idled || !self.m_watching)
