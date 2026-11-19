@@ -815,6 +815,24 @@ Conséquences sur le plan existant :
 
 ## 6. Prochaines étapes prioritaires
 
+### Point d'étape du 19 novembre 2026 (au soir)
+
+`main` est à `6b16cab`. Une PR à la fois, `tools/check.py full` sur l'arbre exact, les 14 jobs de CI verts, fusion seulement sur l'ordre « fusionne » du propriétaire.
+
+**Fusionné aujourd'hui** : [#134](https://github.com/Paullux/GalleonCore/pull/134) (le plugin OpenRGB gardé à titre documentaire avec son `README.md`, les textes des README, de Bosun et du site, `--version` et `--help` qui rendent la main à `main()`), [#135](https://github.com/Paullux/GalleonCore/pull/135) (avertissements D-Bus confirmés disparus), [#136](https://github.com/Paullux/GalleonCore/pull/136) (faux positif `-Warray-bounds` de GCC 15 dans les tests).
+
+**Confirmé par le propriétaire** : la pluie Matrix sur les quatre surfaces et l'ordre des anneaux (18 novembre, vidéo et `galleond --ring-walk`) ; les avertissements D-Bus disparus (journal de `galleond`, 19 novembre) ; `galleond --version` sans avertissement sur Qt 6.10 ; la compilation `Release` avec `-DGALLEON_WERROR=ON` sous GCC 15 ; `full` passé sur l'arbre exact des PR #135 et #136, et, pour la #134, sur `31546e5` (la tête fusionnée, `1c92768`, ne change en plus qu'un fichier de test, vu par les 14 jobs de CI mais pas par un `full` du propriétaire).
+
+**Non prouvé** : l'avertissement `QThreadStorage` n'a jamais été reproduit, ni avant ni après le correctif de `--version` ; le correctif est un durcissement testé, pas une guérison mesurée. Le bogue de la position du ciel n'est pas reproduit.
+
+**À confirmer par le propriétaire (rien n'est « sur le module » avant son retour)** : l'onglet « Dials » (allumés ou éteints, niveau par pas de 10 %, le magenta du choix du fond toujours visible, le fichier `dial-rings.json` écrit ; procédure d'essai donnée le 19 novembre) ; l'aperçu animé du clavier dans Bosun.
+
+**Pas commencé, en attente de l'ordre du propriétaire** : la tranche suivante des anneaux (couleur choisie dans Bosun, place dans la couche « apparence ») ; l'effet du clavier reproduit sur le module et les anneaux ; l'économiseur d'écran prolongé sur le clavier (une seule case, désactivée par défaut) ; le niveau d'éclairage et les réglages du module (luminosité de l'écran, courbe sur la journée).
+
+**Points ouverts, non étudiés** : le message « the main thread was busy for 430 ms » (352 ms au second essai) au démarrage de `galleond` ; un job de CI en `Release` avec un GCC récent et `-Werror` ; le commit `ec91db5` des limites de temps de la CI (lint 70 minutes, GCC et Clang 45), resté sur la branche `ccr-ci-limits`, non fusionné, état à vérifier ; la validation matérielle Windows (rien de nouveau aujourd'hui).
+
+**Prochain pas proposé** : l'essai de l'onglet « Dials » sur le module par le propriétaire, puis la tranche suivante des anneaux si le résultat est bon.
+
 ### Ce que veut dire la v1.0.0 (décision du propriétaire, 14 novembre 2026)
 
 La v1.0.0 sortira quand les deux contrôles seront complets :
