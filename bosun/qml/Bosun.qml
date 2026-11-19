@@ -1188,7 +1188,7 @@ Window {
                     wrapMode: Text.Wrap
                     color: "#7d8591"
                     font.pixelSize: 13
-                    text: qsTr("The lighting can also be driven from Linux with OpenRGB (the dials' rings already are, through this project's plugin); the per-key lighting of the keyboard is not available there yet.")
+                    text: qsTr("The dials' rings are driven by this application's own daemon (galleond). The OpenRGB plugin of the project is kept for documentation only: do not run OpenRGB on the same rings at the same time.")
                 }
     
             }
