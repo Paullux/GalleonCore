@@ -565,6 +565,21 @@ int main(int argc, char *argv[])
     const QCommandLineOption launcherInfo(QStringLiteral("launcher-info"),
         QStringLiteral("Read bounded launcher metadata and exit without opening HID."), QStringLiteral("reference"));
     parser.addOption(launcherInfo);
+#ifndef Q_OS_WIN
+    // --version and --help are answered here and main() returns, instead of QCommandLineParser::process() calling exit(): exit() ends the process
+    // while `app` is still alive on this stack, so Qt's per-thread storage is destroyed before the end of the thread ("QThreadStorage: entry N
+    // destroyed before end of thread"). A bad command line still goes through process() below, which reports it as before.
+    if (parser.parse(QCoreApplication::arguments())) {
+        if (parser.isSet(QStringLiteral("version"))) {
+            QTextStream(stdout) << QCoreApplication::applicationName() << ' ' << QCoreApplication::applicationVersion() << Qt::endl;
+            return 0;
+        }
+        if (parser.isSet(QStringLiteral("help"))) {
+            QTextStream(stdout) << parser.helpText();
+            return 0;
+        }
+    }
+#endif
     parser.process(app);
     if (parser.isSet(launcherInfo)) {
         const QString reference = parser.value(launcherInfo);

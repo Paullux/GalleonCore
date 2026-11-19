@@ -214,6 +214,11 @@ if(WIN32)
     return()
 endif()
 
+# The real galleond program answering --version, --help and a bad option (no device is opened for them).
+galleon_add_test(test_daemoncommandline)
+target_compile_definitions(test_daemoncommandline PRIVATE GALLEON_TEST_DAEMON="$<TARGET_FILE:galleond>")
+add_dependencies(test_daemoncommandline galleond)
+
 galleond_add_test(test_wallpapercatalog)
 galleond_add_test(test_screenrenderer)
 galleond_add_test(test_pagesconfig)

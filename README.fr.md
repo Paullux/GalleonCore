@@ -37,8 +37,8 @@ Le Galleon 100 SD est un clavier mécanique full-size dont le pavé numérique e
 
 - **Module Stream Deck** : afficher sur les 12 touches et l'écran, lire les touches et les molettes.
 - **Widgets partagés** : les mêmes widgets QML (horloge, moniteur système, lecture en cours…) rendus sur l'écran du clavier *et* affichés en widgets KDE Plasma sur le bureau.
-- **Éclairage RVB** : RVB par touche, barre d'ambiance et anneaux des molettes, via [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB).
-- **Plugin OpenRGB** : configurer le deck depuis OpenRGB et synchroniser ses thèmes avec l'éclairage.
+- **Éclairage RVB** : les anneaux des molettes sont pilotés par `galleond` lui-même, avec le code propre de GalleonCore ; l'éclairage par touche du clavier est expérimental (voir État).
+- **Plugin OpenRGB (conservé à titre documentaire)** : le code séparé de `openrgb-plugin/` n'est plus la façon dont GalleonCore éclaire les anneaux ; voir son README. Il n'est pas empaqueté et ne doit pas tourner en même temps que `galleond` sur les mêmes anneaux.
 - **Préversion Windows**, avec le même cœur et des backends natifs pour les médias, le son et le clavier ; validation matérielle encore attendue.
 
 Les widgets de l’accueil se règlent dans l’onglet **Widgets** de Bosun (position, taille et visibilité), puis sont enregistrés avec **Appliquer**. Cette première version comprend météo, CPU/RAM, température CPU Linux, détection des téléchargements partiels et FPS du jeu via CSV MangoHud sous Linux et service/API PresentMon sous Windows, avec taille de police réglable ; voir [les plateformes prises en charge et les limites actuelles](docs/HOME_WIDGETS.md).
@@ -54,7 +54,7 @@ Un mode Jeu automatique affiche une image locale du jeu, les FPS et les tempéra
 | Pages de boutons (JSON) et lecteur de musique (MPRIS) | Implémentés, tests verts ; **touches, molettes, écran « en cours de lecture » (vraie pochette, titre, artiste, durée) et une touche d'application avec son icône confirmés sur le module** (rechargement à chaud, double appui, images de vidéos et fenêtre des applications : pas encore rapportés) |
 | Widgets KDE Plasma | Squelette |
 | Éclairage RVB | **Expérimental.** Une séquence Corsair V2/Bragi non persistante par touche est documentée sur un clavier sous Windows 11 (firmware clavier 2.3.88). GalleonCore ne fournit pas encore de pilote RVB natif par touche ; le fonctionnement Linux et la compatibilité plus large restent à vérifier. |
-| Plugin OpenRGB | Anneaux des molettes implémentés dans le plugin séparé ; RVB du clavier toujours en investigation |
+| Plugin OpenRGB | Séparé et facultatif, conservé à titre documentaire : non empaqueté, ni compilé ni testé par la CI. Les anneaux des molettes sont désormais pilotés par `galleond` |
 | Windows | Préversion desktop ; CI native et essais interactifs suivis dans [WINDOWS.md](docs/WINDOWS.md) |
 
 ### Captures de Galleon Bosun
@@ -138,12 +138,12 @@ widgets/           Widgets QML partagés, sans dépendance à Plasma
 plasmoid/          Widgets KDE Plasma réutilisant widgets/
 tests/             Tests unitaires Qt Test
 fuzz/              Cibles libFuzzer pour les parseurs du protocole
-openrgb-plugin/    Plugin OpenRGB pour les anneaux des molettes
+openrgb-plugin/    Plugin OpenRGB, conservé à titre documentaire (voir son README)
 ```
 
 Garder le protocole sans entrées/sorties permet de tester unitairement et de fuzzer chaque format de trame sans le clavier.
 
-Le support RVB propre à GalleonCore (anneaux des molettes, puis RVB par touche) sera écrit ici avec notre propre code, d'après la spécification publique HID LampArray et nos propres captures, et non dans un fork d'OpenRGB. Le plugin OpenRGB reste une intégration séparée et existante.
+Le support RVB propre à GalleonCore est écrit ici avec notre propre code, d'après la spécification publique HID LampArray et nos propres captures, et non dans un fork d'OpenRGB : les anneaux des molettes sont pilotés par `galleond` aujourd'hui, l'éclairage par touche est expérimental. Le plugin OpenRGB reste une intégration séparée et facultative, conservée à titre documentaire.
 
 ## Compilation
 

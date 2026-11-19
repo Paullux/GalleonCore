@@ -37,8 +37,8 @@ El Galleon 100 SD es un teclado mecánico de tamaño completo cuyo teclado numé
 
 - **Módulo Stream Deck**: dibujar en las 12 teclas y en la pantalla, leer las teclas y los diales.
 - **Widgets compartidos**: los mismos widgets QML (reloj, monitor del sistema, lo que está sonando…) se renderizan en la pantalla del teclado *y* se muestran como widgets de KDE Plasma en el escritorio.
-- **Iluminación RGB**: RGB por tecla, barra de iluminación ambiental y anillos de los diales, a través de [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB).
-- **Complemento de OpenRGB**: configurar el deck desde OpenRGB y sincronizar los temas del deck con la iluminación.
+- **Iluminación RGB**: los anillos de los diales los controla `galleond` mismo, con el código propio de GalleonCore; la iluminación por tecla del teclado es experimental (véase Estado).
+- **Complemento de OpenRGB (conservado como documentación)**: el código aparte de `openrgb-plugin/` ya no es la forma en que GalleonCore ilumina los anillos; véase su README. No está empaquetado y no debe ejecutarse junto con `galleond` sobre los mismos anillos.
 - **Vista previa de escritorio para Windows**, con el mismo núcleo y backends nativos de multimedia, audio y teclado; la validación en hardware sigue pendiente.
 
 Los widgets de la pantalla de inicio se pueden editar en la pestaña **Widgets** de Bosun (posición, tamaño y visibilidad) y guardar con **Aplicar**. La primera iteración incluye el tiempo, CPU/RAM, la temperatura de la CPU en Linux, la detección de descargas parciales y los FPS del juego mediante el CSV de MangoHud en Linux y el servicio/API de PresentMon en Windows, con tamaño de texto ajustable; consulta las [plataformas compatibles y los límites actuales](docs/HOME_WIDGETS.md).
@@ -54,7 +54,7 @@ Una pantalla de juego automática muestra ahora la ilustración local del juego,
 | Páginas de teclas (JSON) y reproductor de música (MPRIS) | Implementado, pruebas en verde; **teclas, diales, la pantalla «reproduciendo ahora» (carátula real, título, artista, línea de tiempo) y una tecla de aplicación con su icono confirmados en el módulo** (la recarga en caliente, la doble pulsación, las miniaturas de vídeo y la ventana de aplicaciones aún no se han comunicado) |
 | Widgets de KDE Plasma | Esqueleto |
 | Iluminación RGB | **Experimental.** Se ha documentado una secuencia Corsair V2/Bragi no persistente de RGB por tecla en un teclado con Windows 11 (firmware del teclado 2.3.88). GalleonCore aún no incluye un controlador nativo de RGB por tecla; el funcionamiento en Linux y la compatibilidad con otros dispositivos y firmwares siguen sin verificarse. |
-| Complemento de OpenRGB | Anillos de los diales implementados en el complemento aparte; el RGB del teclado sigue en investigación |
+| Complemento de OpenRGB | Aparte y opcional, conservado como documentación: no empaquetado, ni compilado ni probado por la CI. Los anillos de los diales los controla ahora `galleond` |
 | Windows | Vista previa de escritorio; la CI nativa y la validación interactiva se siguen en [WINDOWS.md](docs/WINDOWS.md) |
 
 ### Capturas de Galleon Bosun
@@ -133,12 +133,12 @@ widgets/           Widgets QML compartidos, sin dependencia de Plasma
 plasmoid/          Widgets de KDE Plasma que reutilizan widgets/
 tests/             Pruebas unitarias con Qt Test
 fuzz/              Objetivos de libFuzzer para los analizadores del protocolo
-openrgb-plugin/    Complemento de OpenRGB para los anillos de los diales
+openrgb-plugin/    Complemento de OpenRGB, conservado como documentación (véase su README)
 ```
 
 Al mantener el protocolo libre de E/S, cada formato de bytes se puede probar con pruebas unitarias y fuzzing sin el teclado.
 
-El soporte RGB propio de GalleonCore (anillos de los diales, luego RGB por tecla) se escribirá aquí con código propio, a partir de la especificación pública HID LampArray y de nuestras propias capturas, no como un fork de OpenRGB. El complemento de OpenRGB sigue siendo una integración aparte y existente.
+El soporte RGB propio de GalleonCore se escribe aquí con código propio, a partir de la especificación pública HID LampArray y de nuestras propias capturas, no como un fork de OpenRGB: los anillos de los diales los controla hoy `galleond`, la iluminación por tecla es experimental. El complemento de OpenRGB sigue siendo una integración aparte y opcional, conservada como documentación.
 
 ## Compilación
 
