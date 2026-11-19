@@ -126,8 +126,7 @@ struct Fixture
 
     void pressKey(int key, bool pressed)
     {
-        std::vector<std::uint8_t> report = {0x01, 0x00, 0x0c, 0x00};
-        report.resize(4 + galleon::protocol::KeyCount, 0);
+        std::vector<std::uint8_t> report = keyReport(galleon::protocol::KeyCount, 0);
         report[4 + static_cast<std::size_t>(key)] = pressed ? 1 : 0;
         transport->pendingReads.push_back(report);
         QTRY_VERIFY_WITH_TIMEOUT(transport->pendingReads.empty(), 2000);

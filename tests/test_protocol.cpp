@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include "Bytes.h"
 #include <galleon/Protocol.h>
 
 #include <QTest>
@@ -68,8 +69,7 @@ private Q_SLOTS:
     void keysAreDecodedAsChangesOfState()
     {
         InputState state;
-        std::vector<std::uint8_t> report = {0x01, 0x00, 0x0c, 0x00};
-        report.resize(4 + KeyCount, 0);
+        std::vector<std::uint8_t> report = keyReport(KeyCount, 0);
 
         report[4 + 3] = 1; // key 3 pressed
         auto result = decodeInputReport(report, state);
@@ -91,8 +91,7 @@ private Q_SLOTS:
     void aReleaseNeverComesWithoutAPress()
     {
         InputState state;
-        std::vector<std::uint8_t> report = {0x01, 0x00, 0x0c, 0x00};
-        report.resize(4 + KeyCount, 0);
+        std::vector<std::uint8_t> report = keyReport(KeyCount, 0);
         QVERIFY(decodeInputReport(report, state).events.empty()); // nothing was pressed: nothing is released
     }
 
@@ -128,8 +127,7 @@ private Q_SLOTS:
     void malformedReportsAreDroppedAndChangeNothing()
     {
         InputState state;
-        std::vector<std::uint8_t> good = {0x01, 0x00, 0x0c, 0x00};
-        good.resize(4 + KeyCount, 0);
+        std::vector<std::uint8_t> good = keyReport(KeyCount, 0);
         good[4] = 1;
         QCOMPARE(decodeInputReport(good, state).events.size(), std::size_t{1});
         const InputState before = state;
@@ -177,8 +175,7 @@ private Q_SLOTS:
     void everyPrefixAndEveryByteOfAReportIsSafe()
     {
         // No input may read out of bounds or crash, whatever it holds.
-        std::vector<std::uint8_t> keys = {0x01, 0x00, 0x0c, 0x00};
-        keys.resize(4 + KeyCount, 1);
+        const std::vector<std::uint8_t> keys = keyReport(KeyCount, 1);
         std::vector<std::uint8_t> const dials = {0x01, 0x03, 0x03, 0x00, 0x01, 0x02, 0xfe};
         InputState state;
         for (const auto &report : {keys, dials}) {
