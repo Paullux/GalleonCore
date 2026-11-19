@@ -44,7 +44,7 @@ Architecture: $arch
 Maintainer: Paul Woisard <paul@localhost>
 Depends: $deps, qml6-module-qtquick (>= 6.4), qml6-module-qtquick-window (>= 6.4), qml6-module-qtqml (>= 6.4), qml6-module-qtqml-workerscript (>= 6.4), libglib2.0-bin, xdg-utils, systemd, udev, python3
 Recommends: ffmpeg
-Suggests: wireplumber, steam, openrgb
+Suggests: wireplumber, steam
 Installed-Size: $(du -sk "$stage/usr" | cut -f1)
 Description: Corsair Galleon Stream Deck support and settings
  GalleonCore daemon, Bosun settings, libgalleon, QML widgets and wallpapers.

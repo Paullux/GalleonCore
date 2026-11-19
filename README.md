@@ -37,8 +37,8 @@ The Galleon 100 SD is a full-size mechanical keyboard whose numpad is replaced b
 
 - **Stream Deck module**: draw on the 12 keys and the screen, read keys and dials.
 - **Shared widgets**: the same QML widgets (clock, system monitor, now playing…) rendered on the keyboard screen *and* shown as KDE Plasma widgets on the desktop.
-- **RGB lighting**: per-key RGB, mood bar and dial rings, through [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB).
-- **OpenRGB plugin**: configure the deck from OpenRGB and sync deck themes with the lighting.
+- **RGB lighting**: the dial rings are driven by `galleond` itself, with GalleonCore's own code; per-key keyboard lighting is experimental (see Status).
+- **OpenRGB plugin (kept for documentation)**: the separate code in `openrgb-plugin/` is no longer how GalleonCore lights the rings; see its README. It is not packaged, and must not run together with `galleond` on the same rings.
 - **Windows desktop preview**, sharing the same core, with native media, audio and keyboard backends; hardware validation remains pending.
 
 Home screen widgets can be edited in Bosun’s **Widgets** tab (position, size and visibility), then saved with **Apply**. The first iteration includes weather, CPU/RAM, Linux CPU temperature, partial-download detection and game FPS via MangoHud CSV on Linux and the PresentMon service/API on Windows, with adjustable text size; see [supported platforms and current limits](docs/HOME_WIDGETS.md).
@@ -54,7 +54,7 @@ An automatic game screen now shows local game artwork, FPS and CPU/GPU temperatu
 | Button pages (JSON) and music player (MPRIS) | Implemented, tests green; **keys, dials, the now-playing screen (real cover, title, artist, timeline) and an application key with its icon confirmed on the module** (hot reload, double press, video thumbnails and the apps window not reported yet) |
 | KDE Plasma widgets | Skeleton |
 | RGB lighting | **Experimental.** A non-persistent per-key Corsair V2/Bragi sequence is documented for one Windows 11 keyboard (keyboard firmware 2.3.88). GalleonCore does not yet include a native per-key RGB driver; Linux support and wider compatibility remain unverified. |
-| OpenRGB plugin | Dial rings implemented in the separate plugin; keyboard RGB remains under investigation |
+| OpenRGB plugin | Separate and optional, kept for documentation: not packaged, not built or tested by the CI. The dial rings are now driven by `galleond` |
 | Windows | Desktop preview; native CI and interactive validation tracked in [WINDOWS.md](docs/WINDOWS.md) |
 
 ### Galleon Bosun screenshots
@@ -132,12 +132,12 @@ widgets/           Shared QML widgets, free of any Plasma dependency
 plasmoid/          KDE Plasma widgets reusing widgets/
 tests/             Qt Test unit tests
 fuzz/              libFuzzer targets for the protocol parsers
-openrgb-plugin/    OpenRGB plugin for the dial rings
+openrgb-plugin/    OpenRGB plugin, kept for documentation (see its README)
 ```
 
 Keeping the protocol free of I/O means every byte format can be unit-tested and fuzzed without the keyboard.
 
-GalleonCore's own RGB support (dial rings, then per-key lighting) will be written here with our own code, from the public HID LampArray specification and our own captures, not as an OpenRGB fork. The OpenRGB plugin stays a separate, existing integration.
+GalleonCore's own RGB support is written here with our own code, from the public HID LampArray specification and our own captures, not as an OpenRGB fork: the dial rings are driven by `galleond` today, the per-key lighting is experimental. The OpenRGB plugin stays a separate, optional integration kept for documentation.
 
 ## Building
 

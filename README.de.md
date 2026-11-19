@@ -37,8 +37,8 @@ Das Galleon 100 SD ist eine mechanische Tastatur in voller Größe, deren Ziffer
 
 - **Stream-Deck-Modul**: auf den 12 Tasten und dem Bildschirm zeichnen, Tasten und Drehregler lesen.
 - **Gemeinsame Widgets**: dieselben QML-Widgets (Uhr, Systemmonitor, aktuell laufender Titel …) werden auf dem Tastaturbildschirm gerendert *und* als KDE-Plasma-Widgets auf dem Desktop angezeigt.
-- **RGB-Beleuchtung**: RGB pro Taste, RGB-Lichtleiste und Drehregler-Ringe über [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB).
-- **OpenRGB-Plugin**: das Deck aus OpenRGB konfigurieren und Deck-Themes mit der Beleuchtung synchronisieren.
+- **RGB-Beleuchtung**: Die Ringe der Drehregler steuert `galleond` selbst, mit dem eigenen Code von GalleonCore; die Beleuchtung pro Taste der Tastatur ist experimentell (siehe Status).
+- **OpenRGB-Plugin (zu Dokumentationszwecken behalten)**: Der separate Code in `openrgb-plugin/` ist nicht mehr der Weg, wie GalleonCore die Ringe beleuchtet; siehe dessen README. Er ist nicht paketiert und darf nicht zusammen mit `galleond` auf denselben Ringen laufen.
 - **Windows-Desktop-Vorschau** auf demselben Kern, mit nativen Medien-, Audio- und Tastatur-Backends; die Hardwarevalidierung steht noch aus.
 
 Startbildschirm-Widgets lassen sich im Tab **Widgets** von Bosun bearbeiten (Position, Größe und Sichtbarkeit) und mit **Anwenden** speichern. Die erste Ausbaustufe umfasst Wetter, CPU/RAM, die CPU-Temperatur unter Linux, die Erkennung unvollständiger Downloads und Spiel-FPS über die MangoHud-CSV unter Linux bzw. den PresentMon-Dienst/die API unter Windows, mit einstellbarer Textgröße; siehe [unterstützte Plattformen und aktuelle Grenzen](docs/HOME_WIDGETS.md).
@@ -54,7 +54,7 @@ Ein automatischer Spielbildschirm zeigt jetzt lokale Spielgrafiken, FPS und CPU/
 | Tastenseiten (JSON) und Musikplayer (MPRIS) | Implementiert, Tests grün; **Tasten, Drehregler, der Bildschirm „Läuft gerade“ (echtes Cover, Titel, Interpret, Zeitleiste) und eine Anwendungstaste mit ihrem Symbol auf dem Modul bestätigt** (Hot-Reload, Doppeldruck, Video-Vorschaubilder und das Anwendungsfenster sind noch nicht zurückgemeldet) |
 | KDE-Plasma-Widgets | Grundgerüst |
 | RGB-Beleuchtung | **Experimentell.** Eine nicht persistente Corsair-V2/Bragi-Sequenz für RGB pro Taste ist für eine Tastatur unter Windows 11 dokumentiert (Tastatur-Firmware 2.3.88). GalleonCore enthält noch keinen nativen Treiber für RGB pro Taste; Linux-Unterstützung und weitere Geräte- und Firmwarevarianten sind noch nicht bestätigt. |
-| OpenRGB-Plugin | Drehregler-Ringe im separaten Plugin umgesetzt; RGB der Tastatur bleibt in Untersuchung |
+| OpenRGB-Plugin | Separat und optional, zu Dokumentationszwecken behalten: nicht paketiert, von der CI weder gebaut noch getestet. Die Drehregler-Ringe steuert jetzt `galleond` |
 | Windows | Desktop-Vorschau; native CI und interaktive Validierung werden in [WINDOWS.md](docs/WINDOWS.md) verfolgt |
 
 ### Screenshots von Galleon Bosun
@@ -133,12 +133,12 @@ widgets/           Gemeinsame QML-Widgets, ohne Plasma-Abhängigkeit
 plasmoid/          KDE-Plasma-Widgets, die widgets/ wiederverwenden
 tests/             Qt-Test-Unit-Tests
 fuzz/              libFuzzer-Ziele für die Protokoll-Parser
-openrgb-plugin/    OpenRGB-Plugin für die Drehregler-Ringe
+openrgb-plugin/    OpenRGB-Plugin, zu Dokumentationszwecken behalten (siehe dessen README)
 ```
 
 Weil das Protokoll frei von E/A ist, lässt sich jedes Byteformat ohne die Tastatur per Unit-Test prüfen und fuzzen.
 
-Die eigene RGB-Unterstützung von GalleonCore (Drehregler-Ringe, danach RGB pro Taste) wird hier mit eigenem Code geschrieben, nach der öffentlichen HID-LampArray-Spezifikation und eigenen Aufzeichnungen, nicht als OpenRGB-Fork. Das OpenRGB-Plugin bleibt eine separate, bestehende Integration.
+Die eigene RGB-Unterstützung von GalleonCore wird hier mit eigenem Code geschrieben, nach der öffentlichen HID-LampArray-Spezifikation und eigenen Aufzeichnungen, nicht als OpenRGB-Fork: Die Drehregler-Ringe steuert heute `galleond`, die Beleuchtung pro Taste ist experimentell. Das OpenRGB-Plugin bleibt eine separate, optionale Integration, zu Dokumentationszwecken behalten.
 
 ## Bauen
 

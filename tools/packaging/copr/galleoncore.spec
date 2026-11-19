@@ -16,7 +16,7 @@ BuildRequires:  wayland-devel wayland-protocols-devel
 Requires:       qt6-qtdeclarative >= 6.4
 Requires:       systemd udev glib2 xdg-utils python3
 Recommends:     ffmpeg-free
-Suggests:       wireplumber openrgb
+Suggests:       wireplumber
 
 %description
 GalleonCore daemon, Bosun settings, libgalleon, QML widgets and wallpapers.
