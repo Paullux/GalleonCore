@@ -4,6 +4,7 @@
 #include "ScreenController.h"
 
 #include "ScreenRenderer.h"
+#include "ThemeIcon.h"
 
 #include <galleon/Protocol.h>
 #include <galleon/StreamDeck.h>
@@ -14,7 +15,6 @@
 #include <QDateTime>
 #include <QElapsedTimer>
 #include <QFileInfo>
-#include <QIcon>
 #include <QDebug>
 #include <QSettings>
 #include <QVariantMap>
@@ -451,8 +451,7 @@ QImage ScreenController::iconImage(const QString &iconName)
         return {};
     if (const auto known = m_icons.constFind(iconName); known != m_icons.constEnd())
         return known.value();
-    const QIcon icon = QIcon::fromTheme(iconName);
-    QImage image = icon.isNull() ? QImage() : icon.pixmap(256, 256).toImage();
+    QImage image = themeIconImage(iconName, 256);
     if (m_icons.size() >= 8)
         m_icons.clear(); // a session has few players: this only bounds the worst case
     m_icons.insert(iconName, image);

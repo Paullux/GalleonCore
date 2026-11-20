@@ -8,7 +8,8 @@
 #include <QFileInfo>
 #include <QFont>
 #include <QFontMetrics>
-#include <QIcon>
+#include "ThemeIcon.h"
+
 #include <QImageReader>
 #include <QPainter>
 #include <QPainterPath>
@@ -101,10 +102,7 @@ QImage TileRenderer::loadIcon(const QString &name, int size) const
     }
 
     // The desktop's icon theme.
-    const QIcon icon = QIcon::fromTheme(name);
-    if (icon.isNull())
-        return {};
-    return icon.pixmap(size, size).toImage();
+    return themeIconImage(name, size); // one thread at a time: see ThemeIcon.h
 }
 
 QColor TileRenderer::tintBackground(std::uint32_t rgb)

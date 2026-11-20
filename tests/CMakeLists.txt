@@ -219,6 +219,9 @@ galleon_add_test(test_daemoncommandline)
 target_compile_definitions(test_daemoncommandline PRIVATE GALLEON_TEST_DAEMON="$<TARGET_FILE:galleond>")
 add_dependencies(test_daemoncommandline galleond)
 
+# The icons of the desktop's theme: one thread at a time, whoever asks.
+galleond_add_test(test_themeicon)
+
 galleond_add_test(test_wallpapercatalog)
 galleond_add_test(test_screenrenderer)
 galleond_add_test(test_pagesconfig)
@@ -246,6 +249,10 @@ galleond_add_test(test_pageorder)
 # Galleon Bosun, the settings window.
 galleon_add_test(test_tabwidths)
 target_link_libraries(test_tabwidths PRIVATE bosun_core)
+
+# The image provider of the window, asked by the GUI thread and by the image loader thread together.
+galleon_add_test(test_tileprovider)
+target_link_libraries(test_tileprovider PRIVATE bosun_core)
 
 galleon_add_test(test_languages)
 target_link_libraries(test_languages PRIVATE bosun_core)

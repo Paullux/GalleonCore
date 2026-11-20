@@ -909,6 +909,12 @@ TileProvider::TileProvider(const BosunBackend *backend)
 QPixmap TileProvider::requestPixmap(const QString &id, QSize *size, const QSize &requestedSize)
 {
     Q_UNUSED(requestedSize)
+    const QMutexLocker lock(&m_renderMutex); // one tile at a time: see the comment of the class
+    return renderTile(id, size);
+}
+
+QPixmap TileProvider::renderTile(const QString &id, QSize *size) const
+{
     if (id.startsWith(QStringLiteral("recording/"))) {
         const QPixmap pixmap = QPixmap::fromImage(galleond::recordingIcon(id.mid(10), 128));
         if (size) *size = pixmap.size();

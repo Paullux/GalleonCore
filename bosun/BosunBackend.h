@@ -17,6 +17,7 @@
 #include <QFileInfo>
 #include <QFileSystemWatcher>
 #include <QHash>
+#include <QMutex>
 #include <QObject>
 #include <QPixmap>
 #include <QQuickImageProvider>
@@ -246,14 +247,25 @@ private:
 
 // Serves image://tiles/<page>/<key>; a "?..." after the key is ignored (it
 // is there to make the window ask again after a change).
+//
+// Which thread calls it: the window asks from the GUI thread for the images that are not `asynchronous`, and Qt Quick's image loader thread
+// asks for the others (the keyboard preview), so two threads can be here together. Drawing a tile loads icons, and on a KDE desktop the
+// icon loader (KIconLoader, installed by the Plasma platform theme) is not safe against two threads at once: that was a crash of the window
+// (a segmentation fault in KIconLoader::loadScaledIcon, with two threads in it in the dump). requestPixmap() therefore draws one tile at a
+// time. The lock is held only while drawing and the drawing never waits for another thread, so it cannot block the two of them.
 class TileProvider : public QQuickImageProvider
 {
 public:
     explicit TileProvider(const BosunBackend *backend);
     QPixmap requestPixmap(const QString &id, QSize *size, const QSize &requestedSize) override;
 
+protected:
+    // The drawing itself. Called with the lock held: never by two threads at once. Overridden by the test that forces two threads.
+    virtual QPixmap renderTile(const QString &id, QSize *size) const;
+
 private:
     const BosunBackend *m_backend;
+    QMutex m_renderMutex;
 };
 
 } // namespace bosun

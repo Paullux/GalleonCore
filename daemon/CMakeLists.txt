@@ -31,6 +31,7 @@ add_library(galleond_core STATIC
     WallpaperCatalog.h WallpaperCatalog.cpp
     ScreenRenderer.h ScreenRenderer.cpp
     TileRenderer.h TileRenderer.cpp
+    ThemeIcon.h ThemeIcon.cpp
     VideoProbe.h VideoProbe.cpp
     VideoThumbnails.h VideoThumbnails.cpp
     ScreenController.h ScreenController.cpp
