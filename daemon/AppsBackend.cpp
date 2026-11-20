@@ -7,11 +7,11 @@
 
 #include "PagesConfig.h"
 #include "PagesEditor.h"
+#include "ThemeIcon.h"
 #include "TileRenderer.h"
 
 #include <QFile>
 #include <QFileInfo>
-#include <QIcon>
 #include <QPainter>
 #include <QVariantMap>
 
@@ -32,10 +32,8 @@ QPixmap ThemeIconProvider::requestPixmap(const QString &id, QSize *size, const Q
     if (QFileInfo(id).isAbsolute()) {
         pixmap = QPixmap::fromImage(TileRenderer::loadIconFile(id, side));
     } else {
-        QIcon icon = QIcon::fromTheme(id);
-        if (icon.isNull())
-            icon = QIcon::fromTheme(QStringLiteral("application-x-executable"));
-        pixmap = icon.pixmap(side, side);
+        // One thread at a time (see ThemeIcon.h): the key editor asks from the image loader thread of Qt Quick.
+        pixmap = QPixmap::fromImage(themeIconImage(id, side, QStringLiteral("application-x-executable")));
     }
     if (pixmap.isNull()) {
         pixmap = QPixmap(side, side);

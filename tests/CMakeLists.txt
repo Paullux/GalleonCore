@@ -219,6 +219,9 @@ galleon_add_test(test_daemoncommandline)
 target_compile_definitions(test_daemoncommandline PRIVATE GALLEON_TEST_DAEMON="$<TARGET_FILE:galleond>")
 add_dependencies(test_daemoncommandline galleond)
 
+# The icons of the desktop's theme: one thread at a time, whoever asks.
+galleond_add_test(test_themeicon)
+
 galleond_add_test(test_wallpapercatalog)
 galleond_add_test(test_screenrenderer)
 galleond_add_test(test_pagesconfig)
