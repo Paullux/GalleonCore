@@ -247,6 +247,10 @@ galleond_add_test(test_pageorder)
 galleon_add_test(test_tabwidths)
 target_link_libraries(test_tabwidths PRIVATE bosun_core)
 
+# The image provider of the window, asked by the GUI thread and by the image loader thread together.
+galleon_add_test(test_tileprovider)
+target_link_libraries(test_tileprovider PRIVATE bosun_core)
+
 galleon_add_test(test_languages)
 target_link_libraries(test_languages PRIVATE bosun_core)
 
