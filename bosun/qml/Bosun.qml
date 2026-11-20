@@ -175,8 +175,11 @@ Window {
     Flickable {
         id: tabViewport
         objectName: "tabViewport"
-        readonly property var tabWidths: TabWidths.distribute(win.tabs.map(tab => Math.ceil(tabFont.advanceWidth(tab.title)) + 24),
-                                                             win.currentTab, width, bar.spacing, 70)
+        // The width each title would like, measured on the title of the language in use. When they do not all fit, the unselected tabs are
+        // shortened (their titles elided) rather than pushed out of view: the last tab must stay reachable in every language.
+        readonly property var preferredWidths: win.tabs.map(tab => Math.ceil(tabFont.advanceWidth(tab.title)) + 24)
+        readonly property real minimumWidth: TabWidths.fitMinimum(preferredWidths, win.currentTab, width, bar.spacing, 70, 40)
+        readonly property var tabWidths: TabWidths.distribute(preferredWidths, win.currentTab, width, bar.spacing, minimumWidth)
         function revealSelected() {
             const selected = tabRepeater.itemAt(win.currentTab)
             if (!selected) return

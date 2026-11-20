@@ -25,3 +25,15 @@ function distribute(preferred, selected, available, spacing, minimum) {
     }
     return widths
 }
+
+// The narrowest an unselected tab may be so that every tab stays in view: the selected title stays whole and the others share what is left,
+// but never wider than `ceiling` (the usual minimum, kept when everything fits) and never narrower than `floor` (a colour bar and a few
+// letters). It follows the measured width of the titles, so it follows the language: German and Spanish titles are longer than English ones.
+// Below `floor` the tabs are not shortened further and the bar scrolls.
+function fitMinimum(preferred, selected, available, spacing, ceiling, floor) {
+    const others = preferred.length - 1
+    if (others < 1) return ceiling
+    const kept = selected >= 0 && selected < preferred.length ? Math.max(ceiling, preferred[selected]) : ceiling
+    const room = (available - spacing * others - kept) / others
+    return Math.max(floor, Math.min(ceiling, Math.floor(room)))
+}
