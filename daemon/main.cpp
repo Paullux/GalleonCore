@@ -936,6 +936,8 @@ int main(int argc, char *argv[])
     std::unique_ptr<galleond::MatrixRainController> matrixRain;
     if (pages && matrixRenderer.isValid()) {
         matrixRain = std::make_unique<galleond::MatrixRainController>(&deck, &matrixRenderer);
+        // The rain on the rings is set like the other colours of the rings (level, put out): the settings of the pages are asked at each picture.
+        matrixRain->setRingSettingsSource([page = pages.get()] { return page->ringSettings(); });
         QObject::connect(matrixRain.get(), &galleond::MatrixRainController::activeChanged, pages.get(),
                          [&pages, &controller, &screensaver](bool active) {
                              pages->setSuspended(active);

@@ -14,6 +14,8 @@
 #include <QSignalSpy>
 #include <QTest>
 
+#include <algorithm>
+
 #include <array>
 #include <memory>
 
@@ -62,6 +64,7 @@ struct Fixture
     FakeTransport *transport = nullptr;
     std::unique_ptr<StreamDeck> deck;
     std::unique_ptr<ScreenRenderer> renderer;
+    RingSettings rings; // where the rings are set: the controller asks at each picture
     std::unique_ptr<MatrixRainController> controller;
 
     Fixture()
@@ -74,6 +77,7 @@ struct Fixture
         QVERIFY(renderer->isValid());
         controller = std::make_unique<MatrixRainController>(deck.get(), renderer.get());
         controller->setHoldMs(300);
+        controller->setRingSettingsSource([this] { return rings; });
     }
 };
 
@@ -387,6 +391,57 @@ private Q_SLOTS:
         }
         QVERIFY(std::all_of(ledSeen.begin(), ledSeen.end(), [](bool seen) { return seen; }));
         QVERIFY(leftHead); // the almost white head, on the left ring (LEDs 4 to 7)
+    }
+
+    void theRainOnTheRingsFollowsTheLevelOfTheRings()
+    {
+        Fixture f;
+        f.rings = {.lit = true, .level = 500};
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        f.transport->featureReports.clear();
+        f.transport->pendingReads.push_back(dialButtons(true, true));
+        QTRY_COMPARE_WITH_TIMEOUT(active.count(), 1, 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(ringReports(*f.transport).size() >= 8, 3000);
+        bool halfHead = false;
+        for (const auto &report : ringReports(*f.transport)) {
+            // Nothing is brighter than half of the brightest colour of the rain (the almost white head, 255 at most).
+            QVERIFY2(report[3] <= 108 && report[4] <= 128 && report[5] <= 112, "a segment was sent above the level of the rings");
+            halfHead = halfHead || (report[3] == 108 && report[4] == 128 && report[5] == 112); // the head at half
+        }
+        QVERIFY(halfHead);
+    }
+
+    void withTheRingsPutOutTheRainLeavesThemDark()
+    {
+        Fixture f;
+        f.rings = {.lit = false, .level = 1000};
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        f.transport->featureReports.clear();
+        f.transport->pendingReads.push_back(dialButtons(true, true));
+        QTRY_COMPARE_WITH_TIMEOUT(active.count(), 1, 3000);
+        QTest::qWait(1500); // the pictures of the rain go on
+        for (const auto &report : ringReports(*f.transport))
+            QCOMPARE((std::array<int, 3>{report[3], report[4], report[5]}), (std::array<int, 3>{0, 0, 0}));
+    }
+
+    void aLevelChangedWhileTheRainRunsIsFollowedAtOnce()
+    {
+        Fixture f;
+        f.rings = {.lit = true, .level = 200};
+        const QSignalSpy active(f.controller.get(), &MatrixRainController::activeChanged);
+        f.transport->pendingReads.push_back(dialButtons(true, true));
+        QTRY_COMPARE_WITH_TIMEOUT(active.count(), 1, 3000);
+        const auto fullHead = [&f] {
+            const auto reports = ringReports(*f.transport);
+            return std::ranges::any_of(reports, [](const auto &report) { return report[3] == 216 && report[4] == 255 && report[5] == 224; });
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(!ringReports(*f.transport).empty(), 3000);
+        QTest::qWait(800);
+        QVERIFY2(!fullHead(), "at a low level the head was shown at its full colour");
+        f.transport->featureReports.clear();
+        f.rings = {.lit = true, .level = RingLevelFull}; // the slider of the window moved
+        // The head comes back at its full colour, on one of the rings, within a few pictures.
+        QTRY_VERIFY_WITH_TIMEOUT(fullHead(), 4000);
     }
 
     void aSegmentIsSentAgainOnlyWhenItsColourChanged()

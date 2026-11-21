@@ -9,6 +9,8 @@
 
 #include <QDebug>
 
+#include <utility>
+
 namespace galleond {
 
 namespace {
@@ -155,17 +157,25 @@ void MatrixRainController::stop()
     Q_EMIT activeChanged(false);
 }
 
+void MatrixRainController::setRingSettingsSource(RingSettingsSource source)
+{
+    m_ringSettings = std::move(source);
+}
+
 void MatrixRainController::drawRings()
 {
+    // The rain on the rings is set like every other colour of the rings: at the level, and dark when they are put out.
+    const RingSettings settings = m_ringSettings ? m_ringSettings() : RingSettings{};
     for (int dial = 0; dial < galleon::protocol::DialCount; ++dial) {
         const auto colours = matrixRingSegments(dial, m_tick);
         auto &sent = m_ringSent.at(static_cast<std::size_t>(dial));
         for (int segment = 0; segment < galleon::protocol::DialRingLeds; ++segment) {
             const auto index = static_cast<std::size_t>(segment);
-            if (sent.at(index) == colours.at(index))
+            const RingRgb shown = matrixRingShown(colours.at(index), settings);
+            if (sent.at(index) == shown)
                 continue;
-            if (m_deck->setDialRingSegment(dial, segment, colours.at(index).red, colours.at(index).green, colours.at(index).blue))
-                sent.at(index) = colours.at(index);
+            if (m_deck->setDialRingSegment(dial, segment, shown.red, shown.green, shown.blue))
+                sent.at(index) = shown;
         }
     }
 }

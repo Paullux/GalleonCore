@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "RingSettings.h"
+
 #include <galleon/Protocol.h>
 
 #include <array>
@@ -35,5 +37,9 @@ inline constexpr int MatrixRingCycle = galleon::protocol::DialRingLeds + MatrixR
 // The colours of the four segments of the ring of `dial` at the picture number `frame` (0, 1, 2, ... one per picture of the rain). Each ring has its own
 // pace and its own place in the cycle, so that the two rings do not move together. Dark for a dial or a frame out of range.
 [[nodiscard]] std::array<RingRgb, galleon::protocol::DialRingLeds> matrixRingSegments(int dial, int frame);
+
+// The colour of one segment as the rings are set (RingSettings.h): dark when the rings are put out, else each channel scaled by the level, as for every
+// other colour of the rings (ambientRingColour). A dark segment stays dark, and a full level leaves the colour as it is. Pure.
+[[nodiscard]] RingRgb matrixRingShown(const RingRgb &colour, const RingSettings &settings);
 
 } // namespace galleond

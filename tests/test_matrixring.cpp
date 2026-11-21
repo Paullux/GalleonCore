@@ -152,6 +152,41 @@ private Q_SLOTS:
             }
         }
     }
+
+    // ---- the rain on the rings is set like the other colours of the rings
+    void aFullLevelLeavesTheColourAsItIs()
+    {
+        QCOMPARE(matrixRingShown(MatrixRingHead, {}), MatrixRingHead);
+        QCOMPARE(matrixRingShown(MatrixRingTrail, {.lit = true, .level = RingLevelFull}), MatrixRingTrail);
+    }
+
+    void halfTheLevelHalvesEveryChannelToTheNearest()
+    {
+        // 216, 255, 224 -> 108, 127.5 rounds up to 128, 112.
+        QCOMPARE(matrixRingShown(MatrixRingHead, {.lit = true, .level = 500}), (RingRgb{108, 128, 112}));
+        QCOMPARE(matrixRingShown(MatrixRingTrail, {.lit = true, .level = 500}), (RingRgb{0, 106, 29})); // 212 -> 106, 58 -> 29
+    }
+
+    void aDarkSegmentStaysDarkAtAnyLevel()
+    {
+        for (const int level : {0, 100, 500, RingLevelFull})
+            QCOMPARE(matrixRingShown(RingRgb{}, {.lit = true, .level = level}), RingRgb{});
+    }
+
+    void withTheRingsPutOutEverySegmentIsDark()
+    {
+        QCOMPARE(matrixRingShown(MatrixRingHead, {.lit = false, .level = RingLevelFull}), RingRgb{});
+        QCOMPARE(matrixRingShown(MatrixRingTrail, {.lit = false, .level = 500}), RingRgb{});
+    }
+
+    void aLowerLevelNeverShowsMoreThanAHigherOne()
+    {
+        for (int level = 0; level < RingLevelFull; ++level) {
+            const RingRgb lower = matrixRingShown(MatrixRingHead, {.lit = true, .level = level});
+            const RingRgb higher = matrixRingShown(MatrixRingHead, {.lit = true, .level = level + 1});
+            QVERIFY(lower.red <= higher.red && lower.green <= higher.green && lower.blue <= higher.blue);
+        }
+    }
 };
 
 QTEST_GUILESS_MAIN(TestMatrixRing)

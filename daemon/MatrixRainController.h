@@ -4,6 +4,7 @@
 #pragma once
 
 #include "MatrixRing.h"
+#include "RingSettings.h"
 #include "MatrixTrigger.h"
 
 #include <QElapsedTimer>
@@ -11,6 +12,7 @@
 #include <QTimer>
 
 #include <array>
+#include <functional>
 #include <optional>
 
 namespace galleon {
@@ -53,6 +55,10 @@ public:
     void endNow();
     // For the tests: a shorter hold.
     void setHoldMs(qint64 ms);
+    // Where the rings are set (RingSettings.h) is asked at each picture, so a level changed while the rain runs is followed at once: the rain on the rings
+    // is shown at the level and put out like every other colour of the rings. Without a source: full level, rings lit. The source must outlive the controller.
+    using RingSettingsSource = std::function<RingSettings()>;
+    void setRingSettingsSource(RingSettingsSource source);
 
 Q_SIGNALS:
     void activeChanged(bool active);
@@ -83,7 +89,9 @@ private:
     int m_tick = 0;
     int m_sendFailures = 0;
     // What each segment of each ring was last given (nothing: not known, so the next picture sends it).
+    // (what the rings showed, so after the settings: a level that changes makes the segments differ, and they are sent again)
     std::array<std::array<std::optional<RingRgb>, galleon::protocol::DialRingLeds>, galleon::protocol::DialCount> m_ringSent;
+    RingSettingsSource m_ringSettings;
     bool m_inhibited = false;
 };
 
