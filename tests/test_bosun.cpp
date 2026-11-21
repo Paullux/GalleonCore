@@ -2093,6 +2093,43 @@ QtObject {
         QVERIFY(calibrationY < webHub);
     }
 
+    void theKeyCalibrationIsNotOnTheKeyboardTabUnlessBosunWasStartedForIt()
+    {
+        // Without --mapkeys Bosun is given no calibration: the lighting view shows no trace of it.
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        const bosun::AppearanceStore appearance{QString()};
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)},
+                                     {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QVERIFY(root->setProperty("currentTab", 3));
+        auto *window = qobject_cast<QQuickWindow *>(root);
+        QVERIFY(window);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        root->setProperty("keyboardView", QStringLiteral("lighting"));
+        const auto shown = [root](const char *name) {
+            const auto found = namedItems(root, QString::fromLatin1(name));
+            return found.size() == 1 && found.constFirst()->isVisible();
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(shown("lightingToggle"), 3000); // the view is up, the rest of its tools are there
+        QVERIFY(shown("keyboardMap"));
+        for (const char *name : {"calibrationBegin", "calibrationRestart", "calibrationNeedsLighting", "calibrationPanel"})
+            QVERIFY2(!shown(name), name);
+    }
+
     void theDrawingOfTheKeyboardMovesAsTheKeysDoAndOnlyWhileItIsOnScreenAndShowsWhatTheKeysShow()
     {
         const QString connectionName = QStringLiteral("fake-galleond-for-the-moving-drawing");
