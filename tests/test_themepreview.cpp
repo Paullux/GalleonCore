@@ -9,7 +9,11 @@
 using namespace galleond;
 
 namespace {
-const QStringList Pages{"a", "b", "c", "numpad"};
+// A function, not a constant: a QStringList at namespace scope may throw while the program starts (cert-err58-cpp).
+QStringList themePages()
+{
+    return {"a", "b", "c", "numpad"};
+}
 }
 
 class TestThemePreview : public QObject
@@ -22,7 +26,7 @@ private Q_SLOTS:
         ThemePreview preview;
         QVERIFY(preview.begin("a", "b", false));
         QVERIFY(preview.begin("b", "c", false)); // the next tab does not replace the way back
-        const auto revert = preview.end("c", false, Pages);
+        const auto revert = preview.end("c", false, themePages());
         QCOMPARE(revert.kind, ThemePreview::Kind::Show);
         QCOMPARE(revert.page, QString("a"));
         QVERIFY(!preview.active());
@@ -33,7 +37,7 @@ private Q_SLOTS:
         ThemePreview preview;
         QVERIFY(!preview.begin("a", "b", true));
         QVERIFY(!preview.active());
-        QCOMPARE(preview.end("a", true, Pages).kind, ThemePreview::Kind::Nothing);
+        QCOMPARE(preview.end("a", true, themePages()).kind, ThemePreview::Kind::Nothing);
     }
 
     void anEmptyPageIsRefused()
@@ -45,14 +49,14 @@ private Q_SLOTS:
     void nothingIsGivenBackWhenThePreviewNeverStarted()
     {
         ThemePreview preview;
-        QCOMPARE(preview.end("a", false, Pages).kind, ThemePreview::Kind::Nothing);
+        QCOMPARE(preview.end("a", false, themePages()).kind, ThemePreview::Kind::Nothing);
     }
 
     void aModuleChangedSinceTheTabWasShownIsLeftAlone()
     {
         ThemePreview preview;
         QVERIFY(preview.begin("a", "b", false));
-        QCOMPARE(preview.end("c", false, Pages).kind, ThemePreview::Kind::Nothing); // a dial or a player moved it to c
+        QCOMPARE(preview.end("c", false, themePages()).kind, ThemePreview::Kind::Nothing); // a dial or a player moved it to c
         QVERIFY(!preview.active());
     }
 
@@ -60,7 +64,7 @@ private Q_SLOTS:
     {
         ThemePreview preview;
         QVERIFY(preview.begin("_galleon_gaming", "b", false)); // a game's page does not outlive the game
-        const auto revert = preview.end("b", false, Pages);
+        const auto revert = preview.end("b", false, themePages());
         QCOMPARE(revert.kind, ThemePreview::Kind::Show);
         QCOMPARE(revert.page, QString("numpad"));
     }
@@ -76,7 +80,7 @@ private Q_SLOTS:
     {
         ThemePreview preview;
         QVERIFY(preview.begin("a", "b", false));
-        const auto revert = preview.end("b", true, Pages);
+        const auto revert = preview.end("b", true, themePages());
         QCOMPARE(revert.kind, ThemePreview::Kind::AfterGame);
         QCOMPARE(revert.page, QString("a"));
     }
@@ -86,16 +90,16 @@ private Q_SLOTS:
         ThemePreview preview;
         QVERIFY(preview.begin("a", "b", false));
         preview.clear();
-        QCOMPARE(preview.end("b", false, Pages).kind, ThemePreview::Kind::Nothing);
+        QCOMPARE(preview.end("b", false, themePages()).kind, ThemePreview::Kind::Nothing);
     }
 
     void aSecondPreviewAfterTheEndRemembersTheNewStart()
     {
         ThemePreview preview;
         QVERIFY(preview.begin("a", "b", false));
-        QVERIFY(preview.end("b", false, Pages).kind == ThemePreview::Kind::Show);
+        QVERIFY(preview.end("b", false, themePages()).kind == ThemePreview::Kind::Show);
         QVERIFY(preview.begin("c", "b", false));
-        QCOMPARE(preview.end("b", false, Pages).page, QString("c"));
+        QCOMPARE(preview.end("b", false, themePages()).page, QString("c"));
     }
 };
 
