@@ -821,13 +821,28 @@ private Q_SLOTS:
         QCOMPARE(lastRing(true), (std::array<int, 3>{0, 0, 0}));
         QCOMPARE(lastRing(false), (std::array<int, 3>{0, 0, 0}));
 
-        // The wallpaper choice answers an action of the person: magenta, at full level, even with the rings put out. The left one stays dark.
+        // The wallpaper choice answers an action of the person: magenta, never out. With the rings put out it is at the minimum (30 %), not at
+        // full level and not dark. The left one stays dark.
         f.pressDial(1, true);
         f.pressDial(1, false);
         QVERIFY(f.controller->wallpaperMode());
         f.controller->wallpaperLabelShown();
-        QCOMPARE(lastRing(false), (std::array<int, 3>{255, 0, 255}));
+        QCOMPARE(lastRing(false), (std::array<int, 3>{77, 0, 77}));
         QCOMPARE(lastRing(true), (std::array<int, 3>{0, 0, 0}));
+
+        // The level changes DURING the choice (the owner moves the slider of the window): the choice goes on, and the magenta follows the level
+        // but never goes under the minimum.
+        f.controller->setRingSettings({.lit = true, .level = 500});
+        QVERIFY(f.controller->wallpaperMode());
+        QCOMPARE(lastRing(false), (std::array<int, 3>{128, 0, 128}));
+        f.controller->setRingSettings({.lit = true, .level = 100});
+        QVERIFY(f.controller->wallpaperMode());
+        QCOMPARE(lastRing(false), (std::array<int, 3>{77, 0, 77})); // raised to the minimum
+        f.controller->setRingSettings({.lit = true, .level = 1000});
+        QVERIFY(f.controller->wallpaperMode());
+        QCOMPARE(lastRing(false), (std::array<int, 3>{255, 0, 255}));
+        f.controller->setRingSettings({.lit = false, .level = 1000}); // as it was for what follows
+        QVERIFY(f.controller->wallpaperMode());
 
         // Back to the defaults: the theme and white again.
         f.pressDial(1, true);

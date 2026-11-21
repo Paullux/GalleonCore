@@ -16,11 +16,14 @@ namespace galleond {
 //   {"version":1,"lit":true,"level":1000}
 //
 // `lit` false puts the rings out; `level` is 0 to 1000 (the unit of the other levels of the project), a factor on the colours they show. These are
-// the settings of the AMBIENT colours only (the theme on the left, white on the right): what a ring shows to answer an action of the person (magenta
-// while the wallpaper is chosen) is feedback and is always shown, at full level. A missing file means "lit, full level", as before this file existed.
+// the settings of the AMBIENT colours only (the theme on the left, white on the right). What a ring shows to answer an action of the person (magenta
+// while the wallpaper is chosen) is feedback: it follows the level set here, but never goes under RingAnswerMinLevel and is shown even with the rings put
+// out (see answerRingColour). A missing file means "lit, full level", as before this file existed.
 // Like every file read from disk it is untrusted: a bounded size, exactly the keys above, a boolean, a whole number in range, or nothing at all.
 // The file says nothing about the keyboard (the two USB parts stay separate) and nothing about key presses.
 inline constexpr int RingLevelFull = 1000;
+// The least that a ring which answers an action of the person is shown at (30 %): so that the choice stays readable when the rings are set low or out.
+inline constexpr int RingAnswerMinLevel = 300;
 inline constexpr qint64 MaxRingSettingsBytes = 1024;
 
 struct RingSettings
@@ -44,5 +47,9 @@ struct RingSettings
 
 // The colour (0xRRGGBB) that an ambient ring shows: dark when the rings are out, else each channel scaled by the level (rounded to the nearest). Pure.
 [[nodiscard]] std::uint32_t ambientRingColour(std::uint32_t rgb, const RingSettings &settings);
+
+// The colour (0xRRGGBB) of a ring that answers an action of the person (the magenta of the wallpaper choice): the colour at the level of the settings, but
+// never under RingAnswerMinLevel, and, with the rings put out, at that minimum: the answer is never dark. Pure.
+[[nodiscard]] std::uint32_t answerRingColour(std::uint32_t rgb, const RingSettings &settings);
 
 } // namespace galleond
