@@ -172,6 +172,7 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("updates"), QVariant::fromValue(&updates)},
                                  {QStringLiteral("languages"), QVariant::fromValue(&languages)},
                                  {QStringLiteral("animateTabs"), !parser.isSet(shotOption)},
+                                 {QStringLiteral("padFollowsTabs"), !preview},
                                  {QStringLiteral("updatesOpen"), parser.isSet(simulateUpdateOption)},
                                  {QStringLiteral("filePicker"), QVariant::fromValue(filePicker.get())},
                                  {QStringLiteral("backend"), QVariant::fromValue(&backend)},

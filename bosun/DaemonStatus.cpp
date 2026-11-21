@@ -218,6 +218,31 @@ QString DaemonStatus::showTheme(const QString &page)
     return {};
 }
 
+void DaemonStatus::previewTheme(const QString &page)
+{
+    if (!running()) return;
+    auto message = QDBusMessage::createMethodCall(QString::fromLatin1(BusName), QStringLiteral("/org/galleoncore/Deck"), QString::fromLatin1(BusName), QStringLiteral("PreviewTheme"));
+    message << page;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
+    // False is normal (a game runs). An error means an older galleond that does not know the call: the tabs then simply do not follow.
+    connect(watcher, &QDBusPendingCallWatcher::finished, watcher, &QObject::deleteLater);
+}
+
+void DaemonStatus::endThemePreview()
+{
+    if (!running()) return;
+    const auto message = QDBusMessage::createMethodCall(QString::fromLatin1(BusName), QStringLiteral("/org/galleoncore/Deck"), QString::fromLatin1(BusName), QStringLiteral("EndThemePreview"));
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, watcher, &QObject::deleteLater);
+}
+
+void DaemonStatus::endThemePreviewNow()
+{
+    if (!running()) return;
+    const auto message = QDBusMessage::createMethodCall(QString::fromLatin1(BusName), QStringLiteral("/org/galleoncore/Deck"), QString::fromLatin1(BusName), QStringLiteral("EndThemePreview"));
+    QDBusConnection::sessionBus().call(message, QDBus::Block, 300);
+}
+
 QString DaemonStatus::setKeyboardBrightness(int value)
 {
     if (!running()) return tr("Start galleond to change the keyboard brightness");

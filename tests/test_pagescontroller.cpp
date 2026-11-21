@@ -1448,6 +1448,101 @@ private Q_SLOTS:
         QCOMPARE(f.media.stopCount, 1);
     }
 
+    // ---- Bosun's open theme tab: the module shows that theme, then gives itself back ----
+
+    static QByteArray threeThemes()
+    {
+        QJsonArray themes{QJsonObject{{"name", "A"}, {"page", "a"}, {"color", "#ffffff"}},
+                          QJsonObject{{"name", "B"}, {"page", "b"}, {"color", "#336699"}},
+                          QJsonObject{{"name", "C"}, {"page", "c"}, {"color", "#993366"}}};
+        QJsonObject pages{{"a", page({keyJson(0, "Next", mediaAction("next"))})},
+                          {"b", page({keyJson(0, "Stop", mediaAction("stop"))})},
+                          {"c", page({keyJson(0, "Previous", mediaAction("previous"))})}};
+        return QJsonDocument(QJsonObject{{"version", 1}, {"home", "a"}, {"pages", pages}, {"themes", themes}}).toJson();
+    }
+
+    void theModuleFollowsTheThemeTabAndGoesBackToItsThemeWhenThePreviewEnds()
+    {
+        QTemporaryDir const dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, threeThemes()));
+        Fixture f;
+        f.controller->loadFile(file);
+        QVERIFY(f.controller->previewThemePage(QStringLiteral("b")));
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.media.stopCount, 1);
+        QVERIFY(f.controller->previewThemePage(QStringLiteral("c"))); // the next tab keeps the way back to the first theme
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.media.previousCount, 1);
+        f.controller->endThemePreview();
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.media.nextCount, 1);
+        QCOMPARE(f.controller->currentTheme()->name, QString("A"));
+    }
+
+    void aThemeShownForGoodIsNotTakenBackWhenThePreviewEnds()
+    {
+        QTemporaryDir const dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, threeThemes()));
+        Fixture f;
+        f.controller->loadFile(file);
+        QVERIFY(f.controller->previewThemePage(QStringLiteral("b")));
+        QVERIFY(f.controller->showThemePage(QStringLiteral("b"))); // a theme installed from a file, on the tab already open: shown for good
+        f.controller->endThemePreview();
+        QCOMPARE(f.controller->currentTheme()->name, QString("B"));
+    }
+
+    void endingAPreviewThatNeverStartedLeavesTheModuleAlone()
+    {
+        QTemporaryDir const dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, threeThemes()));
+        Fixture f;
+        f.controller->loadFile(file);
+        f.controller->endThemePreview();
+        QCOMPARE(f.controller->currentTheme()->name, QString("A"));
+    }
+
+    void aThemeTabIsIgnoredWhileAGameRuns()
+    {
+        QTemporaryDir const dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, threeThemes()));
+        RecordingController recording(nullptr, dir.filePath("recording.ini"));
+        recording.setPlatformForTest(true, true, false, [](int) { return true; });
+        Fixture f;
+        f.controller->setRecordingController(&recording);
+        f.controller->loadFile(file);
+        f.controller->setGameActive(true);
+        QCOMPARE(f.controller->currentTheme()->name, QString("Gaming"));
+        QVERIFY(!f.controller->previewThemePage(QStringLiteral("b")));
+        QCOMPARE(f.controller->currentTheme()->name, QString("Gaming"));
+        f.controller->endThemePreview();
+        QCOMPARE(f.controller->currentTheme()->name, QString("Gaming"));
+    }
+
+    void aGameThatStartsDuringThePreviewLeavesTheModuleOnTheThemeBeforeThePreviewWhenItEnds()
+    {
+        QTemporaryDir const dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, threeThemes()));
+        RecordingController recording(nullptr, dir.filePath("recording.ini"));
+        recording.setPlatformForTest(true, true, false, [](int) { return true; });
+        Fixture f;
+        f.controller->setRecordingController(&recording);
+        f.controller->loadFile(file);
+        QVERIFY(f.controller->previewThemePage(QStringLiteral("b")));
+        f.controller->setGameActive(true);
+        f.controller->endThemePreview(); // Bosun is closed while the game runs: Gaming stays up
+        QCOMPARE(f.controller->currentTheme()->name, QString("Gaming"));
+        f.controller->setGameActive(false);
+        QCOMPARE(f.controller->currentTheme()->name, QString("A")); // not B, the theme that was only being looked at
+    }
+
     // The theme shipped in themes/voice-chat, installed as a user would, then shown by its page.
     void theShippedVoiceChatThemeIsPlayedByItsKeys()
     {

@@ -28,6 +28,7 @@ add_library(galleond_core STATIC
     InitialPages.h InitialPages.cpp
     PagesEditor.h PagesEditor.cpp
     PagesController.h PagesController.cpp
+    ThemePreview.h ThemePreview.cpp
     WallpaperCatalog.h WallpaperCatalog.cpp
     ScreenRenderer.h ScreenRenderer.cpp
     TileRenderer.h TileRenderer.cpp

@@ -205,6 +205,46 @@ bool PagesController::showGaming()
 
 bool PagesController::showThemePage(const QString &page)
 {
+    m_preview.clear(); // shown for good: no way back to give
+    return showThemePageNow(page);
+}
+
+QString PagesController::shownThemePage() const
+{
+    // While a game runs the module shows the game's page: the theme that counts is the one it goes back to after.
+    const int theme = m_gameActive ? m_beforeGameTheme : m_theme;
+    return theme >= 0 && std::cmp_less(theme, m_config.themes.size()) ? m_config.themes[static_cast<std::size_t>(theme)].page : QString();
+}
+
+bool PagesController::previewThemePage(const QString &page)
+{
+    if (!m_preview.begin(shownThemePage(), page, m_gameActive))
+        return false;
+    return showThemePageNow(page);
+}
+
+void PagesController::endThemePreview()
+{
+    QStringList pages;
+    for (const Theme &theme : m_config.themes)
+        pages.append(theme.page);
+    const ThemePreview::Revert revert = m_preview.end(shownThemePage(), m_gameActive, pages);
+    if (revert.kind == ThemePreview::Kind::Show) {
+        showThemePageNow(revert.page);
+    } else if (revert.kind == ThemePreview::Kind::AfterGame) {
+        // The game page is up: when the game ends the module goes back to this theme, not to the one that was previewed.
+        for (std::size_t i = 0; i < m_config.themes.size(); ++i) {
+            if (m_config.themes[i].page == revert.page) {
+                m_beforeGameTheme = static_cast<int>(i);
+                m_beforeGameStack.clear();
+                break;
+            }
+        }
+    }
+}
+
+bool PagesController::showThemePageNow(const QString &page)
+{
     for (std::size_t i = 0; i < m_config.themes.size(); ++i) {
         if (m_config.themes[i].page != page)
             continue;

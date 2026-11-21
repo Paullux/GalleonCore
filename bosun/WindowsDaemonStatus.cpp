@@ -89,6 +89,10 @@ QString DaemonStatus::showTheme(const QString &page) {
     galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::Theme, {}, page}, this);
     return {};
 }
+// The tabs do not drive the module on Windows yet: the local endpoint has no such action.
+void DaemonStatus::previewTheme(const QString &) {}
+void DaemonStatus::endThemePreview() {}
+void DaemonStatus::endThemePreviewNow() {}
 int DaemonStatus::nearestBrightnessStop(int value) {
     if (value < 0 || value > 1000) return -1;
     return (value + 50) / 100 * 100;
