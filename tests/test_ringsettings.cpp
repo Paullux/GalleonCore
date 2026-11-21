@@ -90,7 +90,7 @@ private Q_SLOTS:
         }
     }
 
-    // ---- the ring that answers an action of the person (the magenta of the wallpaper choice)
+    // ---- the ring that answers an action of the person (the magenta of the wallpaper choice), in normal use
     void theAnswerFollowsTheLevelAndKeepsItsHue()
     {
         QCOMPARE(answerRingColour(0xff00ff, {}), std::uint32_t{0xff00ff});                                  // full level: as it is
@@ -98,33 +98,48 @@ private Q_SLOTS:
         QCOMPARE(answerRingColour(0xff00ff, {.lit = true, .level = 700}), std::uint32_t{0xb300b3});          // 178.5 rounds up
     }
 
-    void theAnswerNeverGoesUnderTheMinimumLevel()
+    void aLowLevelIsRaisedToTheMinimumSoTheAnswerStaysReadable()
     {
-        const std::uint32_t atTheMinimum = ambientRingColour(0xff00ff, {.lit = true, .level = RingAnswerMinLevel});
+        const std::uint32_t atTheMinimum = ambientRingColour(0xff00ff, {.lit = true, .level = RingShownMinLevel});
         QCOMPARE(atTheMinimum, std::uint32_t{0x4d004d}); // 30 % of 255 is 76.5, 77
         QCOMPARE(answerRingColour(0xff00ff, {.lit = true, .level = 100}), atTheMinimum);
-        QCOMPARE(answerRingColour(0xff00ff, {.lit = true, .level = 0}), atTheMinimum);
-        // Just under and just over the minimum.
-        QCOMPARE(answerRingColour(0xff00ff, {.lit = true, .level = RingAnswerMinLevel - 1}), atTheMinimum);
-        QVERIFY(answerRingColour(0xff00ff, {.lit = true, .level = RingAnswerMinLevel + 100}) > atTheMinimum);
+        QCOMPARE(answerRingColour(0xff00ff, {.lit = true, .level = 1}), atTheMinimum);
+        QCOMPARE(answerRingColour(0xff00ff, {.lit = true, .level = RingShownMinLevel - 1}), atTheMinimum);
+        QVERIFY(answerRingColour(0xff00ff, {.lit = true, .level = RingShownMinLevel + 100}) > atTheMinimum);
     }
 
-    void withTheRingsPutOutTheAnswerIsAtTheMinimumAndNeverDark()
+    void withTheRingsPutOutOrAtZeroTheAnswerDoesNotRelightThem()
     {
-        const std::uint32_t atTheMinimum = answerRingColour(0xff00ff, {.lit = true, .level = 0});
-        QVERIFY(atTheMinimum != 0);
-        QCOMPARE(answerRingColour(0xff00ff, {.lit = false, .level = 1000}), atTheMinimum); // whatever the level kept in the file
-        QCOMPARE(answerRingColour(0xff00ff, {.lit = false, .level = 0}), atTheMinimum);
+        QCOMPARE(answerRingColour(0xff00ff, {.lit = false, .level = 1000}), std::uint32_t{0}); // put out, whatever the level kept in the file
+        QCOMPARE(answerRingColour(0xff00ff, {.lit = false, .level = 0}), std::uint32_t{0});
+        QCOMPARE(answerRingColour(0xff00ff, {.lit = true, .level = 0}), std::uint32_t{0});     // lit but at 0 %: the same
     }
 
-    void theAnswerNeverGoesAboveItsOwnChannelAndNeverBelowTheMinimumOfEachChannel()
+    void theAnswerNeverGoesAboveItsOwnChannelAndNeverUnderTheMinimumOnceShown()
     {
-        for (int level = 0; level <= RingLevelFull; ++level) {
+        for (int level = 1; level <= RingLevelFull; ++level) {
             const std::uint32_t shown = answerRingColour(0xff00ff, {.lit = true, .level = level});
             QCOMPARE((shown >> 8) & 0xffU, std::uint32_t{0}); // green was 0 and stays 0
             QCOMPARE((shown >> 16) & 0xffU, shown & 0xffU);   // red and blue stay together
             QVERIFY(((shown >> 16) & 0xffU) >= 77U);          // never under 30 % of 255
         }
+    }
+
+    // ---- the green rain, the one exception
+    void theRainIsAtLeastAtTheMinimumEvenWithTheRingsPutOutOrAtZero()
+    {
+        const std::uint32_t atTheMinimum = ambientRingColour(0x00d43a, {.lit = true, .level = RingShownMinLevel});
+        QVERIFY(atTheMinimum != 0);
+        QCOMPARE(floorRingColour(0x00d43a, {.lit = false, .level = 1000}), atTheMinimum); // put out: the rain relights them
+        QCOMPARE(floorRingColour(0x00d43a, {.lit = false, .level = 0}), atTheMinimum);
+        QCOMPARE(floorRingColour(0x00d43a, {.lit = true, .level = 0}), atTheMinimum);     // at 0 %: the same
+        QCOMPARE(floorRingColour(0x00d43a, {.lit = true, .level = 100}), atTheMinimum);   // low: raised
+    }
+
+    void theRainFollowsTheLevelAboveTheMinimum()
+    {
+        QCOMPARE(floorRingColour(0x00d43a, {}), std::uint32_t{0x00d43a});
+        QCOMPARE(floorRingColour(0x00d43a, {.lit = true, .level = 500}), ambientRingColour(0x00d43a, {.lit = true, .level = 500}));
     }
 };
 

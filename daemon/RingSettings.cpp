@@ -105,11 +105,18 @@ std::uint32_t ambientRingColour(std::uint32_t rgb, const RingSettings &settings)
     return (scaled(16) << 16) | (scaled(8) << 8) | scaled(0);
 }
 
+std::uint32_t floorRingColour(std::uint32_t rgb, const RingSettings &settings)
+{
+    // The level of the settings, raised to the minimum; put out, the minimum. Then the same scaling as for the ambient colours.
+    const int level = settings.lit ? std::max(settings.level, RingShownMinLevel) : RingShownMinLevel;
+    return ambientRingColour(rgb, RingSettings{true, level});
+}
+
 std::uint32_t answerRingColour(std::uint32_t rgb, const RingSettings &settings)
 {
-    // Put out: the minimum. Lit: the level of the settings, raised to the minimum. Then the same scaling as for the ambient colours.
-    const int level = settings.lit ? std::max(settings.level, RingAnswerMinLevel) : RingAnswerMinLevel;
-    return ambientRingColour(rgb, RingSettings{true, level});
+    if (!settings.lit || settings.level == 0)
+        return 0; // put out, or at 0: nothing relights the rings in normal use
+    return floorRingColour(rgb, settings);
 }
 
 } // namespace galleond

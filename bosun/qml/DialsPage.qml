@@ -28,7 +28,7 @@ Item {
             wrapMode: Text.Wrap
             color: "#9aa0a6"
             font.pixelSize: 14
-            text: qsTr("The two rings of light around the dials. The left one shows the colour of the theme, the right one is white for the player. When the right dial chooses the wallpaper its ring turns magenta, at the level set here but never under 30 %, and even when the rings are out: that is the answer to your action.")
+            text: qsTr("The two rings of light around the dials. The left one shows the colour of the theme, the right one is white for the player. When the right dial chooses the wallpaper its ring turns magenta, at the level set here but never under 30 %. With the rings out or at 0 %, nothing lights them.")
         }
         Row {
             spacing: 8

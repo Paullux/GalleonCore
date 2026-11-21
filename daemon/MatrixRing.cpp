@@ -53,7 +53,7 @@ std::array<RingRgb, galleon::protocol::DialRingLeds> matrixRingSegments(int dial
 RingRgb matrixRingShown(const RingRgb &colour, const RingSettings &settings)
 {
     const std::uint32_t packed = (static_cast<std::uint32_t>(colour.red) << 16) | (static_cast<std::uint32_t>(colour.green) << 8) | colour.blue;
-    const std::uint32_t shown = ambientRingColour(packed, settings);
+    const std::uint32_t shown = packed == 0 ? 0 : floorRingColour(packed, settings); // a dark segment stays dark; the rest is at least at the minimum
     return {static_cast<std::uint8_t>(shown >> 16), static_cast<std::uint8_t>(shown >> 8), static_cast<std::uint8_t>(shown)};
 }
 
