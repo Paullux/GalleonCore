@@ -73,6 +73,9 @@ public:
     // is sent (the tab is left or the window hidden). galleond decides: nothing happens while a game runs, nor when the
     // module was changed in between. `endThemePreviewNow` waits (at most a third of a second) for galleond to take the
     // request: for the moment the application quits. Linux only for now; on Windows they do nothing.
+    // The "Test" button of a screensaver video: galleond shows it on the module for a short time, until a key or a dial is used.
+    // "" when the request was sent, else why not. Whether the module could show it comes back as commandError. Linux only for now.
+    Q_INVOKABLE [[nodiscard]] QString testScreensaver(const QString &video);
     Q_INVOKABLE void previewTheme(const QString &page);
     Q_INVOKABLE void endThemePreview();
     Q_INVOKABLE void endThemePreviewNow();

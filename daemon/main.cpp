@@ -968,6 +968,7 @@ int main(int argc, char *argv[])
         return pages && pages->showThemePage(page);
     });
 
+    controller.setScreensaverTestHandler([&screensaver](const QString &video) { return screensaver && screensaver->test(video); });
     controller.setThemePreviewHandlers(
         [&pages, &screensaver](const QString &page) {
             if (screensaver) screensaver->notifyActivity();

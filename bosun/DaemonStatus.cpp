@@ -218,6 +218,21 @@ QString DaemonStatus::showTheme(const QString &page)
     return {};
 }
 
+QString DaemonStatus::testScreensaver(const QString &video)
+{
+    if (!running()) return tr("Start galleond to try a screensaver on the module");
+    auto message = QDBusMessage::createMethodCall(QString::fromLatin1(BusName), QStringLiteral("/org/galleoncore/Deck"), QString::fromLatin1(BusName), QStringLiteral("TestScreensaver"));
+    message << video;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
+        const QDBusPendingReply<bool> reply = *watcher;
+        if (reply.isError()) Q_EMIT commandError(tr("Cannot try the screensaver: restart the updated daemon (%1)").arg(reply.error().message()));
+        else if (!reply.value()) Q_EMIT commandError(tr("The screensaver could not be shown: a game is running, the module is not connected, or one is already on"));
+        watcher->deleteLater();
+    });
+    return {};
+}
+
 void DaemonStatus::previewTheme(const QString &page)
 {
     if (!running()) return;

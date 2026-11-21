@@ -10,6 +10,7 @@ Flickable {
     id: saverPage
     property var filePicker: null
     required property var backend
+    property var daemon: null // galleond: the module shows a video for the Test button
     readonly property var saver: backend.screensaver
     property string message: ""
     property bool messageIsError: false
@@ -25,6 +26,12 @@ Flickable {
     function answered(error, done) {
         message = error === "" ? done : error
         messageIsError = error !== ""
+    }
+
+    // galleond could not show the video (a game, the module not connected, one already on).
+    Connections {
+        target: saverPage.daemon
+        function onCommandError(text) { if (saverPage.visible) saverPage.answered(text, "") }
     }
 
     Column {
@@ -196,7 +203,7 @@ Flickable {
                     id: info
                     x: 114
                     y: 14
-                    width: parent.width - 130 - removeButton.width
+                    width: parent.width - 138 - removeButton.width - testButton.width
                     spacing: 6
 
                     // The title shown while the screensaver runs; empty: the name of the file.
@@ -255,6 +262,18 @@ Flickable {
                             text: "• " + modelData
                         }
                     }
+                }
+                // Shows this video on the module, for a short time: any key or dial stops it.
+                Pill {
+                    id: testButton
+                    objectName: "screensaverTest"
+                    anchors.right: removeButton.left
+                    anchors.rightMargin: 8
+                    y: 14
+                    text: qsTr("Test")
+                    enabledLook: videoRow.modelData.found && saverPage.daemon !== null
+                    onClicked: saverPage.answered(saverPage.daemon.testScreensaver(videoRow.modelData.file),
+                                                  qsTr("Shown on the module for a short time: press any key or turn a dial to stop it."))
                 }
                 Pill {
                     id: removeButton

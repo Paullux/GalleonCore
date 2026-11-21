@@ -769,5 +769,11 @@
   "Level of the rings": "Niveau des anneaux",
   "The rings are out. They light up again for the wallpaper choice, then go out.": "Les anneaux sont éteints. Ils se rallument pour le choix du fond d’écran, puis s’éteignent.",
   "The settings of the rings could not be saved.": "Les réglages des anneaux n’ont pas pu être enregistrés.",
-  "The level of the rings is a number from 0 to 1000.": "Le niveau des anneaux est un nombre de 0 à 1000."
+  "The level of the rings is a number from 0 to 1000.": "Le niveau des anneaux est un nombre de 0 à 1000.",
+  "Test": "Tester",
+  "Shown on the module for a short time: press any key or turn a dial to stop it.": "Affiché sur le module un court instant : appuyez sur une touche ou tournez une molette pour l’arrêter.",
+  "Start galleond to try a screensaver on the module": "Démarrez galleond pour essayer un économiseur d’écran sur le module",
+  "Cannot try the screensaver: restart the updated daemon (%1)": "Impossible d’essayer l’économiseur : redémarrez le démon à jour (%1)",
+  "The screensaver could not be shown: a game is running, the module is not connected, or one is already on": "L’économiseur n’a pas pu être affiché : un jeu tourne, le module n’est pas connecté, ou un économiseur est déjà en cours",
+  "Trying a screensaver on the module is not available on Windows yet": "Essayer un économiseur sur le module n’est pas encore disponible sous Windows"
 }
