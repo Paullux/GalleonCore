@@ -126,8 +126,8 @@ public:
     // when the module was plugged in again.
     void applyRings();
     // The settings of the rings (RingSettings.h): the ambient colours (theme on the left, white on the right) are put out or dimmed; what a ring shows
-    // to answer an action (magenta while the wallpaper is chosen) follows the level but never goes under the minimum and is never out (answerRingColour).
-    // Applied at once when the module is open, also while the wallpaper is being chosen.
+    // to answer an action (magenta while the wallpaper is chosen) follows the level, raised to the minimum when it is low, and stays dark with the rings put out
+    // or at 0 (answerRingColour). Applied at once when the module is open, also while the wallpaper is being chosen.
     void setRingSettings(const RingSettings &settings);
     [[nodiscard]] RingSettings ringSettings() const { return m_rings; }
 

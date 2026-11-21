@@ -804,7 +804,7 @@ void PagesController::applyRings()
                             static_cast<std::uint8_t>(left)))
         qWarning() << "galleond: could not update the left dial ring";
     // The right ring: white for the player control, magenta while it chooses the wallpaper. The magenta answers an action of the
-    // person: it follows the level of the rings but never goes under the minimum, and it is shown even with the rings put out.
+    // person: it follows the level of the rings, raised to the minimum when it is low; with the rings put out, or at 0, nothing relights them.
     const std::uint32_t right = wallpaperMode() ? answerRingColour(WallpaperModeRgb, m_rings) : ambientRingColour(0xffffff, m_rings);
     if (!m_deck->setDialRing(1, static_cast<std::uint8_t>(right >> 16), static_cast<std::uint8_t>(right >> 8),
                             static_cast<std::uint8_t>(right)))

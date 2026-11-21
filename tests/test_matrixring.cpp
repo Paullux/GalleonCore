@@ -171,12 +171,18 @@ private Q_SLOTS:
     {
         for (const int level : {0, 100, 500, RingLevelFull})
             QCOMPARE(matrixRingShown(RingRgb{}, {.lit = true, .level = level}), RingRgb{});
+        QCOMPARE(matrixRingShown(RingRgb{}, {.lit = false, .level = RingLevelFull}), RingRgb{}); // and put out
     }
 
-    void withTheRingsPutOutEverySegmentIsDark()
+    void withTheRingsPutOutOrAtZeroTheRainStillShowsAtTheMinimum()
     {
-        QCOMPARE(matrixRingShown(MatrixRingHead, {.lit = false, .level = RingLevelFull}), RingRgb{});
-        QCOMPARE(matrixRingShown(MatrixRingTrail, {.lit = false, .level = 500}), RingRgb{});
+        // The green rain is started on purpose: it relights the rings, at 30 % (216 -> 65, 255 -> 77, 224 -> 67).
+        const RingRgb atTheMinimum = matrixRingShown(MatrixRingHead, {.lit = true, .level = RingShownMinLevel});
+        QCOMPARE(atTheMinimum, (RingRgb{65, 77, 67}));
+        QCOMPARE(matrixRingShown(MatrixRingHead, {.lit = false, .level = RingLevelFull}), atTheMinimum);
+        QCOMPARE(matrixRingShown(MatrixRingHead, {.lit = false, .level = 0}), atTheMinimum);
+        QCOMPARE(matrixRingShown(MatrixRingHead, {.lit = true, .level = 0}), atTheMinimum);
+        QCOMPARE(matrixRingShown(MatrixRingHead, {.lit = true, .level = 100}), atTheMinimum); // low: raised
     }
 
     void aLowerLevelNeverShowsMoreThanAHigherOne()

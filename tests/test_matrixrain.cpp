@@ -411,7 +411,7 @@ private Q_SLOTS:
         QVERIFY(halfHead);
     }
 
-    void withTheRingsPutOutTheRainLeavesThemDark()
+    void withTheRingsPutOutTheRainRelightsThemAtTheMinimum()
     {
         Fixture f;
         f.rings = {.lit = false, .level = 1000};
@@ -419,9 +419,14 @@ private Q_SLOTS:
         f.transport->featureReports.clear();
         f.transport->pendingReads.push_back(dialButtons(true, true));
         QTRY_COMPARE_WITH_TIMEOUT(active.count(), 1, 3000);
-        QTest::qWait(1500); // the pictures of the rain go on
-        for (const auto &report : ringReports(*f.transport))
-            QCOMPARE((std::array<int, 3>{report[3], report[4], report[5]}), (std::array<int, 3>{0, 0, 0}));
+        QTRY_VERIFY_WITH_TIMEOUT(ringReports(*f.transport).size() >= 8, 3000);
+        bool headAtTheMinimum = false;
+        for (const auto &report : ringReports(*f.transport)) {
+            // The rain is started on purpose: it shows at 30 % even with the rings put out (the head: 216, 255, 224 -> 65, 77, 67), and never above.
+            QVERIFY2(report[3] <= 65 && report[4] <= 77 && report[5] <= 67, "a segment was sent above the minimum with the rings put out");
+            headAtTheMinimum = headAtTheMinimum || (report[3] == 65 && report[4] == 77 && report[5] == 67);
+        }
+        QVERIFY(headAtTheMinimum);
     }
 
     void aLevelChangedWhileTheRainRunsIsFollowedAtOnce()
