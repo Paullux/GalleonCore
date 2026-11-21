@@ -997,6 +997,38 @@ QtObject {
         QVERIFY(!backend.screensaver().value("enabled").toBool());
     }
 
+    // The Test button: one for each video of the list, only for a video that is found; galleond is not running here, and the page says so.
+    void everyFoundVideoHasATestButtonThatAsksGalleondAndSaysWhyWhenItCannot()
+    {
+        const QTemporaryDir dir;
+        QVERIFY(writeFile(dir.filePath("a.mp4"), "x"));
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, saverPages(R"("a.mp4", "gone.mp4")")));
+        const bosun::BosunBackend backend(file, {.ffprobe = "/nonexistent/none", .ffmpeg = "/nonexistent/none", .thumbnailFolder = dir.filePath("thumbs")});
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("padFollowsTabs"), false}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QVERIFY(root->setProperty("currentTab", root->property("tabs").toList().size() - 2)); // the screensavers: before the dials
+        const auto buttons = [root] { return namedItems(root, QStringLiteral("screensaverTest")); };
+        QTRY_COMPARE_WITH_TIMEOUT(buttons().size(), 2, 3000);
+        QVERIFY(buttons().at(0)->property("enabledLook").toBool());  // a.mp4 is there
+        QVERIFY(!buttons().at(1)->property("enabledLook").toBool()); // gone.mp4 is not: nothing to show
+        QVERIFY(QMetaObject::invokeMethod(buttons().at(0), "clicked"));
+        const QObject *page = root->findChild<QObject *>("screensaversPage");
+        QVERIFY(page);
+        QVERIFY(page->property("messageIsError").toBool()); // galleond does not run: the page says so, and shows nothing
+        QVERIFY(page->property("message").toString().contains(QStringLiteral("galleond")));
+    }
+
     void aRefusedEditSaysWhyAndChangesNothing()
     {
         const QTemporaryDir dir;

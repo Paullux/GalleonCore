@@ -584,6 +584,165 @@ private Q_SLOTS:
         QCOMPARE(args.count("clip.mp4"), 2);
         QCOMPARE(args.count("second.mp4"), 1);
     }
+
+    // ---- the Test button of Bosun: a chosen video, now, for a short time ----
+
+    void aTestShowsTheNamedVideoOnTheScreenAndTheKeysWithoutWaitingForTheIdleTime()
+    {
+        Fixture f;
+        f.configure(f.config); // the idle time is minutes: only the test can start it now
+        QSignalSpy active(f.controller.get(), &ScreensaverController::activeChanged);
+        QVERIFY(f.controller->test("clip.mp4"));
+        QVERIFY(f.controller->isTesting());
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        QVERIFY(active.first().first().toBool());
+        QTRY_VERIFY_WITH_TIMEOUT(f.screenReports() > 0 && f.keysDrawn().size() == 12, 5000);
+    }
+
+    void aKeyPressEndsATest()
+    {
+        Fixture f;
+        f.configure(f.config);
+        QVERIFY(f.controller->test("clip.mp4"));
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        f.transport->pendingReads.push_back([] {
+            std::vector<std::uint8_t> report = keyReport(galleon::protocol::KeyCount, 0);
+            report[4] = 1;
+            return report;
+        }());
+        QTRY_VERIFY_WITH_TIMEOUT(!f.controller->isActive(), 3000);
+        QVERIFY(!f.controller->isTesting());
+    }
+
+    void aTestEndsByItselfAfterItsDuration()
+    {
+        Fixture f;
+        f.configure(f.config);
+        f.controller->setTestDurationMs(300);
+        QVERIFY(f.controller->test("clip.mp4"));
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(!f.controller->isActive(), 3000);
+        QVERIFY(!f.controller->isTesting());
+    }
+
+    void aTestIsRefusedWhileAGameKeepsTheModuleAwake()
+    {
+        Fixture f;
+        f.configure(f.config);
+        f.controller->setInhibited(true);
+        QVERIFY(!f.controller->test("clip.mp4"));
+        QVERIFY(!f.controller->isTesting());
+        QTest::qWait(200);
+        QVERIFY(!f.controller->isActive());
+    }
+
+    void aGameThatStartsDuringATestEndsIt()
+    {
+        Fixture f;
+        f.configure(f.config);
+        QVERIFY(f.controller->test("clip.mp4"));
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        f.controller->setInhibited(true);
+        QVERIFY(!f.controller->isActive());
+        QVERIFY(!f.controller->isTesting());
+    }
+
+    void aTestIsRefusedWhileTheScreensaverAlreadyRuns()
+    {
+        Fixture f;
+        f.configure(f.config);
+        f.controller->setIdleTimeoutMs(100);
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        QVERIFY(!f.controller->test("clip.mp4"));
+        QVERIFY(!f.controller->isTesting());
+        QVERIFY(f.controller->isActive()); // the running one is left alone
+    }
+
+    void onlyAVideoOfTheListCanBeTested()
+    {
+        Fixture f;
+        QFile other(f.dir.filePath("other.mp4"));
+        QVERIFY(other.open(QIODevice::WriteOnly));
+        other.write("x");
+        other.close();
+        f.configure(f.config); // the list holds clip.mp4 only
+        QVERIFY(!f.controller->test("other.mp4"));       // a real video, but not one of the list
+        QVERIFY(!f.controller->test(f.dir.filePath("other.mp4")));
+        QVERIFY(!f.controller->test("/etc/passwd"));
+        QVERIFY(!f.controller->test(QString()));
+        QVERIFY(!f.controller->test("missing.mp4"));
+        QVERIFY(!f.controller->isTesting());
+        QVERIFY(!f.controller->isActive());
+    }
+
+    void aTestOfAnUnreadableVideoOfTheListIsRefused()
+    {
+        Fixture f;
+        ScreensaverConfig config = f.config;
+        config.videos = QStringList{"clip.mp4", "missing.mp4"};
+        f.configure(config);
+        QVERIFY(!f.controller->test("missing.mp4"));
+        QVERIFY(!f.controller->isTesting());
+    }
+
+    void theVideoOfAListIsFoundByItsNameOrItsFullPath()
+    {
+        const Fixture f;
+        QCOMPARE(ScreensaverController::videoOfList(f.config, f.dir.path(), "clip.mp4"), f.dir.filePath("clip.mp4"));
+        QCOMPARE(ScreensaverController::videoOfList(f.config, f.dir.path(), f.dir.filePath("clip.mp4")), f.dir.filePath("clip.mp4"));
+        QVERIFY(ScreensaverController::videoOfList(f.config, f.dir.path(), "nothing.mp4").isEmpty());
+        QVERIFY(ScreensaverController::videoOfList(f.config, f.dir.path(), QString()).isEmpty());
+    }
+
+    void aTestLeavesTheTurnOfTheVideosAndTheIdleScreensaverAlone()
+    {
+        Fixture f;
+        QFile second(f.dir.filePath("second.mp4"));
+        QVERIFY(second.open(QIODevice::WriteOnly));
+        second.write("x");
+        second.close();
+        ScreensaverConfig config = f.config;
+        config.videos = QStringList{"clip.mp4", "second.mp4"};
+        f.configure(config);
+        const auto played = [&] {
+            QFile log(f.dir.filePath("args.log"));
+            return log.open(QIODevice::ReadOnly) ? QString::fromUtf8(log.readAll()) : QString();
+        };
+        QVERIFY(f.controller->test("second.mp4"));
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(played().contains("second.mp4"), 3000); // wake only once the decoder has written its line
+        f.controller->notifyActivity(); // wake
+        QTRY_VERIFY_WITH_TIMEOUT(!f.controller->isActive(), 3000);
+        f.controller->setIdleTimeoutMs(100); // the real screensaver starts with the first video, as if no test had been
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(played().contains("clip.mp4"), 3000);
+        QVERIFY(!f.controller->isTesting());
+    }
+
+    void aTrackPlayingDoesNotStopATestThatWasAskedFor()
+    {
+        Fixture f;
+        f.configure(f.config); // a track keeps the screensaver away while it plays (whilePlaying is off)
+        f.media.setState(MediaController::State::Playing);
+        QVERIFY(f.controller->test("clip.mp4"));
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        f.media.setState(MediaController::State::Playing); // a track starting while it shows: it is not what ends it either
+        QTest::qWait(300);
+        QVERIFY(f.controller->isActive());
+        QVERIFY(f.controller->isTesting());
+    }
+
+    void aTestThatCannotStartDoesNotKeepTheRealScreensaverOff()
+    {
+        Fixture f;
+        f.configure(f.config);
+        f.controller->setFfmpegProgram(f.dir.filePath("no-such-ffmpeg"));
+        QVERIFY(!f.controller->test("clip.mp4"));
+        QVERIFY(!f.controller->isTesting());
+        f.controller->setFfmpegProgram(f.dir.filePath("fake-ffmpeg"));
+        f.controller->setIdleTimeoutMs(100);
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000); // not given up until the next input
+    }
 };
 
 QTEST_MAIN(TestScreensaver)

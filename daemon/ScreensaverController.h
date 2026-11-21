@@ -52,6 +52,17 @@ public:
 
     [[nodiscard]] bool isActive() const { return m_active; }
 
+    // Bosun's "Test" button: shows this video of the list on the module now, for TestDurationMs at most. Any key or
+    // dial, a game, or a new configuration ends it like the screensaver; a track playing does not (it was asked for).
+    // `requested` is the video as the list writes it (or its full path). False, and nothing shown, when the module is
+    // not available, a game keeps it awake, the screensaver already runs, or the video is not one of the list or not readable.
+    // The idle delay and the order the videos take turns in are left as they were.
+    bool test(const QString &requested);
+    [[nodiscard]] bool isTesting() const { return m_testing; }
+    static constexpr int TestDurationMs = 30000;
+    // The readable video of `config` that `requested` names (as written, or its full path); empty when it names none.
+    [[nodiscard]] static QString videoOfList(const ScreensaverConfig &config, const QString &baseFolder, const QString &requested);
+
     // Something was used (a key, a dial): restarts the idle time; wakes the
     // module if the screensaver runs.
     void notifyActivity();
@@ -61,6 +72,7 @@ public:
 
     // For the tests.
     void setFfmpegProgram(const QString &program) { m_program = program; }
+    void setTestDurationMs(int ms) { m_testTimer.setInterval(ms); }
     void setIdleTimeoutMs(int ms) { m_idleOverrideMs = ms; restartIdleTimer(); }
 
 Q_SIGNALS:
@@ -71,7 +83,7 @@ Q_SIGNALS:
 private:
     void onIdle();
     // True when a decoder was launched (it may already be running, or still starting).
-    bool start();
+    bool start(const QString &forcedVideo = {});
     void stop(bool wait = true);
     void restartIdleTimer();
     void onReadyRead();
@@ -85,6 +97,7 @@ private:
     void showFrame(const QByteArray &rgb);
     [[nodiscard]] QString resolveVideo(const QString &configured) const { return resolveVideoPath(configured, m_baseFolder); }
     void wake();
+    void endTest();
 
     galleon::StreamDeck *m_deck;
     MediaController *m_media;
@@ -104,6 +117,8 @@ private:
     bool m_active = false;
     bool m_restarting = false; // the decoder stopped while active and a new one is starting: still "on" for the others
     bool m_inhibited = false;
+    bool m_testing = false; // shown by test(): bounded by m_testTimer, not announced to the idle logic
+    QTimer m_testTimer;
     QElapsedTimer m_sinceShown; // since the last frame was sent
     qint64 m_lastCostMs = 0;    // what sending it took
     int m_next = 0; // the video shown at the next start: they take turns

@@ -1292,7 +1292,9 @@ Window {
 
     ScreensaversPage {
         id: screensaversPage
+        objectName: "screensaversPage"
         filePicker: win.filePicker
+        daemon: win.daemon
         visible: win.tab.kind === "screensavers" && win.backend.problem === ""
         x: 30
         y: 84

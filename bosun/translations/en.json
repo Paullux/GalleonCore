@@ -769,5 +769,11 @@
   "Level of the rings": "Level of the rings",
   "The rings are out. They light up again for the wallpaper choice, then go out.": "The rings are out. They light up again for the wallpaper choice, then go out.",
   "The settings of the rings could not be saved.": "The settings of the rings could not be saved.",
-  "The level of the rings is a number from 0 to 1000.": "The level of the rings is a number from 0 to 1000."
+  "The level of the rings is a number from 0 to 1000.": "The level of the rings is a number from 0 to 1000.",
+  "Test": "Test",
+  "Shown on the module for a short time: press any key or turn a dial to stop it.": "Shown on the module for a short time: press any key or turn a dial to stop it.",
+  "Start galleond to try a screensaver on the module": "Start galleond to try a screensaver on the module",
+  "Cannot try the screensaver: restart the updated daemon (%1)": "Cannot try the screensaver: restart the updated daemon (%1)",
+  "The screensaver could not be shown: a game is running, the module is not connected, or one is already on": "The screensaver could not be shown: a game is running, the module is not connected, or one is already on",
+  "Trying a screensaver on the module is not available on Windows yet": "Trying a screensaver on the module is not available on Windows yet"
 }

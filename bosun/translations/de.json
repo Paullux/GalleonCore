@@ -769,5 +769,11 @@
   "Level of the rings": "Stärke der Ringe",
   "The rings are out. They light up again for the wallpaper choice, then go out.": "Die Ringe sind aus. Für die Hintergrundwahl leuchten sie wieder auf und gehen dann aus.",
   "The settings of the rings could not be saved.": "Die Einstellungen der Ringe konnten nicht gespeichert werden.",
-  "The level of the rings is a number from 0 to 1000.": "Die Stärke der Ringe ist eine Zahl von 0 bis 1000."
+  "The level of the rings is a number from 0 to 1000.": "Die Stärke der Ringe ist eine Zahl von 0 bis 1000.",
+  "Test": "Testen",
+  "Shown on the module for a short time: press any key or turn a dial to stop it.": "Kurz auf dem Modul angezeigt: Zum Beenden eine beliebige Taste drücken oder ein Rad drehen.",
+  "Start galleond to try a screensaver on the module": "galleond starten, um einen Bildschirmschoner auf dem Modul auszuprobieren",
+  "Cannot try the screensaver: restart the updated daemon (%1)": "Der Bildschirmschoner kann nicht ausprobiert werden: aktualisierten Dienst neu starten (%1)",
+  "The screensaver could not be shown: a game is running, the module is not connected, or one is already on": "Der Bildschirmschoner konnte nicht angezeigt werden: Ein Spiel läuft, das Modul ist nicht verbunden oder einer läuft bereits",
+  "Trying a screensaver on the module is not available on Windows yet": "Das Ausprobieren eines Bildschirmschoners auf dem Modul ist unter Windows noch nicht verfügbar"
 }

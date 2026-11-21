@@ -36,6 +36,9 @@ ScreensaverController::ScreensaverController(galleon::StreamDeck *deck, MediaCon
     m_startTimeout.setInterval(StartTimeoutMs);
     connect(&m_startTimeout, &QTimer::timeout, this, [this] { onStartFailed(QStringLiteral("it did not start in time")); });
 
+    m_testTimer.setSingleShot(true);
+    m_testTimer.setInterval(TestDurationMs);
+    connect(&m_testTimer, &QTimer::timeout, this, [this] { wake(); }); // starting: the start timeout ends it
     connect(m_deck, &galleon::StreamDeck::keyPressed, this, [this] { notifyActivity(); });
     connect(m_deck, &galleon::StreamDeck::keyReleased, this, [this] { notifyActivity(); });
     connect(m_deck, &galleon::StreamDeck::dialPressed, this, [this] { notifyActivity(); });
@@ -44,7 +47,7 @@ ScreensaverController::ScreensaverController(galleon::StreamDeck *deck, MediaCon
     if (m_media) {
         // A track starting is a reason to leave the screensaver, unless it is allowed over one.
         connect(m_media, &MediaController::stateChanged, this, [this] {
-            if (m_active && !m_config.whilePlaying && m_media->state() == MediaController::State::Playing)
+            if (m_active && !m_testing && !m_config.whilePlaying && m_media->state() == MediaController::State::Playing)
                 wake();
         });
     }
@@ -60,6 +63,7 @@ void ScreensaverController::setConfig(const ScreensaverConfig &config, const QSt
     if (config == m_config && baseFolder == m_baseFolder)
         return;
     const bool wasActive = announcedActive();
+    endTest();
     stop();
     m_active = false;
     m_restarting = false; // stop() only ends the decoder: the idle timer must be able to start the new screensaver
@@ -131,12 +135,12 @@ QString ScreensaverController::resolveVideoPath(const QString &configured, const
     return info.absoluteFilePath();
 }
 
-bool ScreensaverController::start()
+bool ScreensaverController::start(const QString &forcedVideo)
 {
-    // The next readable video of the list; the others are skipped with a warning.
-    QString video;
+    // The next readable video of the list; the others are skipped with a warning. A test names its own.
+    QString video = forcedVideo;
     QString title;
-    for (qsizetype tried = 0; tried < m_config.videos.size() && video.isEmpty(); ++tried) {
+    for (qsizetype tried = 0; forcedVideo.isEmpty() && tried < m_config.videos.size() && video.isEmpty(); ++tried) {
         const qsizetype index = (m_next + tried) % m_config.videos.size();
         const QString configured = m_config.videos.at(index);
         video = resolveVideo(configured);
@@ -148,7 +152,7 @@ bool ScreensaverController::start()
     }
     if (video.isEmpty()) {
         qWarning() << "galleond: no usable screensaver video: the screensaver stays off";
-        m_giveUp = true;
+        m_giveUp = !m_testing;
         return false;
     }
     m_playing = video;
@@ -156,7 +160,7 @@ bool ScreensaverController::start()
     const QString program = QStandardPaths::findExecutable(m_program);
     if (program.isEmpty() && !QFileInfo(m_program).isExecutable()) {
         qWarning() << "galleond: FFmpeg not found: the screensaver stays off";
-        m_giveUp = true;
+        m_giveUp = !m_testing;
         return false;
     }
 
@@ -211,7 +215,7 @@ void ScreensaverController::onStarted()
         return;
     // A track may have started while the decoder was launching: stateChanged is ignored until the
     // screensaver is active, so look again here instead of lighting it over the music.
-    if (!m_config.whilePlaying && m_media && m_media->state() == MediaController::State::Playing) {
+    if (!m_testing && !m_config.whilePlaying && m_media && m_media->state() == MediaController::State::Playing) {
         abandonStart(false);
         return;
     }
@@ -235,9 +239,11 @@ void ScreensaverController::onStartFailed(const QString &reason)
 void ScreensaverController::abandonStart(bool giveUp)
 {
     const bool wasAnnounced = announcedActive();
+    const bool wasTest = m_testing; // a test that fails does not keep the real screensaver off
+    endTest();
     stop(false);
     m_restarting = false;
-    m_giveUp = giveUp;
+    m_giveUp = giveUp && !wasTest;
     if (wasAnnounced)
         Q_EMIT activeChanged(false);
     restartIdleTimer();
@@ -283,12 +289,51 @@ void ScreensaverController::wake()
     }
     if (!m_active)
         return;
+    endTest();
     m_active = false;
     stop(false);
     m_restarts = 0;
     qInfo() << "galleond: screensaver off";
     Q_EMIT activeChanged(false);
     restartIdleTimer();
+}
+
+void ScreensaverController::endTest()
+{
+    m_testing = false;
+    m_testTimer.stop();
+}
+
+QString ScreensaverController::videoOfList(const ScreensaverConfig &config, const QString &baseFolder, const QString &requested)
+{
+    if (requested.isEmpty())
+        return {};
+    const QString asked = resolveVideoPath(requested, baseFolder);
+    for (const QString &configured : config.videos) {
+        const QString path = resolveVideoPath(configured, baseFolder);
+        if (!path.isEmpty() && (configured == requested || path == asked))
+            return path;
+    }
+    return {}; // not one of the list: the daemon does not play any file it is given
+}
+
+bool ScreensaverController::test(const QString &requested)
+{
+    if (m_inhibited || m_active || m_process || !m_splitter || !m_deck->isOpen())
+        return false;
+    const QString video = videoOfList(m_config, m_baseFolder, requested);
+    if (video.isEmpty())
+        return false;
+    m_giveUp = false;
+    m_testing = true;
+    m_idle.stop();
+    m_testTimer.start();
+    if (!start(video)) {
+        endTest();
+        restartIdleTimer();
+        return false;
+    }
+    return true;
 }
 
 void ScreensaverController::onReadyRead()
@@ -353,13 +398,15 @@ void ScreensaverController::onFinished(int exitCode, QProcess::ExitStatus status
     if (wasAnnounced && ++m_restarts <= MaxRestarts && !m_playing.isEmpty()) {
         m_active = false; // onStarted() sets it again; until then the others still see it as on
         m_restarting = true;
-        if (start())
+        if (start(m_testing ? m_playing : QString()))
             return; // launched: its own started()/failure signal ends the restart, even if it already came
         m_restarting = false;
     }
+    const bool wasTest = m_testing;
+    endTest();
     m_active = false;
     m_restarting = false;
-    m_giveUp = true;
+    m_giveUp = !wasTest;
     if (wasAnnounced || m_restarts > 0)
         Q_EMIT activeChanged(false);
     restartIdleTimer();
