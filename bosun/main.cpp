@@ -68,12 +68,15 @@ int main(int argc, char *argv[])
     const QCommandLineOption cropOption(QStringLiteral("crop"), QStringLiteral("With --inspect: open the crop window on the video."));
     const QCommandLineOption pictureOption(QStringLiteral("inspect-picture"),
                                            QStringLiteral("Open the Wallpapers tab with this picture file chosen (to be added)."), QStringLiteral("file"));
+    const QCommandLineOption mapKeysOption(QStringLiteral("mapkeys"),
+        QStringLiteral("Show the key calibration on the Keyboard tab (the map between the LEDs and the keys; for the maintainer, off otherwise)."));
     const QCommandLineOption minimizedOption(QStringLiteral("minimized"), QStringLiteral("Start in the notification area when available."));
     const QCommandLineOption simulateUpdateOption(QStringLiteral("simulate-update"),
         QStringLiteral("Test update notification against version 0.0.0 using the real latest release, without saving update preferences."));
     const QCommandLineOption oldFirmwareOption(QStringLiteral("old-firmware"),
         QStringLiteral("Show a clearly labelled old Stream Deck firmware simulation, without changing hardware or saved settings."));
     parser.addOption(oldFirmwareOption);
+    parser.addOption(mapKeysOption);
     parser.addOption(simulateUpdateOption);
     parser.addOption(minimizedOption);
     parser.addOption(pagesOption);
@@ -175,7 +178,8 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
                                  {QStringLiteral("appearance"), QVariant::fromValue(&appearance)},
                                  {QStringLiteral("rings"), QVariant::fromValue(&rings)},
-                                 {QStringLiteral("keyCalibration"), QVariant::fromValue(&keyCalibration)},
+                                 // The calibration is for the maintainer: the tab shows nothing of it unless Bosun was started with --mapkeys.
+                                 {QStringLiteral("keyCalibration"), parser.isSet(mapKeysOption) ? QVariant::fromValue(&keyCalibration) : QVariant::fromValue<QObject *>(nullptr)},
                                  {QStringLiteral("library"), QVariant::fromValue(&library)}});
     engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
     if (engine.rootObjects().isEmpty())
