@@ -2093,6 +2093,51 @@ QtObject {
         QVERIFY(calibrationY < webHub);
     }
 
+    // Which page the module is asked to follow: the one of the open theme tab, only while the window is shown.
+    // (galleond is not running here: what is checked is the decision, which the window keeps in `previewedPage`.)
+    void theModuleIsAskedToFollowTheThemeTabThatIsOpenAndNothingElse()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        const bosun::AppearanceStore appearance{QString()};
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)},
+                                     {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        auto *window = qobject_cast<QQuickWindow *>(root);
+        QVERIFY(window);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        const auto previewed = [root] { return root->property("previewedPage").toString(); };
+        QCOMPARE(previewed(), QStringLiteral("main")); // the first theme's tab is open
+        QVERIFY(root->setProperty("currentTab", 1));
+        QCOMPARE(previewed(), QStringLiteral("music"));
+        QVERIFY(root->setProperty("currentTab", 3)); // the keyboard tab: not a theme
+        QCOMPARE(previewed(), QString());
+        QVERIFY(root->setProperty("currentTab", 0));
+        QCOMPARE(previewed(), QStringLiteral("main"));
+        window->hide(); // hidden in the notification area: the module is given back
+        QTRY_COMPARE_WITH_TIMEOUT(previewed(), QString(), 3000);
+        window->show();
+        QTRY_COMPARE_WITH_TIMEOUT(previewed(), QStringLiteral("main"), 3000);
+        QVERIFY(root->setProperty("padFollowsTabs", false)); // a picture or a simulation must not touch the module
+        QVERIFY(QMetaObject::invokeMethod(root, "followTab"));
+        QCOMPARE(previewed(), QString());
+        QVERIFY(root->setProperty("currentTab", 1));
+        QCOMPARE(previewed(), QString());
+    }
+
     void theKeyCalibrationIsNotOnTheKeyboardTabUnlessBosunWasStartedForIt()
     {
         // Without --mapkeys Bosun is given no calibration: the lighting view shows no trace of it.

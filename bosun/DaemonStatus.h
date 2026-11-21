@@ -69,6 +69,13 @@ public:
     Q_INVOKABLE [[nodiscard]] QString showGaming();
     // Shows the theme with this page name on the module; "" when the request was sent, else why not.
     Q_INVOKABLE [[nodiscard]] QString showTheme(const QString &page);
+    // The theme tab that is open: the module shows that theme, and goes back to what it showed when `endThemePreview`
+    // is sent (the tab is left or the window hidden). galleond decides: nothing happens while a game runs, nor when the
+    // module was changed in between. `endThemePreviewNow` waits (at most a third of a second) for galleond to take the
+    // request: for the moment the application quits. Linux only for now; on Windows they do nothing.
+    Q_INVOKABLE void previewTheme(const QString &page);
+    Q_INVOKABLE void endThemePreview();
+    Q_INVOKABLE void endThemePreviewNow();
     // Asks galleond to set the keyboard's own brightness (0 to 1000, steps of 100). The write is made by the
     // daemon, never here; "" when the request was sent, else why not. The result of the write comes later.
     Q_INVOKABLE [[nodiscard]] QString setKeyboardBrightness(int value);

@@ -91,6 +91,11 @@ public:
 
     void setGamingHandler(std::function<bool()> handler) { m_showGaming = std::move(handler); }
     void setThemeHandler(std::function<bool(const QString &)> handler) { m_showTheme = std::move(handler); }
+    void setThemePreviewHandlers(std::function<bool(const QString &)> begin, std::function<void()> end)
+    {
+        m_previewTheme = std::move(begin);
+        m_endThemePreview = std::move(end);
+    }
 
     // The wallpaper of the theme being shown (a catalog name), or empty for a theme that has none. While
     // a theme has one, the screen shows it without touching the saved choice; a theme without one gives
@@ -105,6 +110,10 @@ public Q_SLOTS:
     // Shows the theme whose page is named so on the module (and, if the pages file has just
     // been changed, as soon as it is read). False when there is none.
     bool ShowTheme(const QString &page);
+    // Bosun has this theme's tab open: shows it on the module, remembering what the module showed. False while a game
+    // runs. `EndThemePreview`: the tab is closed or another kind of tab is open, the module shows what it showed.
+    bool PreviewTheme(const QString &page);
+    void EndThemePreview();
     // Shows this wallpaper (a catalog name such as "manga-classic/manga-classic-01.jpg").
     // False if the name is unknown or the frame could not be drawn.
     bool SetWallpaper(const QString &name);
@@ -125,6 +134,8 @@ Q_SIGNALS:
 private:
     std::function<bool()> m_showGaming;
     std::function<bool(const QString &)> m_showTheme;
+    std::function<bool(const QString &)> m_previewTheme;
+    std::function<void()> m_endThemePreview;
     void applyThemeWallpaper();
     QString m_themeWallpaper;       // what the current theme asks for (may be unknown to the catalog)
     bool m_themeWallpaperShown = false; // the screen shows it now, in place of the saved choice

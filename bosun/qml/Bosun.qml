@@ -35,6 +35,9 @@ Window {
     property bool hideOnClose: false
     property bool startMinimized: false
     property bool animateTabs: true
+    // The module shows the theme of the open tab and gives itself back after (not in a picture or a simulation, which must not touch the module).
+    property bool padFollowsTabs: true
+    property string previewedPage: ""
     // The page shown inside a theme's tab: its own, or one of the sub-pages it leads to.
     property string shownPage: ""
     // What the last edit said, in the status bar.
@@ -53,6 +56,22 @@ Window {
     property int selectedCap: -1
     property var selectedLamps: []
     readonly property var lastThemeEntry: backend.themes.length > 0 ? backend.themes[Math.min(lastTheme, backend.themes.length - 1)] : null
+
+    // The module follows the theme tab that is open, while the window is shown. galleond keeps what it showed before.
+    function followTab() {
+        const wanted = padFollowsTabs && win.visible && win.visibility !== Window.Minimized && tab.kind === "theme" ? tab.page : ""
+        if (wanted === previewedPage) return
+        previewedPage = wanted
+        if (wanted === "") win.daemon.endThemePreview()
+        else win.daemon.previewTheme(wanted)
+    }
+    onTabChanged: followTab()
+    onVisibleChanged: followTab()
+    onVisibilityChanged: followTab()
+    Connections {
+        target: Qt.application
+        function onAboutToQuit() { if (win.previewedPage !== "") win.daemon.endThemePreviewNow() }
+    }
 
     onClosing: close => {
         if (win.hideOnClose) {

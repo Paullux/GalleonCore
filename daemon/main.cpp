@@ -968,6 +968,13 @@ int main(int argc, char *argv[])
         return pages && pages->showThemePage(page);
     });
 
+    controller.setThemePreviewHandlers(
+        [&pages, &screensaver](const QString &page) {
+            if (screensaver) screensaver->notifyActivity();
+            return pages && pages->previewThemePage(page);
+        },
+        [&pages] { if (pages) pages->endThemePreview(); });
+
     // The keyboard half of the daemon: brightness only, on request, nothing opened until then. It shares nothing with
     // `controller` and the pages: it is reached on its own D-Bus object (Linux) or local control action (Windows).
     galleond::KeyboardController keyboard(galleond::KeyboardController::hidOpener());

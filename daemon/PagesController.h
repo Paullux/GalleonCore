@@ -14,6 +14,7 @@
 #include "MediaController.h"
 #include "PagesConfig.h"
 #include "SteamLibrary.h"
+#include "ThemePreview.h"
 #include "TileRenderer.h"
 #include "UsageStats.h"
 
@@ -54,6 +55,10 @@ public:
     // Goes to the theme whose page is `page`. When the pages file has just been written and is not
     // read yet (a theme was installed), the request is kept for a few seconds and done when it is.
     bool showThemePage(const QString &page);
+    // Bosun's open theme tab: shows that theme for as long as the tab is open, then gives back what the module showed
+    // (see ThemePreview). Refused while a game runs. `endThemePreview` does nothing when no tab was shown.
+    bool previewThemePage(const QString &page);
+    void endThemePreview();
     void setGameActive(bool active);
 
     // Uses this configuration and goes back to its home page.
@@ -169,6 +174,9 @@ private:
     bool m_gameActive = false;
     void addGamingPage();
     int m_beforeGameTheme = -1;
+    ThemePreview m_preview;
+    bool showThemePageNow(const QString &page); // the same as showThemePage, without forgetting a preview
+    [[nodiscard]] QString shownThemePage() const; // the page of the theme the module shows (during a game: goes back to), "" when none
     QStringList m_beforeGameStack;
     galleon::StreamDeck *m_deck;
     RingSettings m_rings;
