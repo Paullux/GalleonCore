@@ -1118,6 +1118,10 @@ int main(int argc, char *argv[])
     // and put back to "off" right now, so that a start that goes wrong is not repeated. Then the same Enable(true) as by hand, with all its refusals (the sleep
     // events, the watchdog): a refusal is only logged, and shown by Bosun in the state of the lighting. Nothing is written to the keyboard's memory.
     galleond::setUpLightingRestore(lighting, galleond::lightingRestorePath(), galleond::lightingMemoryPath()); // on every platform: not under a platform #if
+    // The night for the keyboard: while it lasts the live lighting (if it is on, or when it is switched on) shows black and keeps the keys held. Connected before resume(),
+    // which takes up a night that was going on, so that a lighting put back at the start is dark from its first picture.
+    QObject::connect(&nightMode, &galleond::NightController::activeChanged, &lighting, [&lighting](bool active) { lighting.setNight(active); });
+    lighting.setNight(nightMode.isActive());
     nightMode.resume(); // on every platform: a night that was going on when galleond stopped goes on (the end time is in its file)
 
     if (parser.isSet(wallpaperOption)) {

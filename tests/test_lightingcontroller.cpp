@@ -268,6 +268,123 @@ private Q_SLOTS:
                  "a read error is not proof that the keyboard was unplugged: its mode was never seen back at 1");
     }
 
+    // ---- "lights off until morning" for the keyboard: black pictures, the keys still held ----
+
+    static galleon::keyboard::Appearance colourAppearance()
+    {
+        galleon::keyboard::Appearance appearance;
+        appearance.colour = {100, 200, 40};
+        return appearance;
+    }
+
+    void theNightMakesTheKeysBlackWhileGalleondKeepsHoldingThemAndTheMorningBringsTheColourBack()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{100, 200, 40}), 3000);
+        rig.advance(300);
+        rig.controller->setNight(true);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{0, 0, 0}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 0), (std::vector<std::uint8_t>{0, 0, 0}));
+        QCOMPARE(ledColour(rig.frame(), 145), (std::vector<std::uint8_t>{0, 0, 0}));
+        QCOMPARE(rig.mode(), 2); // still held by galleond: the keyboard does NOT fall back to its own (lit) profile
+        QCOMPARE(rig.controller->state(), QStringLiteral("holding"));
+        rig.advance(300);
+        rig.controller->setNight(false);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{100, 200, 40}), 3000);
+    }
+
+    void aLightingSwitchedOnDuringTheNightStartsDarkFromItsFirstPicture()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.controller->setNight(true); // the night is on, the lighting is not
+        QCOMPARE(rig.journal.count("opener"), 0); // nothing switches it on
+        rig.hold();
+        rig.advance(300);
+        QTRY_VERIFY_WITH_TIMEOUT(rig.frames() > 0, 3000);
+        QCOMPARE(ledColour(rig.frame(), 58), (std::vector<std::uint8_t>{0, 0, 0}));
+        QCOMPARE(rig.mode(), 2);
+    }
+
+    void aToolSceneIsNotShownDuringTheNightAndOneShownBeforeIsLetGo()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        QVERIFY(rig.controller->SetLed(0x3a, 1, 2, 3)); // a tool lights one LED
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 0x3a) == std::vector<std::uint8_t>{1, 2, 3}), 3000);
+        rig.advance(300);
+        rig.controller->setNight(true);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 0x3a) == std::vector<std::uint8_t>{0, 0, 0}), 3000); // the tool's scene is gone
+        QVERIFY(!rig.controller->SetColor(255, 255, 255)); // and a new one is refused
+        QVERIFY(!rig.controller->SetLed(0x3a, 255, 0, 0));
+        rig.advance(300);
+        QTest::qWait(150);
+        QCOMPARE(ledColour(rig.frame(), 0x3a), (std::vector<std::uint8_t>{0, 0, 0}));
+    }
+
+    void theCurveOfTheDayCannotLiftTheNightAndItsLevelCountsAgainInTheMorning()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        rig.controller->setNight(true);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{0, 0, 0}), 3000);
+        rig.advance(300);
+        QVERIFY(rig.controller->setLevelOverride(1000)); // the curve of the day says full: it is kept, not shown
+        QTest::qWait(150);
+        QCOMPARE(ledColour(rig.frame(), 58), (std::vector<std::uint8_t>{0, 0, 0}));
+        rig.advance(300);
+        QVERIFY(rig.controller->setLevelOverride(500)); // and a later level too
+        rig.advance(300);
+        rig.controller->setNight(false);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{50, 100, 20}), 3000); // the morning shows the level of the curve
+    }
+
+    void aWakeFromSleepDuringTheNightTakesTheKeysAgainInBlack()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.controller->setNight(true);
+        rig.power.sleep();
+        rig.power.wake();
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("listening"), 3000);
+        rig.advance(4000);
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("holding"), 3000);
+        rig.advance(300);
+        QTRY_VERIFY_WITH_TIMEOUT(rig.frames() > 0, 3000);
+        QCOMPARE(ledColour(rig.frame(), 58), (std::vector<std::uint8_t>{0, 0, 0}));
+        QCOMPARE(rig.mode(), 2);
+    }
+
+    void theGreenRainOnTheKeyboardIsDarkDuringTheNight()
+    {
+        Rig rig;
+        rig.hold();
+        rig.controller->setNight(true);
+        QVERIFY(rig.controller->setMatrixRain(true));
+        rig.advance(300);
+        QTest::qWait(200);
+        for (const int led : {0, 58, 100, 145})
+            QCOMPARE(ledColour(rig.frame(), led), (std::vector<std::uint8_t>{0, 0, 0}));
+    }
+
+    void theNightNeverSwitchesTheLightingOnOrWritesTheKeyboardsOwnBrightness()
+    {
+        Rig rig;
+        rig.controller->setNight(true);
+        rig.controller->setNight(false);
+        rig.controller->setNight(true);
+        QVERIFY(!rig.controller->active());
+        QCOMPARE(rig.journal.count("opener"), 0);
+        QCOMPARE(rig.reports(), std::size_t{0}); // nothing was sent to the keyboard at all
+    }
+
     // ---- what the controller says to the memory that decides whether the lighting is put back at the next start ----
 
     static void hookInto(Rig &rig, std::vector<LightingMemory> &said)
