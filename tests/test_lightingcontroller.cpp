@@ -1284,6 +1284,58 @@ private Q_SLOTS:
         QCOMPARE(rig.journal.count("opener"), 1 + 1 + 3); // the first start, the wake, then the three tries
     }
 
+    // ---- put back at the start of galleond: a keyboard that is not on the bus yet is waited for ----
+
+    void aLightingPutBackAtStartWaitsForAKeyboardThatIsNotOnTheBusYetAndThenHoldsIt()
+    {
+        Rig rig;
+        rig.controller->setResumeRetry(30, 200);
+        rig.keyboardPresent = false; // the session started before the keyboard was enumerated
+        QVERIFY(rig.controller->restoreAtStart().isEmpty());
+        QTest::qWait(300); // several tries, all failed
+        QVERIFY(rig.controller->active()); // one failed opening did not switch it off
+        QCOMPARE(rig.controller->state(), QStringLiteral("starting"));
+        rig.keyboardPresent = true;
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("listening"), 3000); // then the usual 3 s of listening: another host is given way to
+        rig.advance(4000);
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("holding"), 3000);
+        QCOMPARE(rig.mode(), 2);
+        QCOMPARE(rig.journal.count("watchdog.start"), 1);
+    }
+
+    void aLightingPutBackAtStartGivesUpAfterTheTriesAndStaysOff()
+    {
+        Rig rig;
+        rig.controller->setResumeRetry(20, 3);
+        rig.keyboardPresent = false;
+        QVERIFY(rig.controller->restoreAtStart().isEmpty());
+        QTRY_VERIFY_WITH_TIMEOUT(!rig.controller->active(), 3000);
+        QCOMPARE(rig.controller->state(), QStringLiteral("off"));
+        QCOMPARE(rig.journal.count("opener"), 1 + 3); // the first opening, then the three tries
+        QCOMPARE(rig.reports(), std::size_t{0}); // nothing was ever sent
+    }
+
+    void aRefusalOfTheLightingPutBackAtStartIsReturnedAtOnceAndNotWaitedFor()
+    {
+        Rig rig;
+        rig.controller->setResumeRetry(20, 3);
+        rig.watchdog.works = false;
+        QVERIFY(!rig.controller->restoreAtStart().isEmpty());
+        QTest::qWait(200);
+        QCOMPARE(rig.journal.count("opener"), 0); // never tried: waiting would not change a refusal
+        QVERIFY(!rig.controller->active());
+    }
+
+    void aLightingSwitchedOnByHandDoesNotWaitForAKeyboardThatIsNotThere()
+    {
+        Rig rig;
+        rig.controller->setResumeRetry(20, 3);
+        rig.keyboardPresent = false;
+        QVERIFY(rig.controller->Enable(true).isEmpty());
+        QTRY_VERIFY_WITH_TIMEOUT(!rig.controller->active(), 3000);
+        QCOMPARE(rig.journal.count("opener"), 1); // by hand: one try, and the reason is said at once
+    }
+
     void aKeyboardThatCannotBeOpenedStopsEverythingAndSaysWhy()
     {
         Rig rig;

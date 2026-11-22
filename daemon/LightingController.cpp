@@ -88,6 +88,14 @@ QString LightingController::Enable(bool on)
     return {};
 }
 
+QString LightingController::restoreAtStart()
+{
+    const QString refusal = Enable(true);
+    if (refusal.isEmpty())
+        m_resumeTriesLeft = m_resumeAttempts; // the first opening is reported later, on this thread: see onWorkerState
+    return refusal;
+}
+
 bool LightingController::SetColor(int red, int green, int blue)
 {
     const auto scene = galleon::keyboard::uniformScene(red, green, blue);

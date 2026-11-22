@@ -1087,9 +1087,9 @@ int main(int argc, char *argv[])
         QTimer::singleShot(galleond::LightingRestoreDelayMs, &lighting, [&lighting] {
             if (lighting.active())
                 return; // someone switched it on in the meantime
-            const QString refusal = lighting.Enable(true);
+            const QString refusal = lighting.restoreAtStart(); // waits for a keyboard that is not on the bus yet
             if (refusal.isEmpty())
-                qInfo() << "galleond: the live lighting is put back, as asked";
+                qInfo() << "galleond: the live lighting is being put back, as asked";
             else
                 qWarning().noquote() << "galleond: the live lighting could not be put back:" << refusal;
         });
