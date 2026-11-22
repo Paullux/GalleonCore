@@ -4,12 +4,15 @@
 #include "LightingRestore.h"
 
 #include "AtomicFile.h"
+#include "LightingController.h"
 #include "StrictJson.h"
 
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QDebug>
 #include <QStandardPaths>
+#include <QTimer>
 
 namespace galleond {
 namespace {
@@ -171,6 +174,25 @@ bool consumeLightingRestore(const QString &restorePath, const QString &memoryPat
     if (!writeLightingMemory(memoryPath, LightingMemory::Off))
         return false;
     return shouldRestoreLighting(asked, memory);
+}
+
+void setUpLightingRestore(LightingController &lighting, const QString &restorePath, const QString &memoryPath, int delayMs)
+{
+    lighting.setRememberHook([memoryPath](LightingMemory memory) {
+        if (!writeLightingMemory(memoryPath, memory))
+            qWarning() << "galleond: the memory of the live lighting could not be written: it will not be put back at the next start";
+    });
+    if (!consumeLightingRestore(restorePath, memoryPath))
+        return;
+    QTimer::singleShot(delayMs, &lighting, [&lighting] {
+        if (lighting.active())
+            return; // someone switched it on in the meantime
+        const QString refusal = lighting.restoreAtStart(); // waits for a keyboard that is not on the bus yet
+        if (refusal.isEmpty())
+            qInfo() << "galleond: the live lighting is being put back, as asked";
+        else
+            qWarning().noquote() << "galleond: the live lighting could not be put back:" << refusal;
+    });
 }
 
 } // namespace galleond
