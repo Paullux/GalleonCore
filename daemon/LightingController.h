@@ -120,6 +120,11 @@ public:
     [[nodiscard]] bool matrixRain() const { return m_matrix; }
     [[nodiscard]] int effectiveLevel() const { return m_levelOverride.value_or(m_appearance.level); }
 
+    // The lighting put back when galleond starts (LightingRestore.h): the same as Enable(true), with every refusal, but a keyboard that is not on the bus yet
+    // is waited for, the way it is after waking up (opening is tried again every ResumeRetryMs, at most ResumeAttempts times, then it stays off). A refusal is
+    // returned at once and not retried: it will not change by waiting. By hand (Enable) nothing is waited for.
+    QString restoreAtStart();
+
 public Q_SLOTS:
     // "" when accepted, else why not. Enable(false) gives the keys back (and waits for it) and is always accepted.
     QString Enable(bool on);
