@@ -225,6 +225,16 @@ private Q_SLOTS:
         QCOMPARE(board.overlay(10.0).front().led, std::uint16_t{2});
     }
 
+    void aSignalIsDroppedAtTheMomentItEndsNotAfter()
+    {
+        SignalBoard board;
+        QCOMPARE(board.set("a", 1, Amber, SignalEffect::Steady, 0.0, 5.0), SignalBoard::Result::Ok);
+        board.expire(4.999);
+        QCOMPARE(board.size(), std::size_t{1});
+        board.expire(5.0);
+        QVERIFY(board.empty());
+    }
+
     void signalsAreDrawnOverTheFrameAndOnlyOnTheirLeds()
     {
         LiveFrame frame{};
