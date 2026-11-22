@@ -9,6 +9,8 @@
 #include "AppearanceFile.h"
 #include "BrightnessCurve.h"
 #include "LightingAppearanceApplier.h"
+#include "KeySignalsAccess.h"
+#include "KeySignalsService.h"
 #include "LightingController.h"
 #include "LightingLevelScheduler.h"
 #include "LightingRestore.h"
@@ -23,7 +25,13 @@
 #include <QDateTime>
 #include <QTimeZone>
 #ifndef Q_OS_WIN
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusMessage>
 #include <QDBusMetaType>
+#include <QDBusPendingCall>
+#include <QDBusPendingReply>
+#include "KeySignalsBus.h"
 #endif
 #include <QTest>
 
@@ -443,6 +451,159 @@ private Q_SLOTS:
         rig.advance(300);
         QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
     }
+
+    // ---- key signals for other programs: the service (the door of the bus) ----
+
+    void aProgramCannotLightKeysUnlessThePersonAllowedItAndNothingIsShown()
+    {
+        std::atomic<bool> allowed{false};
+        Rig rig;
+        galleond::KeySignalsService service(*rig.controller, [&allowed] { return allowed.load(); });
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        QVERIFY(!service.set(":1.7", "F2", 255, 160, 0, "steady", 60).isEmpty());
+        QVERIFY(!service.clear(":1.7", "F2"));
+        QVERIFY(!service.clearAll(":1.7"));
+        QTest::qWait(150);
+        QCOMPARE(ledColour(rig.frame(), 59), (std::vector<std::uint8_t>{100, 200, 40}));
+        allowed = true; // the person ticked the box
+        QCOMPARE(service.set(":1.7", "F2", 255, 160, 0, "steady", 60), QString());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+    }
+
+    void aProgramsSignalsAreItsOwnAndAnotherProgramCannotTakeThemAway()
+    {
+        std::atomic<bool> allowed{true};
+        Rig rig;
+        galleond::KeySignalsService service(*rig.controller, [&allowed] { return allowed.load(); });
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        QCOMPARE(service.set(":1.7", "F2", 255, 160, 0, "steady", 600), QString());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+        QVERIFY(!service.clear(":1.8", "F2"));
+        QVERIFY(!service.clearAll(":1.8"));
+        QTest::qWait(150);
+        QCOMPARE(ledColour(rig.frame(), 59), (std::vector<std::uint8_t>{255, 160, 0}));
+        rig.advance(300);
+        QVERIFY(service.clear(":1.7", "F2"));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{100, 200, 40}), 3000);
+    }
+
+    void aProgramThatLeavesTheBusHasItsSignalsTakenAway()
+    {
+        std::atomic<bool> allowed{true};
+        Rig rig;
+        galleond::KeySignalsService service(*rig.controller, [&allowed] { return allowed.load(); });
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        QCOMPARE(service.set(":1.7", "F2", 255, 160, 0, "steady", 3600), QString());
+        QCOMPARE(service.set(":1.8", "F3", 0, 0, 255, "steady", 3600), QString());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 60) == std::vector<std::uint8_t>{0, 0, 255}), 3000);
+        rig.advance(300);
+        service.senderGone(":1.7");
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{100, 200, 40}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 60), (std::vector<std::uint8_t>{0, 0, 255})); // the other program is not touched
+    }
+
+    void switchingTheChoiceOffInBosunTakesTheSignalsAwayWithinTheSecond()
+    {
+        std::atomic<bool> allowed{true};
+        Rig rig;
+        galleond::KeySignalsService service(*rig.controller, [&allowed] { return allowed.load(); });
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        QCOMPARE(service.set(":1.7", "F2", 255, 160, 0, "steady", 3600), QString());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+        allowed = false;
+        rig.advance(300);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{100, 200, 40}), 4000);
+        allowed = true; // ticking it again does not bring the old signal back
+        QTest::qWait(1300);
+        rig.advance(300);
+        QTest::qWait(150);
+        QCOMPARE(ledColour(rig.frame(), 59), (std::vector<std::uint8_t>{100, 200, 40}));
+    }
+
+    void aProgramThatAsksTooOftenIsToldToWaitAndMayAskAgainAfterASecond()
+    {
+        std::atomic<bool> allowed{true};
+        std::atomic<long long> ms{0};
+        const auto origin = std::chrono::steady_clock::now();
+        Rig rig;
+        galleond::KeySignalsService service(*rig.controller, [&allowed] { return allowed.load(); },
+                                            [&] { return origin + std::chrono::milliseconds(ms.load()); });
+        rig.hold();
+        for (int i = 0; i < galleond::MaxSignalRequestsPerSecond; ++i)
+            QCOMPARE(service.set(":1.7", "F2", 1, 2, 3, "steady", 600), QString());
+        QVERIFY(!service.set(":1.7", "F2", 1, 2, 3, "steady", 600).isEmpty());
+        QVERIFY(!service.set(":1.8", "F3", 1, 2, 3, "steady", 600).isEmpty()); // the limit is for everyone together
+        ms = 1000;
+        QCOMPARE(service.set(":1.7", "F2", 1, 2, 3, "steady", 600), QString());
+    }
+
+    void anEffectThatIsNotKnownIsRefused()
+    {
+        std::atomic<bool> allowed{true};
+        Rig rig;
+        galleond::KeySignalsService service(*rig.controller, [&allowed] { return allowed.load(); });
+        rig.hold();
+        QVERIFY(!service.set(":1.7", "F2", 1, 2, 3, "rainbow", 60).isEmpty());
+        QVERIFY(!service.set(":1.7", "F2", 1, 2, 3, "", 60).isEmpty());
+        QVERIFY(!service.set(":1.7", "F2", 1, 2, 3, "Steady", 60).isEmpty()); // exactly the two words
+        QCOMPARE(service.set(":1.7", "F2", 1, 2, 3, "pulse", 60), QString());
+    }
+
+#ifndef Q_OS_WIN
+    void theBusObjectOffersTheThreeMethodsAndNothingElse()
+    {
+        const QMetaObject &meta = galleond::KeySignalsBus::staticMetaObject;
+        QStringList methods;
+        for (int i = meta.methodOffset(); i < meta.methodCount(); ++i)
+            methods << QString::fromLatin1(meta.method(i).methodSignature());
+        methods.sort();
+        QCOMPARE(methods, (QStringList{"Clear(QString)", "ClearAll()", "Set(QString,int,int,int,QString,double)"}));
+        QCOMPARE(meta.propertyCount(), meta.propertyOffset()); // no property
+        for (int i = meta.methodOffset(); i < meta.methodCount(); ++i)
+            QVERIFY2(meta.method(i).methodType() == QMetaMethod::Slot, "no signal on the bus");
+    }
+
+    void aProgramOnTheBusLightsAKeyAndLeavesTheBusAndItsKeyGoes()
+    {
+        QDBusConnection session = QDBusConnection::sessionBus();
+        if (!session.isConnected())
+            QSKIP("no session bus");
+        std::atomic<bool> allowed{true};
+        Rig rig;
+        galleond::KeySignalsService service(*rig.controller, [&allowed] { return allowed.load(); });
+        galleond::KeySignalsBus bus(service);
+        QVERIFY(session.registerObject(QStringLiteral("/test/KeySignals"), &bus, QDBusConnection::ExportAllSlots));
+        QVERIFY(session.registerService(QStringLiteral("org.galleoncore.KeySignalsTest")));
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        {
+            const QDBusConnection other = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("a-program"));
+            QVERIFY(other.isConnected());
+            QDBusInterface iface(QStringLiteral("org.galleoncore.KeySignalsTest"), QStringLiteral("/test/KeySignals"), QStringLiteral("org.galleoncore.KeySignals"), other);
+            QVERIFY(iface.isValid());
+            const QDBusPendingCall call = iface.asyncCall(QStringLiteral("Set"), QStringLiteral("F2"), 255, 160, 0, QStringLiteral("steady"), 3600.0);
+            QTRY_VERIFY_WITH_TIMEOUT(call.isFinished(), 3000);
+            const QDBusPendingReply<QString> reply = call;
+            QVERIFY(reply.isValid());
+            QCOMPARE(reply.value(), QString());
+            QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+            rig.advance(300);
+        }
+        QDBusConnection::disconnectFromBus(QStringLiteral("a-program")); // the program is gone
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{100, 200, 40}), 4000);
+        session.unregisterObject(QStringLiteral("/test/KeySignals"));
+        session.unregisterService(QStringLiteral("org.galleoncore.KeySignalsTest"));
+    }
+#endif
 
     void switchingTheLightingOffLetsEverySignalGo()
     {

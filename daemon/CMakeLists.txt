@@ -71,6 +71,8 @@ add_library(galleond_core STATIC
     LightingSkyDay.h LightingSkyDay.cpp
     StrictJson.h
     KeyMapFile.h KeyMapFile.cpp
+    KeySignalsAccess.h KeySignalsAccess.cpp
+    KeySignalsService.h KeySignalsService.cpp
     LightingState.h LightingState.cpp
     LightingStatePublisher.h LightingStatePublisher.cpp
 )
@@ -82,6 +84,7 @@ if(WIN32)
     target_compile_definitions(galleond_core PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 else()
     target_sources(galleond_core PRIVATE QuitOnSignals.h QuitOnSignals.cpp LogindPowerEvents.h LogindPowerEvents.cpp LinuxKeyInjector.h LinuxKeyInjector.cpp LinuxPlatformBackends.cpp
+        KeySignalsBus.h KeySignalsBus.cpp
         MprisController.h MprisController.cpp DesktopEntries.cpp)
     target_link_libraries(galleond_core PUBLIC Qt6::DBus)
 endif()

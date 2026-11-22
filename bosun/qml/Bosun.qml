@@ -26,6 +26,7 @@ Window {
     property var appearance: null // the appearance of the live lighting (AppearanceStore): written to lighting-appearance.json at every change
     property var rings: null // the settings of the rings of the dials (RingStore): written to dial-rings.json at every change
     property var nightState: null // whether the lights are off until morning, and until when (NightStateStore); null in a test without it
+    property var keySignals: null // the choice "other programs may light single keys" (KeySignalsStore); null where that does not exist (Windows) and in a test without it
     property var lightingRestore: null // the choice "put the live lighting back when galleond starts" (LightingRestoreStore); null in a test without it
     property var keyCalibration: null // the calibration of the key map (KeyCalibration): off until the person starts it
     property bool updatesOpen: false
@@ -756,6 +757,25 @@ Window {
                     color: "#9aa0a6"
                     font.pixelSize: 13
                     text: qsTr("Off by default. When on, the live lighting is put back at the start of galleond only if it was on when galleond ended properly: after a crash, a freeze or a failure it stays off until you switch it on. It goes through the same checks as switching it on by hand, and refuses for the same reasons. Nothing is written to the keyboard's memory.")
+                }
+                // Other programs lighting single keys: off unless chosen here, and the state is always shown.
+                Pill {
+                    objectName: "keySignalsToggle"
+                    visible: win.daemon.lightingSupported && win.keySignals !== null
+                    selected: win.keySignals !== null && win.keySignals.allow
+                    text: win.keySignals !== null && win.keySignals.allow ? qsTr("Other programs may light keys: allowed") : qsTr("Other programs may light keys: not allowed")
+                    onClicked: win.answered(win.keySignals.setAllow(!win.keySignals.allow),
+                                            win.keySignals.allow ? qsTr("Programs on this computer can now light single keys while the live lighting is on.")
+                                                                 : qsTr("No program can light keys any more; the ones that were lit are taken away."))
+                }
+                Text {
+                    objectName: "keySignalsNote"
+                    visible: win.daemon.lightingSupported && win.keySignals !== null
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: qsTr("Off by default. When allowed, a program running as you can ask for one key to light up, for a time you can read in its request (1 second to 24 hours), only while the live lighting is on. It is dark during the night, and it ends if you switch this off or the program quits. Programs only send colours: they never receive which keys you press, nor anything about the keyboard.")
                 }
                 Text {
                     objectName: "liveBrightnessNote"
