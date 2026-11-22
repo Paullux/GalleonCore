@@ -25,6 +25,8 @@
 #include "LightingAppearanceApplier.h"
 #include "RingSettings.h"
 #include "RingSettingsApplier.h"
+#include "KeySignalsAccess.h"
+#include "KeySignalsService.h"
 #include "LightingController.h"
 #include "LightingRestore.h"
 #include "NightController.h"
@@ -36,6 +38,7 @@
 #ifdef Q_OS_WIN
 #include "WindowsPowerEvents.h"
 #else
+#include "KeySignalsBus.h"
 #include "LogindPowerEvents.h"
 #include "QuitOnSignals.h"
 #include <csignal>
@@ -1111,6 +1114,11 @@ int main(int argc, char *argv[])
         qWarning() << "galleond: cannot export the keyboard D-Bus object";
     if (!bus.registerObject(QStringLiteral("/org/galleoncore/Lighting"), &lighting, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals))
         qWarning() << "galleond: cannot export the lighting D-Bus object";
+    galleond::KeySignalsService keySignals(lighting, [] { return galleond::keySignalsAllowed(galleond::keySignalsAccessPath()); });
+    galleond::KeySignalsBus keySignalsBus(keySignals);
+    // The keys that other programs may light (off unless the person allowed it in Bosun: key-signals.json). Only these three methods, nothing is read back.
+    if (!bus.registerObject(QStringLiteral("/org/galleoncore/KeySignals"), &keySignalsBus, QDBusConnection::ExportAllSlots))
+        qWarning() << "galleond: cannot export the key signals D-Bus object";
 #endif
 
     // Putting the lighting back after a restart, if the person asked for it (a checkbox in Bosun, off by default) AND galleond last ended properly with the

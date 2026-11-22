@@ -796,5 +796,10 @@
   "Start galleond to turn the lights back on": "Inicie galleond para volver a encender las luces",
   "Cannot turn the lights off: restart the updated daemon (%1)": "No se pueden apagar las luces: reinicie el servicio actualizado (%1)",
   "The lights could not be turned off: the time is not valid": "No se pudieron apagar las luces: la hora no es válida",
-  "Turning the lights off until morning is not available on Windows yet": "Apagar las luces hasta la mañana aún no está disponible en Windows"
+  "Turning the lights off until morning is not available on Windows yet": "Apagar las luces hasta la mañana aún no está disponible en Windows",
+  "Other programs may light keys: allowed": "Otros programas pueden iluminar teclas: permitido",
+  "Other programs may light keys: not allowed": "Otros programas pueden iluminar teclas: no permitido",
+  "Programs on this computer can now light single keys while the live lighting is on.": "Los programas de este ordenador ya pueden iluminar teclas sueltas mientras la iluminación en directo esté encendida.",
+  "No program can light keys any more; the ones that were lit are taken away.": "Ningún programa puede iluminar teclas; las que estaban encendidas se apagan.",
+  "Off by default. When allowed, a program running as you can ask for one key to light up, for a time you can read in its request (1 second to 24 hours), only while the live lighting is on. It is dark during the night, and it ends if you switch this off or the program quits. Programs only send colours: they never receive which keys you press, nor anything about the keyboard.": "Desactivado por defecto. Una vez permitido, un programa ejecutado por usted puede pedir que se ilumine una tecla, durante el tiempo indicado en su petición (de 1 segundo a 24 horas), solo mientras la iluminación en directo esté encendida. Durante la noche permanece apagada, y termina si desactiva esto o el programa se cierra. Los programas solo envían colores: nunca reciben qué teclas pulsa ni nada del teclado."
 }

@@ -14,6 +14,7 @@ add_library(bosun_core STATIC
     RingStore.h RingStore.cpp
     NightStateStore.h NightStateStore.cpp
     LightingRestoreStore.h LightingRestoreStore.cpp
+    KeySignalsStore.h KeySignalsStore.cpp
     DaemonStatus.h
     KeyCalibration.h KeyCalibration.cpp
     LedValues.h LedValues.cpp
