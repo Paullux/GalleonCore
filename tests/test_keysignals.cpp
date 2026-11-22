@@ -38,7 +38,8 @@ private Q_SLOTS:
         QVERIFY(std::fabs(pulseShare(PulsePeriodSeconds / 2) - PulseLowestShare) < 1e-9);
         QVERIFY(std::fabs(pulseShare(PulsePeriodSeconds) - 1.0) < 1e-9);
         QVERIFY(std::fabs(pulseShare(7 * PulsePeriodSeconds) - 1.0) < 1e-9);
-        for (double t = 0; t < 10; t += 0.013) {
+        for (int step = 0; step < 770; ++step) {
+            const double t = step * 0.013;
             QVERIFY(pulseShare(t) >= PulseLowestShare - 1e-12);
             QVERIFY(pulseShare(t) <= 1.0 + 1e-12);
         }
@@ -256,7 +257,7 @@ private Q_SLOTS:
 
     void theLevelDimsTheSignalsAndZeroMakesThemBlack()
     {
-        LiveFrame frame{};
+        const LiveFrame frame{};
         const std::vector<LedColor> lit{{60, 200, 100, 50}};
         const LiveFrame half = withSignals(frame, lit, 500);
         QCOMPARE(half.at(2 + 3 * 60), std::uint8_t{100});
@@ -273,7 +274,7 @@ private Q_SLOTS:
 
     void aSignalOnALedBeyondTheFrameIsIgnoredNotWrittenOutside()
     {
-        LiveFrame frame{};
+        const LiveFrame frame{};
         const std::vector<LedColor> lit{{146, 255, 255, 255}, {0xFFFF, 255, 255, 255}};
         QVERIFY(withSignals(frame, lit, LevelFull) == frame);
     }

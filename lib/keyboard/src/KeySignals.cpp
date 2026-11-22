@@ -109,10 +109,10 @@ std::vector<LedColor> SignalBoard::overlay(double now) const
     return colours;
 }
 
-LiveFrame withSignals(LiveFrame frame, std::span<const LedColor> signals, int level)
+LiveFrame withSignals(LiveFrame frame, std::span<const LedColor> lit, int level)
 {
     const double share = static_cast<double>(std::clamp(level, 0, LevelFull)) / LevelFull;
-    for (const LedColor &signal : signals) {
+    for (const LedColor &signal : lit) {
         if (signal.led >= LiveLedCount)
             continue; // never beyond the frame
         const std::size_t at = 2 + 3 * static_cast<std::size_t>(signal.led);

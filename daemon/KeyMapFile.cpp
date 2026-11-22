@@ -181,6 +181,18 @@ bool writeKeyMap(const QString &path, const KeyMapFile &file)
     return writeFileAtomically(path, encodeKeyMap(file));
 }
 
+const galleon::keyboard::KeyMap &builtInKeyMap()
+{
+    static const galleon::keyboard::KeyMap map = [] {
+        QFile file(QStringLiteral(":/galleond/galleon-100-sd-keymap.json"));
+        if (!file.open(QIODevice::ReadOnly))
+            return galleon::keyboard::KeyMap{};
+        const auto parsed = parseKeyMap(file.read(MaxKeyMapBytes + 1));
+        return parsed ? parsed->map : galleon::keyboard::KeyMap{};
+    }();
+    return map;
+}
+
 std::optional<KeyMapFile> readKeyMap(const QString &path, QString *why)
 {
     QFile file(path);

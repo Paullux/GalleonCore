@@ -326,6 +326,166 @@ private Q_SLOTS:
         QCOMPARE(ledColour(rig.frame(), 0x3a), (std::vector<std::uint8_t>{0, 0, 0}));
     }
 
+    // ---- key signals: a program lights one key; nothing comes back ----
+
+    void aSignalLightsItsKeyOverTheAppearanceAndLeavesTheOthersAlone()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        QCOMPARE(rig.controller->setSignal("helper", "F2", 255, 160, 0, galleon::keyboard::SignalEffect::Steady, 60), QString());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000); // F2 is LED 59
+        QCOMPARE(ledColour(rig.frame(), 58), (std::vector<std::uint8_t>{100, 200, 40}));                          // F1 is as it was
+        QCOMPARE(ledColour(rig.frame(), 60), (std::vector<std::uint8_t>{100, 200, 40}));
+    }
+
+    void aSignalIsRefusedWhileTheLightingIsOffAndNothingSwitchesItOn()
+    {
+        Rig rig;
+        QVERIFY(!rig.controller->setSignal("helper", "F2", 255, 160, 0, galleon::keyboard::SignalEffect::Steady, 60).isEmpty());
+        QCOMPARE(rig.journal.count("opener"), 0);
+        QVERIFY(!rig.controller->active());
+    }
+
+    void aSignalGoesOutByItselfWhenItsTimeIsOver()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        QCOMPARE(rig.controller->setSignal("helper", "F2", 255, 160, 0, galleon::keyboard::SignalEffect::Steady, 2), QString());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+        rig.advance(2500);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{100, 200, 40}), 3000);
+    }
+
+    void aSignalFollowsTheBrightnessInForce()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        QVERIFY(rig.controller->setLevelOverride(500));
+        QCOMPARE(rig.controller->setSignal("helper", "F2", 200, 100, 50, galleon::keyboard::SignalEffect::Steady, 600), QString());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{100, 50, 25}), 3000);
+    }
+
+    void aSignalIsBlackDuringTheNightAndComesBackInTheMorning()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        QCOMPARE(rig.controller->setSignal("helper", "F2", 255, 160, 0, galleon::keyboard::SignalEffect::Steady, 3600), QString());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+        rig.advance(300);
+        rig.controller->setNight(true);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{0, 0, 0}), 3000);
+        rig.advance(300);
+        QCOMPARE(rig.controller->setSignal("helper", "F3", 0, 0, 255, galleon::keyboard::SignalEffect::Steady, 3600), QString()); // asked during the night
+        QTest::qWait(150);
+        QCOMPARE(ledColour(rig.frame(), 59), (std::vector<std::uint8_t>{0, 0, 0}));
+        QCOMPARE(ledColour(rig.frame(), 60), (std::vector<std::uint8_t>{0, 0, 0})); // F3
+        QCOMPARE(rig.mode(), 2);
+        rig.advance(300);
+        rig.controller->setNight(false);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 60), (std::vector<std::uint8_t>{0, 0, 255}));
+    }
+
+    void aSignalIsKeptWhenAToolOrTheAppearanceChangesWhatIsUnderIt()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        QCOMPARE(rig.controller->setSignal("helper", "F2", 255, 160, 0, galleon::keyboard::SignalEffect::Steady, 600), QString());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+        rig.advance(300);
+        QVERIFY(rig.controller->SetColor(1, 2, 3));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 58) == std::vector<std::uint8_t>{1, 2, 3}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 59), (std::vector<std::uint8_t>{255, 160, 0}));
+    }
+
+    void clearingTakesTheSignalAwayAndTheKeyShowsWhatIsUnderIt()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        QCOMPARE(rig.controller->setSignal("helper", "F2", 255, 160, 0, galleon::keyboard::SignalEffect::Steady, 600), QString());
+        QCOMPARE(rig.controller->setSignal("helper", "F3", 255, 160, 0, galleon::keyboard::SignalEffect::Steady, 600), QString());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+        rig.advance(300);
+        QVERIFY(rig.controller->clearSignals("helper", "F2"));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{100, 200, 40}), 3000);
+        QCOMPARE(ledColour(rig.frame(), 60), (std::vector<std::uint8_t>{255, 160, 0}));
+        QVERIFY(!rig.controller->clearSignals("helper", "F2")); // nothing left to take away
+        rig.advance(300);
+        QVERIFY(rig.controller->clearSignals("helper"));
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 60) == std::vector<std::uint8_t>{100, 200, 40}), 3000);
+    }
+
+    void aSignalStillOnWhenTheComputerWakesIsShownAgain()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        QCOMPARE(rig.controller->setSignal("helper", "F2", 255, 160, 0, galleon::keyboard::SignalEffect::Steady, 3600), QString());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+        rig.power.sleep();
+        rig.power.wake();
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("listening"), 3000);
+        rig.advance(4000);
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("holding"), 3000);
+        rig.advance(300);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+    }
+
+    void switchingTheLightingOffLetsEverySignalGo()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        QCOMPARE(rig.controller->setSignal("helper", "F2", 255, 160, 0, galleon::keyboard::SignalEffect::Steady, 3600), QString());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+        QVERIFY(rig.controller->Enable(false).isEmpty());
+        rig.hold(); // on again: the signal of before is not there
+        rig.advance(300);
+        QTRY_VERIFY_WITH_TIMEOUT(rig.frames() > 0, 3000);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{100, 200, 40}), 3000);
+    }
+
+    void aSignalIsRefusedForABadColourAKeyThatIsNotOneAndAKeyWithoutAMeasuredLight()
+    {
+        Rig rig;
+        rig.hold();
+        using galleon::keyboard::SignalEffect;
+        QVERIFY(!rig.controller->setSignal("helper", "F2", 256, 0, 0, SignalEffect::Steady, 60).isEmpty());
+        QVERIFY(!rig.controller->setSignal("helper", "F2", 0, -1, 0, SignalEffect::Steady, 60).isEmpty());
+        QVERIFY(!rig.controller->setSignal("helper", "Banana", 1, 1, 1, SignalEffect::Steady, 60).isEmpty());
+        QVERIFY(!rig.controller->setSignal("helper", "", 1, 1, 1, SignalEffect::Steady, 60).isEmpty());
+        QVERIFY(!rig.controller->setSignal("", "F2", 1, 1, 1, SignalEffect::Steady, 60).isEmpty());
+        QVERIFY(!rig.controller->setSignal("helper", "F2", 1, 1, 1, SignalEffect::Steady, 0).isEmpty());
+        QVERIFY(!rig.controller->setSignal("helper", "F2", 1, 1, 1, SignalEffect::Steady, 90000).isEmpty());
+        rig.controller->setKeyMap({}); // nothing measured: nothing is guessed
+        QVERIFY(!rig.controller->setSignal("helper", "F2", 1, 1, 1, SignalEffect::Steady, 60).isEmpty());
+    }
+
+    void keySignalsAreNotOnTheBusAndNothingReadsThemBack()
+    {
+        // The pipe is not opened to other programs before its security review (AGENTS.md rules 6 to 8): nothing of it is a slot or a signal, so nothing is
+        // on the bus, and no method of the controller gives a signal or a key back.
+        const QMetaObject &meta = LightingController::staticMetaObject;
+        for (int i = meta.methodOffset(); i < meta.methodCount(); ++i) {
+            const QByteArray name = meta.method(i).name().toLower();
+            QVERIFY2(!name.contains("signal") && !name.contains("pressed") && !name.contains("keys"), name.constData());
+        }
+    }
+
     void theCurveOfTheDayCannotLiftTheNightAndItsLevelCountsAgainInTheMorning()
     {
         Rig rig;

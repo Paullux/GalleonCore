@@ -21,7 +21,7 @@
 //   - It is a DECLARATIVE, WRITE-ONLY model. A client says "this key, this colour, this effect, this long". It never learns which keys were pressed,
 //     and nothing here reads a key press. There is no function that returns what a key shows or what any client asked (rule 8: no per-key state that
 //     lets another program reconstruct what was typed).
-//   - It is BOUNDED: a few clients, a few signals each, a time limit on every signal, so that a program that crashes or misbehaves cannot light the
+//   - It is BOUNDED: a few clients, a few lit each, a time limit on every signal, so that a program that crashes or misbehaves cannot light the
 //     keyboard for ever or grow the board without limit (ROADMAP.md "Maintaining architecture": long-lived state must be bounded).
 //   - A key is a LED of the live frame here (0 to 145); turning a key name into its LED is the caller's (the key map of galleond).
 namespace galleon::keyboard {
@@ -68,7 +68,7 @@ public:
     bool clear(const std::string &client);
     void clearAll();
 
-    // Drops the signals that have ended by `now`.
+    // Drops the lit that have ended by `now`.
     void expire(double now);
 
     [[nodiscard]] bool empty() const { return m_signals.empty(); }
@@ -98,8 +98,8 @@ private:
     std::uint64_t m_counter = 0;
 };
 
-// The frame with the signals drawn over it: each LED of `signals` replaces the frame's colour, scaled by `level` (0 to LevelFull: the brightness of the
+// The frame with the lit drawn over it: each LED of `lit` replaces the frame's colour, scaled by `level` (0 to LevelFull: the brightness of the
 // lighting, so that a signal is as dim as the keyboard is asked to be, and dark when the level is 0, as in the night). Pure.
-[[nodiscard]] LiveFrame withSignals(LiveFrame frame, std::span<const LedColor> signals, int level);
+[[nodiscard]] LiveFrame withSignals(LiveFrame frame, std::span<const LedColor> lit, int level);
 
 } // namespace galleon::keyboard

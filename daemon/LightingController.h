@@ -9,6 +9,8 @@
 #include <galleon/Transport.h>
 #include <galleon/keyboard/LivePolicy.h>
 #include <galleon/keyboard/Appearance.h>
+#include <galleon/keyboard/KeyMap.h>
+#include <galleon/keyboard/KeySignals.h>
 #include <galleon/keyboard/LiveScene.h>
 
 #include <QList>
@@ -133,6 +135,19 @@ public:
     // returned at once and not retried: it will not change by waiting. By hand (Enable) nothing is waited for.
     QString restoreAtStart();
 
+    // Key signals: a program asks for ONE key to be lit (KeySignals.h), so that another program can say "mail" or "meeting" on a key without ever touching
+    // the keyboard. Declarative and write-only (AGENTS.md, security and privacy by design): a program says what to light and for how long, and never learns
+    // anything about the keyboard, not even what it lit; there is no way to read a signal back, to list them or to tell which key was pressed. Only while the
+    // live lighting is on (nothing is switched on for a signal), drawn over the appearance at the brightness in force (black at night), always with an end
+    // (1 second to 24 hours), bounded in number, and let go when the lighting stops. `key` is the name of KeyIdentity.h ("F3", "Left Control"), the place of
+    // the key on a QWERTY keyboard; a key whose LED has not been measured (the key map built into galleond) is refused, nothing is guessed.
+    // "" when accepted, else why not (for a person to read). Not on the bus yet: this is the core the bus and the local IPC will call.
+    QString setSignal(const QString &client, const QString &key, int red, int green, int blue, galleon::keyboard::SignalEffect effect, double seconds);
+    // What a program asked for is taken away: one key, or all of its keys when `key` is empty. False when there was nothing to take away.
+    bool clearSignals(const QString &client, const QString &key = {});
+    // For tests: the key map used to find the LED of a key (the measured one built into galleond by default).
+    void setKeyMap(galleon::keyboard::KeyMap map) { m_keyMap = map; }
+
 public Q_SLOTS:
     // "" when accepted, else why not. Enable(false) gives the keys back (and waits for it) and is always accepted.
     QString Enable(bool on);
@@ -156,6 +171,8 @@ Q_SIGNALS:
 private:
     bool showScene(const galleon::keyboard::LiveScene &scene);
     void startWorker();
+    void sendSignals();
+    [[nodiscard]] double signalSeconds() const;
     [[nodiscard]] galleon::keyboard::Appearance shownAppearance() const; // the appearance with the level in force
     bool stopWorker();
     void finish(const QString &detail, bool cleanExit = false);
@@ -186,6 +203,8 @@ private:
     std::function<galleon::keyboard::SkyDay()> m_skyDay = [] { return galleon::keyboard::SkyDay{}; };
     std::optional<galleon::keyboard::LiveScene> m_tool; // what a tool shows over it, if one does
     std::vector<galleon::keyboard::LedPosition> m_positions;
+    galleon::keyboard::SignalBoard m_signals; // only here; the worker gets copies
+    galleon::keyboard::KeyMap m_keyMap;
 };
 
 } // namespace galleond
