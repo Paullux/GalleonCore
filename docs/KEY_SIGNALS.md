@@ -1,6 +1,6 @@
 <!--
 SPDX-FileCopyrightText: 2026 Paul Woisard
-SPDX-License-Identifier: CC-BY-SA-4.0
+SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
 # Lighting single keys from another program (Linux, D-Bus)
