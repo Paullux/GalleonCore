@@ -1336,6 +1336,63 @@ private Q_SLOTS:
         QCOMPARE(rig.journal.count("opener"), 1); // by hand: one try, and the reason is said at once
     }
 
+    // ---- the start-up wiring of the restore (setUpLightingRestore): what main() does, with fakes ----
+
+    static QString memoryOn(const QString &path)
+    {
+        const auto memory = readLightingMemory(path);
+        if (!memory)
+            return QStringLiteral("none");
+        if (*memory == LightingMemory::CleanExit)
+            return QStringLiteral("clean");
+        if (*memory == LightingMemory::Running)
+            return QStringLiteral("running");
+        return QStringLiteral("off");
+    }
+
+    void aStartWithTheChoiceAndACleanMemoryPutsTheLightingBackAndRemembersItAsRunning()
+    {
+        const QTemporaryDir dir;
+        const QString restore = dir.filePath("lighting-restore.json");
+        const QString memory = dir.filePath("lighting-memory.json");
+        QVERIFY(writeLightingRestore(restore, true));
+        QVERIFY(writeLightingMemory(memory, LightingMemory::CleanExit));
+        Rig rig;
+        setUpLightingRestore(*rig.controller, restore, memory, 80);
+        QCOMPARE(memoryOn(memory), QStringLiteral("off")); // read, and put back to off at once: a start that goes wrong is not repeated
+        QVERIFY(!rig.controller->active()); // nothing before the delay
+        QTRY_VERIFY_WITH_TIMEOUT(rig.controller->active(), 3000);
+        QCOMPARE(memoryOn(memory), QStringLiteral("running")); // on again, and only a clean exit will say clean
+    }
+
+    void aStartAfterACrashOrWithoutTheChoiceLeavesTheLightingOffAndConsumesTheMemory()
+    {
+        for (const bool asked : {true, false}) {
+            const QTemporaryDir dir;
+            const QString restore = dir.filePath("lighting-restore.json");
+            const QString memory = dir.filePath("lighting-memory.json");
+            QVERIFY(writeLightingRestore(restore, asked));
+            // after a crash the memory says running; without the choice a clean memory is not enough
+            QVERIFY(writeLightingMemory(memory, asked ? LightingMemory::Running : LightingMemory::CleanExit));
+            Rig rig;
+            setUpLightingRestore(*rig.controller, restore, memory, 40);
+            QTest::qWait(300);
+            QVERIFY(!rig.controller->active());
+            QCOMPARE(rig.journal.count("opener"), 0); // the keyboard was never opened
+            QCOMPARE(memoryOn(memory), QStringLiteral("off"));
+        }
+    }
+
+    void theMemoryFileIsWrittenAtEveryStartEvenWithNothingAskedFor()
+    {
+        const QTemporaryDir dir;
+        const QString memory = dir.filePath("lighting-memory.json");
+        QVERIFY(!QFile::exists(memory));
+        Rig rig;
+        setUpLightingRestore(*rig.controller, dir.filePath("lighting-restore.json"), memory, 40);
+        QCOMPARE(memoryOn(memory), QStringLiteral("off")); // the file that a real start leaves, as it must on every platform
+    }
+
     void aKeyboardThatCannotBeOpenedStopsEverythingAndSaysWhy()
     {
         Rig rig;

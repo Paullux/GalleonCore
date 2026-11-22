@@ -10,6 +10,8 @@
 
 namespace galleond {
 
+class LightingController;
+
 // Putting the live lighting back when galleond starts, if the person asked for it: the decisions and the two small files.
 //
 // Two files, each with one writer, so that the settings window never writes what galleond remembers:
@@ -51,5 +53,11 @@ inline constexpr int LightingRestoreDelayMs = 3000;
 // cannot be written, nothing is put back (a crash could not then be told from a clean exit). Only decides: switching on, with all its refusals, is the
 // caller's (LightingController::Enable).
 [[nodiscard]] bool consumeLightingRestore(const QString &restorePath, const QString &memoryPath);
+
+// The whole start-up wiring, in one place so that it is the same on every platform and can be tested: the controller reports how it stands to the memory file
+// (setRememberHook), the files are read and the memory put back to "off" (consumeLightingRestore), and if the lighting is to be put back, `delayMs` later the
+// controller is asked with LightingController::restoreAtStart (with all its refusals; a refusal is only logged). Call it once, at the start of galleond, after the
+// controller is built. `lighting` must outlive the pending timer (the timer is bound to it and goes with it).
+void setUpLightingRestore(LightingController &lighting, const QString &restorePath, const QString &memoryPath, int delayMs = LightingRestoreDelayMs);
 
 } // namespace galleond
