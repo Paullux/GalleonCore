@@ -161,7 +161,10 @@ class CiFile(unittest.TestCase):
         steps = check.parse_steps((root / check.CI_FILE).read_text())
         for name in check.CI_STEPS_REPLAYED:
             self.assertIn(name, steps)
-        self.assertEqual(check.tidy_folders(steps["clang-tidy"]), check.TIDY_DIRS)
+        # The CI runs clang-tidy in parts (tools/ci/clang_tidy_shard.py): the step names the script, and the folders are the script's pattern.
+        self.assertIn("clang_tidy_shard.py", steps["clang-tidy"])
+        script = (root / "tools" / "ci" / "clang_tidy_shard.py").read_text()
+        self.assertEqual(check.tidy_folders(script), check.TIDY_DIRS)
 
 
 class CleanCopy(unittest.TestCase):

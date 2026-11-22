@@ -59,17 +59,25 @@ jobs:
         if: contains(matrix.flags, 'GALLEON_FUZZ')
         run: ./build/fuzz/fuzz_live_link -max_total_time=60
 
-  lint:
+  # clang-tidy was a single step of about 23 minutes in a lint job of 26: it now runs as several jobs at once, each on its own machine, over its share of the files
+  # (tools/ci/clang_tidy_shard.py: the same set of files as before, dealt out in turn, tested to cover it exactly). Each one still configures and builds
+  # first (about 3 minutes: the moc and other generated files are needed). The `lint` job below waits for all of them.
+  clang-tidy:
+    name: clang-tidy (${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-24.04
-    # Normally about 25 minutes. The build step has twice stayed "in progress" for 47 minutes before the job was cut (a runner that stopped answering);
-    # a limit makes it fail sooner, and a re-run of the failed job is then enough.
-    timeout-minutes: 70
+    # A part is normally about 10 minutes. The build step has twice stayed "in progress" for 47 minutes before the job was cut (a runner that
+    # stopped answering); a limit makes it fail sooner, and a re-run of the failed job is then enough.
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           bash tools/ci/install-ubuntu-deps.sh cmake g++ clang-tidy \
-            qt6-base-dev qt6-declarative-dev qt6-websockets-dev libhidapi-dev pkg-config pipx \
+            qt6-base-dev qt6-declarative-dev qt6-websockets-dev libhidapi-dev pkg-config \
             libwayland-dev libwayland-bin wayland-protocols \
             qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtqml qml6-module-qtqml-workerscript
       - name: Configure
@@ -78,7 +86,28 @@ jobs:
         # A number of jobs, not a bare -j (as many compilations as there are files ready): perhaps the cause of the hangs above, not proven.
         run: cmake --build build -j"$(nproc)"
       - name: clang-tidy
-        run: run-clang-tidy -quiet -p build '(lib/src|daemon|bosun|tests|media)/[^/]+\.cpp$'
+        run: python3 tools/ci/clang_tidy_shard.py "${{ matrix.shard }}" "${{ strategy.job-total }}"
+
+  # The name `lint` is kept: it is what stands for the whole check. It waits for every clang-tidy part and fails if one did not pass (a job skipped
+  # because a part failed would otherwise count as passed), then runs the quick steps that need no build.
+  lint:
+    runs-on: ubuntu-24.04
+    needs: clang-tidy
+    if: ${{ always() }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every clang-tidy part must have passed
+        if: needs.clang-tidy.result != 'success'
+        run: |
+          echo "clang-tidy: ${{ needs.clang-tidy.result }}"
+          exit 1
+      - name: Install dependencies
+        run: |
+          bash tools/ci/install-ubuntu-deps.sh cmake g++ clang-tidy \
+            qt6-base-dev qt6-declarative-dev qt6-websockets-dev libhidapi-dev pkg-config pipx \
+            libwayland-dev libwayland-bin wayland-protocols \
+            qml6-module-qtquick qml6-module-qtquick-window qml6-module-qtqml qml6-module-qtqml-workerscript
       - name: qmllint
         run: /usr/lib/qt6/bin/qmllint widgets/*.qml bosun/qml/*.qml daemon/qml/*.qml
       - name: Decisions of tools/check.py
