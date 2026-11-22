@@ -25,6 +25,7 @@ Window {
     property var updates: null
     property var appearance: null // the appearance of the live lighting (AppearanceStore): written to lighting-appearance.json at every change
     property var rings: null // the settings of the rings of the dials (RingStore): written to dial-rings.json at every change
+    property var nightState: null // whether the lights are off until morning, and until when (NightStateStore); null in a test without it
     property var lightingRestore: null // the choice "put the live lighting back when galleond starts" (LightingRestoreStore); null in a test without it
     property var keyCalibration: null // the calibration of the key map (KeyCalibration): off until the person starts it
     property bool updatesOpen: false
@@ -1315,6 +1316,7 @@ Window {
         objectName: "screensaversPage"
         filePicker: win.filePicker
         daemon: win.daemon
+        night: win.nightState
         visible: win.tab.kind === "screensavers" && win.backend.problem === ""
         x: 30
         y: 84

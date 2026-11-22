@@ -15,7 +15,7 @@ import unittest
 MAIN = pathlib.Path(__file__).resolve().parent.parent / "daemon" / "main.cpp"
 
 # Calls that every platform must make.
-EVERYWHERE = ("setUpLightingRestore(",)
+EVERYWHERE = ("setUpLightingRestore(", "nightMode.resume(", "galleond::NightController nightMode(")
 
 
 def platform_conditions_around(lines, index):

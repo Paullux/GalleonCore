@@ -781,5 +781,20 @@
   "The live lighting will be put back when galleond starts, if it ended properly with the lighting on.": "Die Live-Beleuchtung wird beim Start von galleond wiederhergestellt, wenn es mit eingeschalteter Beleuchtung ordnungsgemäß beendet wurde.",
   "The live lighting stays off when galleond starts.": "Die Live-Beleuchtung bleibt beim Start von galleond aus.",
   "Off by default. When on, the live lighting is put back at the start of galleond only if it was on when galleond ended properly: after a crash, a freeze or a failure it stays off until you switch it on. It goes through the same checks as switching it on by hand, and refuses for the same reasons. Nothing is written to the keyboard's memory.": "Standardmäßig aus. Wenn aktiviert, wird die Live-Beleuchtung beim Start von galleond nur wiederhergestellt, wenn sie eingeschaltet war, als galleond ordnungsgemäß beendet wurde: Nach einem Absturz, einem Einfrieren oder einem Fehler bleibt sie aus, bis Sie sie einschalten. Es gelten dieselben Prüfungen wie beim manuellen Einschalten, und sie wird aus denselben Gründen abgelehnt. Es wird nichts in den Speicher der Tastatur geschrieben.",
-  "The choice could not be saved.": "Die Auswahl konnte nicht gespeichert werden."
+  "The choice could not be saved.": "Die Auswahl konnte nicht gespeichert werden.",
+  "Lights off until morning": "Licht aus bis zum Morgen",
+  "The module goes dark (brightness 0, black screen and keys) and the rings of the dials go out, until the time you choose. Nothing else lights them meanwhile: no screensaver, no music, no game, and the keys and dials do nothing. galleond brings everything back at that time, even if it is restarted before. The keyboard is not part of this yet.": "Das Modul wird dunkel (Helligkeit 0, schwarzer Bildschirm und schwarze Tasten) und die Ringe der Drehregler gehen aus, bis zur gewählten Uhrzeit. Nichts anderes beleuchtet sie in der Zwischenzeit: kein Bildschirmschoner, keine Musik, kein Spiel, und die Tasten und Drehregler tun nichts. galleond schaltet zu dieser Uhrzeit alles wieder ein, auch wenn es vorher neu gestartet wird. Die Tastatur gehört noch nicht dazu.",
+  "Until": "Bis",
+  "h": "Uhr",
+  "Bring the lights back now": "Jetzt wieder einschalten",
+  "Turn the lights off until %1": "Ausschalten bis %1",
+  "Asked galleond to bring the lights back.": "galleond wurde gebeten, wieder einzuschalten.",
+  "Asked galleond to turn the lights off until %1.": "galleond wurde gebeten, bis %1 auszuschalten.",
+  "The lights are off until %1.": "Das Licht ist aus bis %1.",
+  "The lights are on.": "Das Licht ist an.",
+  "Start galleond to turn the lights off": "galleond starten, um das Licht auszuschalten",
+  "Start galleond to turn the lights back on": "galleond starten, um das Licht wieder einzuschalten",
+  "Cannot turn the lights off: restart the updated daemon (%1)": "Das Licht kann nicht ausgeschaltet werden: aktualisierten Dienst neu starten (%1)",
+  "The lights could not be turned off: the time is not valid": "Das Licht konnte nicht ausgeschaltet werden: die Uhrzeit ist ungültig",
+  "Turning the lights off until morning is not available on Windows yet": "Das Ausschalten bis zum Morgen ist unter Windows noch nicht verfügbar"
 }

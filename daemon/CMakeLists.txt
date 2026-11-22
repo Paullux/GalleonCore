@@ -60,6 +60,8 @@ add_library(galleond_core STATIC
     LightingAppearanceApplier.h LightingAppearanceApplier.cpp
     RingSettings.h RingSettings.cpp
     LightingRestore.h LightingRestore.cpp
+    NightMode.h NightMode.cpp
+    NightController.h NightController.cpp
     MatrixRing.h MatrixRing.cpp
     RingSettingsApplier.h RingSettingsApplier.cpp
     LedPositions.h LedPositions.cpp

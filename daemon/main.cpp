@@ -27,6 +27,8 @@
 #include "RingSettingsApplier.h"
 #include "LightingController.h"
 #include "LightingRestore.h"
+#include "NightController.h"
+#include "NightMode.h"
 #include "LightingState.h"
 #include "LightingStatePublisher.h"
 #include "ProcessWatchdog.h"
@@ -871,6 +873,8 @@ int main(int argc, char *argv[])
     galleond::ScreenController controller(&deck, &renderer, galleond::WallpaperCatalog(wallpaperRoots), widgetFile,
                                           media.get(), nowPlayingRenderer.isValid() ? &nowPlayingRenderer : nullptr,
                                           thumbnails.get());
+    // "Lights off until morning" for the module and the dial rings (NightController.h): built here, wired below, on every platform.
+    galleond::NightController nightMode(&deck, galleond::nightModePath());
 #ifdef Q_OS_WIN
     QObject::connect(&controller, &galleond::ScreenController::deckAvailableChanged, &app, [&recordHid, &deck] {
         recordHid(deck.isOpen() ? QStringLiteral("connected %1").arg(deck.hidCollection())
@@ -915,9 +919,9 @@ int main(int argc, char *argv[])
         screensaver = std::make_unique<galleond::ScreensaverController>(&deck, media.get());
         const QString pagesFolder = QFileInfo(defaultPagesFile(parser.value(pagesOption))).absolutePath();
         QObject::connect(screensaver.get(), &galleond::ScreensaverController::activeChanged, pages.get(),
-                         [&pages, &controller](bool active) {
-                             pages->setSuspended(active);
-                             controller.setSuspended(active);
+                         [&pages, &controller, &nightMode](bool active) {
+                             pages->setSuspended(active || nightMode.isActive()); // the night keeps them asleep whatever ends
+                             controller.setSuspended(active || nightMode.isActive());
                          });
         // A wallpaper chosen in Bosun is user activity even while the video
         // covers the screen. Stop the video so the selected picture can appear.
@@ -940,18 +944,37 @@ int main(int argc, char *argv[])
         // The rain on the rings is set like the other colours of the rings (level, put out): the settings of the pages are asked at each picture.
         matrixRain->setRingSettingsSource([page = pages.get()] { return page->ringSettings(); });
         QObject::connect(matrixRain.get(), &galleond::MatrixRainController::activeChanged, pages.get(),
-                         [&pages, &controller, &screensaver](bool active) {
-                             pages->setSuspended(active);
-                             controller.setSuspended(active);
+                         [&pages, &controller, &screensaver, &nightMode](bool active) {
+                             pages->setSuspended(active || nightMode.isActive()); // the night keeps them asleep whatever ends
+                             controller.setSuspended(active || nightMode.isActive());
                              // The screensaver must not start over the letters.
-                             if (screensaver) screensaver->setInhibited(active || controller.gameActive());
+                             if (screensaver) screensaver->setInhibited(active || controller.gameActive() || nightMode.isActive());
                          });
-        matrixRain->setInhibited(controller.gameActive());
+        matrixRain->setInhibited(controller.gameActive() || nightMode.isActive());
         QObject::connect(&controller, &galleond::ScreenController::gameActiveChanged, matrixRain.get(),
-                         [&matrixRain](bool active) { matrixRain->setInhibited(active); });
+                         [&matrixRain, &nightMode](bool active) { matrixRain->setInhibited(active || nightMode.isActive()); });
     } else if (pages) {
         qWarning() << "galleond: MatrixRain.qml could not be loaded: no easter egg";
     }
+
+    // The night: nothing else draws on the module while it lasts, so the others are put to sleep the way the screensaver does it (pages and screen suspended, which also
+    // puts the rings out) and the screensaver and the green rain are kept from starting. The sleepers are put to sleep AFTER the inhibits, because
+    // inhibiting a running screensaver or rain wakes it, and waking un-suspends; at the end it is the other way round. A key or a dial used during the night does
+    // nothing (the pages are suspended). The module coming back (replugged) gets the dark again.
+    QObject::connect(&nightMode, &galleond::NightController::activeChanged, &nightMode,
+                     [&pages, &controller, &screensaver, &matrixRain](bool active) {
+                         const bool keepQuiet = active || controller.gameActive();
+                         if (screensaver) screensaver->setInhibited(keepQuiet);
+                         if (matrixRain) matrixRain->setInhibited(keepQuiet);
+                         if (active) {
+                             if (pages) pages->setSuspended(true);
+                             controller.setSuspended(true);
+                         } else {
+                             if (pages) pages->setSuspended(false);
+                             controller.setSuspended(false);
+                         }
+                     });
+    QObject::connect(&controller, &galleond::ScreenController::deckAvailableChanged, &nightMode, &galleond::NightController::reapply);
 
     const auto updateGamingPad = [&pages, &screensaver](bool active) {
         if (active && screensaver) screensaver->notifyActivity();
@@ -969,6 +992,7 @@ int main(int argc, char *argv[])
         return pages && pages->showThemePage(page);
     });
 
+    controller.setNightHandlers([&nightMode](int hour, int minute) { return nightMode.start(hour, minute); }, [&nightMode] { nightMode.end(); });
     controller.setScreensaverTestHandler([&screensaver](const QString &video) { return screensaver && screensaver->test(video); });
     controller.setThemePreviewHandlers(
         [&pages, &screensaver](const QString &page) {
@@ -1094,6 +1118,7 @@ int main(int argc, char *argv[])
     // and put back to "off" right now, so that a start that goes wrong is not repeated. Then the same Enable(true) as by hand, with all its refusals (the sleep
     // events, the watchdog): a refusal is only logged, and shown by Bosun in the state of the lighting. Nothing is written to the keyboard's memory.
     galleond::setUpLightingRestore(lighting, galleond::lightingRestorePath(), galleond::lightingMemoryPath()); // on every platform: not under a platform #if
+    nightMode.resume(); // on every platform: a night that was going on when galleond stopped goes on (the end time is in its file)
 
     if (parser.isSet(wallpaperOption)) {
         if (!controller.SetWallpaper(parser.value(wallpaperOption)))

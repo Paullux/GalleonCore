@@ -76,6 +76,11 @@ public:
     // The "Test" button of a screensaver video: galleond shows it on the module for a short time, until a key or a dial is used.
     // "" when the request was sent, else why not. Whether the module could show it comes back as commandError. Linux only for now.
     Q_INVOKABLE [[nodiscard]] QString testScreensaver(const QString &video);
+    // "Lights off until morning" for the module and the rings: galleond makes them dark until the next HH:MM, and brings them back at that time or
+    // on `endNight`. "" when the request was sent, else why not; whether it was taken comes back as the file night-mode.json (NightStateStore) or, if it was
+    // refused, as commandError. Linux only for now; on Windows they say so.
+    Q_INVOKABLE [[nodiscard]] QString startNight(int hour, int minute);
+    Q_INVOKABLE [[nodiscard]] QString endNight();
     Q_INVOKABLE void previewTheme(const QString &page);
     Q_INVOKABLE void endThemePreview();
     Q_INVOKABLE void endThemePreviewNow();
