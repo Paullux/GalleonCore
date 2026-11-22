@@ -781,5 +781,20 @@
   "The live lighting will be put back when galleond starts, if it ended properly with the lighting on.": "The live lighting will be put back when galleond starts, if it ended properly with the lighting on.",
   "The live lighting stays off when galleond starts.": "The live lighting stays off when galleond starts.",
   "Off by default. When on, the live lighting is put back at the start of galleond only if it was on when galleond ended properly: after a crash, a freeze or a failure it stays off until you switch it on. It goes through the same checks as switching it on by hand, and refuses for the same reasons. Nothing is written to the keyboard's memory.": "Off by default. When on, the live lighting is put back at the start of galleond only if it was on when galleond ended properly: after a crash, a freeze or a failure it stays off until you switch it on. It goes through the same checks as switching it on by hand, and refuses for the same reasons. Nothing is written to the keyboard's memory.",
-  "The choice could not be saved.": "The choice could not be saved."
+  "The choice could not be saved.": "The choice could not be saved.",
+  "Lights off until morning": "Lights off until morning",
+  "The module goes dark (brightness 0, black screen and keys) and the rings of the dials go out, until the time you choose. Nothing else lights them meanwhile: no screensaver, no music, no game, and the keys and dials do nothing. galleond brings everything back at that time, even if it is restarted before. The keyboard is not part of this yet.": "The module goes dark (brightness 0, black screen and keys) and the rings of the dials go out, until the time you choose. Nothing else lights them meanwhile: no screensaver, no music, no game, and the keys and dials do nothing. galleond brings everything back at that time, even if it is restarted before. The keyboard is not part of this yet.",
+  "Until": "Until",
+  "h": "h",
+  "Bring the lights back now": "Bring the lights back now",
+  "Turn the lights off until %1": "Turn the lights off until %1",
+  "Asked galleond to bring the lights back.": "Asked galleond to bring the lights back.",
+  "Asked galleond to turn the lights off until %1.": "Asked galleond to turn the lights off until %1.",
+  "The lights are off until %1.": "The lights are off until %1.",
+  "The lights are on.": "The lights are on.",
+  "Start galleond to turn the lights off": "Start galleond to turn the lights off",
+  "Start galleond to turn the lights back on": "Start galleond to turn the lights back on",
+  "Cannot turn the lights off: restart the updated daemon (%1)": "Cannot turn the lights off: restart the updated daemon (%1)",
+  "The lights could not be turned off: the time is not valid": "The lights could not be turned off: the time is not valid",
+  "Turning the lights off until morning is not available on Windows yet": "Turning the lights off until morning is not available on Windows yet"
 }

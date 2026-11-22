@@ -233,6 +233,30 @@ QString DaemonStatus::testScreensaver(const QString &video)
     return {};
 }
 
+QString DaemonStatus::startNight(int hour, int minute)
+{
+    if (!running()) return tr("Start galleond to turn the lights off");
+    auto message = QDBusMessage::createMethodCall(QString::fromLatin1(BusName), QStringLiteral("/org/galleoncore/Deck"), QString::fromLatin1(BusName), QStringLiteral("StartNight"));
+    message << hour << minute;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
+        const QDBusPendingReply<bool> reply = *watcher;
+        if (reply.isError()) Q_EMIT commandError(tr("Cannot turn the lights off: restart the updated daemon (%1)").arg(reply.error().message()));
+        else if (!reply.value()) Q_EMIT commandError(tr("The lights could not be turned off: the time is not valid"));
+        watcher->deleteLater();
+    });
+    return {};
+}
+
+QString DaemonStatus::endNight()
+{
+    if (!running()) return tr("Start galleond to turn the lights back on");
+    const auto message = QDBusMessage::createMethodCall(QString::fromLatin1(BusName), QStringLiteral("/org/galleoncore/Deck"), QString::fromLatin1(BusName), QStringLiteral("EndNight"));
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, watcher, &QObject::deleteLater);
+    return {};
+}
+
 void DaemonStatus::previewTheme(const QString &page)
 {
     if (!running()) return;

@@ -91,6 +91,8 @@ QString DaemonStatus::showTheme(const QString &page) {
 }
 // The tabs do not drive the module on Windows yet: the local endpoint has no such action.
 QString DaemonStatus::testScreensaver(const QString &) { return tr("Trying a screensaver on the module is not available on Windows yet"); }
+QString DaemonStatus::startNight(int, int) { return tr("Turning the lights off until morning is not available on Windows yet"); }
+QString DaemonStatus::endNight() { return tr("Turning the lights off until morning is not available on Windows yet"); }
 void DaemonStatus::previewTheme(const QString &) {}
 void DaemonStatus::endThemePreview() {}
 void DaemonStatus::endThemePreviewNow() {}

@@ -781,5 +781,20 @@
   "The live lighting will be put back when galleond starts, if it ended properly with the lighting on.": "L’éclairage en direct sera rétabli au démarrage de galleond, s’il s’est arrêté proprement avec l’éclairage allumé.",
   "The live lighting stays off when galleond starts.": "L’éclairage en direct reste éteint au démarrage de galleond.",
   "Off by default. When on, the live lighting is put back at the start of galleond only if it was on when galleond ended properly: after a crash, a freeze or a failure it stays off until you switch it on. It goes through the same checks as switching it on by hand, and refuses for the same reasons. Nothing is written to the keyboard's memory.": "Désactivé par défaut. Activé, l’éclairage en direct n’est rétabli au démarrage de galleond que s’il était allumé quand galleond s’est arrêté proprement : après un plantage, un blocage ou un échec, il reste éteint jusqu’à ce que vous l’allumiez. Il passe par les mêmes vérifications que l’allumage à la main et refuse pour les mêmes raisons. Rien n’est écrit dans la mémoire du clavier.",
-  "The choice could not be saved.": "Le choix n’a pas pu être enregistré."
+  "The choice could not be saved.": "Le choix n’a pas pu être enregistré.",
+  "Lights off until morning": "Éteint jusqu'au matin",
+  "The module goes dark (brightness 0, black screen and keys) and the rings of the dials go out, until the time you choose. Nothing else lights them meanwhile: no screensaver, no music, no game, and the keys and dials do nothing. galleond brings everything back at that time, even if it is restarted before. The keyboard is not part of this yet.": "Le module s'éteint (luminosité 0, écran et touches noirs) et les anneaux des molettes s'éteignent, jusqu'à l'heure que vous choisissez. Rien d'autre ne les rallume entre-temps : ni économiseur d'écran, ni musique, ni jeu, et les touches et les molettes ne font rien. galleond remet tout à cette heure-là, même s'il est redémarré avant. Le clavier n'en fait pas encore partie.",
+  "Until": "Jusqu'à",
+  "h": "h",
+  "Bring the lights back now": "Rallumer maintenant",
+  "Turn the lights off until %1": "Éteindre jusqu'à %1",
+  "Asked galleond to bring the lights back.": "galleond a été prié de rallumer.",
+  "Asked galleond to turn the lights off until %1.": "galleond a été prié d'éteindre jusqu'à %1.",
+  "The lights are off until %1.": "Éteint jusqu'à %1.",
+  "The lights are on.": "Allumé.",
+  "Start galleond to turn the lights off": "Démarrez galleond pour éteindre",
+  "Start galleond to turn the lights back on": "Démarrez galleond pour rallumer",
+  "Cannot turn the lights off: restart the updated daemon (%1)": "Impossible d'éteindre : redémarrez le démon à jour (%1)",
+  "The lights could not be turned off: the time is not valid": "L'extinction n'a pas pu être faite : l'heure n'est pas valide",
+  "Turning the lights off until morning is not available on Windows yet": "L'extinction jusqu'au matin n'est pas encore disponible sous Windows"
 }

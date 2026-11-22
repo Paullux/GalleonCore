@@ -24,6 +24,8 @@ namespace galleond {
 bool ScreenController::ShowGaming() { return m_showGaming && m_showGaming(); }
 bool ScreenController::ShowTheme(const QString &page) { return m_showTheme && m_showTheme(page); }
 bool ScreenController::TestScreensaver(const QString &video) { return m_testScreensaver && m_testScreensaver(video); }
+bool ScreenController::StartNight(int hour, int minute) { return m_startNight && m_startNight(hour, minute); }
+void ScreenController::EndNight() { if (m_endNight) m_endNight(); }
 bool ScreenController::PreviewTheme(const QString &page) { return m_previewTheme && m_previewTheme(page); }
 void ScreenController::EndThemePreview() { if (m_endThemePreview) m_endThemePreview(); }
 

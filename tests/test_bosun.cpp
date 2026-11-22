@@ -9,6 +9,8 @@
 #include "RingStore.h"
 #include "KeyCalibration.h"
 #include "LightingRestoreStore.h"
+#include "NightStateStore.h"
+#include <NightMode.h>
 #include <LightingRestore.h>
 #include "WallpaperLibrary.h"
 #include "Required.h"
@@ -1029,6 +1031,74 @@ QtObject {
         QVERIFY(page);
         QVERIFY(page->property("messageIsError").toBool()); // galleond does not run: the page says so, and shows nothing
         QVERIFY(page->property("message").toString().contains(QStringLiteral("galleond")));
+    }
+
+    // "Lights off until morning": the section is there only with its state, shows the end, and asks galleond (not running here: the page says so).
+    void theNightSectionShowsTheStateAndAsksGalleondAndSaysWhyWhenItCannot()
+    {
+        const QTemporaryDir dir;
+        QVERIFY(writeFile(dir.filePath("a.mp4"), "x"));
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, saverPages(R"("a.mp4")")));
+        const bosun::BosunBackend backend(file, {.ffprobe = "/nonexistent/none", .ffmpeg = "/nonexistent/none", .thumbnailFolder = dir.filePath("thumbs")});
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        bosun::NightStateStore night(dir.filePath("night-mode.json"), [] { return qint64{1800000000}; }); // NOLINT(misc-const-correctness): refreshed below
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("padFollowsTabs"), false},
+                                     {QStringLiteral("nightState"), QVariant::fromValue(&night)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QVERIFY(root->setProperty("currentTab", root->property("tabs").toList().size() - 2)); // the screensavers: before the dials
+        const auto item = [root](const char *name) {
+            const auto found = namedItems(root, QString::fromLatin1(name));
+            return found.size() == 1 ? found.constFirst() : nullptr;
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(item("nightSection") != nullptr && item("nightSection")->isVisible(), 3000);
+        QQuickItem *toggle = item("nightToggle");
+        QVERIFY(toggle);
+        QVERIFY(!toggle->property("selected").toBool()); // the lights are on
+        QVERIFY(toggle->property("text").toString().contains(QStringLiteral("07:00"))); // the end offered, 7:00 by default
+        QVERIFY(QMetaObject::invokeMethod(toggle, "clicked")); // galleond does not run here: nothing is sent, and the page says why
+        const QObject *page = root->findChild<QObject *>("screensaversPage");
+        QVERIFY(page);
+        QVERIFY(page->property("messageIsError").toBool());
+        QVERIFY(page->property("message").toString().contains(QStringLiteral("galleond")));
+        QVERIFY(galleond::writeNightUntil(dir.filePath("night-mode.json"), 1800003600)); // galleond turned the lights off
+        night.refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(toggle->property("selected").toBool(), 3000);
+        QVERIFY(item("nightState")->property("text").toString().contains(night.endTime()));
+    }
+
+    void theNightSectionIsNotThereWithoutItsState()
+    {
+        const QTemporaryDir dir;
+        QVERIFY(writeFile(dir.filePath("a.mp4"), "x"));
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, saverPages(R"("a.mp4")")));
+        const bosun::BosunBackend backend(file, {.ffprobe = "/nonexistent/none", .ffmpeg = "/nonexistent/none", .thumbnailFolder = dir.filePath("thumbs")});
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("padFollowsTabs"), false}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QVERIFY(root->setProperty("currentTab", root->property("tabs").toList().size() - 2));
+        QTRY_COMPARE_WITH_TIMEOUT(namedItems(root, QStringLiteral("screensaverTest")).size(), 1, 3000); // the page is up
+        const auto found = namedItems(root, QStringLiteral("nightSection"));
+        QVERIFY(found.isEmpty() || !found.constFirst()->isVisible());
     }
 
     void aRefusedEditSaysWhyAndChangesNothing()

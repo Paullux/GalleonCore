@@ -11,6 +11,10 @@ Flickable {
     property var filePicker: null
     required property var backend
     property var daemon: null // galleond: the module shows a video for the Test button
+    property var night: null // whether the lights are off until morning, and until when (NightStateStore); null in a test without it
+    property int nightHour: 7 // the end asked for
+    property int nightMinute: 0
+    readonly property string nightEndText: String(nightHour).padStart(2, "0") + ":" + String(nightMinute).padStart(2, "0")
     readonly property var saver: backend.screensaver
     property string message: ""
     property bool messageIsError: false
@@ -56,6 +60,85 @@ Flickable {
                 if (saverPage.saver.videos.length === 0)
                     return qsTr("Off: no video.")
                 return qsTr("On.")
+            }
+        }
+
+        // Lights off until morning: the module and the rings of the dials, until a time. galleond does it and brings them back by itself.
+        Rectangle {
+            objectName: "nightSection"
+            visible: saverPage.night !== null
+            width: parent.width
+            height: nightColumn.height + 28
+            radius: 10
+            color: "#1f2125"
+            border.width: 1
+            border.color: saverPage.night !== null && saverPage.night.active ? "#4caf50" : "#33ffffff"
+            Column {
+                id: nightColumn
+                x: 14
+                y: 14
+                width: parent.width - 28
+                spacing: 10
+                Text {
+                    color: "white"
+                    font.pixelSize: 16
+                    font.bold: true
+                    text: qsTr("Lights off until morning")
+                }
+                Text {
+                    width: parent.width
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    wrapMode: Text.Wrap
+                    text: qsTr("The module goes dark (brightness 0, black screen and keys) and the rings of the dials go out, until the time you choose. Nothing else lights them meanwhile: no screensaver, no music, no game, and the keys and dials do nothing. galleond brings everything back at that time, even if it is restarted before. The keyboard is not part of this yet.")
+                }
+                Row {
+                    spacing: 14
+                    Text {
+                        height: 32
+                        verticalAlignment: Text.AlignVCenter
+                        color: "#c9ced6"
+                        font.pixelSize: 14
+                        text: qsTr("Until")
+                    }
+                    Stepper {
+                        objectName: "nightHour"
+                        value: saverPage.nightHour
+                        from: 0
+                        to: 23
+                        unit: qsTr("h")
+                        onPicked: v => saverPage.nightHour = v
+                    }
+                    Stepper {
+                        objectName: "nightMinute"
+                        value: saverPage.nightMinute
+                        from: 0
+                        to: 55
+                        step: 5
+                        unit: qsTr("min")
+                        onPicked: v => saverPage.nightMinute = v
+                    }
+                }
+                Pill {
+                    objectName: "nightToggle"
+                    selected: saverPage.night !== null && saverPage.night.active
+                    text: saverPage.night !== null && saverPage.night.active ? qsTr("Bring the lights back now")
+                                                                                : qsTr("Turn the lights off until %1").arg(saverPage.nightEndText)
+                    onClicked: {
+                        if (saverPage.night.active)
+                            saverPage.answered(saverPage.daemon.endNight(), qsTr("Asked galleond to bring the lights back."))
+                        else
+                            saverPage.answered(saverPage.daemon.startNight(saverPage.nightHour, saverPage.nightMinute), qsTr("Asked galleond to turn the lights off until %1.").arg(saverPage.nightEndText))
+                    }
+                }
+                Text {
+                    objectName: "nightState"
+                    width: parent.width
+                    color: saverPage.night !== null && saverPage.night.active ? "#9be7a0" : "#9aa0a6"
+                    font.pixelSize: 13
+                    wrapMode: Text.Wrap
+                    text: saverPage.night !== null && saverPage.night.active ? qsTr("The lights are off until %1.").arg(saverPage.night.endTime) : qsTr("The lights are on.")
+                }
             }
         }
 

@@ -91,6 +91,11 @@ public:
 
     void setGamingHandler(std::function<bool()> handler) { m_showGaming = std::move(handler); }
     void setThemeHandler(std::function<bool(const QString &)> handler) { m_showTheme = std::move(handler); }
+    void setNightHandlers(std::function<bool(int, int)> start, std::function<void()> end)
+    {
+        m_startNight = std::move(start);
+        m_endNight = std::move(end);
+    }
     void setScreensaverTestHandler(std::function<bool(const QString &)> handler) { m_testScreensaver = std::move(handler); }
     void setThemePreviewHandlers(std::function<bool(const QString &)> begin, std::function<void()> end)
     {
@@ -117,6 +122,10 @@ public Q_SLOTS:
     // Bosun's "Test" button of a screensaver video (as the list writes it): shows it on the module for a short time, until a key
     // or a dial is used. False when it cannot be shown (a game, no module, one already running, not a video of the list).
     bool TestScreensaver(const QString &video);
+    // Bosun's "Lights off until morning": the module and the rings go dark until the next HH:MM (NightController.h). False for an hour or a minute out of range.
+    // `EndNight` brings the lights back now. Asked again during a night, StartNight only moves the end.
+    bool StartNight(int hour, int minute);
+    void EndNight();
     void EndThemePreview();
     // Shows this wallpaper (a catalog name such as "manga-classic/manga-classic-01.jpg").
     // False if the name is unknown or the frame could not be drawn.
@@ -140,6 +149,8 @@ private:
     std::function<bool(const QString &)> m_showTheme;
     std::function<bool(const QString &)> m_previewTheme;
     std::function<bool(const QString &)> m_testScreensaver;
+    std::function<bool(int, int)> m_startNight;
+    std::function<void()> m_endNight;
     std::function<void()> m_endThemePreview;
     void applyThemeWallpaper();
     QString m_themeWallpaper;       // what the current theme asks for (may be unknown to the catalog)
