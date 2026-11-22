@@ -55,7 +55,7 @@ LightingController::LightingController(Opener opener, WatchdogGuard &watchdog, P
 
 LightingController::~LightingController()
 {
-    finish({}); // the keys are given back before galleond goes, and the watchdog is not needed any more
+    finish({}, true); // the keys are given back before galleond goes, and the watchdog is not needed any more: a clean exit
 }
 
 QString LightingController::Enable(bool on)
@@ -82,6 +82,7 @@ QString LightingController::Enable(bool on)
     m_tool.reset(); // what a tool showed before is not carried over a switching off
     m_matrix = false;
     m_active = true;
+    remember(LightingMemory::Running); // from now on only a clean exit says that it may be put back
     Q_EMIT activeChanged(true);
     startWorker();
     return {};
@@ -213,7 +214,13 @@ bool LightingController::stopWorker()
     return released;
 }
 
-void LightingController::finish(const QString &detail)
+void LightingController::remember(LightingMemory memory) const
+{
+    if (m_remember)
+        m_remember(memory);
+}
+
+void LightingController::finish(const QString &detail, bool cleanExit)
 {
     m_resumeTimer.stop();
     m_resumeTriesLeft = 0;
@@ -228,6 +235,8 @@ void LightingController::finish(const QString &detail)
         m_watchdog.stop();
     m_power.allowSleep();
     m_active = false;
+    // Put back at the next start only after a clean exit with the keys confirmed back; any other end leaves it off until asked for again.
+    remember(released && cleanExit ? LightingMemory::CleanExit : LightingMemory::Off);
     setState(QStringLiteral("off"), released ? detail
                                              : tr("The keys could not be confirmed as given back. The watchdog keeps watching and gives them back when galleond ends.")
                                                    + (detail.isEmpty() ? QString() : QLatin1Char(' ') + detail));

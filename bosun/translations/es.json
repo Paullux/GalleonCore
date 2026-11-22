@@ -775,5 +775,11 @@
   "Start galleond to try a screensaver on the module": "Inicie galleond para probar un salvapantallas en el módulo",
   "Cannot try the screensaver: restart the updated daemon (%1)": "No se puede probar el salvapantallas: reinicie el servicio actualizado (%1)",
   "The screensaver could not be shown: a game is running, the module is not connected, or one is already on": "No se pudo mostrar el salvapantallas: hay un juego en marcha, el módulo no está conectado o ya hay uno activo",
-  "Trying a screensaver on the module is not available on Windows yet": "Probar un salvapantallas en el módulo aún no está disponible en Windows"
+  "Trying a screensaver on the module is not available on Windows yet": "Probar un salvapantallas en el módulo aún no está disponible en Windows",
+  "Do not put the live lighting back at start": "No restablecer la iluminación en directo al iniciar",
+  "Put the live lighting back at start": "Restablecer la iluminación en directo al iniciar",
+  "The live lighting will be put back when galleond starts, if it ended properly with the lighting on.": "La iluminación en directo se restablecerá al iniciar galleond, si terminó correctamente con la iluminación encendida.",
+  "The live lighting stays off when galleond starts.": "La iluminación en directo permanece apagada al iniciar galleond.",
+  "Off by default. When on, the live lighting is put back at the start of galleond only if it was on when galleond ended properly: after a crash, a freeze or a failure it stays off until you switch it on. It goes through the same checks as switching it on by hand, and refuses for the same reasons. Nothing is written to the keyboard's memory.": "Desactivado por defecto. Si se activa, la iluminación en directo solo se restablece al iniciar galleond si estaba encendida cuando galleond terminó correctamente: tras un fallo, un bloqueo o un error permanece apagada hasta que usted la encienda. Pasa por las mismas comprobaciones que encenderla a mano y se rechaza por las mismas razones. No se escribe nada en la memoria del teclado.",
+  "The choice could not be saved.": "No se pudo guardar la elección."
 }

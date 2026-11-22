@@ -8,6 +8,8 @@
 #include "AppearanceStore.h"
 #include "RingStore.h"
 #include "KeyCalibration.h"
+#include "LightingRestoreStore.h"
+#include <LightingRestore.h>
 #include "WallpaperLibrary.h"
 #include "Required.h"
 
@@ -2170,6 +2172,54 @@ QtObject {
         QCOMPARE(previewed(), QString());
     }
 
+    // "Put the live lighting back when galleond starts": a choice that is off until it is made, written to the file galleond reads.
+    void theLightingIsPutBackAtStartOnlyOnceChosenAndTheChoiceIsWrittenForGalleond()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        const bosun::AppearanceStore appearance{QString()};
+        bosun::LightingRestoreStore restore(dir.filePath("lighting-restore.json")); // NOLINT(misc-const-correctness): the QML calls its non-const methods
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("padFollowsTabs"), false},
+                                     {QStringLiteral("lightingRestore"), QVariant::fromValue(&restore)},
+                                     {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QVERIFY(root->setProperty("currentTab", 3)); // the keyboard
+        auto *window = qobject_cast<QQuickWindow *>(root);
+        QVERIFY(window);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        root->setProperty("keyboardView", QStringLiteral("lighting"));
+        const auto shown = [root](const char *name) {
+            const auto found = namedItems(root, QString::fromLatin1(name));
+            return found.size() == 1 && found.constFirst()->isVisible();
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(shown("lightingRestoreToggle"), 3000);
+        QVERIFY(shown("lightingRestoreNote"));
+        QQuickItem *toggle = namedItems(root, QStringLiteral("lightingRestoreToggle")).constFirst();
+        QVERIFY(!toggle->property("selected").toBool()); // off until chosen
+        QVERIFY(!restore.restore());
+        QVERIFY(!QFile::exists(dir.filePath("lighting-restore.json"))); // looking at the tab writes nothing
+        QVERIFY(QMetaObject::invokeMethod(toggle, "clicked"));
+        QVERIFY(restore.restore());
+        QVERIFY(toggle->property("selected").toBool());
+        QCOMPARE(galleond::readLightingRestore(dir.filePath("lighting-restore.json")).value_or(false), true); // what galleond reads
+        QVERIFY(!QFile::exists(dir.filePath("lighting-memory.json"))); // the window never writes what galleond remembers
+        QVERIFY(QMetaObject::invokeMethod(toggle, "clicked"));
+        QVERIFY(!restore.restore());
+    }
+
     void theKeyCalibrationIsNotOnTheKeyboardTabUnlessBosunWasStartedForIt()
     {
         // Without --mapkeys Bosun is given no calibration: the lighting view shows no trace of it.
@@ -2203,6 +2253,7 @@ QtObject {
         };
         QTRY_VERIFY_WITH_TIMEOUT(shown("lightingToggle"), 3000); // the view is up, the rest of its tools are there
         QVERIFY(shown("keyboardMap"));
+        QVERIFY(!shown("lightingRestoreToggle")); // no store of the choice given: nothing is offered
         for (const char *name : {"calibrationBegin", "calibrationRestart", "calibrationNeedsLighting", "calibrationPanel"})
             QVERIFY2(!shown(name), name);
     }

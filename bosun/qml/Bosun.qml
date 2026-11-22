@@ -25,6 +25,7 @@ Window {
     property var updates: null
     property var appearance: null // the appearance of the live lighting (AppearanceStore): written to lighting-appearance.json at every change
     property var rings: null // the settings of the rings of the dials (RingStore): written to dial-rings.json at every change
+    property var lightingRestore: null // the choice "put the live lighting back when galleond starts" (LightingRestoreStore); null in a test without it
     property var keyCalibration: null // the calibration of the key map (KeyCalibration): off until the person starts it
     property bool updatesOpen: false
 
@@ -735,6 +736,25 @@ Window {
                         const base = names[win.daemon.lightingState] !== undefined ? names[win.daemon.lightingState] : win.daemon.lightingState
                         return win.daemon.lightingDetail !== "" ? base + " · " + win.daemon.lightingDetail : base
                     }
+                }
+                // Putting the lighting back when galleond starts: off unless chosen here.
+                Pill {
+                    objectName: "lightingRestoreToggle"
+                    visible: win.daemon.lightingSupported && win.lightingRestore !== null
+                    selected: win.lightingRestore !== null && win.lightingRestore.restore
+                    text: win.lightingRestore !== null && win.lightingRestore.restore ? qsTr("Do not put the live lighting back at start") : qsTr("Put the live lighting back at start")
+                    onClicked: win.answered(win.lightingRestore.setRestore(!win.lightingRestore.restore),
+                                            win.lightingRestore.restore ? qsTr("The live lighting will be put back when galleond starts, if it ended properly with the lighting on.")
+                                                                        : qsTr("The live lighting stays off when galleond starts."))
+                }
+                Text {
+                    objectName: "lightingRestoreNote"
+                    visible: win.daemon.lightingSupported && win.lightingRestore !== null
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: qsTr("Off by default. When on, the live lighting is put back at the start of galleond only if it was on when galleond ended properly: after a crash, a freeze or a failure it stays off until you switch it on. It goes through the same checks as switching it on by hand, and refuses for the same reasons. Nothing is written to the keyboard's memory.")
                 }
                 Text {
                     objectName: "liveBrightnessNote"
