@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cstdint>
 #include <optional>
 
@@ -176,6 +177,17 @@ std::optional<const char *> keyName(HidUsage usage)
 {
     const KeyRow *row = findKey([usage](const KeyRow &key) { return key.usage == usage; });
     return row == nullptr ? std::nullopt : std::optional<const char *>(row->name);
+}
+
+std::optional<HidUsage> hidUsageFromKeyName(std::string_view name)
+{
+    const auto same = [name](const char *known) {
+        const std::string_view other(known);
+        return other.size() == name.size()
+               && std::equal(name.begin(), name.end(), other.begin(), [](char a, char b) { return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b)); });
+    };
+    const KeyRow *row = findKey([&same](const KeyRow &key) { return same(key.name); });
+    return row == nullptr ? std::nullopt : std::optional<HidUsage>(row->usage);
 }
 
 } // namespace galleon::keyboard

@@ -56,6 +56,14 @@ class TestKeyMapFile : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void theMeasuredMapBuiltIntoTheProgramIsValidAndKnowsTheTopRow()
+    {
+        const auto &map = builtInKeyMap();
+        QCOMPARE(map.ledForKey(0x3A).value_or(0xFFFF), std::uint16_t{58}); // F1
+        QCOMPARE(map.ledForKey(0x3B).value_or(0xFFFF), std::uint16_t{59}); // F2
+        QVERIFY(!map.ledForKey(0xFFFE).has_value());                       // nothing is guessed for a key that is not in it
+    }
+
     void aMapSurvivesBeingEncodedAndParsed()
     {
         const KeyMapFile file = sample();

@@ -46,6 +46,9 @@ inline constexpr int MaxKeyMapFirmware = 40;
 [[nodiscard]] QString keyMapPath();
 // Atomic (written aside, then renamed). Creates the folder. False on failure.
 [[nodiscard]] bool writeKeyMap(const QString &path, const KeyMapFile &file);
+// The measured map compiled into the program (data/devices/galleon-100-sd-keymap.json): which LED lights which key. Read once; empty (no LED known)
+// if the resource could not be read or is not valid, which a test catches. It names only what was measured: a key that is not in it has no LED here.
+[[nodiscard]] const galleon::keyboard::KeyMap &builtInKeyMap();
 // Nothing for a missing, unreadable, oversized or invalid file.
 [[nodiscard]] std::optional<KeyMapFile> readKeyMap(const QString &path, QString *why = nullptr);
 

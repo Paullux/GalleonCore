@@ -140,6 +140,7 @@ qt_add_resources(galleond_core "galleond_data"
     PREFIX "/galleond"
     BASE ${PROJECT_SOURCE_DIR}/data/devices
     FILES ${PROJECT_SOURCE_DIR}/data/devices/galleon-100-sd-led-positions.json
+          ${PROJECT_SOURCE_DIR}/data/devices/galleon-100-sd-keymap.json
 )
 
 qt_add_resources(galleond_core "galleond_ui"

@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <string_view>
 
 // The identity of a PHYSICAL key, independent of the layout (AZERTY, QWERTY...) and of the characters the system
 // produces: the USB HID usage of the key on the Keyboard/Keypad page (0x07). It is also what the keyboard's lighting
@@ -57,5 +58,10 @@ enum class QtScanCodeSystem : std::uint8_t { Linux, Windows };
 
 // A short English name of the key ("A", "F1", "Left Control"), for a person to read; nullopt for a usage not in the tables.
 [[nodiscard]] std::optional<const char *> keyName(HidUsage usage);
+
+// The reverse of keyName: the usage of the key with that name ("F3", "left control"), the capitals do not matter and nothing else is tolerated (no
+// spaces trimmed, no part of a name). For the keys whose engraving depends on the layout (isLayoutDependent) the name is that of a QWERTY keyboard: it
+// names the PHYSICAL place, so "Q" is the key that says A on an AZERTY keyboard. nullopt for a name not in the tables.
+[[nodiscard]] std::optional<HidUsage> hidUsageFromKeyName(std::string_view name);
 
 } // namespace galleon::keyboard

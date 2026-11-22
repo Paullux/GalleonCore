@@ -8,6 +8,7 @@
 #include <galleon/keyboard/AppearancePlayer.h>
 #include <galleon/keyboard/LiveFrame.h>
 #include <galleon/keyboard/LiveLink.h>
+#include <galleon/keyboard/KeySignals.h>
 #include <galleon/keyboard/LiveScene.h>
 
 #include <QDebug>
@@ -44,7 +45,7 @@ public:
     LightingWorker(LightingController::Opener opener, LightingController::Clock clock, const galleon::keyboard::Appearance &appearance,
                    std::optional<galleon::keyboard::LiveScene> tool, std::vector<galleon::keyboard::LedPosition> positions,
                    std::function<double()> dayHours = [] { return 12.0; }, std::function<galleon::keyboard::SkyDay()> skyDay = [] { return galleon::keyboard::SkyDay{}; })
-        : m_opener(std::move(opener)), m_clock(std::move(clock)), m_dayHours(std::move(dayHours)), m_skyDay(std::move(skyDay)), m_tool(tool), m_toolDirty(tool.has_value())
+        : m_opener(std::move(opener)), m_clock(std::move(clock)), m_dayHours(std::move(dayHours)), m_skyDay(std::move(skyDay)), m_tool(tool), m_toolDirty(tool.has_value()), m_level(appearance.level)
     {
         m_player.setPositions(std::move(positions));
         static_cast<void>(m_player.setAppearance(appearance, 0.0)); // the controller only hands over valid appearances
@@ -68,6 +69,9 @@ public Q_SLOTS:
         m_player.resend();
         m_toolDirty = m_tool.has_value();
         m_pending.reset();
+        m_base.reset();
+        m_lastSent.reset();
+        m_baseChanged = false;
         m_timer = std::make_unique<QTimer>();
         m_timer->setInterval(lighting::TickMs);
         connect(m_timer.get(), &QTimer::timeout, this, &LightingWorker::tick);
@@ -88,11 +92,20 @@ public Q_SLOTS:
         m_tool.reset();
         m_toolDirty = false;
         m_pending.reset();
+        m_level = appearance.level;
         static_cast<void>(m_player.setAppearance(appearance, secondsSince(m_clock())));
     }
 
     // The level of the appearance only (a curve of the day changes it every hour): the rainbow keeps its place.
-    void setLevel(int level) { static_cast<void>(m_player.setLevel(level)); }
+    void setLevel(int level)
+    {
+        m_level = level;
+        static_cast<void>(m_player.setLevel(level));
+    }
+
+    // The keys that programs asked to be lit (KeySignals.h), drawn over what the keyboard shows, at the brightness in force: dark at night. The board is
+    // checked and bounded by the controller; this thread only plays it. A copy is handed over each time it changes.
+    void setSignals(galleon::keyboard::SignalBoard board) { m_signals = std::move(board); }
 
     // Called with a blocking connection: it returns once the keys are given back and the keyboard is closed. True when the
     // keyboard is known to be back in its own mode (or nothing was held); false when the release could not be confirmed,
@@ -151,15 +164,38 @@ private:
             m_toolDirty = m_tool.has_value();
             m_player.resend();
             m_pending.reset();
+            m_lastSent.reset();
+            m_baseChanged = m_base.has_value();
         }
         if (m_link->status() != LiveLink::Status::Holding || !m_link->keysTaken())
             return;
-        if (m_tool) { // a tool is showing something: that is what the keyboard gets
+        updateBase(now);
+        if (!m_base)
+            return;
+        // What the keyboard gets: the picture of the appearance (or of a tool), with the signals over it. Sent when either changed; a signal that
+        // breathes or ends changes it by itself, without anyone asking.
+        const double at = signalSeconds(now);
+        m_signals.expire(at);
+        const auto frame = galleon::keyboard::withSignals(*m_base, m_signals.overlay(at), m_level);
+        if (!m_baseChanged && m_lastSent && *m_lastSent == frame)
+            return;
+        if (m_link->show(frame, now) == LiveLink::ShowResult::Sent) { // else it is tried again at the next tick (dropped for pacing, or failed)
+            noteSent(frame);
+            m_lastSent = frame;
+            m_baseChanged = false;
+            m_toolDirty = false;
+            m_pending.reset();
+        }
+    }
+
+    // The picture under the signals: a tool's scene if there is one, else what the appearance plays. Unchanged when there is nothing new.
+    void updateBase(LiveClock::time_point now)
+    {
+        if (m_tool) {
             if (m_toolDirty) {
-                const auto frame = galleon::keyboard::sceneFrame(*m_tool);
-                if (frame && m_link->show(*frame, now) == LiveLink::ShowResult::Sent) {
-                    m_toolDirty = false; // dropped for pacing, or failed: it is tried again at the next tick
-                    noteSent(*frame);
+                if (const auto frame = galleon::keyboard::sceneFrame(*m_tool)) {
+                    m_base = *frame;
+                    m_baseChanged = true;
                 }
             }
             return;
@@ -168,15 +204,11 @@ private:
             m_pending = m_player.sceneAt(secondsSince(now), m_dayHours(), m_skyDay()); // nothing when it is the scene already shown
         if (!m_pending)
             return;
-        const auto frame = galleon::keyboard::sceneFrame(*m_pending);
-        if (!frame) {
-            m_pending.reset(); // a scene that cannot be made into a frame is dropped, never sent half
-            return;
+        if (const auto frame = galleon::keyboard::sceneFrame(*m_pending)) {
+            m_base = *frame;
+            m_baseChanged = true;
         }
-        if (m_link->show(*frame, now) == LiveLink::ShowResult::Sent) {
-            noteSent(*frame);
-            m_pending.reset(); // else it is kept for the next tick (dropped for pacing, or failed)
-        }
+        m_pending.reset(); // a scene that cannot be made into a frame is dropped, never sent half
     }
 
     // The number of LEDs of a frame that are not black. Said in the log when it changes, so that a dark picture does not pass for a lit one.
@@ -194,6 +226,8 @@ private:
         }
     }
 
+    // The time of the signals: seconds of the clock itself, the same as the controller counts them in.
+    [[nodiscard]] static double signalSeconds(LiveClock::time_point now) { return std::chrono::duration<double>(now.time_since_epoch()).count(); }
     [[nodiscard]] double secondsSince(LiveClock::time_point now) const { return std::chrono::duration<double>(now - m_origin).count(); }
 
     LightingController::Opener m_opener;
@@ -210,6 +244,11 @@ private:
     std::optional<galleon::keyboard::LiveScene> m_pending; // a scene from the player that has not been sent yet
     std::optional<galleon::keyboard::LiveScene> m_tool;
     bool m_toolDirty = false;
+    int m_level;                                // the brightness in force, for the signals
+    galleon::keyboard::SignalBoard m_signals;
+    std::optional<galleon::keyboard::LiveFrame> m_base;     // the picture under the signals
+    std::optional<galleon::keyboard::LiveFrame> m_lastSent; // what the keyboard was last given
+    bool m_baseChanged = false;                              // the picture under the signals has not been sent yet
     int m_loggedLit = -1; // the number of lit LEDs last said in the log
 };
 

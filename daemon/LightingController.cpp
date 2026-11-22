@@ -3,6 +3,7 @@
 
 #include "LightingController.h"
 
+#include "KeyMapFile.h"
 #include "LedPositions.h"
 #include "LightingWorker.h"
 
@@ -22,7 +23,7 @@ using galleon::keyboard::LiveClock;
 
 LightingController::LightingController(Opener opener, WatchdogGuard &watchdog, PowerEvents &power, Clock clock, QObject *parent)
     : QObject(parent), m_opener(std::move(opener)), m_clock(clock ? std::move(clock) : Clock([] { return LiveClock::now(); })),
-      m_watchdog(watchdog), m_power(power), m_positions(builtInLedPositions())
+      m_watchdog(watchdog), m_power(power), m_positions(builtInLedPositions()), m_keyMap(builtInKeyMap())
 {
     connect(&m_watchdog, &WatchdogGuard::died, this, [this] {
         if (m_active)
@@ -205,6 +206,62 @@ double systemDayHours()
     return now.hour() + now.minute() / 60.0 + now.second() / 3600.0;
 }
 
+double LightingController::signalSeconds() const
+{
+    return std::chrono::duration<double>(m_clock().time_since_epoch()).count(); // the same measure as the worker's
+}
+
+void LightingController::sendSignals()
+{
+    if (!m_worker)
+        return; // asleep, or not started yet: startWorker hands the board over
+    QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), board = m_signals] { worker->setSignals(board); }, Qt::QueuedConnection);
+}
+
+QString LightingController::setSignal(const QString &client, const QString &key, int red, int green, int blue, galleon::keyboard::SignalEffect effect,
+                                      double seconds)
+{
+    using galleon::keyboard::SignalBoard;
+    if (!m_active)
+        return tr("The lighting is off: a signal is only shown while it is on.");
+    for (const int channel : {red, green, blue}) {
+        if (channel < 0 || channel > 255)
+            return tr("A colour is made of three numbers from 0 to 255.");
+    }
+    const auto usage = galleon::keyboard::hidUsageFromKeyName(key.toStdString());
+    if (!usage)
+        return tr("This is not the name of a key.");
+    const auto led = m_keyMap.ledForKey(*usage);
+    if (!led)
+        return tr("The light of this key has not been measured yet.");
+    const galleon::keyboard::Rgb colour{static_cast<std::uint8_t>(red), static_cast<std::uint8_t>(green), static_cast<std::uint8_t>(blue)};
+    switch (m_signals.set(client.toStdString(), *led, colour, effect, signalSeconds(), seconds)) {
+    case SignalBoard::Result::Ok:
+        sendSignals();
+        return {};
+    case SignalBoard::Result::BadClient: return tr("The name of the program is 1 to 64 plain characters.");
+    case SignalBoard::Result::BadLed: return tr("This key cannot be lit.");
+    case SignalBoard::Result::BadSeconds: return tr("A signal lasts from 1 second to 24 hours.");
+    case SignalBoard::Result::TooManyClients: return tr("Too many programs have signals already.");
+    case SignalBoard::Result::TooManySignals: return tr("Too many signals are lit already.");
+    }
+    return tr("The signal was refused.");
+}
+
+bool LightingController::clearSignals(const QString &client, const QString &key)
+{
+    bool cleared = false;
+    if (key.isEmpty()) {
+        cleared = m_signals.clear(client.toStdString());
+    } else if (const auto usage = galleon::keyboard::hidUsageFromKeyName(key.toStdString())) {
+        if (const auto led = m_keyMap.ledForKey(*usage))
+            cleared = m_signals.clear(client.toStdString(), *led);
+    }
+    if (cleared)
+        sendSignals();
+    return cleared;
+}
+
 galleon::keyboard::Appearance LightingController::shownAppearance() const
 {
     galleon::keyboard::Appearance shown = m_appearance;
@@ -220,6 +277,7 @@ void LightingController::startWorker()
 {
     setState(QStringLiteral("starting"), {});
     m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, shownAppearance(), m_night ? std::nullopt : m_tool, m_positions, m_dayHours, m_skyDay);
+    m_worker->setSignals(m_signals); // before it moves: nobody else touches it yet
     m_worker->moveToThread(&m_thread);
     connect(m_worker.get(), &LightingWorker::reported, this, &LightingController::onWorkerState);
     m_thread.start();
@@ -253,6 +311,7 @@ void LightingController::finish(const QString &detail, bool cleanExit)
     m_resumeTimer.stop();
     m_resumeTriesLeft = 0;
     m_matrix = false;
+    m_signals.clearAll(); // a signal is for a lighting that is on: the next one starts clean
     const bool released = stopWorker();
     if (!m_active)
         return;
