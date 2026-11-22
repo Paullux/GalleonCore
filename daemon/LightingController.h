@@ -118,7 +118,15 @@ public:
     // False, and nothing done, when the lighting is off.
     bool setMatrixRain(bool on);
     [[nodiscard]] bool matrixRain() const { return m_matrix; }
-    [[nodiscard]] int effectiveLevel() const { return m_levelOverride.value_or(m_appearance.level); }
+    [[nodiscard]] int effectiveLevel() const { return m_night ? 0 : m_levelOverride.value_or(m_appearance.level); }
+
+    // "Lights off until morning" (NightController.h) for the keyboard: while it lasts the keys show black WHATEVER the appearance, the level override (the curve of
+    // the day) or a tool says, and they stay HELD by galleond with black pictures, as the lesson of Aaryush1 on #111 asks (stopping the program would let the keyboard
+    // fall back to its own profile, which is lit). Only while the live lighting is on: with it off the keyboard shows its own profile, as always, and nothing here
+    // switches it on. A lighting switched on during the night starts dark. The keyboard's own brightness property is never touched (it is kept inside the keyboard
+    // across a replug). A tool's scene (SetColor, SetLed, SetLeds) is not shown during the night. Ending the night shows the appearance again.
+    void setNight(bool night);
+    [[nodiscard]] bool night() const { return m_night; }
 
     // The lighting put back when galleond starts (LightingRestore.h): the same as Enable(true), with every refusal, but a keyboard that is not on the bus yet
     // is waited for, the way it is after waking up (opening is tried again every ResumeRetryMs, at most ResumeAttempts times, then it stays off). A refusal is
@@ -173,6 +181,7 @@ private:
     std::optional<int> m_levelOverride;
     AppearanceAnnouncer m_announcer; // not a child, and never put on the bus
     bool m_matrix = false; // the hidden rain is showing
+    bool m_night = false;  // the keys are dark until the night ends
     std::function<double()> m_dayHours = [] { return systemDayHours(); };
     std::function<galleon::keyboard::SkyDay()> m_skyDay = [] { return galleon::keyboard::SkyDay{}; };
     std::optional<galleon::keyboard::LiveScene> m_tool; // what a tool shows over it, if one does

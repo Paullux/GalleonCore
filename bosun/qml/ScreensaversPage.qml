@@ -90,7 +90,7 @@ Flickable {
                     color: "#9aa0a6"
                     font.pixelSize: 13
                     wrapMode: Text.Wrap
-                    text: qsTr("The module goes dark (brightness 0, black screen and keys) and the rings of the dials go out, until the time you choose. Nothing else lights them meanwhile: no screensaver, no music, no game, and the keys and dials do nothing. galleond brings everything back at that time, even if it is restarted before. The keyboard is not part of this yet.")
+                    text: qsTr("The module goes dark (brightness 0, black screen and keys) and the rings of the dials go out, until the time you choose. Nothing else lights them meanwhile: no screensaver, no music, no game, and the keys and dials do nothing. galleond brings everything back at that time, even if it is restarted before. The keyboard goes dark too, but only while the live lighting is on: galleond then keeps holding its keys with black, and a lighting switched on during the night starts dark. With the live lighting off, the keyboard shows its own profile as always. The keyboard's own brightness is never changed.")
                 }
                 Row {
                     spacing: 14

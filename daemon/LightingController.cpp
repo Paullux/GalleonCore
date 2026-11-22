@@ -131,6 +131,8 @@ bool LightingController::SetLeds(const QList<int> &values)
 
 bool LightingController::showScene(const galleon::keyboard::LiveScene &scene)
 {
+    if (m_night)
+        return false; // it is night: nothing is shown over the black
     m_tool = scene; // a tool shows this, over the appearance, until the appearance is set again
     if (m_worker)
         QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), scene] { worker->setToolScene(scene); }, Qt::QueuedConnection);
@@ -167,6 +169,24 @@ bool LightingController::setMatrixRain(bool on)
     return true;
 }
 
+void LightingController::setNight(bool night)
+{
+    if (night == m_night)
+        return;
+    m_night = night;
+    if (night)
+        m_tool.reset(); // what a tool showed is let go: the keys go black
+    if (!m_worker)
+        return; // not on: the next start shows what the night says (startWorker)
+    if (night) {
+        // The appearance again, at level 0: this also lets go of a tool's scene on the worker, which would otherwise be shown over the black.
+        const galleon::keyboard::Appearance shown = shownAppearance();
+        QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), shown] { worker->setAppearance(shown); }, Qt::QueuedConnection);
+    } else {
+        QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), level = effectiveLevel()] { worker->setLevel(level); }, Qt::QueuedConnection);
+    }
+}
+
 bool LightingController::setLevelOverride(std::optional<int> level)
 {
     if (level && (*level < 0 || *level > galleon::keyboard::LevelFull))
@@ -199,7 +219,7 @@ galleon::keyboard::Appearance LightingController::shownAppearance() const
 void LightingController::startWorker()
 {
     setState(QStringLiteral("starting"), {});
-    m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, shownAppearance(), m_tool, m_positions, m_dayHours, m_skyDay);
+    m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, shownAppearance(), m_night ? std::nullopt : m_tool, m_positions, m_dayHours, m_skyDay);
     m_worker->moveToThread(&m_thread);
     connect(m_worker.get(), &LightingWorker::reported, this, &LightingController::onWorkerState);
     m_thread.start();
