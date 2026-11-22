@@ -26,6 +26,7 @@
 #include "RingSettings.h"
 #include "RingSettingsApplier.h"
 #include "LightingController.h"
+#include "LightingRestore.h"
 #include "LightingState.h"
 #include "LightingStatePublisher.h"
 #include "ProcessWatchdog.h"
@@ -1073,6 +1074,26 @@ int main(int argc, char *argv[])
     QObject::connect(&localControl, &galleond::LocalControl::lightingColorRequested, &lighting, [&lighting](int red, int green, int blue) { static_cast<void>(lighting.SetColor(red, green, blue)); });
     QObject::connect(&localControl, &galleond::LocalControl::lightingLedRequested, &lighting, [&lighting](int led, int red, int green, int blue) { static_cast<void>(lighting.SetLed(led, red, green, blue)); });
     QObject::connect(&localControl, &galleond::LocalControl::lightingLedsRequested, &lighting, [&lighting](const QList<int> &values) { static_cast<void>(lighting.SetLeds(values)); });
+
+    // Putting the lighting back after a restart, if the person asked for it (a checkbox in Bosun, off by default) AND galleond last ended properly with the
+    // lighting on: after a crash, a freeze or a failure it stays off. The controller says how it stands (the memory, written by galleond only); the memory is read
+    // and put back to "off" right now, so that a start that goes wrong is not repeated. Then the same Enable(true) as by hand, with all its refusals (the sleep
+    // events, the watchdog): a refusal is only logged, and shown by Bosun in the state of the lighting. Nothing is written to the keyboard's memory.
+    lighting.setRememberHook([path = galleond::lightingMemoryPath()](galleond::LightingMemory memory) {
+        if (!galleond::writeLightingMemory(path, memory))
+            qWarning() << "galleond: the memory of the live lighting could not be written: it will not be put back at the next start";
+    });
+    if (galleond::consumeLightingRestore(galleond::lightingRestorePath(), galleond::lightingMemoryPath())) {
+        QTimer::singleShot(galleond::LightingRestoreDelayMs, &lighting, [&lighting] {
+            if (lighting.active())
+                return; // someone switched it on in the meantime
+            const QString refusal = lighting.Enable(true);
+            if (refusal.isEmpty())
+                qInfo() << "galleond: the live lighting is put back, as asked";
+            else
+                qWarning().noquote() << "galleond: the live lighting could not be put back:" << refusal;
+        });
+    }
     QObject::connect(&localControl, &galleond::LocalControl::gamingRequested, &controller, [&controller] { controller.ShowGaming(); });
     QObject::connect(&localControl, &galleond::LocalControl::themeRequested, &controller, [&controller](const QString &page) { controller.ShowTheme(page); });
     QObject::connect(&localControl, &galleond::LocalControl::wallpaperRequested,

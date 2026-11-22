@@ -775,5 +775,11 @@
   "Start galleond to try a screensaver on the module": "Start galleond to try a screensaver on the module",
   "Cannot try the screensaver: restart the updated daemon (%1)": "Cannot try the screensaver: restart the updated daemon (%1)",
   "The screensaver could not be shown: a game is running, the module is not connected, or one is already on": "The screensaver could not be shown: a game is running, the module is not connected, or one is already on",
-  "Trying a screensaver on the module is not available on Windows yet": "Trying a screensaver on the module is not available on Windows yet"
+  "Trying a screensaver on the module is not available on Windows yet": "Trying a screensaver on the module is not available on Windows yet",
+  "Do not put the live lighting back at start": "Do not put the live lighting back at start",
+  "Put the live lighting back at start": "Put the live lighting back at start",
+  "The live lighting will be put back when galleond starts, if it ended properly with the lighting on.": "The live lighting will be put back when galleond starts, if it ended properly with the lighting on.",
+  "The live lighting stays off when galleond starts.": "The live lighting stays off when galleond starts.",
+  "Off by default. When on, the live lighting is put back at the start of galleond only if it was on when galleond ended properly: after a crash, a freeze or a failure it stays off until you switch it on. It goes through the same checks as switching it on by hand, and refuses for the same reasons. Nothing is written to the keyboard's memory.": "Off by default. When on, the live lighting is put back at the start of galleond only if it was on when galleond ended properly: after a crash, a freeze or a failure it stays off until you switch it on. It goes through the same checks as switching it on by hand, and refuses for the same reasons. Nothing is written to the keyboard's memory.",
+  "The choice could not be saved.": "The choice could not be saved."
 }

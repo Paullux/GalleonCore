@@ -775,5 +775,11 @@
   "Start galleond to try a screensaver on the module": "galleond starten, um einen Bildschirmschoner auf dem Modul auszuprobieren",
   "Cannot try the screensaver: restart the updated daemon (%1)": "Der Bildschirmschoner kann nicht ausprobiert werden: aktualisierten Dienst neu starten (%1)",
   "The screensaver could not be shown: a game is running, the module is not connected, or one is already on": "Der Bildschirmschoner konnte nicht angezeigt werden: Ein Spiel läuft, das Modul ist nicht verbunden oder einer läuft bereits",
-  "Trying a screensaver on the module is not available on Windows yet": "Das Ausprobieren eines Bildschirmschoners auf dem Modul ist unter Windows noch nicht verfügbar"
+  "Trying a screensaver on the module is not available on Windows yet": "Das Ausprobieren eines Bildschirmschoners auf dem Modul ist unter Windows noch nicht verfügbar",
+  "Do not put the live lighting back at start": "Die Live-Beleuchtung beim Start nicht wiederherstellen",
+  "Put the live lighting back at start": "Live-Beleuchtung beim Start wiederherstellen",
+  "The live lighting will be put back when galleond starts, if it ended properly with the lighting on.": "Die Live-Beleuchtung wird beim Start von galleond wiederhergestellt, wenn es mit eingeschalteter Beleuchtung ordnungsgemäß beendet wurde.",
+  "The live lighting stays off when galleond starts.": "Die Live-Beleuchtung bleibt beim Start von galleond aus.",
+  "Off by default. When on, the live lighting is put back at the start of galleond only if it was on when galleond ended properly: after a crash, a freeze or a failure it stays off until you switch it on. It goes through the same checks as switching it on by hand, and refuses for the same reasons. Nothing is written to the keyboard's memory.": "Standardmäßig aus. Wenn aktiviert, wird die Live-Beleuchtung beim Start von galleond nur wiederhergestellt, wenn sie eingeschaltet war, als galleond ordnungsgemäß beendet wurde: Nach einem Absturz, einem Einfrieren oder einem Fehler bleibt sie aus, bis Sie sie einschalten. Es gelten dieselben Prüfungen wie beim manuellen Einschalten, und sie wird aus denselben Gründen abgelehnt. Es wird nichts in den Speicher der Tastatur geschrieben.",
+  "The choice could not be saved.": "Die Auswahl konnte nicht gespeichert werden."
 }

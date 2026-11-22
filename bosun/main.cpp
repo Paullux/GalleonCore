@@ -8,6 +8,8 @@
 #include "AppearanceStore.h"
 #include "RingStore.h"
 #include "KeyCalibration.h"
+#include "LightingRestoreStore.h"
+#include <LightingRestore.h>
 #include <AppearanceFile.h>
 #include <WeatherPlace.h>
 #include <KeyMapFile.h>
@@ -126,6 +128,8 @@ int main(int argc, char *argv[])
     bosun::AppearanceStore appearance(preview ? QString() : galleond::appearancePath(), preview ? QString() : galleond::widgetsPath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
     // The rings of the dials: read from their file at the start, written after every change (nothing in a preview run).
     bosun::RingStore rings(preview ? QString() : galleond::ringSettingsPath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
+    // Whether the live lighting is put back when galleond starts: off unless chosen; read from its file at the start, written at each change (nothing in a preview run).
+    bosun::LightingRestoreStore lightingRestore(preview ? QString() : galleond::lightingRestorePath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
     bosun::KeyCalibration keyCalibration(calibrationLights, galleond::keyMapPath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
 #ifdef Q_OS_WIN
     if (!parser.isSet(shotOption) && !parser.isSet(pagesOption) && !parser.isSet(simulateUpdateOption) && !parser.isSet(oldFirmwareOption)) {
@@ -179,6 +183,7 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
                                  {QStringLiteral("appearance"), QVariant::fromValue(&appearance)},
                                  {QStringLiteral("rings"), QVariant::fromValue(&rings)},
+                                 {QStringLiteral("lightingRestore"), QVariant::fromValue(&lightingRestore)},
                                  // The calibration is for the maintainer: the tab shows nothing of it unless Bosun was started with --mapkeys.
                                  {QStringLiteral("keyCalibration"), parser.isSet(mapKeysOption) ? QVariant::fromValue(&keyCalibration) : QVariant::fromValue<QObject *>(nullptr)},
                                  {QStringLiteral("library"), QVariant::fromValue(&library)}});

@@ -11,6 +11,7 @@
 #include "LightingAppearanceApplier.h"
 #include "LightingController.h"
 #include "LightingLevelScheduler.h"
+#include "LightingRestore.h"
 #include "LightingSkyDay.h"
 #include "SkySun.h"
 
@@ -265,6 +266,109 @@ private Q_SLOTS:
         const auto entries = rig.journal.entries();
         QVERIFY2(std::find(entries.begin(), entries.end(), "watchdog.stop") == entries.end(),
                  "a read error is not proof that the keyboard was unplugged: its mode was never seen back at 1");
+    }
+
+    // ---- what the controller says to the memory that decides whether the lighting is put back at the next start ----
+
+    static void hookInto(Rig &rig, std::vector<LightingMemory> &said)
+    {
+        rig.controller->setRememberHook([&said](LightingMemory memory) { said.push_back(memory); });
+    }
+
+    void aLightingThatIsSwitchedOnIsRememberedAsRunningNotAsCleanSoACrashIsNotRestored()
+    {
+        std::vector<LightingMemory> said; // before the rig: the controller says its last word when the rig ends
+        Rig rig;
+        hookInto(rig, said);
+        rig.hold();
+        QCOMPARE(said.size(), std::size_t{1});
+        QVERIFY(said.front() == LightingMemory::Running);
+    }
+
+    void aLightingSwitchedOffByHandIsRememberedAsOff()
+    {
+        std::vector<LightingMemory> said; // before the rig: the controller says its last word when the rig ends
+        Rig rig;
+        hookInto(rig, said);
+        rig.hold();
+        QVERIFY(rig.controller->Enable(false).isEmpty());
+        QVERIFY(said.back() == LightingMemory::Off);
+    }
+
+    void aLightingStillOnWhenGalleondEndsProperlyIsRememberedAsACleanExit()
+    {
+        std::vector<LightingMemory> said; // before the rig: the controller says its last word when the rig ends
+        Rig rig;
+        hookInto(rig, said);
+        rig.hold();
+        rig.controller.reset(); // galleond ends: the keys are given back first
+        QVERIFY(!said.empty());
+        QVERIFY(said.back() == LightingMemory::CleanExit);
+        QCOMPARE(rig.mode(), 1); // and they were confirmed back
+    }
+
+    void aLightingOffWhenGalleondEndsLeavesTheMemoryOff()
+    {
+        std::vector<LightingMemory> said; // before the rig: the controller says its last word when the rig ends
+        Rig rig;
+        hookInto(rig, said);
+        rig.controller.reset(); // never switched on
+        QVERIFY(said.empty()); // nothing is said: the memory stays as the start left it (off)
+    }
+
+    void galleondEndingWithAKeyboardThatCannotBeConfirmedBackIsNotACleanExit()
+    {
+        std::vector<LightingMemory> said; // before the rig: the controller says its last word when the rig ends
+        Rig rig;
+        hookInto(rig, said);
+        rig.hold();
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.disconnected = true; // the release cannot be confirmed
+        }
+        rig.controller.reset();
+        QVERIFY(said.back() == LightingMemory::Off);
+    }
+
+    void aWatchdogThatEndsLeavesItRememberedAsOff()
+    {
+        std::vector<LightingMemory> said; // before the rig: the controller says its last word when the rig ends
+        Rig rig;
+        hookInto(rig, said);
+        rig.hold();
+        rig.watchdog.die();
+        QVERIFY(!rig.controller->active());
+        QVERIFY(said.back() == LightingMemory::Off);
+        rig.controller.reset(); // and ending galleond afterwards does not make it clean: it was off already
+        QVERIFY(said.back() == LightingMemory::Off);
+    }
+
+    void aKeyboardThatStopsAnsweringLeavesItRememberedAsOff()
+    {
+        std::vector<LightingMemory> said; // before the rig: the controller says its last word when the rig ends
+        Rig rig;
+        hookInto(rig, said);
+        rig.hold();
+        {
+            const std::scoped_lock lock(rig.device.mutex);
+            rig.device.disconnected = true;
+        }
+        rig.advance(2000);
+        QTRY_VERIFY_WITH_TIMEOUT(!rig.controller->active(), 5000);
+        QVERIFY(said.back() == LightingMemory::Off);
+    }
+
+    void aSwitchingOnThatIsRefusedSaysNothingToTheMemory()
+    {
+        std::vector<LightingMemory> said; // before the rig: the controller says its last word when the rig ends
+        Rig rig;
+        hookInto(rig, said);
+        rig.power.isAvailable = false;
+        QVERIFY(!rig.controller->Enable(true).isEmpty());
+        rig.watchdog.works = false;
+        rig.power.isAvailable = true;
+        QVERIFY(!rig.controller->Enable(true).isEmpty());
+        QVERIFY(said.empty()); // nothing started: nothing to remember
     }
 
     void aConfirmedReleaseStopsTheWatchdog()

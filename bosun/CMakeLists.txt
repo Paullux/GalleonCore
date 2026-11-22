@@ -12,6 +12,7 @@ add_library(bosun_core STATIC
     FileNames.h FileNames.cpp
     AppearanceStore.h AppearanceStore.cpp
     RingStore.h RingStore.cpp
+    LightingRestoreStore.h LightingRestoreStore.cpp
     DaemonStatus.h
     KeyCalibration.h KeyCalibration.cpp
     LedValues.h LedValues.cpp

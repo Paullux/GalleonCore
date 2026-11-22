@@ -4,6 +4,7 @@
 #pragma once
 
 #include "LightingEnvironment.h"
+#include "LightingRestore.h"
 
 #include <galleon/Transport.h>
 #include <galleon/keyboard/LivePolicy.h>
@@ -32,7 +33,9 @@ class LightingWorker;
 // Exposed on D-Bus as org.galleoncore.Lighting (Linux).
 //
 // What is decided here (the library, galleon::keyboard::LiveLink, holds the protocol and the safety rules):
-// - It does nothing until Enable(true), and it is never switched on by itself, nor remembered across starts.
+// - It does nothing until Enable(true). It does not switch itself on: whoever starts galleond may call Enable(true) at the start, with every refusal
+//   below, only when the person asked for it AND galleond last ended properly with the lighting on (LightingRestore.h). The controller itself only
+//   reports how it stands, through the hook of setRememberHook: it never reads that decision.
 // - Enable(true) is REFUSED, and the keyboard is not touched, unless (1) the system tells us about sleep in time, and
 //   (2) the watchdog process is running. The watchdog is started for galleond's own process ID before the keyboard is
 //   opened. If it ends while the lighting is on, the lighting is stopped and the keys given back.
@@ -77,6 +80,12 @@ public:
     [[nodiscard]] QString state() const { return m_state; }
     // True from an accepted Enable(true) until the keys have been given back.
     [[nodiscard]] bool active() const { return m_active; }
+
+    // Says how the lighting stands, for the memory that decides whether it is put back at the next start (LightingRestore.h): Running when an
+    // Enable(true) was accepted; CleanExit when galleond ends (the destructor) with the lighting on and the keys confirmed back; Off for every other end
+    // (switched off, failed, frozen, the watchdog ended, the release not confirmed). Called from the thread of the controller; it must be quick.
+    using RememberHook = std::function<void(LightingMemory)>;
+    void setRememberHook(RememberHook hook) { m_remember = std::move(hook); }
 
     // After waking up the keyboard may not be back on the bus yet (USB devices often take a moment): opening it is tried
     // again every ResumeRetryMs, at most ResumeAttempts times, before the lighting gives up and goes off. For tests.
@@ -136,11 +145,13 @@ private:
     void startWorker();
     [[nodiscard]] galleon::keyboard::Appearance shownAppearance() const; // the appearance with the level in force
     bool stopWorker();
-    void finish(const QString &detail);
+    void finish(const QString &detail, bool cleanExit = false);
+    void remember(LightingMemory memory) const;
     void setState(const QString &state, const QString &detail);
     void onWorkerState(const QString &state, const QString &detail);
 
     Opener m_opener;
+    RememberHook m_remember;
     Clock m_clock;
     WatchdogGuard &m_watchdog;
     PowerEvents &m_power;
