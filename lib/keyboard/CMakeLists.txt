@@ -16,6 +16,7 @@ add_library(galleon_keyboard STATIC
     include/galleon/keyboard/KeyboardLink.h
     include/galleon/keyboard/KeyIdentity.h
     include/galleon/keyboard/KeyMap.h
+    include/galleon/keyboard/KeySignals.h
     include/galleon/keyboard/LiveCommandGuard.h
     include/galleon/keyboard/LiveFrame.h
     include/galleon/keyboard/LiveLink.h
@@ -38,6 +39,7 @@ add_library(galleon_keyboard STATIC
     src/KeyboardLink.cpp
     src/KeyIdentity.cpp
     src/KeyMap.cpp
+    src/KeySignals.cpp
     src/LiveCommandGuard.cpp
     src/LiveFrame.cpp
     src/LiveLink.cpp

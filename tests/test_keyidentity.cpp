@@ -140,6 +140,34 @@ private slots:
         QCOMPARE(QString::fromLatin1(keyName(0xE4).value_or("")), QStringLiteral("Right Control"));
         QVERIFY(!keyName(0x03).has_value());
     }
+
+    void aKeyIsFoundByItsNameWhateverTheCapitals()
+    {
+        QCOMPARE(hidUsageFromKeyName("F3").value_or(0), HidUsage{0x3C});
+        QCOMPARE(hidUsageFromKeyName("f3").value_or(0), HidUsage{0x3C});
+        QCOMPARE(hidUsageFromKeyName("Left Control").value_or(0), HidUsage{0xE0});
+        QCOMPARE(hidUsageFromKeyName("LEFT CONTROL").value_or(0), HidUsage{0xE0});
+        QCOMPARE(hidUsageFromKeyName("Fn").value_or(0), FnKey);
+        QCOMPARE(hidUsageFromKeyName("copilot").value_or(0), CopilotKey);
+        QCOMPARE(hidUsageFromKeyName("A").value_or(0), HidUsage{0x04});
+    }
+
+    void aNameThatIsNotExactlyAKeyNameFindsNothing()
+    {
+        for (const char *name : {"", " F3", "F3 ", "F1F", "F13", "F 3", "Left", "Control", "F3\n", "F3\x01", "\xc3\x89"})
+            QVERIFY2(!hidUsageFromKeyName(name).has_value(), name);
+    }
+
+    void everyKeyNameGivesItsOwnKeyBack()
+    {
+        // The names are unique: a name never stands for two keys.
+        for (unsigned usage = 0; usage < 0x10000; ++usage) {
+            const auto name = keyName(static_cast<HidUsage>(usage));
+            if (!name)
+                continue;
+            QCOMPARE(hidUsageFromKeyName(*name).value_or(0xFFFF), static_cast<HidUsage>(usage));
+        }
+    }
 };
 
 QTEST_APPLESS_MAIN(KeyIdentityTest)
