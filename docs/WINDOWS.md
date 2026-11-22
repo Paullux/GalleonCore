@@ -49,6 +49,9 @@ DLLs must be on PATH when running tests. Use `GALLEON_BUILD_DESKTOP=OFF` to buil
 
 These features are not implemented by the portable-library build.
 
+The hand tests to run on real hardware before 1.0 are listed, with their expected results and a progress table, in
+[`WINDOWS_ACCEPTANCE.md`](WINDOWS_ACCEPTANCE.md).
+
 ## SMTC backend
 
 `media/SmtcController` implements `MediaController` over a replaceable session
