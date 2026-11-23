@@ -1106,6 +1106,10 @@ int main(int argc, char *argv[])
     QObject::connect(&localControl, &galleond::LocalControl::lightingColorRequested, &lighting, [&lighting](int red, int green, int blue) { static_cast<void>(lighting.SetColor(red, green, blue)); });
     QObject::connect(&localControl, &galleond::LocalControl::lightingLedRequested, &lighting, [&lighting](int led, int red, int green, int blue) { static_cast<void>(lighting.SetLed(led, red, green, blue)); });
     QObject::connect(&localControl, &galleond::LocalControl::lightingLedsRequested, &lighting, [&lighting](const QList<int> &values) { static_cast<void>(lighting.SetLeds(values)); });
+    // The veille tab of Bosun: lights off until morning, and the "Test" button of a screensaver video (no reply on this endpoint; the night shows in night-mode.json).
+    QObject::connect(&localControl, &galleond::LocalControl::nightStartRequested, &controller, [&controller](int hour, int minute) { static_cast<void>(controller.StartNight(hour, minute)); });
+    QObject::connect(&localControl, &galleond::LocalControl::nightEndRequested, &controller, [&controller] { controller.EndNight(); });
+    QObject::connect(&localControl, &galleond::LocalControl::screensaverTestRequested, &controller, [&controller](const QString &video) { static_cast<void>(controller.TestScreensaver(video)); });
     QObject::connect(&localControl, &galleond::LocalControl::gamingRequested, &controller, [&controller] { controller.ShowGaming(); });
     QObject::connect(&localControl, &galleond::LocalControl::themeRequested, &controller, [&controller](const QString &page) { controller.ShowTheme(page); });
     QObject::connect(&localControl, &galleond::LocalControl::wallpaperRequested,

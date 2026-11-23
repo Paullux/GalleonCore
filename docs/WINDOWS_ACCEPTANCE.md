@@ -39,10 +39,10 @@ Rows by section. Updated when results are recorded. `R` = required for 1.0; the 
 | 3. Dial rings | 5 | 0 | 0 | 0 | 0 | 5 |
 | 4. Live lighting (keyboard) | 12 | 0 | 0 | 0 | 0 | 12 |
 | 5. Restore at start | 7 | 0 | 0 | 0 | 0 | 7 |
-| 6. Features without effect on Windows yet | 4 | 0 | 0 | 0 | 0 | 4 |
+| 6. Veille tab, and the tabs driving the module | 7 | 0 | 0 | 0 | 0 | 7 |
 | 7. Coexistence | 3 | 0 | 0 | 0 | 0 | 3 |
 | 8. Other programs lighting keys | 6 | 0 | 0 | 0 | 0 | 6 |
-| **Total** | **49** | **0** | **0** | **0** | **0** | **49** |
+| **Total** | **52** | **0** | **0** | **0** | **0** | **52** |
 
 **Release gate.** All `R` rows are `Pass`, or each one that is not has a recorded decision of the maintainer to accept it
 for 1.0 (with the reason), and every `Fail` has an open issue or a fix. Nothing in this table is a promise about when.
@@ -152,18 +152,23 @@ ticked **and** galleond last ended properly with the lighting on.
 | 5.6 | Same with **shutdown and power on**. | Same: record. | R | Not run | |
 | 5.7 | Start galleond with the **keyboard unplugged**, plug it in within 30 s. | The lighting is put back once it answers; after 30 s without it, it stays off with a reason in the log. | A | Not run | |
 
-## 6. Features without effect on Windows yet
+## 6. Veille tab, and the tabs driving the module
 
-These exist on Linux. On Windows the local endpoint has no such action, so Bosun says **"not available on Windows yet"**.
-**Expected here: that message, and no change of any kind.** If one of them does something, that is a surprise to record.
-The row becomes a real test when the feature is brought to Windows.
+"Lights off until morning" and the "Test" button of a screensaver video are on Windows since this branch: Bosun sends them to galleond's
+local endpoint (`night-start`, `night-end`, `screensaver-test`). **That endpoint gives no reply**, so Bosun cannot say why a request was refused:
+a night that was taken shows in the state line under the button (`night-mode.json`), and a test that was refused (a game is running, the module is
+not connected, a screensaver is already on) shows nothing. The theme tabs driving the module (6.2) are **not on Windows yet**: the expected result
+there is that nothing changes.
 
-| ID | Feature | What to do | Expected now | Req. | Result | Notes |
+| ID | Feature | What to do | Expected | Req. | Result | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| 6.1 | Lights off until morning (module and rings; keyboard while the live lighting is on) | Bosun > Screensavers > "Lights off until morning": choose a time, press the button. | The message, and the module, the rings and the keyboard **do not change**. No `night-mode.json`. | A | Not run | |
-| 6.2 | The module follows the open theme tab | Open several theme tabs in Bosun. | The module does **not** change. | A | Not run | |
-| 6.3 | "Test" button of a screensaver video | Press it on a video. | The message; nothing plays on the module. | A | Not run | |
-| 6.4 | Key calibration hidden unless `--mapkeys` | Open the Keyboard tab; then start `galleon-bosun.exe --mapkeys`. | Hidden without the option; shown with it. (This one works on Windows: it is Bosun only.) | A | Not run | |
+| 6.1 | Lights off until morning: the module and the rings | Bosun > Veille > "Lights off until morning": choose a time a few minutes away, press the button. | The module goes dark at once (brightness 0, black screen and keys) and the rings go out; the state line says the lights are off until that time. Nothing wakes the module meanwhile (a key, a dial, the screensaver). At that time the module comes back. | R | Not run | |
+| 6.2 | The module follows the open theme tab | Open several theme tabs in Bosun. | The module does **not** change (not on Windows yet). | A | Not run | |
+| 6.3 | "Test" button of a screensaver video | Press it on a video (no game running, the module connected). | The video plays on the module for a short time; a key or a dial stops it. Pressed with a game running: nothing happens and Bosun does not say why (no reply). | R | Not run | |
+| 6.4 | Key calibration hidden unless `--mapkeys` | Open the Keyboard tab; then start `galleon-bosun.exe --mapkeys`. | Hidden without the option; shown with it. (This one is Bosun only.) | A | Not run | |
+| 6.5 | Bring the lights back now | During a night, press the same button (it then offers to bring the lights back). | The module and the rings come back at once; the state line says the lights are on. | R | Not run | |
+| 6.6 | A night survives a restart of galleond | During a night, stop galleond (Bosun > stop) and start it again. | The module stays dark until the same time (the end is read from `night-mode.json`, and a restart does not light it before then). | R | Not run | |
+| 6.7 | Night and the live lighting | With the live lighting on, start a night. | The keyboard goes **black but stays held** by galleond (it does not fall back to its own bright profile); a signal lit by another program (section 8) is black too; at the end the lighting comes back. With the live lighting off, the keyboard keeps its own profile. | R | Not run | |
 
 ## 7. Coexistence
 
