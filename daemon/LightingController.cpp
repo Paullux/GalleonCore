@@ -28,10 +28,35 @@ LightingController::LightingController(Opener opener, WatchdogGuard &watchdog, P
     connect(&m_watchdog, &WatchdogGuard::died, this, [this] {
         if (!m_active)
             return;
-        if (m_sessionEnding && m_sessionEnding()) // the system is stopping everything: a normal end, put back at the next start
+        if (m_sessionEnding && m_sessionEnding()) { // the system is stopping everything: a normal end, put back at the next start
             finish(tr("The computer is shutting down: the lighting was stopped and the keys given back."), true);
-        else
-            finish(tr("The watchdog ended, so the keys are no longer protected: the lighting was stopped and the keys given back."));
+            return;
+        }
+        // Not announced yet: the keys are given back at once (safety first) and the end is remembered as a failure, unless the system announces the end of the
+        // session in the next moments. The detail says what was seen, so that the cause can be read from lighting-state.json.
+        QString detail = tr("The watchdog ended, so the keys are no longer protected: the lighting was stopped and the keys given back.");
+        if (m_sessionEnding)
+            detail += tr(" (the end of the session was not announced yet)");
+        finish(detail);
+        if (m_sessionEnding && m_releasedConfirmed) {
+            m_graceLeft = m_graceAttempts;
+            m_graceTimer.setInterval(m_graceIntervalMs);
+            m_graceTimer.start();
+        }
+    });
+    m_graceTimer.setSingleShot(false);
+    connect(&m_graceTimer, &QTimer::timeout, this, [this] {
+        if (m_active || !m_releasedConfirmed || !m_sessionEnding) { // switched on again, or nothing to decide
+            m_graceTimer.stop();
+            return;
+        }
+        if (m_sessionEnding()) {
+            m_graceTimer.stop();
+            remember(LightingMemory::CleanExit); // it was the end of the session after all
+            setState(QStringLiteral("off"), tr("The computer is shutting down: the lighting was stopped and the keys given back."));
+        } else if (--m_graceLeft <= 0) {
+            m_graceTimer.stop(); // not a shutdown: the watchdog really failed, and it stays remembered as off
+        }
     });
     m_resumeTimer.setSingleShot(true);
     connect(&m_resumeTimer, &QTimer::timeout, this, [this] {
@@ -86,6 +111,7 @@ QString LightingController::Enable(bool on)
     m_power.holdSleep();
     m_tool.reset(); // what a tool showed before is not carried over a switching off
     m_matrix = false;
+    m_graceTimer.stop(); // a late decision about the previous end is void now
     m_active = true;
     remember(LightingMemory::Running); // from now on only a clean exit says that it may be put back
     Q_EMIT activeChanged(true);
@@ -317,6 +343,7 @@ void LightingController::finish(const QString &detail, bool cleanExit)
     m_matrix = false;
     m_signals.clearAll(); // a signal is for a lighting that is on: the next one starts clean
     const bool released = stopWorker();
+    m_releasedConfirmed = released;
     if (!m_active)
         return;
     m_sleeping = false;

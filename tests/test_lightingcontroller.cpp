@@ -842,16 +842,54 @@ private Q_SLOTS:
         QVERIFY(rig.journal.count("watchdog.stop") >= 1); // and the watchdog is let go, as for any confirmed release
     }
 
-    void aWatchdogThatEndsWhileTheSessionIsNotEndingStaysAFailureEvenWithTheCheckSet()
+    void aWatchdogThatEndsWhileTheSessionIsNotEndingStaysAFailureEvenWithTheCheckSetAndAfterTheGrace()
     {
         std::vector<LightingMemory> said;
         Rig rig;
         hookInto(rig, said);
         rig.controller->setSessionEndingCheck([] { return false; });
+        rig.controller->setSessionEndGrace(10, 5);
         rig.hold();
         rig.watchdog.die();
         QVERIFY(!rig.controller->active());
         QVERIFY(said.back() == LightingMemory::Off);
+        QTest::qWait(250); // well past the grace (5 looks of 10 ms): still a failure
+        QVERIFY(said.back() == LightingMemory::Off);
+    }
+
+    void aWatchdogThatEndsJustBeforeTheSystemAnnouncesTheEndOfTheSessionIsStillRememberedAsClean()
+    {
+        // Seen on a real restart: the check was still false at the instant the watchdog died; the session was announced a moment later.
+        std::vector<LightingMemory> said;
+        Rig rig;
+        hookInto(rig, said);
+        std::atomic<bool> ending{false};
+        rig.controller->setSessionEndingCheck([&ending] { return ending.load(); });
+        rig.controller->setSessionEndGrace(20, 100);
+        rig.hold();
+        rig.watchdog.die();
+        QVERIFY(!rig.controller->active());
+        QCOMPARE(rig.mode(), 1);                         // the keys are given back at once, whatever comes next
+        QVERIFY(said.back() == LightingMemory::Off);     // and it is a failure until the session is announced
+        QVERIFY(rig.controller->state() == QStringLiteral("off"));
+        ending = true;
+        QTRY_VERIFY_WITH_TIMEOUT(said.back() == LightingMemory::CleanExit, 3000);
+    }
+
+    void theLateEndOfTheSessionIsNotTakenIntoAccountOnceTheLightingIsOnAgain()
+    {
+        std::vector<LightingMemory> said;
+        Rig rig;
+        hookInto(rig, said);
+        std::atomic<bool> ending{false};
+        rig.controller->setSessionEndingCheck([&ending] { return ending.load(); });
+        rig.controller->setSessionEndGrace(20, 100);
+        rig.hold();
+        rig.watchdog.die();
+        QVERIFY(rig.controller->Enable(true).isEmpty()); // someone switches it on again
+        ending = true;
+        QTest::qWait(200);
+        QVERIFY(said.back() == LightingMemory::Running); // not turned into a clean exit of the previous end
     }
 
     void theEndOfTheSessionIsNeverReportedOnALinuxMachine()
