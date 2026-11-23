@@ -89,10 +89,33 @@ QString DaemonStatus::showTheme(const QString &page) {
     galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::Theme, {}, page}, this);
     return {};
 }
-// The tabs do not drive the module on Windows yet: the local endpoint has no such action.
-QString DaemonStatus::testScreensaver(const QString &) { return tr("Trying a screensaver on the module is not available on Windows yet"); }
-QString DaemonStatus::startNight(int, int) { return tr("Turning the lights off until morning is not available on Windows yet"); }
-QString DaemonStatus::endNight() { return tr("Turning the lights off until morning is not available on Windows yet"); }
+// The veille tab: there is no reply on this endpoint. A night that galleond took shows in night-mode.json (NightStateStore); a screensaver test that was
+// refused (a game runs, the module is not there, one is already on) shows nothing here.
+QString DaemonStatus::testScreensaver(const QString &video)
+{
+    if (!running()) return tr("Start galleond to try a screensaver on the module");
+    if (video.isEmpty() || video.size() > 1024) return tr("This video cannot be tried");
+    galleond::LocalCommand command{galleond::LocalAction::ScreensaverTest, {}, {}};
+    command.video = video;
+    galleond::sendLocalCommand(m_endpoint, command, this);
+    return {};
+}
+QString DaemonStatus::startNight(int hour, int minute)
+{
+    if (!running()) return tr("Start galleond to turn the lights off");
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return tr("The lights could not be turned off: the time is not valid");
+    galleond::LocalCommand command{galleond::LocalAction::NightStart, {}, {}};
+    command.hour = hour;
+    command.minute = minute;
+    galleond::sendLocalCommand(m_endpoint, command, this);
+    return {};
+}
+QString DaemonStatus::endNight()
+{
+    if (!running()) return tr("Start galleond to turn the lights back on");
+    galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::NightEnd, {}, {}}, this);
+    return {};
+}
 void DaemonStatus::previewTheme(const QString &) {}
 void DaemonStatus::endThemePreview() {}
 void DaemonStatus::endThemePreviewNow() {}

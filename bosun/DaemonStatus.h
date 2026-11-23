@@ -74,11 +74,11 @@ public:
     // module was changed in between. `endThemePreviewNow` waits (at most a third of a second) for galleond to take the
     // request: for the moment the application quits. Linux only for now; on Windows they do nothing.
     // The "Test" button of a screensaver video: galleond shows it on the module for a short time, until a key or a dial is used.
-    // "" when the request was sent, else why not. Whether the module could show it comes back as commandError. Linux only for now.
+    // "" when the request was sent, else why not. Whether the module could show it comes back as commandError on Linux; on Windows the endpoint has no reply, so a refusal (a game runs, no module) shows nothing.
     Q_INVOKABLE [[nodiscard]] QString testScreensaver(const QString &video);
     // "Lights off until morning" for the module and the rings: galleond makes them dark until the next HH:MM, and brings them back at that time or
     // on `endNight`. "" when the request was sent, else why not; whether it was taken comes back as the file night-mode.json (NightStateStore) or, if it was
-    // refused, as commandError. Linux only for now; on Windows they say so.
+    // refused, as commandError on Linux (on Windows there is no reply: a night that was not taken simply does not show).
     Q_INVOKABLE [[nodiscard]] QString startNight(int hour, int minute);
     Q_INVOKABLE [[nodiscard]] QString endNight();
     Q_INVOKABLE void previewTheme(const QString &page);

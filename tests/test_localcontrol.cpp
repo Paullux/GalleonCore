@@ -251,6 +251,67 @@ private slots:
         QCOMPARE(requested.constFirst().at(6).toDouble(), 30.0);
     }
 
+    void theNightCommandsCarryOnlyAValidTimeOfDay()
+    {
+        LocalCommand start{LocalAction::NightStart, {}, {}};
+        start.hour = 7;
+        start.minute = 30;
+        const LocalCommand received = parseLocalCommand(encodeLocalCommand(start)).value_or(LocalCommand{});
+        QCOMPARE(received.action, LocalAction::NightStart);
+        QCOMPARE(received.hour, 7);
+        QCOMPARE(received.minute, 30);
+        QVERIFY(parseLocalCommand(R"({"action":"night-start","hour":0,"minute":0})").has_value());
+        QVERIFY(parseLocalCommand(R"({"action":"night-start","hour":23,"minute":59})").has_value());
+        for (const char *frame : {R"({"action":"night-start","hour":24,"minute":0})", R"({"action":"night-start","hour":-1,"minute":0})",
+                                  R"({"action":"night-start","hour":7,"minute":60})", R"({"action":"night-start","hour":7,"minute":-1})",
+                                  R"({"action":"night-start","hour":7.5,"minute":0})", R"({"action":"night-start","hour":"7","minute":0})",
+                                  R"({"action":"night-start","hour":7})", R"({"action":"night-start","minute":7})",
+                                  R"({"action":"night-start","hour":7,"minute":0,"extra":1})", R"({"action":"night-start","hour":null,"minute":0})"})
+            QVERIFY2(!parseLocalCommand(frame).has_value(), frame);
+        QCOMPARE(parseLocalCommand(encodeLocalCommand({LocalAction::NightEnd, {}, {}})).value_or(LocalCommand{}).action, LocalAction::NightEnd);
+        QVERIFY(!parseLocalCommand(R"({"action":"night-end","extra":1})").has_value());
+    }
+
+    void aScreensaverTestCarriesOneVideoNameAndNothingElse()
+    {
+        LocalCommand test{LocalAction::ScreensaverTest, {}, {}};
+        test.video = QStringLiteral("C:/Users/paulw/AppData/Local/Programs/GalleonCore/share/galleoncore/screensavers/Refuge néon sous la lune rose.mp4");
+        const LocalCommand received = parseLocalCommand(encodeLocalCommand(test)).value_or(LocalCommand{});
+        QCOMPARE(received.action, LocalAction::ScreensaverTest);
+        QCOMPARE(received.video, test.video);
+        for (const QByteArray &frame : {QByteArray(R"({"action":"screensaver-test"})"), QByteArray(R"({"action":"screensaver-test","video":""})"),
+                                        QByteArray(R"({"action":"screensaver-test","video":3})"), QByteArray(R"({"action":"screensaver-test","video":"a\nb"})"),
+                                        QByteArray(R"({"action":"screensaver-test","video":"a\u0000b"})"),
+                                        QByteArray(R"({"action":"screensaver-test","video":"a","extra":1})"),
+                                        QByteArray(R"({"action":"screensaver-test","video":")") + QByteArray(1025, 'a') + QByteArray(R"("})")})
+            QVERIFY2(!parseLocalCommand(frame).has_value(), frame.left(80).constData());
+        QVERIFY(parseLocalCommand(QByteArray(R"({"action":"screensaver-test","video":")") + QByteArray(1024, 'a') + QByteArray(R"("})")).has_value());
+    }
+
+    void theNightAndTheTestReachTheServerAsAsked()
+    {
+        const QString name = QStringLiteral("galleon-veille-") + QUuid::createUuid().toString(QUuid::Id128);
+        LocalControl server;
+        QVERIFY(server.listen(name));
+        const QSignalSpy started(&server, &LocalControl::nightStartRequested);
+        const QSignalSpy ended(&server, &LocalControl::nightEndRequested);
+        const QSignalSpy tested(&server, &LocalControl::screensaverTestRequested);
+        LocalCommand start{LocalAction::NightStart, {}, {}};
+        start.hour = 6;
+        start.minute = 45;
+        sendLocalCommand(name, start, &server);
+        QTRY_COMPARE(started.size(), 1);
+        QCOMPARE(started.constFirst().at(0).toInt(), 6);
+        QCOMPARE(started.constFirst().at(1).toInt(), 45);
+        sendLocalCommand(name, {LocalAction::NightEnd, {}, {}}, &server);
+        QTRY_COMPARE(ended.size(), 1);
+        LocalCommand test{LocalAction::ScreensaverTest, {}, {}};
+        test.video = QStringLiteral("rain.mp4");
+        sendLocalCommand(name, test, &server);
+        QTRY_COMPARE(tested.size(), 1);
+        QCOMPARE(tested.constFirst().at(0).toString(), QStringLiteral("rain.mp4"));
+    }
+
     void aKeyboardBrightnessReadCarriesNothingElse()
     {
         const auto command = parseLocalCommand(encodeLocalCommand({LocalAction::KeyboardBrightnessRead, {}, {}}));
