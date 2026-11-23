@@ -13,7 +13,7 @@
 
 namespace galleond {
 
-enum class LocalAction : unsigned char { Ping, Wallpaper, Stop, Gaming, Theme, KeyboardBrightness, KeyboardBrightnessRead, LightingEnable, LightingColor, LightingLed, LightingLeds, KeySignal, KeySignalClear, KeySignalClearAll };
+enum class LocalAction : unsigned char { Ping, Wallpaper, Stop, Gaming, Theme, KeyboardBrightness, KeyboardBrightnessRead, LightingEnable, LightingColor, LightingLed, LightingLeds, KeySignal, KeySignalClear, KeySignalClearAll, NightStart, NightEnd, ScreensaverTest };
 struct LocalCommand
 {
     LocalAction action = LocalAction::Ping;
@@ -34,6 +34,11 @@ struct LocalCommand
     QString key{};    // NOLINT(readability-redundant-member-init)
     QString effect{}; // NOLINT(readability-redundant-member-init)
     double seconds = 0;
+    // NightStart ("Lights off until morning", NightController.h): the time of the end, hour 0 to 23 and minute 0 to 59 (the controller finds the next such time, within 24 hours).
+    int hour = 0;
+    int minute = 0;
+    // ScreensaverTest (the "Test" button of a screensaver video): the video as the pages file lists it. The daemon plays only a video of its own list, never a file it is given.
+    QString video{}; // NOLINT(readability-redundant-member-init)
 };
 
 // One bounded JSON object per connection; the server accepts only this user.
@@ -63,6 +68,10 @@ Q_SIGNALS:
     void keySignalRequested(const QString &client, const QString &key, int red, int green, int blue, const QString &effect, double seconds);
     void keySignalClearRequested(const QString &client, const QString &key);
     void keySignalClearAllRequested(const QString &client);
+    // The veille tab of Bosun on Windows. No reply either: a night that was taken shows in night-mode.json, which Bosun reads; a refused test (a game runs, the module is not there) shows nothing.
+    void nightStartRequested(int hour, int minute);
+    void nightEndRequested();
+    void screensaverTestRequested(const QString &video);
 private:
     void acceptConnections();
     std::unique_ptr<QLockFile> m_lock;

@@ -75,6 +75,36 @@ constexpr int LongestSignalClient = 64; // as KeySignals.h: MaxClientNameBytes
 constexpr int LongestKeyName = 32;
 constexpr double LongestSignalSeconds = 24.0 * 60 * 60;
 
+constexpr int LongestVideoName = 1024; // as the pages file allows for a path
+
+// A whole number in [low, high] from a JSON number (not 1.5, not "1").
+std::optional<int> boundedWhole(const QJsonObject &object, const QString &name, int low, int high)
+{
+    const QJsonValue value = object.value(name);
+    if (!value.isDouble())
+        return std::nullopt;
+    const double number = value.toDouble();
+    if (number < low || number > high || number != static_cast<int>(number))
+        return std::nullopt;
+    return static_cast<int>(number);
+}
+
+// The video of a screensaver as the list names it: a text of 1 to 1024 characters with no control character (a path may hold any other).
+std::optional<QString> videoName(const QJsonObject &object)
+{
+    const QJsonValue value = object.value(QStringLiteral("video"));
+    if (!value.isString())
+        return std::nullopt;
+    QString text = value.toString();
+    if (text.isEmpty() || text.size() > LongestVideoName)
+        return std::nullopt;
+    for (const QChar c : text) {
+        if (c.unicode() < 0x20 || c.unicode() == 0x7F)
+            return std::nullopt;
+    }
+    return text;
+}
+
 std::optional<LocalCommand> parseKeySignal(const QJsonObject &object, const QString &action)
 {
     const auto client = plainText(object, QStringLiteral("client"), LongestSignalClient);
@@ -217,6 +247,26 @@ std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
     }
     if (action == QStringLiteral("key-signal") || action == QStringLiteral("key-signal-clear") || action == QStringLiteral("key-signal-clear-all"))
         return parseKeySignal(object, action);
+    if (object.size() == 3 && action == QStringLiteral("night-start")) {
+        const auto hour = boundedWhole(object, QStringLiteral("hour"), 0, 23);
+        const auto minute = boundedWhole(object, QStringLiteral("minute"), 0, 59);
+        if (!hour || !minute)
+            return std::nullopt;
+        LocalCommand command{LocalAction::NightStart, {}, {}};
+        command.hour = *hour;
+        command.minute = *minute;
+        return command;
+    }
+    if (object.size() == 1 && action == QStringLiteral("night-end"))
+        return LocalCommand{LocalAction::NightEnd, {}, {}};
+    if (object.size() == 2 && action == QStringLiteral("screensaver-test")) {
+        const auto video = videoName(object);
+        if (!video)
+            return std::nullopt;
+        LocalCommand command{LocalAction::ScreensaverTest, {}, {}};
+        command.video = *video;
+        return command;
+    }
     if (object.size() == 1 && action == QStringLiteral("stop"))
         return LocalCommand{LocalAction::Stop, {}, {}};
     if (object.size() != 2 || action != QStringLiteral("wallpaper"))
@@ -289,6 +339,16 @@ QByteArray encodeLocalCommand(const LocalCommand &command)
     case LocalAction::KeySignalClearAll:
         object.insert(QStringLiteral("action"), QStringLiteral("key-signal-clear-all"));
         object.insert(QStringLiteral("client"), command.client);
+        break;
+    case LocalAction::NightStart:
+        object.insert(QStringLiteral("action"), QStringLiteral("night-start"));
+        object.insert(QStringLiteral("hour"), command.hour);
+        object.insert(QStringLiteral("minute"), command.minute);
+        break;
+    case LocalAction::NightEnd: object.insert(QStringLiteral("action"), QStringLiteral("night-end")); break;
+    case LocalAction::ScreensaverTest:
+        object.insert(QStringLiteral("action"), QStringLiteral("screensaver-test"));
+        object.insert(QStringLiteral("video"), command.video);
         break;
     case LocalAction::Stop: object.insert(QStringLiteral("action"), QStringLiteral("stop")); break;
     case LocalAction::Wallpaper:
@@ -421,6 +481,9 @@ void LocalControl::acceptConnections()
                 break;
             case LocalAction::KeySignalClear: Q_EMIT keySignalClearRequested(command->client, command->key); break;
             case LocalAction::KeySignalClearAll: Q_EMIT keySignalClearAllRequested(command->client); break;
+            case LocalAction::NightStart: Q_EMIT nightStartRequested(command->hour, command->minute); break;
+            case LocalAction::NightEnd: Q_EMIT nightEndRequested(); break;
+            case LocalAction::ScreensaverTest: Q_EMIT screensaverTestRequested(command->video); break;
             case LocalAction::Stop: Q_EMIT stopRequested(); break;
             }
         };

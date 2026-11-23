@@ -27,6 +27,7 @@
 #include "RingSettingsApplier.h"
 #include "KeySignalsAccess.h"
 #include "KeySignalsLocal.h"
+#include "SessionEnding.h"
 #include "KeySignalsService.h"
 #include "LightingController.h"
 #include "LightingRestore.h"
@@ -1049,6 +1050,8 @@ int main(int argc, char *argv[])
         }
     }
     galleond::LightingController lighting(lightingOpener, lightingWatchdog, lightingPower);
+    // On Windows the end of the session stops the watchdog before galleond: that is a normal shutdown, not a failure (the lighting is put back at the next start).
+    lighting.setSessionEndingCheck([] { return galleond::sessionIsEnding(); });
     if (lightingTrace) {
         QObject::connect(&lighting, &galleond::LightingController::stateChanged, &lighting, [lightingTrace](const QString &state, const QString &detail) {
             lightingTrace->line(QStringLiteral("state: %1%2").arg(state, detail.isEmpty() ? QString() : QStringLiteral(" (%1)").arg(detail)));
@@ -1106,6 +1109,10 @@ int main(int argc, char *argv[])
     QObject::connect(&localControl, &galleond::LocalControl::lightingColorRequested, &lighting, [&lighting](int red, int green, int blue) { static_cast<void>(lighting.SetColor(red, green, blue)); });
     QObject::connect(&localControl, &galleond::LocalControl::lightingLedRequested, &lighting, [&lighting](int led, int red, int green, int blue) { static_cast<void>(lighting.SetLed(led, red, green, blue)); });
     QObject::connect(&localControl, &galleond::LocalControl::lightingLedsRequested, &lighting, [&lighting](const QList<int> &values) { static_cast<void>(lighting.SetLeds(values)); });
+    // The veille tab of Bosun: lights off until morning, and the "Test" button of a screensaver video (no reply on this endpoint; the night shows in night-mode.json).
+    QObject::connect(&localControl, &galleond::LocalControl::nightStartRequested, &controller, [&controller](int hour, int minute) { static_cast<void>(controller.StartNight(hour, minute)); });
+    QObject::connect(&localControl, &galleond::LocalControl::nightEndRequested, &controller, [&controller] { controller.EndNight(); });
+    QObject::connect(&localControl, &galleond::LocalControl::screensaverTestRequested, &controller, [&controller](const QString &video) { static_cast<void>(controller.TestScreensaver(video)); });
     QObject::connect(&localControl, &galleond::LocalControl::gamingRequested, &controller, [&controller] { controller.ShowGaming(); });
     QObject::connect(&localControl, &galleond::LocalControl::themeRequested, &controller, [&controller](const QString &page) { controller.ShowTheme(page); });
     QObject::connect(&localControl, &galleond::LocalControl::wallpaperRequested,
