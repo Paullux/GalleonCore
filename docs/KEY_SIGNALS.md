@@ -29,9 +29,9 @@ Session bus, service `org.galleoncore.Deck`, object `/org/galleoncore/KeySignals
 
 `key` is the name of the physical key as on a QWERTY keyboard ("F3", "Left Control", "Q" is the key that says A on an AZERTY keyboard). A key whose LED has not been measured yet (`data/devices/galleon-100-sd-keymap.json`) is refused.
 
-```bash
-busctl --user call org.galleoncore.Deck /org/galleoncore/KeySignals org.galleoncore.KeySignals Set siiissd F3 255 120 0 pulse 600
-```
+**The program has to stay on the bus.** A signal belongs to the connection that asked for it and goes when that connection closes. So a command that makes one call and exits (`busctl`, `gdbus`, `dbus-send`) lights nothing that lasts: its signal ends as soon as the command does. A client for this interface must keep its connection open for as long as the signals should last, and close it (or call `Clear` / `ClearAll`) to take them away. The seconds you give are the longest they can last, not a promise that they stay if the program leaves.
+
+There is no command-line tool for Linux yet. A way to try a signal by hand is planned in Bosun (the Keyboard tab), which keeps the connection while it is open.
 
 ## Windows (local endpoint)
 
