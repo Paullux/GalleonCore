@@ -26,7 +26,11 @@ LightingController::LightingController(Opener opener, WatchdogGuard &watchdog, P
       m_watchdog(watchdog), m_power(power), m_positions(builtInLedPositions()), m_keyMap(builtInKeyMap())
 {
     connect(&m_watchdog, &WatchdogGuard::died, this, [this] {
-        if (m_active)
+        if (!m_active)
+            return;
+        if (m_sessionEnding && m_sessionEnding()) // the system is stopping everything: a normal end, put back at the next start
+            finish(tr("The computer is shutting down: the lighting was stopped and the keys given back."), true);
+        else
             finish(tr("The watchdog ended, so the keys are no longer protected: the lighting was stopped and the keys given back."));
     });
     m_resumeTimer.setSingleShot(true);

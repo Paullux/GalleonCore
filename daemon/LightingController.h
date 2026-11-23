@@ -89,6 +89,13 @@ public:
     using RememberHook = std::function<void(LightingMemory)>;
     void setRememberHook(RememberHook hook) { m_remember = std::move(hook); }
 
+    // Says whether the computer is shutting down or the session is ending right now (Windows: SessionEnding.h). At the end of a session the system stops the
+    // watchdog program together with everything else, and galleond sees it die before it is stopped itself: that is the end of a normal shutdown and not a failure of
+    // the watchdog, so the lighting is stopped the same way (the keys are given back) but is remembered as a clean exit, and the next start puts it back. Without
+    // this check, or while the session is not ending, a dead watchdog stays a failure (remembered as off). Called from the thread of the controller; it must be quick.
+    using SessionEndingCheck = std::function<bool()>;
+    void setSessionEndingCheck(SessionEndingCheck check) { m_sessionEnding = std::move(check); }
+
     // After waking up the keyboard may not be back on the bus yet (USB devices often take a moment): opening it is tried
     // again every ResumeRetryMs, at most ResumeAttempts times, before the lighting gives up and goes off. For tests.
     static constexpr int ResumeRetryMs = 1000;
@@ -182,6 +189,7 @@ private:
 
     Opener m_opener;
     RememberHook m_remember;
+    SessionEndingCheck m_sessionEnding;
     Clock m_clock;
     WatchdogGuard &m_watchdog;
     PowerEvents &m_power;

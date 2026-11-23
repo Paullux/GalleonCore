@@ -15,6 +15,7 @@
 #include "LocalControl.h"
 #include <QUuid>
 #include "LightingController.h"
+#include "SessionEnding.h"
 #include "LightingLevelScheduler.h"
 #include "LightingRestore.h"
 #include "LightingSkyDay.h"
@@ -822,6 +823,40 @@ private Q_SLOTS:
         QVERIFY(said.back() == LightingMemory::Off);
         rig.controller.reset(); // and ending galleond afterwards does not make it clean: it was off already
         QVERIFY(said.back() == LightingMemory::Off);
+    }
+
+    void aWatchdogThatEndsWhileTheSessionIsEndingIsANormalShutdownAndLeavesItRememberedAsClean()
+    {
+        // Windows stops the watchdog together with everything else, before galleond: seen on a real shutdown (the lighting was not put back at the next start).
+        std::vector<LightingMemory> said; // before the rig: the controller says its last word when the rig ends
+        Rig rig;
+        hookInto(rig, said);
+        std::atomic<bool> ending{true};
+        rig.controller->setSessionEndingCheck([&ending] { return ending.load(); });
+        rig.hold();
+        QCOMPARE(rig.mode(), 2);
+        rig.watchdog.die();
+        QVERIFY(!rig.controller->active());
+        QCOMPARE(rig.mode(), 1); // the keys were given back all the same
+        QVERIFY(said.back() == LightingMemory::CleanExit);
+        QVERIFY(rig.journal.count("watchdog.stop") >= 1); // and the watchdog is let go, as for any confirmed release
+    }
+
+    void aWatchdogThatEndsWhileTheSessionIsNotEndingStaysAFailureEvenWithTheCheckSet()
+    {
+        std::vector<LightingMemory> said;
+        Rig rig;
+        hookInto(rig, said);
+        rig.controller->setSessionEndingCheck([] { return false; });
+        rig.hold();
+        rig.watchdog.die();
+        QVERIFY(!rig.controller->active());
+        QVERIFY(said.back() == LightingMemory::Off);
+    }
+
+    void theEndOfTheSessionIsNeverReportedOnALinuxMachine()
+    {
+        QVERIFY(!galleond::sessionIsEnding());
     }
 
     void aKeyboardThatStopsAnsweringLeavesItRememberedAsOff()

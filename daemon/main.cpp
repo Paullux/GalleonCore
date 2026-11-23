@@ -27,6 +27,7 @@
 #include "RingSettingsApplier.h"
 #include "KeySignalsAccess.h"
 #include "KeySignalsLocal.h"
+#include "SessionEnding.h"
 #include "KeySignalsService.h"
 #include "LightingController.h"
 #include "LightingRestore.h"
@@ -1049,6 +1050,8 @@ int main(int argc, char *argv[])
         }
     }
     galleond::LightingController lighting(lightingOpener, lightingWatchdog, lightingPower);
+    // On Windows the end of the session stops the watchdog before galleond: that is a normal shutdown, not a failure (the lighting is put back at the next start).
+    lighting.setSessionEndingCheck([] { return galleond::sessionIsEnding(); });
     if (lightingTrace) {
         QObject::connect(&lighting, &galleond::LightingController::stateChanged, &lighting, [lightingTrace](const QString &state, const QString &detail) {
             lightingTrace->line(QStringLiteral("state: %1%2").arg(state, detail.isEmpty() ? QString() : QStringLiteral(" (%1)").arg(detail)));

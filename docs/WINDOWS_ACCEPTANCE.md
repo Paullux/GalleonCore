@@ -148,8 +148,8 @@ ticked **and** galleond last ended properly with the lighting on.
 | 5.2 | Tick the box, switch the lighting on, then **restart galleond cleanly** (from the tray or Bosun's stop). | `lighting-memory.json` says `clean` after the stop, `off` right after the start, `running` about 3 s later; the keys light again by themselves. | R | Not run | |
 | 5.3 | Same, then **end `galleond.exe` in Task Manager** and start it again. | The lighting is **not** put back; the memory reads `off` after the start. This is the guard that matters most. | R | Not run | |
 | 5.4 | Same, with the box **unticked**. | Never put back. | R | Not run | |
-| 5.5 | With the box ticked and the lighting on, **sign out, then in**. | **Record what happens** and what `lighting-memory.json` says before and after. It is not known whether Windows lets galleond end cleanly at sign-out, which decides whether the lighting comes back. | R | Not run | |
-| 5.6 | Same with **shutdown and power on**. | Same: record. | R | Not run | |
+| 5.5 | With the box ticked and the lighting on, **sign out, then in**. | **Record what happens** and what `lighting-memory.json` says before (`running`) and after. Expected since the fix of the end of session: the lighting is put back. Before it, the memory ended as `off`. | R | Not run | First seen on a restart (23 November): before `running`, after `off` and `lighting-state.json` said "The watchdog ended": Windows stops the watchdog before galleond, which was taken for a failure. |
+| 5.6 | Same with a **restart**, then with a **shutdown and power on**. | Same: the keyboard is back under the live lighting about a minute after the session opens; `lighting-state.json` does not say "The watchdog ended" but "The computer is shutting down" the time before. | R | Not run | |
 | 5.7 | Start galleond with the **keyboard unplugged**, plug it in within 30 s. | The lighting is put back once it answers; after 30 s without it, it stays off with a reason in the log. | A | Not run | |
 
 ## 6. Veille tab, and the tabs driving the module
