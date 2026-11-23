@@ -192,11 +192,7 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("appearance"), QVariant::fromValue(&appearance)},
                                  {QStringLiteral("rings"), QVariant::fromValue(&rings)},
                                  {QStringLiteral("lightingRestore"), QVariant::fromValue(&lightingRestore)},
-#ifdef Q_OS_WIN
-                                 {QStringLiteral("keySignals"), QVariant::fromValue<QObject *>(nullptr)}, // no way in for other programs here yet: nothing is offered
-#else
-                                 {QStringLiteral("keySignals"), QVariant::fromValue(&keySignals)},
-#endif
+                                 {QStringLiteral("keySignals"), QVariant::fromValue(&keySignals)}, // on Windows through the local endpoint, on Linux through D-Bus
                                  {QStringLiteral("nightState"), QVariant::fromValue(&nightState)},
                                  // The calibration is for the maintainer: the tab shows nothing of it unless Bosun was started with --mapkeys.
                                  {QStringLiteral("keyCalibration"), parser.isSet(mapKeysOption) ? QVariant::fromValue(&keyCalibration) : QVariant::fromValue<QObject *>(nullptr)},

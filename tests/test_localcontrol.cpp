@@ -160,6 +160,97 @@ private slots:
             QVERIFY2(!parseLocalCommand(frame), frame);
     }
 
+    void aKeySignalRoundTripsThroughItsEncodingWithItsWholeShape()
+    {
+        LocalCommand sent{LocalAction::KeySignal, {}, {}};
+        sent.client = QStringLiteral("desk helper");
+        sent.key = QStringLiteral("Left Control");
+        sent.red = 255;
+        sent.green = 120;
+        sent.blue = 0;
+        sent.effect = QStringLiteral("pulse");
+        sent.seconds = 600.5;
+        const auto parsed = parseLocalCommand(encodeLocalCommand(sent));
+        QVERIFY(parsed.has_value());
+        const LocalCommand received = parsed.value_or(LocalCommand{});
+        QCOMPARE(received.action, LocalAction::KeySignal);
+        QCOMPARE(received.client, sent.client);
+        QCOMPARE(received.key, sent.key);
+        QCOMPARE(received.red, 255);
+        QCOMPARE(received.green, 120);
+        QCOMPARE(received.blue, 0);
+        QCOMPARE(received.effect, QStringLiteral("pulse"));
+        QCOMPARE(received.seconds, 600.5);
+    }
+
+    void aKeySignalWithAnythingOutOfShapeIsRefused()
+    {
+        const QString good = QStringLiteral(R"({"action":"key-signal","client":"a","key":"F3","red":1,"green":2,"blue":3,"effect":"steady","seconds":60})");
+        QVERIFY(parseLocalCommand(good.toUtf8()).has_value());
+        const auto changed = [&good](const char *what, const char *with) {
+            QString text = good;
+            text.replace(QString::fromLatin1(what), QString::fromLatin1(with));
+            return text.toUtf8();
+        };
+        const QList<QByteArray> frames{
+            changed(R"("client":"a")", R"("client":"")"), changed(R"("client":"a")", R"("client":7)"),
+            changed(R"("client":"a")", R"("client":"café")"), changed(R"("client":"a")", R"("client":"two\nlines")"),
+            changed(R"("client":"a")", QStringLiteral(R"("client":"%1")").arg(QString(65, QLatin1Char('a'))).toLatin1().constData()),
+            changed(R"("key":"F3")", R"("key":"")"), changed(R"("key":"F3")", R"("key":3)"),
+            changed(R"("key":"F3")", R"("key":"a name that is much longer than any key has")"),
+            changed(R"("red":1)", R"("red":256)"), changed(R"("green":2)", R"("green":-1)"), changed(R"("blue":3)", R"("blue":1.5)"),
+            changed(R"("blue":3)", R"("blue":"3")"),
+            changed(R"("effect":"steady")", R"("effect":"rainbow")"), changed(R"("effect":"steady")", R"("effect":"Steady")"),
+            changed(R"("effect":"steady")", R"("effect":1)"),
+            changed(R"("seconds":60)", R"("seconds":0.5)"), changed(R"("seconds":60)", R"("seconds":0)"), changed(R"("seconds":60)", R"("seconds":-5)"),
+            changed(R"("seconds":60)", R"("seconds":86401)"), changed(R"("seconds":60)", R"("seconds":"60")"), changed(R"("seconds":60)", R"("seconds":null)"),
+            changed(R"("seconds":60})", R"("seconds":60,"extra":1})"), // an extra key
+            changed(R"(,"seconds":60)", R"()"),                          // a missing key
+            QByteArray(R"({"action":"key-signal"})")};
+        for (const QByteArray &frame : frames)
+            QVERIFY2(!parseLocalCommand(frame).has_value(), frame.constData());
+        QVERIFY(parseLocalCommand(changed(R"("client":"a")", QStringLiteral(R"("client":"%1")").arg(QString(64, QLatin1Char('a'))).toLatin1().constData())).has_value());
+        QVERIFY(parseLocalCommand(changed(R"("seconds":60)", R"("seconds":86400)")).has_value());
+        QVERIFY(parseLocalCommand(changed(R"("seconds":60)", R"("seconds":1)")).has_value());
+    }
+
+    void clearingAKeySignalCarriesOnlyWhoAsksAndTheKey()
+    {
+        QVERIFY(parseLocalCommand(R"({"action":"key-signal-clear","client":"a","key":"F3"})").has_value());
+        QVERIFY(parseLocalCommand(R"({"action":"key-signal-clear-all","client":"a"})").has_value());
+        for (const char *frame : {R"({"action":"key-signal-clear","client":"a"})", R"({"action":"key-signal-clear","key":"F3"})",
+                                  R"({"action":"key-signal-clear","client":"a","key":"F3","red":1})", R"({"action":"key-signal-clear-all"})",
+                                  R"({"action":"key-signal-clear-all","client":"a","key":"F3"})", R"({"action":"key-signal-clear-all","client":""})"})
+            QVERIFY2(!parseLocalCommand(frame).has_value(), frame);
+        LocalCommand clear{LocalAction::KeySignalClear, {}, {}};
+        clear.client = QStringLiteral("a");
+        clear.key = QStringLiteral("F3");
+        QCOMPARE(parseLocalCommand(encodeLocalCommand(clear)).value_or(LocalCommand{}).action, LocalAction::KeySignalClear);
+        LocalCommand all{LocalAction::KeySignalClearAll, {}, {}};
+        all.client = QStringLiteral("a");
+        QCOMPARE(parseLocalCommand(encodeLocalCommand(all)).value_or(LocalCommand{}).action, LocalAction::KeySignalClearAll);
+    }
+
+    void aKeySignalReachesTheServerAsAskedAndTheEndpointStillRepliesOnlyOk()
+    {
+        const QString name = QStringLiteral("galleon-signal-") + QUuid::createUuid().toString(QUuid::Id128);
+        LocalControl server;
+        QVERIFY(server.listen(name));
+        const QSignalSpy requested(&server, &LocalControl::keySignalRequested);
+        LocalCommand command{LocalAction::KeySignal, {}, {}};
+        command.client = QStringLiteral("helper");
+        command.key = QStringLiteral("F3");
+        command.red = 1;
+        command.effect = QStringLiteral("steady");
+        command.seconds = 30;
+        sendLocalCommand(name, command, &server);
+        QTRY_COMPARE(requested.size(), 1);
+        QCOMPARE(requested.constFirst().at(0).toString(), QStringLiteral("helper"));
+        QCOMPARE(requested.constFirst().at(1).toString(), QStringLiteral("F3"));
+        QCOMPARE(requested.constFirst().at(5).toString(), QStringLiteral("steady"));
+        QCOMPARE(requested.constFirst().at(6).toDouble(), 30.0);
+    }
+
     void aKeyboardBrightnessReadCarriesNothingElse()
     {
         const auto command = parseLocalCommand(encodeLocalCommand({LocalAction::KeyboardBrightnessRead, {}, {}}));

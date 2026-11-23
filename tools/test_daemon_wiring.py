@@ -15,7 +15,7 @@ import unittest
 MAIN = pathlib.Path(__file__).resolve().parent.parent / "daemon" / "main.cpp"
 
 # Calls that every platform must make.
-EVERYWHERE = ("setUpLightingRestore(", "nightMode.resume(", "galleond::NightController nightMode(", "lighting.setNight(")
+EVERYWHERE = ("setUpLightingRestore(", "nightMode.resume(", "galleond::NightController nightMode(", "lighting.setNight(", "galleond::KeySignalsService keySignals(")
 
 
 def platform_conditions_around(lines, index):
@@ -53,6 +53,11 @@ class TestDaemonWiring(unittest.TestCase):
             for i in found:
                 platform = [c for c in platform_conditions_around(self.lines, i) if "Q_OS_" in c]
                 self.assertEqual(platform, [], f"daemon/main.cpp line {i + 1}: {call} is under a platform condition {platform}: it would be missing on the other system")
+
+    def test_windows_reaches_the_key_signals_through_the_local_endpoint_and_only_there(self):
+        calls = [i for i, line in enumerate(self.lines) if "connectKeySignals(" in line and not line.strip().startswith("//")]
+        self.assertEqual(len(calls), 1, "daemon/main.cpp must connect the key signals to the local endpoint exactly once")
+        self.assertTrue(any("Q_OS_WIN" in c for c in platform_conditions_around(self.lines, calls[0])), "the local endpoint is the way in on Windows only")
 
 
 if __name__ == "__main__":
