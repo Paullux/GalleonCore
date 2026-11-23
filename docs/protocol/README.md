@@ -266,6 +266,16 @@ Every other property read the same value in every run: `0x01` = 7, `0x02` = `0x0
 
 Not run on Windows: the power-cycle persistence check and `-SoftwareMode`/`-Hold` (see "Not established" above and the option descriptions in the script's header comment).
 
+## Keyboard brightness: the full 0–1000 range is usable, not just the Web Hub's six steps (Windows, 2026-11-12)
+
+The owner compared `tools/keyboard-brightness` writes of 100, 200, 300, ..., up to 1000 on the real keyboard (same unit, firmware 2.3.88), including values that are not among the Web Hub's six slider steps (0/200/400/600/800/1000). Every write read back the exact value, as already observed above for the six steps, and each one visibly changed the keys' brightness — intermediate values are not silently rounded to a step by the firmware.
+
+**Observed.** Stepping by 100 across the whole range gave differences of uneven size by eye: some adjacent 100-steps looked close to identical, others produced a visibly stronger jump, and the stronger jumps formed a progressive sequence rather than a single threshold.
+
+**Hypothesis, not confirmed.** The LED driver's brightness curve may be non-linear, and the Web Hub's six 200-wide steps could be chosen so that each slider click always lands on a visible jump, hiding the sub-steps where the eye barely notices a change — rather than the hardware being limited to six levels. No lux measurement was taken; this is one person's visual comparison on one unit, not a calibrated curve.
+
+**Consequence for software.** `tools/keyboard-brightness` (and anything built on `lib/keyboard/` later) should keep accepting and writing the full 0–1000 range. Rounding user input to the Web Hub's six steps would discard real, usable granularity that the device honours.
+
 ## galleon::HidTransport keyboard probe confirmed on Windows (2026-11-08)
 
 `tools/keyboard-read-probe` (`-DGALLEON_BUILD_KEYBOARD_PROBE=ON`, off by default; its logic is tested with a fake transport by `tests/test_keyboardreadprobe.cpp`) builds only command `0x02` (get property) for properties `0x13` and `0xEA`, and refuses to send anything unless the opened interface reports usage page `0xFF42` usage `1`. Unlike `bragi-probe.ps1`, it reads through `galleon::HidTransport` (hidapi) — the same class `galleond` uses — instead of a raw `ReadFile`/`WriteFile` port. Run on the same keyboard, after `bragi-probe.ps1` above:
