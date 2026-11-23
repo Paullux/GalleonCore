@@ -89,6 +89,22 @@ public:
     using RememberHook = std::function<void(LightingMemory)>;
     void setRememberHook(RememberHook hook) { m_remember = std::move(hook); }
 
+    // Says whether the computer is shutting down or the session is ending right now (Windows: SessionEnding.h). At the end of a session the system stops the
+    // watchdog program together with everything else, and galleond sees it die before it is stopped itself: that is the end of a normal shutdown and not a failure of
+    // the watchdog, so the lighting is stopped the same way (the keys are given back) but is remembered as a clean exit, and the next start puts it back. Without
+    // this check, or while the session is not ending, a dead watchdog stays a failure (remembered as off). Called from the thread of the controller; it must be quick.
+    using SessionEndingCheck = std::function<bool()>;
+    void setSessionEndingCheck(SessionEndingCheck check) { m_sessionEnding = std::move(check); }
+    // The system may announce the end of the session a moment AFTER the watchdog is stopped (seen on a real restart: the check was still false at the instant the
+    // watchdog died). So when the watchdog dies and the check says no, the keys are still given back at once and the end is first remembered as a failure, and the
+    // check is looked at again every `intervalMs`, `attempts` times: the first time it says yes the end is remembered as clean (only if the keys were confirmed back).
+    // For tests; the defaults are 250 ms and 12 attempts (3 s).
+    void setSessionEndGrace(int intervalMs, int attempts)
+    {
+        m_graceIntervalMs = intervalMs;
+        m_graceAttempts = attempts;
+    }
+
     // After waking up the keyboard may not be back on the bus yet (USB devices often take a moment): opening it is tried
     // again every ResumeRetryMs, at most ResumeAttempts times, before the lighting gives up and goes off. For tests.
     static constexpr int ResumeRetryMs = 1000;
@@ -182,6 +198,12 @@ private:
 
     Opener m_opener;
     RememberHook m_remember;
+    SessionEndingCheck m_sessionEnding;
+    QTimer m_graceTimer; // after a watchdog that died with no end of session announced yet: looks again
+    int m_graceIntervalMs = 250;
+    int m_graceAttempts = 12;
+    int m_graceLeft = 0;
+    bool m_releasedConfirmed = false; // the last finish() saw the keys confirmed back
     Clock m_clock;
     WatchdogGuard &m_watchdog;
     PowerEvents &m_power;
