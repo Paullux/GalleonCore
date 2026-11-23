@@ -54,6 +54,66 @@ std::optional<int> ledIndex(const QJsonObject &object, const QString &name)
         return std::nullopt;
     return static_cast<int>(number);
 }
+
+// A short text of plain printable ASCII (0x20 to 0x7E), 1 to `longest` characters: a program's name, a key's name.
+std::optional<QString> plainText(const QJsonObject &object, const QString &name, int longest)
+{
+    const QJsonValue value = object.value(name);
+    if (!value.isString())
+        return std::nullopt;
+    QString text = value.toString();
+    if (text.isEmpty() || text.size() > longest)
+        return std::nullopt;
+    for (const QChar c : text) {
+        if (c.unicode() < 0x20 || c.unicode() > 0x7E)
+            return std::nullopt;
+    }
+    return text;
+}
+
+constexpr int LongestSignalClient = 64; // as KeySignals.h: MaxClientNameBytes
+constexpr int LongestKeyName = 32;
+constexpr double LongestSignalSeconds = 24.0 * 60 * 60;
+
+std::optional<LocalCommand> parseKeySignal(const QJsonObject &object, const QString &action)
+{
+    const auto client = plainText(object, QStringLiteral("client"), LongestSignalClient);
+    if (!client)
+        return std::nullopt;
+    LocalCommand command{LocalAction::KeySignalClearAll, {}, {}};
+    command.client = *client;
+    if (object.size() == 2 && action == QStringLiteral("key-signal-clear-all"))
+        return command;
+    const auto key = plainText(object, QStringLiteral("key"), LongestKeyName);
+    if (!key)
+        return std::nullopt;
+    command.key = *key;
+    if (object.size() == 3 && action == QStringLiteral("key-signal-clear")) {
+        command.action = LocalAction::KeySignalClear;
+        return command;
+    }
+    if (object.size() != 8 || action != QStringLiteral("key-signal"))
+        return std::nullopt;
+    const auto red = colourChannel(object, QStringLiteral("red"));
+    const auto green = colourChannel(object, QStringLiteral("green"));
+    const auto blue = colourChannel(object, QStringLiteral("blue"));
+    const QJsonValue effect = object.value(QStringLiteral("effect"));
+    const QJsonValue seconds = object.value(QStringLiteral("seconds"));
+    if (!red || !green || !blue || !effect.isString() || !seconds.isDouble())
+        return std::nullopt;
+    if (effect.toString() != QStringLiteral("steady") && effect.toString() != QStringLiteral("pulse"))
+        return std::nullopt;
+    const double length = seconds.toDouble();
+    if (!(length >= 1.0) || length > LongestSignalSeconds) // also refuses NaN
+        return std::nullopt;
+    command.action = LocalAction::KeySignal;
+    command.red = *red;
+    command.green = *green;
+    command.blue = *blue;
+    command.effect = effect.toString();
+    command.seconds = length;
+    return command;
+}
 }
 
 std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
@@ -155,6 +215,8 @@ std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
         }
         return command;
     }
+    if (action == QStringLiteral("key-signal") || action == QStringLiteral("key-signal-clear") || action == QStringLiteral("key-signal-clear-all"))
+        return parseKeySignal(object, action);
     if (object.size() == 1 && action == QStringLiteral("stop"))
         return LocalCommand{LocalAction::Stop, {}, {}};
     if (object.size() != 2 || action != QStringLiteral("wallpaper"))
@@ -209,6 +271,25 @@ QByteArray encodeLocalCommand(const LocalCommand &command)
         object.insert(QStringLiteral("leds"), groups);
         break;
     }
+    case LocalAction::KeySignal:
+        object.insert(QStringLiteral("action"), QStringLiteral("key-signal"));
+        object.insert(QStringLiteral("client"), command.client);
+        object.insert(QStringLiteral("key"), command.key);
+        object.insert(QStringLiteral("red"), command.red);
+        object.insert(QStringLiteral("green"), command.green);
+        object.insert(QStringLiteral("blue"), command.blue);
+        object.insert(QStringLiteral("effect"), command.effect);
+        object.insert(QStringLiteral("seconds"), command.seconds);
+        break;
+    case LocalAction::KeySignalClear:
+        object.insert(QStringLiteral("action"), QStringLiteral("key-signal-clear"));
+        object.insert(QStringLiteral("client"), command.client);
+        object.insert(QStringLiteral("key"), command.key);
+        break;
+    case LocalAction::KeySignalClearAll:
+        object.insert(QStringLiteral("action"), QStringLiteral("key-signal-clear-all"));
+        object.insert(QStringLiteral("client"), command.client);
+        break;
     case LocalAction::Stop: object.insert(QStringLiteral("action"), QStringLiteral("stop")); break;
     case LocalAction::Wallpaper:
         object.insert(QStringLiteral("action"), QStringLiteral("wallpaper"));
@@ -335,6 +416,11 @@ void LocalControl::acceptConnections()
             case LocalAction::LightingColor: Q_EMIT lightingColorRequested(command->red, command->green, command->blue); break;
             case LocalAction::LightingLed: Q_EMIT lightingLedRequested(command->led, command->red, command->green, command->blue); break;
             case LocalAction::LightingLeds: Q_EMIT lightingLedsRequested(command->ledValues); break;
+            case LocalAction::KeySignal:
+                Q_EMIT keySignalRequested(command->client, command->key, command->red, command->green, command->blue, command->effect, command->seconds);
+                break;
+            case LocalAction::KeySignalClear: Q_EMIT keySignalClearRequested(command->client, command->key); break;
+            case LocalAction::KeySignalClearAll: Q_EMIT keySignalClearAllRequested(command->client); break;
             case LocalAction::Stop: Q_EMIT stopRequested(); break;
             }
         };

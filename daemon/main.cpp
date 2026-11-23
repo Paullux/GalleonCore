@@ -26,6 +26,7 @@
 #include "RingSettings.h"
 #include "RingSettingsApplier.h"
 #include "KeySignalsAccess.h"
+#include "KeySignalsLocal.h"
 #include "KeySignalsService.h"
 #include "LightingController.h"
 #include "LightingRestore.h"
@@ -1088,9 +1089,13 @@ int main(int argc, char *argv[])
     // The curve of the level of the colours through the day (a software factor, not the keyboard's brightness).
     const galleond::LightingLevelScheduler lightingLevel(lighting, galleond::lightingLevelCurvePath(), [] { return QTime::currentTime(); });
 
+    // The keys that other programs may light, on every platform: off unless the person allowed it in Bosun (key-signals.json). Linux reaches it by D-Bus
+    // (KeySignalsBus below), Windows by the local endpoint (connectKeySignals).
+    galleond::KeySignalsService keySignals(lighting, [] { return galleond::keySignalsAllowed(galleond::keySignalsAccessPath()); });
     // org.galleoncore.Deck on the session bus (the name was claimed at the start):
     // SetWallpaper, ClearWallpaper, Wallpapers.
 #ifdef Q_OS_WIN
+    galleond::connectKeySignals(localControl, keySignals);
     QObject::connect(&localControl, &galleond::LocalControl::keyboardBrightnessRequested, &keyboard, [&keyboard](int value) { keyboard.SetBrightness(value); });
     QObject::connect(&localControl, &galleond::LocalControl::keyboardBrightnessReadRequested, &keyboard, [&keyboard] { keyboard.ReadBrightness(); });
     // The way back to Bosun on Windows: the state of the lighting, in lighting-state.json at every change.
@@ -1114,7 +1119,6 @@ int main(int argc, char *argv[])
         qWarning() << "galleond: cannot export the keyboard D-Bus object";
     if (!bus.registerObject(QStringLiteral("/org/galleoncore/Lighting"), &lighting, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals))
         qWarning() << "galleond: cannot export the lighting D-Bus object";
-    galleond::KeySignalsService keySignals(lighting, [] { return galleond::keySignalsAllowed(galleond::keySignalsAccessPath()); });
     galleond::KeySignalsBus keySignalsBus(keySignals);
     // The keys that other programs may light (off unless the person allowed it in Bosun: key-signals.json). Only these three methods, nothing is read back.
     if (!bus.registerObject(QStringLiteral("/org/galleoncore/KeySignals"), &keySignalsBus, QDBusConnection::ExportAllSlots))

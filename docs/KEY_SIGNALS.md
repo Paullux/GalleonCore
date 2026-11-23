@@ -33,4 +33,18 @@ Session bus, service `org.galleoncore.Deck`, object `/org/galleoncore/KeySignals
 busctl --user call org.galleoncore.Deck /org/galleoncore/KeySignals org.galleoncore.KeySignals Set siiissd F3 255 120 0 pulse 600
 ```
 
-Windows has no way in for other programs yet (the local IPC of galleond will get the same three actions).
+## Windows (local endpoint)
+
+Windows has no D-Bus: galleond's per-user local endpoint (a named pipe, `\\.\pipe\galleoncore-<24 hex digits>`, the digits being the first 24 of the UTF-8 SHA-256 of the user's SID, as for the other actions) takes the same three requests, one JSON object per line, one request per connection:
+
+```json
+{"action":"key-signal","client":"assistant","key":"F3","red":255,"green":120,"blue":0,"effect":"pulse","seconds":600}
+{"action":"key-signal-clear","client":"assistant","key":"F3"}
+{"action":"key-signal-clear-all","client":"assistant"}
+```
+
+`tools/windows/key-signal.ps1` sends them (not tested on a Windows machine yet: `docs/WINDOWS_ACCEPTANCE.md`, section 8). Differences from Linux, by the nature of this endpoint:
+
+- **No reply about the result.** The endpoint answers `{"ok":true}` for a request that is well formed, whether or not a key was lit (not allowed, lighting off, unknown key, too many requests). Nothing comes back about the keyboard.
+- **No way to tell programs apart.** A signal belongs to the `client` name in the request (1 to 64 plain characters), so another program of the same person that knows the name can clear it. Every signal still ends by itself, the person's choice in Bosun comes first, and it stops when the live lighting stops.
+- **No cleanup when a program quits**: only the end of the signal's duration, or a clear, removes it. Choose short durations and renew them.

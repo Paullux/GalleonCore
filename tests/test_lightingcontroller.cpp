@@ -10,7 +10,10 @@
 #include "BrightnessCurve.h"
 #include "LightingAppearanceApplier.h"
 #include "KeySignalsAccess.h"
+#include "KeySignalsLocal.h"
 #include "KeySignalsService.h"
+#include "LocalControl.h"
+#include <QUuid>
 #include "LightingController.h"
 #include "LightingLevelScheduler.h"
 #include "LightingRestore.h"
@@ -555,6 +558,46 @@ private Q_SLOTS:
         QVERIFY(!service.set(":1.7", "F2", 1, 2, 3, "", 60).isEmpty());
         QVERIFY(!service.set(":1.7", "F2", 1, 2, 3, "Steady", 60).isEmpty()); // exactly the two words
         QCOMPARE(service.set(":1.7", "F2", 1, 2, 3, "pulse", 60), QString());
+    }
+
+    // ---- the same service reached through the local endpoint of Windows (no reply there) ----
+
+    void aProgramOnTheLocalEndpointLightsAKeyOnlyWhenAllowedAndItsClearTakesItAway()
+    {
+        std::atomic<bool> allowed{false};
+        Rig rig;
+        galleond::KeySignalsService service(*rig.controller, [&allowed] { return allowed.load(); });
+        galleond::LocalControl control;
+        const QString endpoint = QStringLiteral("galleon-signals-e2e-") + QUuid::createUuid().toString(QUuid::Id128);
+        QVERIFY(control.listen(endpoint));
+        galleond::connectKeySignals(control, service);
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.hold();
+        rig.advance(300);
+        galleond::LocalCommand ask{galleond::LocalAction::KeySignal, {}, {}};
+        ask.client = QStringLiteral("assistant");
+        ask.key = QStringLiteral("F2");
+        ask.red = 255;
+        ask.green = 160;
+        ask.effect = QStringLiteral("steady");
+        ask.seconds = 600;
+        galleond::sendLocalCommand(endpoint, ask, &control); // not allowed yet: nothing is lit
+        QTest::qWait(300);
+        QCOMPARE(ledColour(rig.frame(), 59), (std::vector<std::uint8_t>{100, 200, 40}));
+        allowed = true;
+        galleond::sendLocalCommand(endpoint, ask, &control);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+        rig.advance(300);
+        galleond::LocalCommand other{galleond::LocalAction::KeySignalClearAll, {}, {}};
+        other.client = QStringLiteral("someone else");
+        galleond::sendLocalCommand(endpoint, other, &control); // another name: the signal of "assistant" stays
+        QTest::qWait(300);
+        QCOMPARE(ledColour(rig.frame(), 59), (std::vector<std::uint8_t>{255, 160, 0}));
+        galleond::LocalCommand clear{galleond::LocalAction::KeySignalClear, {}, {}};
+        clear.client = QStringLiteral("assistant");
+        clear.key = QStringLiteral("F2");
+        galleond::sendLocalCommand(endpoint, clear, &control);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{100, 200, 40}), 3000);
     }
 
 #ifndef Q_OS_WIN

@@ -73,6 +73,7 @@ add_library(galleond_core STATIC
     KeyMapFile.h KeyMapFile.cpp
     KeySignalsAccess.h KeySignalsAccess.cpp
     KeySignalsService.h KeySignalsService.cpp
+    KeySignalsLocal.h KeySignalsLocal.cpp
     LightingState.h LightingState.cpp
     LightingStatePublisher.h LightingStatePublisher.cpp
 )

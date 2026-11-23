@@ -41,7 +41,8 @@ Rows by section. Updated when results are recorded. `R` = required for 1.0; the 
 | 5. Restore at start | 7 | 0 | 0 | 0 | 0 | 7 |
 | 6. Features without effect on Windows yet | 4 | 0 | 0 | 0 | 0 | 4 |
 | 7. Coexistence | 3 | 0 | 0 | 0 | 0 | 3 |
-| **Total** | **43** | **0** | **0** | **0** | **0** | **43** |
+| 8. Other programs lighting keys | 6 | 0 | 0 | 0 | 0 | 6 |
+| **Total** | **49** | **0** | **0** | **0** | **0** | **49** |
 
 **Release gate.** All `R` rows are `Pass`, or each one that is not has a recorded decision of the maintainer to accept it
 for 1.0 (with the reason), and every `Fail` has an open issue or a fix. Nothing in this table is a promise about when.
@@ -171,6 +172,20 @@ The row becomes a real test when the feature is brought to Windows.
 | 7.1 | Web Hub open **and idle** with the live lighting on, for 2 min. | galleond may resume after its quiet period (about 60 s) and **yield again** at the Web Hub's next command; the Web Hub preview may briefly show galleond's frame. Record. | A | Not run | |
 | 7.2 | Another RGB program owns the keyboard first (Web Hub or another host in mode 2), then switch galleond's lighting on. | galleond waits for the keyboard to be free (`listening`) or refuses; it never fights. | R | Not run | |
 | 7.3 | Run **galleond and Aaryush1's helper** (or another writer) together, if available. | Not a pass/fail: a second writer in the same mode is **not detected** by galleond (it only sees the mode and foreign replies), so expect flicker, and record it. The planned local API will remove the need for a second writer. | A | Not run | |
+
+## 8. Other programs lighting single keys (new)
+
+Off by default. A program sends a request to galleond's local endpoint; `tools/windows/key-signal.ps1` is the sender used here ([`docs/KEY_SIGNALS.md`](KEY_SIGNALS.md)). **No reply says whether a key was lit**: look at the keyboard.
+Needs the live lighting on (row 4.1), except where the row says otherwise.
+
+| ID | Check | Expected | Req. | Result | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 8.1 | Bosun > Keyboard > live lighting: look at "Other programs may light keys". Then, with the lighting on and the box **not** ticked, run `.\key-signal.ps1 -Client test -Key F3 -Red 255 -Green 120 -Blue 0 -Effect steady -Seconds 120`. | The box says "not allowed" (off by default, and no `key-signals.json` yet). **F3 does not light.** | R | Not run | |
+| 8.2 | Tick the box, send the same command again, then `-Effect pulse`. | F3 lights orange, then breathes from full to a fifth and back (about 1.6 s a cycle). The other keys keep the lighting. | R | Not run | |
+| 8.3 | While F3 is lit, untick the box in Bosun. | F3 goes back to the lighting **within about a second**. Ticking it again does not bring it back. | R | Not run | |
+| 8.4 | Send a signal with `-Seconds 10`, wait. | It ends by itself at 10 s. | R | Not run | |
+| 8.5 | With a signal lit, switch the live lighting off in Bosun, then on again. | The signal is gone; it does not come back. | R | Not run | |
+| 8.6 | Send junk to the endpoint (a wrong key name `-Key Banana`, then `-Seconds 99999` through the script's validation, then a hand-made frame with an unknown effect). | Nothing lights; galleond keeps running (no crash, no restart); no key name appears in its log. | A | Not run | |
 
 ## After the tests
 
