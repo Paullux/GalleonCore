@@ -193,6 +193,43 @@ Q_SIGNALS:
     void stateChanged(const QString &_t1, const QString &_t2); // NOLINT(readability-inconsistent-declaration-parameter-name): moc names them
 };
 
+// The key signals interface of galleond, as a fake: what the "Try a signal" panel asks for lands here.
+class KeySignalsEndpoint : public QObject
+{
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.galleoncore.KeySignals")
+public:
+    struct Call
+    {
+        QString key;
+        int red = 0;
+        int green = 0;
+        int blue = 0;
+        QString effect;
+        double seconds = 0;
+    };
+    QList<Call> sets;
+    QStringList clears;
+    int clearAlls = 0;
+    QString answer; // what Set says: "" when accepted, else why not
+public Q_SLOTS:
+    QString Set(const QString &key, int red, int green, int blue, const QString &effect, double seconds)
+    {
+        sets.append({key, red, green, blue, effect, seconds});
+        return answer;
+    }
+    bool Clear(const QString &key)
+    {
+        clears.append(key);
+        return true;
+    }
+    bool ClearAll()
+    {
+        ++clearAlls;
+        return true;
+    }
+};
+
 class TestBosun : public QObject
 {
     Q_OBJECT
@@ -2293,6 +2330,138 @@ QtObject {
     }
 
     // "Other programs may light keys": a choice that is off until it is made, written to the file galleond reads, and shown either way.
+    // ---- "Try a signal": the request another program would make, from the drawing of the keyboard ----
+
+    void theTryASignalPanelAsksGalleondForTheKeyChosenOnTheDrawingAndShowsWhyItRefused()
+    {
+        const QString connectionName = QStringLiteral("fake-galleond-for-the-signal-panel");
+        QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, connectionName);
+        KeySignalsEndpoint endpoint;
+        LightingEndpoint lighting;
+        QVERIFY(bus.registerObject("/org/galleoncore/KeySignals", &endpoint, QDBusConnection::ExportAllSlots));
+        QVERIFY(bus.registerObject("/org/galleoncore/Lighting", &lighting, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(bus.registerService(bosun::DaemonStatus::BusName));
+        const auto cleanUp = qScopeGuard([&] {
+            bus.unregisterObject("/org/galleoncore/KeySignals");
+            bus.unregisterObject("/org/galleoncore/Lighting");
+            bus.unregisterService(bosun::DaemonStatus::BusName);
+            QDBusConnection::disconnectFromBus(connectionName);
+        });
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        const bosun::AppearanceStore appearance{QString()};
+        bosun::KeySignalsStore allowing(dir.filePath("key-signals.json")); // NOLINT(misc-const-correctness): the QML calls its non-const methods
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("padFollowsTabs"), false},
+                                     {QStringLiteral("keySignals"), QVariant::fromValue(&allowing)},
+                                     {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QTRY_VERIFY_WITH_TIMEOUT(daemon.running(), 3000);
+        QVERIFY(root->setProperty("currentTab", 3));
+        QVERIFY(root->setProperty("keyboardView", QStringLiteral("lighting")));
+        const auto named = [root](const char *name) -> QQuickItem * {
+            const auto found = namedItems(root, QString::fromLatin1(name)); // also what a Repeater makes
+            return found.size() == 1 ? found.constFirst() : nullptr;
+        };
+        QQuickItem *panel = named("keySignalPanel");
+        QVERIFY(panel);
+        QTRY_VERIFY_WITH_TIMEOUT(panel->isVisible(), 3000);
+        // Nothing chosen: no key to light, and the box above is not ticked.
+        QVERIFY(!named("keySignalLight")->property("enabledLook").toBool());
+        QVERIFY(named("keySignalNeedsBox")->isVisible());
+        QVERIFY(allowing.setAllow(true).isEmpty());
+        QTRY_VERIFY_WITH_TIMEOUT(!named("keySignalNeedsBox")->isVisible(), 3000);
+        // The cap of F3 chosen on the drawing (the LED 60).
+        int cap = -1;
+        for (int index = 0; index < 200 && cap < 0; ++index) {
+            QVariant led;
+            QVERIFY(QMetaObject::invokeMethod(root, "ledOfCap", Q_RETURN_ARG(QVariant, led), Q_ARG(QVariant, index)));
+            if (led.toInt() == 60)
+                cap = index;
+        }
+        QVERIFY2(cap >= 0, "no cap of the drawing is on the LED 60");
+        QVERIFY(root->setProperty("selectedCap", cap));
+        QTRY_VERIFY_WITH_TIMEOUT(named("keySignalLight")->property("enabledLook").toBool(), 3000);
+        QVERIFY2(named("keySignalTarget")->property("text").toString().contains(QStringLiteral("F3")), "the key is not named");
+        // The colour, the effect and the time are the ones chosen.
+        QVERIFY(QMetaObject::invokeMethod(named("keySignalSwatches"), "picked", Q_ARG(QString, QStringLiteral("#e53935"))));
+        QVERIFY(QMetaObject::invokeMethod(named("keySignalPulse"), "clicked"));
+        QVERIFY(QMetaObject::invokeMethod(named("keySignalDuration600"), "clicked"));
+        QVERIFY(QMetaObject::invokeMethod(named("keySignalLight"), "clicked"));
+        QTRY_COMPARE_WITH_TIMEOUT(endpoint.sets.size(), 1, 3000);
+        const KeySignalsEndpoint::Call call = endpoint.sets.constFirst();
+        QCOMPARE(call.key, QStringLiteral("F3"));
+        QCOMPARE(call.red, 0xe5);
+        QCOMPARE(call.green, 0x39);
+        QCOMPARE(call.blue, 0x35);
+        QCOMPARE(call.effect, QStringLiteral("pulse"));
+        QCOMPARE(call.seconds, 600.0);
+        // The steady one with another time.
+        QVERIFY(QMetaObject::invokeMethod(named("keySignalSteady"), "clicked"));
+        QVERIFY(QMetaObject::invokeMethod(named("keySignalDuration10"), "clicked"));
+        QVERIFY(QMetaObject::invokeMethod(named("keySignalLight"), "clicked"));
+        QTRY_COMPARE_WITH_TIMEOUT(endpoint.sets.size(), 2, 3000);
+        QCOMPARE(endpoint.sets.constLast().effect, QStringLiteral("steady"));
+        QCOMPARE(endpoint.sets.constLast().seconds, 10.0);
+        // A refusal of galleond is told in its own words.
+        endpoint.answer = QStringLiteral("Other programs are not allowed to light keys: the person allows it in Bosun.");
+        QVERIFY(QMetaObject::invokeMethod(named("keySignalLight"), "clicked"));
+        QTRY_VERIFY_WITH_TIMEOUT(root->property("message").toString() == endpoint.answer, 3000);
+        QVERIFY(root->property("messageIsError").toBool());
+        // Clearing one key, then all of them.
+        QVERIFY(QMetaObject::invokeMethod(named("keySignalClear"), "clicked"));
+        QTRY_COMPARE_WITH_TIMEOUT(endpoint.clears, (QStringList{QStringLiteral("F3")}), 3000);
+        QVERIFY(QMetaObject::invokeMethod(named("keySignalClearAll"), "clicked"));
+        QTRY_COMPARE_WITH_TIMEOUT(endpoint.clearAlls, 1, 3000);
+    }
+
+    void aPlaceWithoutAMeasuredLightCannotBeAskedForAndNothingIsSent()
+    {
+        const QString connectionName = QStringLiteral("fake-galleond-for-the-signal-refusals");
+        QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, connectionName);
+        KeySignalsEndpoint endpoint;
+        QVERIFY(bus.registerObject("/org/galleoncore/KeySignals", &endpoint, QDBusConnection::ExportAllSlots));
+        QVERIFY(bus.registerService(bosun::DaemonStatus::BusName));
+        const auto cleanUp = qScopeGuard([&] {
+            bus.unregisterObject("/org/galleoncore/KeySignals");
+            bus.unregisterService(bosun::DaemonStatus::BusName);
+            QDBusConnection::disconnectFromBus(connectionName);
+        });
+        bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        QTRY_VERIFY_WITH_TIMEOUT(daemon.running(), 3000);
+        QVERIFY(!daemon.lightKey(139, QStringLiteral("#ffffff"), false, 60).isEmpty()); // a section of the strip
+        QVERIFY(!daemon.lightKey(-1, QStringLiteral("#ffffff"), false, 60).isEmpty());
+        QVERIFY(!daemon.lightKey(60, QStringLiteral("white"), false, 60).isEmpty());   // not #rrggbb
+        QVERIFY(!daemon.lightKey(60, QStringLiteral("#ffffff"), false, 0).isEmpty());   // no time
+        QVERIFY(!daemon.clearKey(139).isEmpty());
+        QTest::qWait(300);
+        QCOMPARE(endpoint.sets.size(), 0);
+        QCOMPARE(endpoint.clears.size(), 0);
+    }
+
+    void withoutGalleondTheTryASignalPanelSaysSoAndSendsNothing()
+    {
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        QVERIFY(!daemon.running());
+        // const method needs no daemon: the name of the key of a LED
+        QCOMPARE(daemon.keyNameOfLed(60), QStringLiteral("F3"));
+        bosun::DaemonStatus asking("/nonexistent/systemctl");
+        QVERIFY(!asking.lightKey(60, QStringLiteral("#ffffff"), false, 60).isEmpty());
+        QVERIFY(!asking.clearKey(60).isEmpty());
+        QVERIFY(!asking.clearKeys().isEmpty());
+    }
+
     void otherProgramsMayLightKeysOnlyOnceChosenAndTheChoiceIsWrittenForGalleond()
     {
         const QTemporaryDir dir;

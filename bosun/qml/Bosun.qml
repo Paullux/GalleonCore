@@ -1008,6 +1008,14 @@ Window {
                           ? qsTr("The drawing is greyed: the keyboard is not showing it right now (see the state of the live lighting above). What you choose here is kept and shown as soon as it is.")
                           : qsTr("The drawing stays in black and grey while the live lighting is off: switch it on to see and choose the colours of the keys. The key caps are a standard French layout drawn for orientation; the lamps under them are at the positions the keyboard reports.")
                 }
+                KeySignalPanel {
+                    objectName: "keySignalPanel"
+                    visible: win.daemon.lightingSupported && win.keySignals !== null
+                    daemon: win.daemon
+                    allowed: win.keySignals !== null && win.keySignals.allow
+                    led: win.ledOfCap(win.selectedCap)
+                    onAnswered: (error, done) => win.answered(error, done)
+                }
                 Text {
                     color: "#c9ced6"
                     font.pixelSize: 13

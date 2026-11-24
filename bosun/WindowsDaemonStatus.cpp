@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "DaemonStatus.h"
+#include "KeySignalRequest.h"
 #include "LedValues.h"
 #include "LightingStateWatcher.h"
 #include "LocalControl.h"
@@ -99,6 +100,33 @@ QString DaemonStatus::testScreensaver(const QString &video)
     command.video = video;
     galleond::sendLocalCommand(m_endpoint, command, this);
     return {};
+}
+// The "Try a signal" panel, through the local endpoint, as the client "bosun". There is no reply on this endpoint: a refusal (the box is not ticked, the lighting is off, a
+// limit) shows nothing here, and a signal stays until its end or a clear (nothing ties it to this window).
+void DaemonStatus::postKeySignal(const KeySignalRequest &request)
+{
+    galleond::LocalCommand command{galleond::LocalAction::KeySignal, {}, {}};
+    command.client = QStringLiteral("bosun");
+    command.key = request.key;
+    command.red = request.red;
+    command.green = request.green;
+    command.blue = request.blue;
+    command.effect = request.pulse ? QStringLiteral("pulse") : QStringLiteral("steady");
+    command.seconds = request.seconds;
+    galleond::sendLocalCommand(m_endpoint, command, this);
+}
+void DaemonStatus::postKeySignalClear(const QString &key)
+{
+    galleond::LocalCommand command{galleond::LocalAction::KeySignalClear, {}, {}};
+    command.client = QStringLiteral("bosun");
+    command.key = key;
+    galleond::sendLocalCommand(m_endpoint, command, this);
+}
+void DaemonStatus::postKeySignalsClear()
+{
+    galleond::LocalCommand command{galleond::LocalAction::KeySignalClearAll, {}, {}};
+    command.client = QStringLiteral("bosun");
+    galleond::sendLocalCommand(m_endpoint, command, this);
 }
 QString DaemonStatus::startNight(int hour, int minute)
 {

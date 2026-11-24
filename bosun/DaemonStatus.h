@@ -17,6 +17,8 @@
 
 namespace bosun {
 
+struct KeySignalRequest;
+
 // Reports whether galleond is available and requests its lifecycle operations.
 // Linux uses the session bus and systemd; Windows uses a per-user local endpoint
 // and starts the sibling executable. This window never opens the device.
@@ -106,6 +108,17 @@ public:
     // Asks galleond for its lighting state (when it appears, or to look again).
     Q_INVOKABLE [[nodiscard]] QString refreshLighting();
 
+    // The "Try a signal" panel: lights ONE key the way another program does (docs/KEY_SIGNALS.md): the same request, through the D-Bus interface on Linux and through the
+    // local endpoint on Windows (as the client "bosun"). `led` is the LED of the key chosen on the drawing; the name of the key comes from the map of measured lights.
+    // "" when the request was sent, else why not. galleond's answer (the box "Other programs may light keys" is not ticked, the lighting is off, a limit...) comes back as
+    // commandError on Linux; the endpoint of Windows has no reply, so a refusal shows nothing there. On Linux the signal goes when this window closes (it belongs to
+    // this window's D-Bus connection); on Windows only its end or a clear takes it away. Output only: no key press is read.
+    Q_INVOKABLE [[nodiscard]] QString lightKey(int led, const QString &colour, bool pulse, int seconds);
+    Q_INVOKABLE [[nodiscard]] QString clearKey(int led);
+    Q_INVOKABLE [[nodiscard]] QString clearKeys();
+    // The name that would be sent for the key of this LED ("F3"), or "" when it has none (a section of the strip, a light that was not measured).
+    Q_INVOKABLE [[nodiscard]] QString keyNameOfLed(int led) const;
+
 Q_SIGNALS:
     void changed();
     void keyboardBrightnessChanged();
@@ -119,6 +132,10 @@ private Q_SLOTS:
     void onLightingStateChanged(const QString &state, const QString &detail);
 
 private:
+    // The sending of the three requests of the panel, by platform (DaemonStatus.cpp, WindowsDaemonStatus.cpp); the checks are shared (DaemonStatusKeys.cpp).
+    void postKeySignal(const KeySignalRequest &request);
+    void postKeySignalClear(const QString &key);
+    void postKeySignalsClear();
     void setKeyboardBrightnessKnown(int value);
     void setLighting(const QString &state, const QString &detail);
     [[nodiscard]] QString ask(const QString &verb);

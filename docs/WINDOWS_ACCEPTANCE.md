@@ -41,8 +41,8 @@ Rows by section. Updated when results are recorded. `R` = required for 1.0; the 
 | 5. Restore at start | 8 | 1 | 0 | 0 | 0 | 7 |
 | 6. Veille tab, and the tabs driving the module | 7 | 3 | 0 | 0 | 0 | 4 |
 | 7. Coexistence | 3 | 0 | 0 | 0 | 0 | 3 |
-| 8. Other programs lighting keys | 7 | 2 | 0 | 0 | 0 | 5 |
-| **Total** | **54** | **6** | **0** | **0** | **0** | **48** |
+| 8. Other programs lighting keys | 8 | 2 | 0 | 0 | 0 | 6 |
+| **Total** | **55** | **6** | **0** | **0** | **0** | **49** |
 
 **Release gate.** All `R` rows are `Pass`, or each one that is not has a recorded decision of the maintainer to accept it
 for 1.0 (with the reason), and every `Fail` has an open issue or a fix. Nothing in this table is a promise about when.
@@ -193,6 +193,7 @@ Needs the live lighting on (row 4.1), except where the row says otherwise.
 | 8.5 | With a signal lit, switch the live lighting off in Bosun, then on again. | The signal is gone; it does not come back. | R | Not run | |
 | 8.6 | Send junk to the endpoint (a wrong key name `-Key Banana`, then `-Seconds 99999` through the script's validation, then a hand-made frame with an unknown effect). | Nothing lights; galleond keeps running (no crash, no restart); no key name appears in its log. | A | Not run | `-Key Banana` changed nothing (23 Nov 2026). Not confirmed: that galleond kept running, nor the other junk cases. |
 | 8.7 | After lighting a key, send `-ClearAll` with the same client name. | The signals of that client go back to the lighting. | A | Pass | 23 Nov 2026: the keys went back to blue. (Not seen: that another client name cannot clear them.) |
+| 8.8 | Bosun > Keyboard > live lighting > "Try a signal": tick the box above, click a key on the drawing (for example F3), choose a colour, "Pulse", "1 min", then "Light the key". | The key lights and pulses for a minute. "Clear this key" and "Clear all" take it away. Without the box ticked nothing lights and **nothing says why** (the endpoint of Windows has no reply). | A | Not run | |
 
 ## After the tests
 
