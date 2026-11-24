@@ -58,6 +58,9 @@ jobs:
       - name: Fuzz the keyboard live-lighting link (60 s)
         if: contains(matrix.flags, 'GALLEON_FUZZ')
         run: ./build/fuzz/fuzz_live_link -max_total_time=60
+      - name: Fuzz the keyboard input report (60 s)
+        if: contains(matrix.flags, 'GALLEON_FUZZ')
+        run: ./build/fuzz/fuzz_key_report -max_total_time=60
 
   # clang-tidy was a single step of about 23 minutes in a lint job of 26: it now runs as several jobs at once, each on its own machine, over its share of the files
   # (tools/ci/clang_tidy_shard.py: the same set of files as before, dealt out in turn, tested to cover it exactly). Each one still configures and builds
