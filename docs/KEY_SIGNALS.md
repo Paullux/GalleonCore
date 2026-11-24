@@ -31,7 +31,7 @@ Session bus, service `org.galleoncore.Deck`, object `/org/galleoncore/KeySignals
 
 **The program has to stay on the bus.** A signal belongs to the connection that asked for it and goes when that connection closes. So a command that makes one call and exits (`busctl`, `gdbus`, `dbus-send`) lights nothing that lasts: its signal ends as soon as the command does. A client for this interface must keep its connection open for as long as the signals should last, and close it (or call `Clear` / `ClearAll`) to take them away. The seconds you give are the longest they can last, not a promise that they stay if the program leaves.
 
-There is no command-line tool for Linux yet. A way to try a signal by hand is planned in Bosun (the Keyboard tab), which keeps the connection while it is open.
+There is no command-line tool for Linux yet (one that keeps its connection is planned: `galleon-key-signal`). To try a signal by hand, Bosun has a **"Try a signal" panel** (Keyboard tab, live lighting): click a key on the drawing, choose a colour, steady or pulse, and a time (10 s, 1 min, 10 min, 1 h), then "Light the key". It sends the same request as another program (on Linux through this D-Bus interface, so the signal goes when Bosun is closed; on Windows through the local endpoint as the client `bosun`). It still needs the box "Other programs may light keys" to be ticked and the live lighting to be on, and galleond's refusal, if any, is shown in its own words (on Windows nothing comes back).
 
 ## Windows (local endpoint)
 

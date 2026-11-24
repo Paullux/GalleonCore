@@ -3,6 +3,7 @@
 
 #include "DaemonStatus.h"
 
+#include "KeySignalRequest.h"
 #include "LedValues.h"
 
 #include <QCoreApplication>
@@ -231,6 +232,43 @@ QString DaemonStatus::testScreensaver(const QString &video)
         watcher->deleteLater();
     });
     return {};
+}
+
+// The "Try a signal" panel, on the D-Bus interface that other programs use too. The signal belongs to the connection of this window: it goes when the window closes.
+namespace {
+QDBusMessage keySignalsCall(const QString &method)
+{
+    return QDBusMessage::createMethodCall(QString::fromLatin1(DaemonStatus::BusName), QStringLiteral("/org/galleoncore/KeySignals"), QStringLiteral("org.galleoncore.KeySignals"), method);
+}
+} // namespace
+
+void DaemonStatus::postKeySignal(const KeySignalRequest &request)
+{
+    auto message = keySignalsCall(QStringLiteral("Set"));
+    message << request.key << request.red << request.green << request.blue << (request.pulse ? QStringLiteral("pulse") : QStringLiteral("steady")) << static_cast<double>(request.seconds);
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
+        const QDBusPendingReply<QString> reply = *watcher;
+        if (reply.isError())
+            Q_EMIT commandError(tr("Cannot light the key: restart the updated daemon (%1)").arg(reply.error().message()));
+        else if (!reply.value().isEmpty())
+            Q_EMIT commandError(reply.value()); // galleond says why in a sentence
+        watcher->deleteLater();
+    });
+}
+
+void DaemonStatus::postKeySignalClear(const QString &key)
+{
+    auto message = keySignalsCall(QStringLiteral("Clear"));
+    message << key;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, watcher, &QObject::deleteLater);
+}
+
+void DaemonStatus::postKeySignalsClear()
+{
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(keySignalsCall(QStringLiteral("ClearAll")), 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, watcher, &QObject::deleteLater);
 }
 
 QString DaemonStatus::startNight(int hour, int minute)
