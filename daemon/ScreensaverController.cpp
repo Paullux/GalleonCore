@@ -319,17 +319,32 @@ QString ScreensaverController::videoOfList(const ScreensaverConfig &config, cons
 
 bool ScreensaverController::test(const QString &requested)
 {
-    if (m_inhibited || m_active || m_process || !m_splitter || !m_deck->isOpen())
+    if (m_inhibited || !m_splitter || !m_deck->isOpen())
+        return false;
+    // A test that is on the module (or being launched) gives way to the next one: trying another video does not ask the person to leave the first. The real
+    // screensaver, the one the idle time started, is left alone: its end is an input on the module.
+    const bool replacing = m_testing && (m_active || m_process);
+    if (!replacing && (m_active || m_process))
         return false;
     const QString video = videoOfList(m_config, m_baseFolder, requested);
     if (video.isEmpty())
-        return false;
+        return false; // checked before anything is touched: a refused request leaves the test that runs alone
     m_giveUp = false;
+    const bool wasShown = replacing && announcedActive();
+    if (replacing) {
+        stop(false);
+        m_active = false;        // started() sets it again; until then the others still see the module as taken
+        m_restarting = wasShown; // so nothing is announced as off and on again in between
+        m_restarts = 0;
+    }
     m_testing = true;
     m_idle.stop();
-    m_testTimer.start();
+    m_testTimer.start(); // the new test has its whole time
     if (!start(video)) {
+        m_restarting = false;
         endTest();
+        if (wasShown)
+            Q_EMIT activeChanged(false); // the first test is gone and the next one could not start
         restartIdleTimer();
         return false;
     }

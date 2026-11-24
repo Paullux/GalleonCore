@@ -719,6 +719,114 @@ private Q_SLOTS:
         QVERIFY(!f.controller->isTesting());
     }
 
+    // ---- a test in progress gives way to the next one ----
+
+    void aTestInProgressGivesWayToTheNextOneWithoutTheModuleBeingGivenBackInBetween()
+    {
+        Fixture f;
+        QFile second(f.dir.filePath("second.mp4"));
+        QVERIFY(second.open(QIODevice::WriteOnly));
+        second.write("x");
+        second.close();
+        ScreensaverConfig config = f.config;
+        config.videos = QStringList{"clip.mp4", "second.mp4"};
+        f.configure(config);
+        const auto played = [&] {
+            QFile log(f.dir.filePath("args.log"));
+            return log.open(QIODevice::ReadOnly) ? QString::fromUtf8(log.readAll()) : QString();
+        };
+        QVERIFY(f.controller->test("clip.mp4"));
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(played().contains("clip.mp4"), 3000);
+        const QSignalSpy active(f.controller.get(), &ScreensaverController::activeChanged);
+        QVERIFY(f.controller->test("second.mp4")); // the first one is still on the module
+        QTRY_VERIFY_WITH_TIMEOUT(played().contains("second.mp4"), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        QVERIFY(f.controller->isTesting());
+        for (const auto &signal : active)
+            QVERIFY2(signal.first().toBool(), "the module was announced as free between the two tests");
+    }
+
+    void aTestAskedWhileTheFirstOneIsStillStartingTakesItsPlace()
+    {
+        Fixture f;
+        QFile second(f.dir.filePath("second.mp4"));
+        QVERIFY(second.open(QIODevice::WriteOnly));
+        second.write("x");
+        second.close();
+        ScreensaverConfig config = f.config;
+        config.videos = QStringList{"clip.mp4", "second.mp4"};
+        f.configure(config);
+        QVERIFY(f.controller->test("clip.mp4"));
+        QVERIFY(f.controller->test("second.mp4")); // right away: the decoder of the first is not up yet
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        QVERIFY(f.controller->isTesting());
+        const auto played = [&] {
+            QFile log(f.dir.filePath("args.log"));
+            return log.open(QIODevice::ReadOnly) ? QString::fromUtf8(log.readAll()) : QString();
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(played().contains("second.mp4"), 3000);
+    }
+
+    void aRefusedTestLeavesTheTestThatRunsAlone()
+    {
+        Fixture f;
+        f.configure(f.config);
+        QVERIFY(f.controller->test("clip.mp4"));
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        const QSignalSpy active(f.controller.get(), &ScreensaverController::activeChanged);
+        QVERIFY(!f.controller->test("other.mp4"));   // not one of the list
+        QVERIFY(!f.controller->test("missing.mp4")); // not readable
+        QVERIFY(!f.controller->test(QString()));
+        const int before = f.screenReports();
+        QTRY_VERIFY_WITH_TIMEOUT(f.screenReports() > before + 2, 5000); // and its decoder still draws: nothing was stopped for a request that was refused
+        QVERIFY(f.controller->isActive());
+        QVERIFY(f.controller->isTesting());
+        QCOMPARE(active.count(), 0);
+    }
+
+    void anInputBetweenTwoTestsGivesTheModuleBackAndSaysSo()
+    {
+        // The first test is stopped and the next decoder is not up yet: an input then must end the whole thing and announce it, or the pages stay asleep.
+        Fixture f;
+        QFile second(f.dir.filePath("second.mp4"));
+        QVERIFY(second.open(QIODevice::WriteOnly));
+        second.write("x");
+        second.close();
+        ScreensaverConfig config = f.config;
+        config.videos = QStringList{"clip.mp4", "second.mp4"};
+        f.configure(config);
+        QVERIFY(f.controller->test("clip.mp4"));
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        QSignalSpy active(f.controller.get(), &ScreensaverController::activeChanged);
+        QVERIFY(f.controller->test("second.mp4"));
+        f.controller->notifyActivity(); // before the new decoder starts: handled on the next turn of the event loop
+        QTRY_VERIFY_WITH_TIMEOUT(!active.isEmpty(), 3000);
+        QVERIFY(!active.last().first().toBool());
+        QVERIFY(!f.controller->isActive());
+        QVERIFY(!f.controller->isTesting());
+    }
+
+    void theNextTestHasItsWholeTimeAndNotWhatIsLeftOfTheFirst()
+    {
+        Fixture f;
+        QFile second(f.dir.filePath("second.mp4"));
+        QVERIFY(second.open(QIODevice::WriteOnly));
+        second.write("x");
+        second.close();
+        ScreensaverConfig config = f.config;
+        config.videos = QStringList{"clip.mp4", "second.mp4"};
+        f.configure(config);
+        f.controller->setTestDurationMs(900);
+        QVERIFY(f.controller->test("clip.mp4"));
+        QTRY_VERIFY_WITH_TIMEOUT(f.controller->isActive(), 3000);
+        QTest::qWait(500);
+        QVERIFY(f.controller->test("second.mp4")); // the first would end 400 ms from now
+        QTest::qWait(650);                         // past the end of the first, well before the end of the next
+        QVERIFY(f.controller->isActive());
+        QTRY_VERIFY_WITH_TIMEOUT(!f.controller->isActive(), 3000); // and it does end
+    }
+
     void aTrackPlayingDoesNotStopATestThatWasAskedFor()
     {
         Fixture f;
