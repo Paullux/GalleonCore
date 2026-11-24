@@ -38,11 +38,11 @@ Rows by section. Updated when results are recorded. `R` = required for 1.0; the 
 | 2. Module (keys, screen, dials) | 6 | 0 | 0 | 0 | 0 | 6 |
 | 3. Dial rings | 5 | 0 | 0 | 0 | 0 | 5 |
 | 4. Live lighting (keyboard) | 12 | 0 | 0 | 0 | 0 | 12 |
-| 5. Restore at start | 7 | 0 | 0 | 0 | 0 | 7 |
-| 6. Veille tab, and the tabs driving the module | 7 | 0 | 0 | 0 | 0 | 7 |
+| 5. Restore at start | 8 | 1 | 0 | 0 | 0 | 7 |
+| 6. Veille tab, and the tabs driving the module | 7 | 3 | 0 | 0 | 0 | 4 |
 | 7. Coexistence | 3 | 0 | 0 | 0 | 0 | 3 |
-| 8. Other programs lighting keys | 6 | 0 | 0 | 0 | 0 | 6 |
-| **Total** | **52** | **0** | **0** | **0** | **0** | **52** |
+| 8. Other programs lighting keys | 7 | 2 | 0 | 0 | 0 | 5 |
+| **Total** | **54** | **6** | **0** | **0** | **0** | **48** |
 
 **Release gate.** All `R` rows are `Pass`, or each one that is not has a recorded decision of the maintainer to accept it
 for 1.0 (with the reason), and every `Fail` has an open issue or a fix. Nothing in this table is a promise about when.
@@ -149,8 +149,9 @@ ticked **and** galleond last ended properly with the lighting on.
 | 5.3 | Same, then **end `galleond.exe` in Task Manager** and start it again. | The lighting is **not** put back; the memory reads `off` after the start. This is the guard that matters most. | R | Not run | |
 | 5.4 | Same, with the box **unticked**. | Never put back. | R | Not run | |
 | 5.5 | With the box ticked and the lighting on, **sign out, then in**. | **Record what happens** and what `lighting-memory.json` says before (`running`) and after. Expected since the fix of the end of session: the lighting is put back. Before it, the memory ended as `off`. A first fix (checking once) was not enough on a real restart (run 405); the second one looks again for 3 s. | R | Not run | First seen on a restart (23 November): before `running`, after `off` and `lighting-state.json` said "The watchdog ended": Windows stops the watchdog before galleond, which was taken for a failure. |
-| 5.6 | Same with a **restart**, then with a **shutdown and power on**. | Same: the keyboard is back under the live lighting about a minute after the session opens; `lighting-state.json` does not say "The watchdog ended" but "The computer is shutting down" the time before. | R | Not run | |
+| 5.6 | Same with a **restart**. | Same: the keyboard is back under the live lighting about a minute after the session opens; `lighting-state.json` does not say "The watchdog ended" but "The computer is shutting down" the time before. | R | Pass | 23 Nov 2026, Windows 11, **restart**, with the sky appearance: it came back a few seconds after GalleonCore started. Two attempts before: the memory ended `off` and the state said "The watchdog ended", because Windows stops the watchdog before galleond (that moment was before the boot, 14:04:10 against a boot at 14:04:59). Fixed by #157 (the check is repeated for 3 s). The detail written in `lighting-state.json` after this restart was not recorded. |
 | 5.7 | Start galleond with the **keyboard unplugged**, plug it in within 30 s. | The lighting is put back once it answers; after 30 s without it, it stays off with a reason in the log. | A | Not run | |
+| 5.8 | Same with a **shutdown and power on**. | Same as 5.6. | R | Not run | |
 
 ## 6. Veille tab, and the tabs driving the module
 
@@ -162,12 +163,12 @@ there is that nothing changes.
 
 | ID | Feature | What to do | Expected | Req. | Result | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| 6.1 | Lights off until morning: the module and the rings | Bosun > Veille > "Lights off until morning": choose a time a few minutes away, press the button. | The module goes dark at once (brightness 0, black screen and keys) and the rings go out; the state line says the lights are off until that time. Nothing wakes the module meanwhile (a key, a dial, the screensaver). At that time the module comes back. | R | Not run | |
+| 6.1 | Lights off until morning: the module and the rings | Bosun > Veille > "Lights off until morning": choose a time a few minutes away, press the button. | The module goes dark at once (brightness 0, black screen and keys) and the rings go out; the state line says the lights are off until that time. Nothing wakes the module meanwhile (a key, a dial, the screensaver). At that time the module comes back. | R | Pass | 23 Nov 2026: the module and the rings go dark until the chosen time. |
 | 6.2 | The module follows the open theme tab | Open several theme tabs in Bosun. | The module does **not** change (not on Windows yet). | A | Not run | |
-| 6.3 | "Test" button of a screensaver video | Press it on a video (no game running, the module connected). | The video plays on the module for a short time; a key or a dial stops it. Pressed with a game running: nothing happens and Bosun does not say why (no reply). | R | Not run | |
-| 6.4 | Key calibration hidden unless `--mapkeys` | Open the Keyboard tab; then start `galleon-bosun.exe --mapkeys`. | Hidden without the option; shown with it. (This one is Bosun only.) | A | Not run | |
-| 6.5 | Bring the lights back now | During a night, press the same button (it then offers to bring the lights back). | The module and the rings come back at once; the state line says the lights are on. | R | Not run | |
-| 6.6 | A night survives a restart of galleond | During a night, stop galleond (Bosun > stop) and start it again. | The module stays dark until the same time (the end is read from `night-mode.json`, and a restart does not light it before then). | R | Not run | |
+| 6.3 | "Test" button of a screensaver video | Press it on a video (no game running, the module connected). | The video plays on the module for a short time; a key or a dial stops it. Pressed with a game running: nothing happens and Bosun does not say why (no reply). | R | Pass | 23 Nov 2026: plays. UX defect, same on Linux: to test another video one must first leave the one that is playing (the daemon refuses while a screensaver is on). To fix: a test in progress is replaced by the new one. |
+| 6.4 | Key calibration hidden unless `--mapkeys` | Open the Keyboard tab; then start `galleon-bosun.exe --mapkeys`. | Hidden without the option; shown with it. (This one is Bosun only.) | A | Not run | 23 Nov 2026: with `--mapkeys` the section "Étalonner les touches" is shown (seen). That it is hidden without the option was not confirmed. |
+| 6.5 | Bring the lights back now | During a night, press the same button (it then offers to bring the lights back). | The module and the rings come back at once; the state line says the lights are on. | R | Not run | To redo (23 Nov 2026). |
+| 6.6 | A night survives a restart of galleond | During a night, stop galleond (Bosun > stop) and start it again. | The module stays dark until the same time (the end is read from `night-mode.json`, and a restart does not light it before then). | R | Pass | 23 Nov 2026: the night survives a restart of galleond. |
 | 6.7 | Night and the live lighting | With the live lighting on, start a night. | The keyboard goes **black but stays held** by galleond (it does not fall back to its own bright profile); a signal lit by another program (section 8) is black too; at the end the lighting comes back. With the live lighting off, the keyboard keeps its own profile. | R | Not run | |
 
 ## 7. Coexistence
@@ -185,12 +186,13 @@ Needs the live lighting on (row 4.1), except where the row says otherwise.
 
 | ID | Check | Expected | Req. | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| 8.1 | Bosun > Keyboard > live lighting: look at "Other programs may light keys". Then, with the lighting on and the box **not** ticked, run `.\key-signal.ps1 -Client test -Key F3 -Red 255 -Green 120 -Blue 0 -Effect steady -Seconds 120`. | The box says "not allowed" (off by default, and no `key-signals.json` yet). **F3 does not light.** | R | Not run | |
-| 8.2 | Tick the box, send the same command again, then `-Effect pulse`. | F3 lights orange, then breathes from full to a fifth and back (about 1.6 s a cycle). The other keys keep the lighting. | R | Not run | |
-| 8.3 | While F3 is lit, untick the box in Bosun. | F3 goes back to the lighting **within about a second**. Ticking it again does not bring it back. | R | Not run | |
-| 8.4 | Send a signal with `-Seconds 10`, wait. | It ends by itself at 10 s. | R | Not run | |
+| 8.1 | Bosun > Keyboard > live lighting: look at "Other programs may light keys". Then, with the lighting on and the box **not** ticked, run `.\key-signal.ps1 -Client test -Key F3 -Red 255 -Green 120 -Blue 0 -Effect steady -Seconds 120`. | The box says "not allowed" (off by default, and no `key-signals.json` yet). **F3 does not light.** | R | Not run | Not confirmed that nothing lit with the box unticked. |
+| 8.2 | Tick the box, send the same command again, then `-Effect pulse`. | F3 lights orange, then breathes from full to a fifth and back (about 1.6 s a cycle). The other keys keep the lighting. | R | Pass | 23 Nov 2026: steady then pulse seen on F3, and on four keys at once (the keys engraved Z Q S D are the physical W A S D). The names are the physical QWERTY places. |
+| 8.3 | While F3 is lit, untick the box in Bosun. | F3 goes back to the lighting **within about a second**. Ticking it again does not bring it back. | R | Not run | Unticking the box turned F3 off (seen, 23 Nov 2026). Not confirmed: back within about a second, and ticking again does not relight it. |
+| 8.4 | Send a signal with `-Seconds 10`, wait. | It ends by itself at 10 s. | R | Not run | Not measured. Four signals of 120 s had gone out by the next photo, which does not say when. |
 | 8.5 | With a signal lit, switch the live lighting off in Bosun, then on again. | The signal is gone; it does not come back. | R | Not run | |
-| 8.6 | Send junk to the endpoint (a wrong key name `-Key Banana`, then `-Seconds 99999` through the script's validation, then a hand-made frame with an unknown effect). | Nothing lights; galleond keeps running (no crash, no restart); no key name appears in its log. | A | Not run | |
+| 8.6 | Send junk to the endpoint (a wrong key name `-Key Banana`, then `-Seconds 99999` through the script's validation, then a hand-made frame with an unknown effect). | Nothing lights; galleond keeps running (no crash, no restart); no key name appears in its log. | A | Not run | `-Key Banana` changed nothing (23 Nov 2026). Not confirmed: that galleond kept running, nor the other junk cases. |
+| 8.7 | After lighting a key, send `-ClearAll` with the same client name. | The signals of that client go back to the lighting. | A | Pass | 23 Nov 2026: the keys went back to blue. (Not seen: that another client name cannot clear them.) |
 
 ## After the tests
 
