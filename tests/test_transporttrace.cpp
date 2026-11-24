@@ -34,6 +34,49 @@ class TestTransportTrace : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void whilePausedNothingIsWrittenAndOneLineSaysSoAtEachEnd()
+    {
+        Lines lines;
+        auto inner = std::make_unique<FakeTransport>();
+        FakeTransport *fake = inner.get();
+        const auto sink = lines.sink();
+        TracedTransport traced(std::move(inner), sink, [] { return 7; });
+        QVERIFY(traced.open());
+        const qsizetype before = lines.list.size();
+        sink->setPaused(true);
+        QVERIFY(sink->paused());
+        QCOMPARE(lines.list.size(), before + 1);
+        QVERIFY(lines.list.last().contains("paused"));
+        const std::vector<std::uint8_t> frame{0, 0, 1, 6, 0x12, 0x00, 9, 9, 9};
+        QVERIFY(traced.write(frame));
+        QVERIFY(traced.sendFeatureReport(frame));
+        QCOMPARE(fake->writes.size(), std::size_t{1}); // what goes to the keyboard is not touched by the pause
+        sink->line(QStringLiteral("a line of the lighting while the keys glow"));
+        QCOMPARE(lines.list.size(), before + 1);        // nothing was written
+        sink->setPaused(true);                           // said twice: the same
+        QCOMPARE(lines.list.size(), before + 1);
+        sink->setPaused(false);
+        QVERIFY(!sink->paused());
+        QCOMPARE(lines.list.size(), before + 2);
+        QVERIFY(lines.list.last().contains("resumes"));
+        QVERIFY(traced.write(frame));
+        QCOMPARE(lines.list.size(), before + 3);        // told again
+        sink->setPaused(false);
+        QCOMPARE(lines.list.size(), before + 3);
+    }
+
+    void theLimitOfTheFileStillHoldsWhenItIsPausedAndResumed()
+    {
+        Lines lines;
+        const auto sink = lines.sink(120);
+        for (int i = 0; i < 20; ++i) {
+            sink->setPaused(true);
+            sink->setPaused(false);
+        }
+        QVERIFY(lines.list.size() < 6);
+        QVERIFY(lines.list.last().contains("the log is full"));
+    }
+
     void aLineHasTheTimeTheDirectionTheLengthAndOnlyTheFirstBytes()
     {
         const std::vector<std::uint8_t> report(128, 0xab);

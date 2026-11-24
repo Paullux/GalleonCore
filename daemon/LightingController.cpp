@@ -292,6 +292,22 @@ bool LightingController::clearSignals(const QString &client, const QString &key)
     return cleared;
 }
 
+void LightingController::setKeyGlow(bool on)
+{
+    if (on == m_glowOn)
+        return;
+    m_glowOn = on;
+    if (m_worker)
+        QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), on] { worker->setGlow(on); }, Qt::QueuedConnection);
+}
+
+void LightingController::touchKeyGlow(std::uint16_t led)
+{
+    if (!m_glowOn || !m_worker)
+        return;
+    QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), led] { worker->touchGlow(led); }, Qt::QueuedConnection);
+}
+
 galleon::keyboard::Appearance LightingController::shownAppearance() const
 {
     galleon::keyboard::Appearance shown = m_appearance;
@@ -308,6 +324,7 @@ void LightingController::startWorker()
     setState(QStringLiteral("starting"), {});
     m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, shownAppearance(), m_night ? std::nullopt : m_tool, m_positions, m_dayHours, m_skyDay);
     m_worker->setSignals(m_signals); // before it moves: nobody else touches it yet
+    m_worker->setGlow(m_glowOn);
     m_worker->moveToThread(&m_thread);
     connect(m_worker.get(), &LightingWorker::reported, this, &LightingController::onWorkerState);
     m_thread.start();

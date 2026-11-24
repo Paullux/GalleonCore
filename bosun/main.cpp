@@ -8,9 +8,11 @@
 #include "AppearanceStore.h"
 #include "RingStore.h"
 #include "KeyCalibration.h"
+#include "KeyGlowStore.h"
 #include "KeySignalsStore.h"
 #include "LightingRestoreStore.h"
 #include "NightStateStore.h"
+#include <KeyGlowAccess.h>
 #include <KeySignalsAccess.h>
 #include <LightingRestore.h>
 #include <NightMode.h>
@@ -136,6 +138,8 @@ int main(int argc, char *argv[])
     bosun::LightingRestoreStore lightingRestore(preview ? QString() : galleond::lightingRestorePath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
     // Whether other programs may light single keys: off unless chosen; read from its file at the start, written at each change (nothing in a preview run).
     bosun::KeySignalsStore keySignals(preview ? QString() : galleond::keySignalsAccessPath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
+    // Whether the keys glow under the fingers (it reads the key presses inside galleond): off unless chosen, with its state always shown; read from its file at the start, written at each change (nothing in a preview run).
+    bosun::KeyGlowStore keyGlow(preview ? QString() : galleond::keyGlowAccessPath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
     // Whether the lights are off until morning, and until when: read from galleond's file (nothing in a preview run).
     const bosun::NightStateStore nightState(preview ? QString() : galleond::nightModePath());
     bosun::KeyCalibration keyCalibration(calibrationLights, galleond::keyMapPath()); // NOLINT(misc-const-correctness): the QML calls its non-const methods
@@ -193,6 +197,7 @@ int main(int argc, char *argv[])
                                  {QStringLiteral("rings"), QVariant::fromValue(&rings)},
                                  {QStringLiteral("lightingRestore"), QVariant::fromValue(&lightingRestore)},
                                  {QStringLiteral("keySignals"), QVariant::fromValue(&keySignals)}, // on Windows through the local endpoint, on Linux through D-Bus
+                                 {QStringLiteral("keyGlow"), QVariant::fromValue(&keyGlow)}, // read by galleond on Linux only for now
                                  {QStringLiteral("nightState"), QVariant::fromValue(&nightState)},
                                  // The calibration is for the maintainer: the tab shows nothing of it unless Bosun was started with --mapkeys.
                                  {QStringLiteral("keyCalibration"), parser.isSet(mapKeysOption) ? QVariant::fromValue(&keyCalibration) : QVariant::fromValue<QObject *>(nullptr)},

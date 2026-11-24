@@ -10,6 +10,14 @@
 #include "BrightnessCurve.h"
 #include "LightingAppearanceApplier.h"
 #include "KeySignalsAccess.h"
+#include "KeyGlowDriver.h"
+#include "LightingGlowTarget.h"
+#ifndef Q_OS_WIN
+#include "HidrawKeyPressSource.h"
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
+#include <galleon/keyboard/ReactiveGlow.h>
 #include "KeySignalsLocal.h"
 #include "KeySignalsService.h"
 #include "LocalControl.h"
@@ -40,6 +48,7 @@
 #include <QTest>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <memory>
@@ -200,6 +209,24 @@ struct Rig
         QTRY_VERIFY_WITH_TIMEOUT(controller->state() == QStringLiteral("listening"), 3000);
         advance(4000);
         QTRY_VERIFY_WITH_TIMEOUT(controller->state() == QStringLiteral("holding"), 3000);
+    }
+};
+
+// What the program says in its log while a test runs (qInfo, qWarning...), taken from any thread.
+struct LogCapture
+{
+    std::mutex mutex;
+    QStringList messages;
+    static LogCapture &instance()
+    {
+        static LogCapture capture;
+        return capture;
+    }
+    static void handler(QtMsgType /*type*/, const QMessageLogContext &/*context*/, const QString &message)
+    {
+        LogCapture &capture = instance();
+        const std::scoped_lock lock(capture.mutex);
+        capture.messages.append(message);
     }
 };
 
@@ -454,6 +481,244 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(rig.controller->state() == QStringLiteral("holding"), 3000);
         rig.advance(300);
         QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), 59) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+    }
+
+    // ---- the reactive glow: a key that goes down glows under the finger, then fades ----
+
+    static std::uint16_t glowLed() { return 59; } // the F2 key
+    static std::vector<std::uint8_t> glowCyan() { return {0, 200, 255}; }
+    static std::vector<std::uint8_t> pictureColour() { return {100, 200, 40}; }
+
+    void aKeyThatWentDownGlowsAndTheGlowFadesBackToThePicture()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.controller->setKeyGlow(true);
+        rig.hold();
+        rig.advance(300);
+        rig.controller->touchKeyGlow(glowLed());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == glowCyan()), 3000);
+        QCOMPARE(ledColour(rig.frame(), glowLed() + 1), pictureColour()); // only that key
+        rig.advance(3000); // past the fade of 1.5 s
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == pictureColour()), 3000);
+    }
+
+    void theGlowIsOffUntilItIsSwitchedOnAndAKeyThatGoesDownShowsNothingThen()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        QVERIFY(!rig.controller->keyGlow());
+        rig.hold();
+        rig.advance(300);
+        rig.controller->touchKeyGlow(glowLed());
+        QTest::qWait(300);
+        QCOMPARE(ledColour(rig.frame(), glowLed()), pictureColour());
+    }
+
+    void aKeyThatGoesDownWhileTheLightingIsOffShowsNothingWhenItComesOn()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.controller->setKeyGlow(true);
+        rig.controller->touchKeyGlow(glowLed()); // the lighting is off: nothing is kept
+        rig.hold();
+        rig.advance(300);
+        QTest::qWait(300);
+        QCOMPARE(ledColour(rig.frame(), glowLed()), pictureColour());
+    }
+
+    void switchingTheGlowOffForgetsTheTouchesAtOnce()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.controller->setKeyGlow(true);
+        rig.hold();
+        rig.advance(300);
+        rig.controller->touchKeyGlow(glowLed());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == glowCyan()), 3000);
+        rig.controller->setKeyGlow(false); // the clock did not move: the glow is not over, it was taken away
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == pictureColour()), 3000);
+        rig.controller->setKeyGlow(true); // switching it on again does not bring the old touch back
+        rig.advance(100);
+        QTest::qWait(300);
+        QCOMPARE(ledColour(rig.frame(), glowLed()), pictureColour());
+    }
+
+    void whenTheLightingStopsTheTouchesAreForgottenAndTheChoiceStays()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.controller->setKeyGlow(true);
+        rig.hold();
+        rig.advance(300);
+        rig.controller->touchKeyGlow(glowLed());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == glowCyan()), 3000);
+        QVERIFY(rig.controller->Enable(false).isEmpty());
+        QVERIFY(rig.controller->keyGlow()); // the choice is not the lighting's to change
+        rig.hold();
+        rig.advance(300);
+        QTest::qWait(300);
+        QCOMPARE(ledColour(rig.frame(), glowLed()), pictureColour()); // a new lighting starts with no glow
+    }
+
+    void theGlowIsDarkInTheNightAsEverythingElse()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.controller->setKeyGlow(true);
+        rig.controller->setNight(true);
+        rig.hold();
+        rig.advance(300);
+        rig.controller->touchKeyGlow(glowLed());
+        QTest::qWait(300);
+        QCOMPARE(ledColour(rig.frame(), glowLed()), (std::vector<std::uint8_t>{0, 0, 0}));
+    }
+
+    void aSignalThatAnotherProgramAskedForStaysVisibleOverTheGlow()
+    {
+        std::atomic<bool> allowed{true};
+        Rig rig;
+        galleond::KeySignalsService service(*rig.controller, [&allowed] { return allowed.load(); });
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.controller->setKeyGlow(true);
+        rig.hold();
+        rig.advance(300);
+        QCOMPARE(service.set(":1.7", "F2", 255, 160, 0, "steady", 600), QString());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == std::vector<std::uint8_t>{255, 160, 0}), 3000);
+        rig.controller->touchKeyGlow(glowLed());
+        QTest::qWait(300);
+        QCOMPARE(ledColour(rig.frame(), glowLed()), (std::vector<std::uint8_t>{255, 160, 0}));
+    }
+
+    void noMoreKeysGlowAtOnceThanTheBoardHolds()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.controller->setKeyGlow(true);
+        rig.hold();
+        rig.advance(300);
+        QTest::qWait(200);
+        const std::vector<std::uint8_t> before = rig.frame(); // not every LED shows the picture (some light no key): each is compared with itself
+        for (std::uint16_t led = 4; led < 140; ++led)
+            rig.controller->touchKeyGlow(led);
+        QTest::qWait(400);
+        int glowing = 0;
+        for (int led = 4; led < 140; ++led) {
+            if (ledColour(rig.frame(), led) != ledColour(before, led))
+                ++glowing;
+        }
+        QCOMPARE(glowing, static_cast<int>(galleon::keyboard::MaxGlowing));
+    }
+
+#ifndef Q_OS_WIN
+    // From the key report to the picture: the real source reads a node (a socket pair stands for it), the real driver decides, the real controller draws.
+    void aKeyReportOfTheKeyboardMakesTheKeyGlowOnlyWhileThePersonAllowedItAndTheLightingIsOn()
+    {
+        std::array<int, 2> fds{};
+        QVERIFY(socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_NONBLOCK, 0, fds.data()) == 0);
+        const int keyboardEnd = fds.at(0);
+        const int sourceEnd = fds.at(1);
+        const auto closeOurEnd = qScopeGuard([keyboardEnd] { close(keyboardEnd); });
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        galleond::HidrawKeyPressSource source([sourceEnd] { return sourceEnd; });
+        galleond::LightingGlowTarget target(*rig.controller);
+        std::atomic<bool> allowed{false};
+        galleond::KeyGlowDriver driver(source, target, [&allowed] { return allowed.load(); });
+        std::vector<bool> traceSaid;
+        driver.setWatchingHook([&traceSaid](bool watching) { traceSaid.push_back(watching); });
+        QObject::connect(rig.controller.get(), &galleond::LightingController::activeChanged, &driver, [&driver](bool) { driver.refresh(); });
+        const auto sendF2 = [keyboardEnd] {
+            std::array<std::uint8_t, 18> report{};
+            report[0] = 1;  // the key report
+            report[9] = 0x08; // F2: usage 0x3B = 59, bit 3 of the eighth byte of the bitmap
+            return ::send(keyboardEnd, report.data(), report.size(), MSG_NOSIGNAL) == static_cast<ssize_t>(report.size());
+        };
+        rig.hold();
+        rig.advance(300);
+        driver.refresh();
+        QVERIFY(!source.watching()); // the lighting is on, but the person did not choose it: the node is not even opened
+        QVERIFY(traceSaid.empty());
+        allowed = true; // the person ticked the box in Bosun
+        driver.refresh();
+        QVERIFY(source.watching());
+        QCOMPARE(traceSaid, (std::vector<bool>{true})); // the lighting trace is paused first
+        QVERIFY(rig.controller->keyGlow());
+        QVERIFY(sendF2());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == glowCyan()), 3000);
+        rig.advance(3000);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == pictureColour()), 3000);
+        allowed = false; // unticked
+        driver.refresh();
+        QVERIFY(!source.watching());
+        QVERIFY(!rig.controller->keyGlow());
+        const std::array<std::uint8_t, 1> byte{0};
+        QVERIFY(::send(keyboardEnd, byte.data(), byte.size(), MSG_NOSIGNAL) < 0); // the node was closed: nothing is read any more
+        QTRY_COMPARE_WITH_TIMEOUT(traceSaid, (std::vector<bool>{true, false}), 4000);
+    }
+
+    void switchingTheLightingOffStopsReadingTheKeysAtOnce()
+    {
+        std::array<int, 2> fds{};
+        QVERIFY(socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_NONBLOCK, 0, fds.data()) == 0);
+        const int keyboardEnd = fds.at(0);
+        const int sourceEnd = fds.at(1);
+        const auto closeOurEnd = qScopeGuard([keyboardEnd] { close(keyboardEnd); });
+        Rig rig;
+        galleond::HidrawKeyPressSource source([sourceEnd] { return sourceEnd; });
+        galleond::LightingGlowTarget target(*rig.controller);
+        galleond::KeyGlowDriver driver(source, target, [] { return true; });
+        QObject::connect(rig.controller.get(), &galleond::LightingController::activeChanged, &driver, [&driver](bool) { driver.refresh(); });
+        rig.hold();
+        driver.refresh();
+        QVERIFY(source.watching());
+        QVERIFY(rig.controller->Enable(false).isEmpty());
+        QTRY_VERIFY_WITH_TIMEOUT(!source.watching(), 3000); // the lighting went off: the keys are not read
+    }
+#endif
+
+    void theGlowAndWhatItNeedsAreNotOnTheBus()
+    {
+        const QMetaObject &meta = LightingController::staticMetaObject;
+        for (int i = 0; i < meta.methodCount(); ++i) {
+            const QString name = QString::fromLatin1(meta.method(i).name());
+            QVERIFY2(!name.contains(QStringLiteral("glow"), Qt::CaseInsensitive), qPrintable(name));
+            QVERIFY2(!name.contains(QStringLiteral("usage"), Qt::CaseInsensitive), qPrintable(name));
+        }
+        const QMetaObject &announcer = AppearanceAnnouncer::staticMetaObject;
+        for (int i = 0; i < announcer.methodCount(); ++i)
+            QVERIFY(!QString::fromLatin1(announcer.method(i).name()).contains(QStringLiteral("glow"), Qt::CaseInsensitive));
+    }
+
+    void whileKeysGlowTheLogDoesNotSayHowManyLedsAreLitBecauseThatWouldFollowTheTyping()
+    {
+        const auto count = [](bool glow) {
+            {
+                const std::scoped_lock lock(LogCapture::instance().mutex);
+                LogCapture::instance().messages.clear();
+            }
+            const auto previous = qInstallMessageHandler(&LogCapture::handler);
+            {
+                Rig rig;
+                if (!rig.controller->setAppearance(colourAppearance()))
+                    return -1;
+                rig.controller->setKeyGlow(glow);
+                if (!rig.controller->Enable(true).isEmpty())
+                    return -1;
+                QTest::qWait(200);
+                rig.advance(4000);
+                QTest::qWait(400);
+                rig.advance(300);
+                QTest::qWait(300);
+                rig.controller->touchKeyGlow(glowLed());
+                QTest::qWait(300);
+            }
+            qInstallMessageHandler(previous);
+            const std::scoped_lock lock(LogCapture::instance().mutex);
+            return static_cast<int>(LogCapture::instance().messages.filter(QStringLiteral("lit LEDs")).size());
+        };
+        QVERIFY(count(false) > 0); // without the glow the picture is still said, as before
+        QCOMPARE(count(true), 0);
     }
 
     // ---- key signals for other programs: the service (the door of the bus) ----

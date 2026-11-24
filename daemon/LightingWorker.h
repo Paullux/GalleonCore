@@ -9,6 +9,7 @@
 #include <galleon/keyboard/LiveFrame.h>
 #include <galleon/keyboard/LiveLink.h>
 #include <galleon/keyboard/KeySignals.h>
+#include <galleon/keyboard/ReactiveGlow.h>
 #include <galleon/keyboard/LiveScene.h>
 
 #include <QDebug>
@@ -30,6 +31,9 @@ using galleon::keyboard::LiveClock;
 using galleon::keyboard::LiveLink;
 
 namespace lighting {
+// The first version of the glow has nothing to set: this colour (cyan) and this fade, for every key.
+constexpr galleon::keyboard::Rgb GlowColour{0, 200, 255};
+constexpr double GlowFadeSeconds = galleon::keyboard::DefaultGlowFadeSeconds;
 constexpr int TickMs = 50;                            // how often the link is given the time: well under its 1 s and 3 s steps
 constexpr std::chrono::milliseconds LinkTimeout{500}; // one request and its answer
 } // namespace lighting
@@ -107,6 +111,22 @@ public Q_SLOTS:
     // checked and bounded by the controller; this thread only plays it. A copy is handed over each time it changes.
     void setSignals(galleon::keyboard::SignalBoard board) { m_signals = std::move(board); }
 
+    // The reactive glow (ReactiveGlow.h): whether it is on, and a key that went down. The controller only calls this while the person chose the effect and the
+    // lighting is on; switching it off forgets every touch. The time is read here, from the clock of the worker, so that nothing about WHEN a key was pressed
+    // crosses the threads. What is kept is the LED and that time, bounded (MaxGlowing), for the length of the fade.
+    void setGlow(bool on)
+    {
+        m_glowOn = on;
+        m_glow.clear();
+        if (!on)
+            m_loggedLit = -1; // the log says the number of lit LEDs again, now that it can no longer reveal a press
+    }
+    void touchGlow(std::uint16_t led)
+    {
+        if (m_glowOn)
+            static_cast<void>(m_glow.touch(led, signalSeconds(m_clock())));
+    }
+
     // Called with a blocking connection: it returns once the keys are given back and the keyboard is closed. True when the
     // keyboard is known to be back in its own mode (or nothing was held); false when the release could not be confirmed,
     // so the caller must not stop the watchdog: the keyboard may still be in host mode.
@@ -176,7 +196,13 @@ private:
         // breathes or ends changes it by itself, without anyone asking.
         const double at = signalSeconds(now);
         m_signals.expire(at);
-        const auto frame = galleon::keyboard::withSignals(*m_base, m_signals.overlay(at), m_level);
+        // The glow of the keys that were pressed, then the signals over it: what another program asked to show stays visible.
+        galleon::keyboard::LiveFrame under = *m_base;
+        if (m_glowOn) {
+            m_glow.expire(at, lighting::GlowFadeSeconds);
+            under = galleon::keyboard::withGlow(under, m_glow.shares(at, lighting::GlowFadeSeconds), lighting::GlowColour, m_level);
+        }
+        const auto frame = galleon::keyboard::withSignals(under, m_signals.overlay(at), m_level);
         if (!m_baseChanged && m_lastSent && *m_lastSent == frame)
             return;
         if (m_link->show(frame, now) == LiveLink::ShowResult::Sent) { // else it is tried again at the next tick (dropped for pacing, or failed)
@@ -214,6 +240,8 @@ private:
     // The number of LEDs of a frame that are not black. Said in the log when it changes, so that a dark picture does not pass for a lit one.
     void noteSent(const galleon::keyboard::LiveFrame &frame)
     {
+        if (m_glowOn)
+            return; // while keys glow under the fingers, how many LEDs are lit would follow what is typed: nothing of it is said
         int lit = 0;
         for (std::size_t led = 0; led < galleon::keyboard::LiveLedCount; ++led) {
             const std::size_t at = 2 + 3 * led;
@@ -246,6 +274,8 @@ private:
     bool m_toolDirty = false;
     int m_level;                                // the brightness in force, for the signals
     galleon::keyboard::SignalBoard m_signals;
+    galleon::keyboard::GlowBoard m_glow; // only here, only while m_glowOn: the LED and the time of each recent touch, bounded
+    bool m_glowOn = false;
     std::optional<galleon::keyboard::LiveFrame> m_base;     // the picture under the signals
     std::optional<galleon::keyboard::LiveFrame> m_lastSent; // what the keyboard was last given
     bool m_baseChanged = false;                              // the picture under the signals has not been sent yet

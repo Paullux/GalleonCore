@@ -825,5 +825,11 @@
   "Start galleond to light a key": "Démarrez galleond pour allumer une touche",
   "Choose a key on the drawing: this one has no measured light": "Choisissez une touche sur le dessin : celle-ci n’a pas de lumière mesurée",
   "The request is not valid: %1": "La demande n’est pas valide : %1",
-  "Start galleond to take a signal away": "Démarrez galleond pour éteindre un signal"
+  "Start galleond to take a signal away": "Démarrez galleond pour éteindre un signal",
+  "Keys glow under your fingers: on": "Les touches s’éclairent sous vos doigts : oui",
+  "Keys glow under your fingers: off": "Les touches s’éclairent sous vos doigts : non",
+  "The keys you press now glow while the live lighting is on.": "Les touches que vous pressez s’éclairent désormais tant que l’éclairage en direct est allumé.",
+  "The keys no longer glow, and the key presses are not read any more.": "Les touches ne s’éclairent plus, et les frappes ne sont plus lues.",
+  "Off by default. When on, galleond reads the key reports of this keyboard, only while the live lighting is on, and lights the key you just pressed in cyan for a second and a half. It uses what it reads at once and keeps nothing: no key, no order, no count, no history, no file and no log. No program can ask about it, and the lighting trace is paused while it runs. Linux only for now.": "Désactivé par défaut. Activé, galleond lit les rapports de touches de ce clavier, seulement tant que l’éclairage en direct est allumé, et éclaire en cyan la touche que vous venez de presser pendant une seconde et demie. Il se sert de ce qu’il lit aussitôt et ne garde rien : ni touche, ni ordre, ni compte, ni historique, ni fichier, ni journal. Aucun programme ne peut l’interroger, et la trace de l’éclairage est suspendue pendant qu’il tourne. Sous Linux seulement pour l’instant.",
+  "This is not available on this system yet.": "Ce n’est pas encore disponible sur ce système."
 }
