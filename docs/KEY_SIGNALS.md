@@ -31,7 +31,29 @@ Session bus, service `org.galleoncore.Deck`, object `/org/galleoncore/KeySignals
 
 **The program has to stay on the bus.** A signal belongs to the connection that asked for it and goes when that connection closes. So a command that makes one call and exits (`busctl`, `gdbus`, `dbus-send`) lights nothing that lasts: its signal ends as soon as the command does. A client for this interface must keep its connection open for as long as the signals should last, and close it (or call `Clear` / `ClearAll`) to take them away. The seconds you give are the longest they can last, not a promise that they stay if the program leaves.
 
-There is no command-line tool for Linux yet (one that keeps its connection is planned: `galleon-key-signal`). To try a signal by hand, Bosun has a **"Try a signal" panel** (Keyboard tab, live lighting): click a key on the drawing, choose a colour, steady or pulse, and a time (10 s, 1 min, 10 min, 1 h), then "Light the key". It sends the same request as another program (on Linux through this D-Bus interface, so the signal goes when Bosun is closed; on Windows through the local endpoint as the client `bosun`). It still needs the box "Other programs may light keys" to be ticked and the live lighting to be on, and galleond's refusal, if any, is shown in its own words (on Windows nothing comes back).
+To try a signal by hand there is the command-line tool below, and Bosun has a **"Try a signal" panel** (Keyboard tab, live lighting): click a key on the drawing, choose a colour, steady or pulse, and a time (10 s, 1 min, 10 min, 1 h), then "Light the key". It sends the same request as another program (on Linux through this D-Bus interface, so the signal goes when Bosun is closed; on Windows through the local endpoint as the client `bosun`). It still needs the box "Other programs may light keys" to be ticked and the live lighting to be on, and galleond's refusal, if any, is shown in its own words (on Windows nothing comes back).
+
+## The command-line tool: `galleon-key-signal`
+
+Installed with the other programs (`bin/`), on Linux and Windows. It lights ONE key through the interface above, as another program would. It reads no key press and no state of the keyboard.
+
+```
+galleon-key-signal --key F3 --color #ff7800 --effect pulse --seconds 600
+galleon-key-signal --key F3 --red 255 --green 120 --blue 0 --seconds 60
+```
+
+| Option | Meaning |
+| --- | --- |
+| `--key NAME` | The key by its place on a QWERTY keyboard (`F3`, `Left Control`; `W` is the key engraved Z on an AZERTY keyboard). A key whose light was not measured is refused. |
+| `--color #rrggbb` | Its colour. Or `--red`, `--green` and `--blue`, each 0 to 255, all three. Not both forms. |
+| `--effect steady\|pulse` | Steady (default) or breathing (about 1.6 s a cycle). |
+| `--seconds N` | How long, 1 to 86400. **Required**: a signal always has an end. |
+| `--help` | The usage. |
+| `--clear`, `--clear-all`, `--client NAME` | **Windows only** (below). |
+
+**On Linux** the tool stays running while the key is lit: the signal belongs to the D-Bus connection of the tool. It takes the signal away when its time is over or when it is stopped (Ctrl-C, `kill`). So there is no `--clear`: stop the tool. Exit status: 0 when it ended as asked, 1 for a wrong command line, 2 when galleond refused (the sentence is printed: the box "Other programs may light keys" is not ticked, the live lighting is off, a limit) or could not be reached.
+
+**On Windows** the tool sends the request to the local endpoint and ends at once; the signal lasts until its end or a clear. `--clear --key F3` takes away the signal of that key, `--clear-all` every signal, both for the same `--client` (default `galleon-key-signal`: the name the signals belong to, 1 to 64 plain characters). The endpoint gives no reply about the lighting: the tool says "sent" when the request was taken, and a refusal shows nothing.
 
 ## Windows (local endpoint)
 

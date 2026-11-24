@@ -103,6 +103,15 @@ function Assert-ThemeFileType {
     if (-not (Test-Path -LiteralPath $icon)) { throw 'The .gctheme icon file is not installed.' }
     if (Test-Path "$classesKey\GalleonCore.Theme\shell") { throw 'The theme file type must not have an open verb.' }
 }
+# The command-line tool that lights one key is installed beside galleond.exe and runs: --help is not an error, a command line that is not whole is (status 1).
+function Assert-KeySignalTool {
+    $exe = Join-Path $root 'bin/galleon-key-signal.exe'
+    if (-not (Test-Path -LiteralPath $exe)) { throw 'galleon-key-signal is not installed beside galleond.' }
+    $help = Start-Process -FilePath $exe -ArgumentList '--help' -PassThru -Wait -NoNewWindow
+    if ($help.ExitCode -ne 0) { throw "The installed galleon-key-signal exited with $($help.ExitCode) for --help, not 0." }
+    $wrong = Start-Process -FilePath $exe -ArgumentList '--key F3' -PassThru -Wait -NoNewWindow
+    if ($wrong.ExitCode -ne 1) { throw "The installed galleon-key-signal exited with $($wrong.ExitCode) for a command line that is not whole, not 1." }
+}
 # The watchdog of the live lighting is installed beside galleond.exe (that is where galleond looks for it), and runs.
 function Assert-Watchdog {
     $exe = Join-Path $root 'bin/galleon-keyboard-watchdog.exe'
@@ -142,6 +151,7 @@ try {
     if ((Get-ItemPropertyValue $runKey GalleonBosun) -ne $bosunCommand) { throw 'Bosun tray sign-in command missing or incorrectly quoted.' }
     Assert-ThemeFileType
     Assert-Watchdog
+    Assert-KeySignalTool
     # Launch Bosun alone, as from the Start menu: it must start its missing daemon.
     $bosun = Start-LoggedApplication 'galleon-bosun' '--minimized'
     $script:processes = @($bosun)
@@ -160,12 +170,13 @@ try {
     if (-not (Test-Path $sentinel)) { throw 'Upgrade removed personal data.' }
     Assert-ThemeFileType
     Assert-Watchdog
+    Assert-KeySignalTool
     # Uninstall has the same lifecycle guarantee and keeps personal data.
     Start-Applications
     Run-Installer (Join-Path $root 'Uninstall.exe') '/S'
     Assert-Closed
     # NSIS launches a temporary uninstaller copy; its launcher can exit before cleanup ends.
-    $markers = @((Join-Path $root 'bin/galleond.exe'), (Join-Path $root 'bin/galleon-keyboard-watchdog.exe'), (Join-Path $root 'Uninstall.exe'),
+    $markers = @((Join-Path $root 'bin/galleond.exe'), (Join-Path $root 'bin/galleon-keyboard-watchdog.exe'), (Join-Path $root 'bin/galleon-key-signal.exe'), (Join-Path $root 'Uninstall.exe'),
         (Join-Path $root 'gctheme.ico'), (Join-Path $startup 'GalleonCore.lnk'), (Join-Path $startup 'Galleon Bosun.lnk'))
     $deadline = [System.DateTime]::UtcNow.AddSeconds(20)
     do {
