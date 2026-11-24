@@ -5,6 +5,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Lighting single keys from another program (Linux, D-Bus)
 
+A shorter page for developers, in four languages, is on the website: [The pipe](https://galleoncore.xyz/key-signals.html) (`site/key-signals.html`). Keep it in step with this file.
+
 galleond can light single keys for other programs, so that an assistant, a calendar or a script can say "mail" or "meeting" on a key without ever touching the keyboard. galleond stays the only program that writes to it.
 
 **Off by default.** The person allows it in Bosun (Keyboard, live lighting: "Other programs may light keys"). Nothing here works while the live lighting is off, and nothing here switches it on.
