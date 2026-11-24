@@ -24,6 +24,15 @@ target_include_directories(fuzz_live_guard PRIVATE ${PROJECT_SOURCE_DIR}/lib/key
 target_compile_options(fuzz_live_guard PRIVATE -fsanitize=fuzzer,address,undefined)
 target_link_options(fuzz_live_guard PRIVATE -fsanitize=fuzzer,address,undefined)
 
+# The keyboard's input report (the keys down): pure code, compiled directly into the fuzzer.
+add_executable(fuzz_key_report
+    fuzz_key_report.cpp
+    ${PROJECT_SOURCE_DIR}/lib/keyboard/src/KeyReport.cpp
+)
+target_include_directories(fuzz_key_report PRIVATE ${PROJECT_SOURCE_DIR}/lib/keyboard/include)
+target_compile_options(fuzz_key_report PRIVATE -fsanitize=fuzzer,address,undefined)
+target_link_options(fuzz_key_report PRIVATE -fsanitize=fuzzer,address,undefined)
+
 if(NOT GALLEON_BUILD_DESKTOP)
     return()
 endif()

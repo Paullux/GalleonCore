@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
         err << "galleon-key-signal: " << reason << "\n";
         return 2;
     }
-    out << "Lit " << arguments.key << " for " << arguments.seconds << " s. Ctrl-C takes it away.\n" << Qt::flush;
+    out << "Lit " << arguments.key << " for " << arguments.seconds << " s. Ctrl-C or kill takes it away.\n" << Qt::flush;
     static_cast<void>(std::signal(SIGINT, onStopSignal)); // the previous handlers are not needed
     static_cast<void>(std::signal(SIGTERM, onStopSignal));
     QTimer end;

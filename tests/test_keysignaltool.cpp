@@ -345,6 +345,9 @@ private Q_SLOTS:
         QCOMPARE(program.exitStatus(), QProcess::NormalExit);
         QCOMPARE(program.exitCode(), 0);
         QTRY_COMPARE_WITH_TIMEOUT(fake.clears, QStringList{QStringLiteral("F3")}, 5000);
+        // It says how to take the key away, and that includes `kill`, which is what stops it when it runs in the background (Ctrl-C does not).
+        QVERIFY2(QString::fromUtf8(program.readAllStandardOutput()).contains(QStringLiteral("Lit F3 for 300 s. Ctrl-C or kill takes it away.")),
+                 "the message that says how to stop it is missing");
     }
 
     void theProgramEndsByItselfWhenTheTimeIsOverAndTakesTheSignalAway()
