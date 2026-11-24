@@ -445,3 +445,41 @@ version components. It accepts a trailing NUL, rejects malformed replies, and
 queries once per connection. This reads the module application firmware, not the
 keyboard firmware and not a bootloader. No feature write is needed for this query.
 The implementation follows this upstream source; physical readback is pending.
+
+## Keyboard input reports: the HID descriptors (Linux, 2026-11-24)
+
+Source: `tools/linux/hid-descriptors.c` run by the owner on Kubuntu (Linux), keyboard `1b1c:2b0c` plugged in. It asks the kernel for each `/dev/hidraw` node's report descriptor with ioctls only and never reads a report, so **no key press was seen and none is recorded here**. The keyboard firmware was not printed by the tool (the Bragi properties give it): not recorded for this run, so it is not known whether this is 2.3.88 as in the sections above. Four nodes, in this order of the output:
+
+| Node (as numbered that day) | Descriptor | Usage page / usage | What it declares |
+| --- | --- | --- | --- |
+| `hidraw14` | 60 bytes | 0x0001 / 0x0002 mouse | 8 buttons, two 16-bit axes, one 8-bit wheel. Input only. |
+| `hidraw13` | 21 bytes | 0xFF42 / 0x0002 vendor | 64-byte input, unnumbered. |
+| `hidraw12` | 27 bytes | 0xFF42 / 0x0001 vendor | The Bragi interface: 128-byte input and output, unnumbered. |
+| `hidraw11` | 138 bytes | keyboard and consumer | **The keys.** Three collections, below. |
+
+The raw bytes of the keyboard node, so that the layout below can be checked by anyone:
+
+```
+05 01 09 06 a1 01 85 08 05 08 95 03 75 01 19 01 29 03 15 00 25 01 91 02 95 05 91 03 05 07 75 01
+19 e0 29 e7 95 08 81 02 19 00 29 8b 15 00 26 ff 00 75 08 95 0d 81 00 c0
+05 01 09 06 a1 01 85 01 05 08 95 03 75 01 19 01 29 03 15 00 25 01 91 02 95 05 91 03 05 07 75 01
+19 e0 29 e7 95 08 81 02 19 00 29 73 95 78 81 02 19 87 29 8e 95 08 81 02 c0
+05 0c 09 01 a1 01 85 02 95 01 75 10 15 00 26 ff 03 19 00 2a ff 03 81 00 c0
+```
+
+Read as the HID specification defines the items (this is the decoding of the bytes above, not a capture of traffic):
+
+| Report ID | Total input length (with the ID) | Layout of the input report |
+| --- | --- | --- |
+| 8 | 15 bytes (matches the 15 of the Windows table at the top) | byte 0 = `08`; byte 1 = the eight modifiers, bit 0 = usage 0xE0 (left Control) to bit 7 = 0xE7 (right GUI); bytes 2 to 14 = **an array of 13 usages** (0 = none, values 0 to 0x8B). |
+| 1 | 18 bytes (matches the 18 of the Windows table) | byte 0 = `01`; byte 1 = the eight modifiers as above; bytes 2 to 16 = **a bitmap of 120 bits**, bit *n* of the field (byte 2 + *n* / 8, bit *n* mod 8) standing for usage *n* for *n* = 0 to 0x73; byte 17 = eight bits for usages 0x87 to 0x8E (the international keys). |
+| 2 | 3 bytes | the consumer control (media keys): one 16-bit usage, 0 to 0x3FF. |
+
+The two keyboard reports also declare an output report of one byte (three LEDs: Num, Caps, Scroll Lock, and five padding bits), unrelated to the RGB lighting.
+
+Not known, and to be measured before the code relies on it:
+- **Which of the two keyboard reports the keyboard actually sends** while typing (the bitmap of ID 1 is what a keyboard with full key rollover normally uses, the array of ID 8 what a boot or 6-key mode uses), and whether it sends both. `tools/linux/hid-descriptors.c` cannot tell: it reads no report. A next probe will print only the report ID and the length of each report it sees, never the key bytes.
+- The four last bits of the bitmap (bits 116 to 119, beyond usage 0x73): the descriptor gives them no usage of their own; a reader must ignore them.
+- Whether the Windows interface of the same part gives the same descriptors (its table lists the same two keyboard collections of 15 and 18 bytes, which fits).
+
+Consequence for galleond: reading `hidraw11` read-only gives the identity of the key as a USB HID usage, which is already the LED index for most keys (`KeyIdentity.h`). The udev rule `70-galleon.rules` already tags every `hidraw` node of `1b1c:2b0c` with `uaccess`, and the owner ran the tool as a normal user, so no new rule is needed. Every key typed on this keyboard passes through that node, which is why the reactive glow's key source follows the rules of AGENTS.md ("Security and privacy by design"): converted to a LED at once, never stored, logged or passed on.
