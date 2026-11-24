@@ -67,7 +67,7 @@ add_library(galleond_core STATIC
     LedPositions.h LedPositions.cpp
     WeatherPlace.h WeatherPlace.cpp
     SkySun.h SkySun.cpp
-    InputActivity.h InputActivity.cpp
+    InputActivity.h InputActivity.cpp KeyPressSource.h
     LightingSkyDay.h LightingSkyDay.cpp
     StrictJson.h
     KeyMapFile.h KeyMapFile.cpp
@@ -87,6 +87,7 @@ if(WIN32)
 else()
     target_sources(galleond_core PRIVATE QuitOnSignals.h QuitOnSignals.cpp LogindPowerEvents.h LogindPowerEvents.cpp LinuxKeyInjector.h LinuxKeyInjector.cpp LinuxPlatformBackends.cpp
         KeySignalsBus.h KeySignalsBus.cpp
+        HidrawKeyPressSource.h HidrawKeyPressSource.cpp
         MprisController.h MprisController.cpp DesktopEntries.cpp)
     target_link_libraries(galleond_core PUBLIC Qt6::DBus)
 endif()

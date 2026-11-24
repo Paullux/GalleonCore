@@ -149,6 +149,17 @@ private Q_SLOTS:
         }
     }
 
+    void theMediaKeyReportIsRecognisedByItsIdAndItsLengthOnly()
+    {
+        QVERIFY(isMediaKeyReport(std::array<std::uint8_t, 3>{2, 0xE9, 0}));
+        QVERIFY(isMediaKeyReport(std::array<std::uint8_t, 3>{2, 0, 0}));
+        QVERIFY(!isMediaKeyReport(std::array<std::uint8_t, 3>{1, 0, 0}));
+        QVERIFY(!isMediaKeyReport(std::array<std::uint8_t, 4>{2, 0, 0, 0}));
+        QVERIFY(!isMediaKeyReport(std::array<std::uint8_t, 2>{2, 0}));
+        QVERIFY(!isMediaKeyReport(std::span<const std::uint8_t>{}));
+        QVERIFY(!keysDown(std::array<std::uint8_t, 3>{2, 0xE9, 0}).has_value()); // and it is not a key report
+    }
+
     void theBytesOfTheReportAreNotKeptAnywhereButInTheCallersBuffer()
     {
         // Asking twice gives the same answer from the same bytes and nothing carries over: the function has no state.
