@@ -11,6 +11,7 @@
 #include <galleon/keyboard/Appearance.h>
 #include <galleon/keyboard/KeyMap.h>
 #include <galleon/keyboard/KeySignals.h>
+#include <galleon/keyboard/ReactiveGlow.h>
 #include <galleon/keyboard/LiveScene.h>
 
 #include <QList>
@@ -161,6 +162,19 @@ public:
     QString setSignal(const QString &client, const QString &key, int red, int green, int blue, galleon::keyboard::SignalEffect effect, double seconds);
     // What a program asked for is taken away: one key, or all of its keys when `key` is empty. False when there was nothing to take away.
     bool clearSignals(const QString &client, const QString &key = {});
+    // The reactive glow (ReactiveGlow.h): the key that goes down glows under the finger, then fades. It reads the key presses (KeyPressSource.h), so it is OFF
+    // until the person chose it in Bosun (KeyGlowDriver.h decides when it runs). THESE ARE NOT SLOTS AND NOT SIGNALS, ON PURPOSE: nothing about the glow is on
+    // the bus, and no program can ask which key was pressed or whether the glow is on (a test guards the names). Only while the live lighting is on.
+    void setKeyGlow(bool on);
+    [[nodiscard]] bool keyGlow() const { return m_glowOn; }
+    // The colour of the glow, the person's choice (cyan until then). Kept while the lighting is off and handed to each worker when it starts.
+    void setKeyGlowColour(galleon::keyboard::Rgb colour);
+    [[nodiscard]] galleon::keyboard::Rgb keyGlowColour() const { return m_glowColour; }
+    // A key went down on this LED (0 to 145). Ignored unless the glow is on and the lighting holds the keyboard. Nothing is kept here: the worker keeps the LED
+    // and its time, bounded, for the length of the fade.
+    void touchKeyGlow(std::uint16_t led);
+    // The LED of a key, from the key map built into galleond (a key whose light was not measured has none): what the glow needs to turn a usage into a LED.
+    [[nodiscard]] std::optional<std::uint16_t> ledForUsage(galleon::keyboard::HidUsage usage) const { return m_keyMap.ledForKey(usage); }
     // For tests: the key map used to find the LED of a key (the measured one built into galleond by default).
     void setKeyMap(galleon::keyboard::KeyMap map) { m_keyMap = map; }
 
@@ -226,6 +240,8 @@ private:
     std::optional<galleon::keyboard::LiveScene> m_tool; // what a tool shows over it, if one does
     std::vector<galleon::keyboard::LedPosition> m_positions;
     galleon::keyboard::SignalBoard m_signals; // only here; the worker gets copies
+    galleon::keyboard::Rgb m_glowColour = galleon::keyboard::DefaultGlowColour;
+    bool m_glowOn = false; // the glow is on (chosen in Bosun and running): handed to each worker when it starts
     galleon::keyboard::KeyMap m_keyMap;
 };
 

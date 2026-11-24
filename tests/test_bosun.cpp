@@ -8,10 +8,12 @@
 #include "AppearanceStore.h"
 #include "RingStore.h"
 #include "KeyCalibration.h"
+#include "KeyGlowStore.h"
 #include "KeySignalsStore.h"
 #include "LightingRestoreStore.h"
 #include "NightStateStore.h"
 #include <NightMode.h>
+#include <KeyGlowAccess.h>
 #include <KeySignalsAccess.h>
 #include <LightingRestore.h>
 #include "WallpaperLibrary.h"
@@ -2507,6 +2509,135 @@ QtObject {
         QVERIFY(!QFile::exists(dir.filePath("lighting-restore.json"))); // and it is not the choice of putting the lighting back
         QVERIFY(QMetaObject::invokeMethod(toggle, "clicked"));
         QVERIFY(!allowing.allow());
+    }
+
+    void theKeysGlowUnderTheFingersOnlyOnceChosenAndTheChoiceIsWrittenForGalleondAndNothingIsOfferedWhereItCannotBeDone()
+    {
+        for (const bool supported : {true, false}) {
+            const QTemporaryDir dir;
+            const QString file = dir.filePath("pages.json");
+            QVERIFY(writeFile(file, twoThemes()));
+            const bosun::BosunBackend backend(file);
+            QQmlApplicationEngine engine;
+            engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+            const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+            const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+            engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+            engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+            engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+            const bosun::AppearanceStore appearance{QString()};
+            bosun::KeyGlowStore glow(dir.filePath("key-glow.json"), supported); // NOLINT(misc-const-correctness): the QML calls its non-const methods
+            engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                         {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("padFollowsTabs"), false},
+                                         {QStringLiteral("keyGlow"), QVariant::fromValue(&glow)},
+                                         {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
+            engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+            QVERIFY(!engine.rootObjects().isEmpty());
+            QObject *root = engine.rootObjects().constFirst();
+            QVERIFY(root->setProperty("currentTab", 3)); // the keyboard
+            auto *window = qobject_cast<QQuickWindow *>(root);
+            QVERIFY(window);
+            window->show();
+            QVERIFY(QTest::qWaitForWindowExposed(window));
+            root->setProperty("keyboardView", QStringLiteral("lighting"));
+            const auto shown = [root](const char *name) {
+                const auto found = namedItems(root, QString::fromLatin1(name));
+                return found.size() == 1 && found.constFirst()->isVisible();
+            };
+            QTRY_VERIFY_WITH_TIMEOUT(shown("lightingToggle"), 3000); // the view is up
+            if (!supported) {
+                QVERIFY(!shown("keyGlowToggle"));
+                QVERIFY(!shown("keyGlowNote"));
+                continue;
+            }
+            QTRY_VERIFY_WITH_TIMEOUT(shown("keyGlowToggle"), 3000);
+            QVERIFY(shown("keyGlowNote"));
+            QVERIFY(!shown("keyGlowSwatches")); // the colour is chosen once the glow is on: there is nothing to colour before
+            QVERIFY(!shown("keyGlowColourLabel"));
+            QQuickItem *toggle = namedItems(root, QStringLiteral("keyGlowToggle")).constFirst();
+            QVERIFY(!toggle->property("selected").toBool()); // off until chosen
+            QVERIFY(!glow.allow());
+            QVERIFY(!QFile::exists(dir.filePath("key-glow.json"))); // looking at the tab writes nothing
+            QVERIFY(QMetaObject::invokeMethod(toggle, "clicked"));
+            QVERIFY(glow.allow());
+            QVERIFY(toggle->property("selected").toBool());
+            QCOMPARE(galleond::keyGlowAllowed(dir.filePath("key-glow.json")), true); // what galleond reads
+            QVERIFY(!QFile::exists(dir.filePath("key-signals.json"))); // and it is not the choice of other programs
+            QTRY_VERIFY_WITH_TIMEOUT(shown("keyGlowSwatches"), 3000); // now the colour of the keys you press can be chosen, as for the keyboard
+            QVERIFY(shown("keyGlowColourLabel"));
+            QQuickItem *swatches = namedItems(root, QStringLiteral("keyGlowSwatches")).constFirst();
+            QVERIFY(QMetaObject::invokeMethod(swatches, "picked", Q_ARG(QString, QStringLiteral("#e53935"))));
+            QCOMPARE(glow.colour(), QStringLiteral("#e53935"));
+            QCOMPARE(galleond::keyGlowChoice(dir.filePath("key-glow.json")).colour, (galleon::keyboard::Rgb{0xe5, 0x39, 0x35})); // what galleond reads
+            QVERIFY(glow.allow()); // choosing a colour does not change the choice of the glow
+            QVERIFY(QMetaObject::invokeMethod(toggle, "clicked"));
+            QVERIFY(!glow.allow());
+            QCOMPARE(galleond::keyGlowAllowed(dir.filePath("key-glow.json")), false);
+            QTRY_VERIFY_WITH_TIMEOUT(!shown("keyGlowSwatches"), 3000); // switched off: no colour to choose
+            QCOMPARE(glow.colour(), QStringLiteral("#e53935")); // and the colour is kept for the next time
+        }
+    }
+
+    void theOptionsOfEachModeAreUnderTheAppearanceButtonsAndTheColoursAreOnlyForOneColour()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        const bosun::BosunBackend backend(file);
+        QQmlApplicationEngine engine;
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        const bosun::DaemonStatus daemon("/nonexistent/systemctl");
+        const bosun::WallpaperLibrary library({.roots = {}, .userRoot = dir.filePath("own"), .settingsFile = dir.filePath("galleond.conf")});
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        bosun::AppearanceStore appearance{QString()}; // NOLINT(misc-const-correctness): the QML calls its non-const methods
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("padFollowsTabs"), false},
+                                     {QStringLiteral("appearance"), QVariant::fromValue(&appearance)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        QVERIFY(!engine.rootObjects().isEmpty());
+        QObject *root = engine.rootObjects().constFirst();
+        QVERIFY(root->setProperty("currentTab", 3)); // the keyboard
+        auto *window = qobject_cast<QQuickWindow *>(root);
+        QVERIFY(window);
+        window->show();
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+        root->setProperty("keyboardView", QStringLiteral("lighting"));
+        const auto item = [root](const char *name) {
+            const auto found = namedItems(root, QString::fromLatin1(name));
+            return found.size() == 1 ? found.constFirst() : nullptr;
+        };
+        const auto shown = [&item](const char *name) {
+            const QQuickItem *found = item(name);
+            return found != nullptr && found->isVisible();
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(shown("appearanceUniform"), 3000);
+        // One colour: its colours are under the buttons of the appearance (where the options of the other modes are), not in the block of the live lighting above.
+        QVERIFY(QMetaObject::invokeMethod(item("appearanceUniform"), "clicked"));
+        QTRY_VERIFY_WITH_TIMEOUT(shown("lightingSwatches"), 3000);
+        QVERIFY(!shown("rainbowSpeeds"));
+        QVERIFY(!shown("skyAnimated"));
+        const auto top = [&item](const char *name) { return item(name)->mapToScene(QPointF(0, 0)).y(); };
+        QVERIFY(top("lightingSwatches") > top("appearanceUniform"));
+        QVERIFY(top("lightingSwatches") < top("keyboardMap"));
+        QVERIFY(top("lightingToggle") < top("appearanceUniform")); // the live lighting block is above the appearance: the colours are not in it
+        // The rainbow: its speed, and no colours (they would not be used).
+        QVERIFY(QMetaObject::invokeMethod(item("appearanceRainbow"), "clicked"));
+        QTRY_VERIFY_WITH_TIMEOUT(shown("rainbowSpeeds"), 3000);
+        QVERIFY(!shown("lightingSwatches"));
+        QVERIFY(!shown("skyAnimated"));
+        // The sky: its own options, and no colours.
+        QVERIFY(QMetaObject::invokeMethod(item("appearanceSky"), "clicked"));
+        QTRY_VERIFY_WITH_TIMEOUT(shown("skyAnimated"), 3000);
+        QVERIFY(!shown("lightingSwatches"));
+        QVERIFY(!shown("rainbowSpeeds"));
+        // Back to one colour: choosing one sets it, and the colours show the one that is in force.
+        QVERIFY(QMetaObject::invokeMethod(item("appearanceUniform"), "clicked"));
+        QTRY_VERIFY_WITH_TIMEOUT(shown("lightingSwatches"), 3000);
+        QVERIFY(QMetaObject::invokeMethod(item("lightingSwatches"), "picked", Q_ARG(QString, QStringLiteral("#ff9800"))));
+        QCOMPARE(appearance.colour().name(), QStringLiteral("#ff9800"));
+        QTRY_COMPARE_WITH_TIMEOUT(item("lightingSwatches")->property("color").toString().toLower(), QStringLiteral("#ff9800"), 3000);
     }
 
     void theKeyCalibrationIsNotOnTheKeyboardTabUnlessBosunWasStartedForIt()

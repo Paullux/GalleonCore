@@ -33,6 +33,13 @@ TraceSink::TraceSink(Write write, std::size_t limit) : m_write(std::move(write))
 void TraceSink::line(const QString &text)
 {
     const std::scoped_lock lock(m_mutex);
+    if (m_paused)
+        return;
+    writeLocked(text);
+}
+
+void TraceSink::writeLocked(const QString &text)
+{
     if (m_full)
         return;
     const std::size_t size = static_cast<std::size_t>(text.toUtf8().size()) + 1;
@@ -43,6 +50,26 @@ void TraceSink::line(const QString &text)
     }
     m_written += size;
     m_write(text);
+}
+
+void TraceSink::setPaused(bool paused)
+{
+    const std::scoped_lock lock(m_mutex);
+    if (paused == m_paused)
+        return;
+    if (paused) {
+        writeLocked(QStringLiteral("the trace is paused while the keys glow under the fingers: nothing is written until it resumes"));
+        m_paused = true;
+    } else {
+        m_paused = false;
+        writeLocked(QStringLiteral("the trace resumes"));
+    }
+}
+
+bool TraceSink::paused()
+{
+    const std::scoped_lock lock(m_mutex);
+    return m_paused;
 }
 
 TracedTransport::TracedTransport(std::unique_ptr<galleon::Transport> inner, std::shared_ptr<TraceSink> sink, Clock clock)

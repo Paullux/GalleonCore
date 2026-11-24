@@ -15,6 +15,7 @@ add_library(bosun_core STATIC
     NightStateStore.h NightStateStore.cpp
     LightingRestoreStore.h LightingRestoreStore.cpp
     KeySignalsStore.h KeySignalsStore.cpp
+    KeyGlowStore.h KeyGlowStore.cpp
     KeySignalRequest.h KeySignalRequest.cpp
     DaemonStatusKeys.cpp
     DaemonStatus.h

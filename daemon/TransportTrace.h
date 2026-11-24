@@ -37,11 +37,19 @@ public:
 
     void line(const QString &text); // stops, with a last line saying so, once `limit` bytes were written
 
+    // While paused, nothing is written: the reactive glow of the keys runs (KeyGlowDriver.h), and a frame that lights a key at a given moment would reveal that it
+    // was pressed. One line says so when it pauses and one when it resumes, so that a gap in the file is never taken for a hang. Said twice, it is the same.
+    void setPaused(bool paused);
+    [[nodiscard]] bool paused();
+
 private:
     Write m_write;
     std::size_t m_limit;
+    void writeLocked(const QString &text); // the caller holds m_mutex
+
     std::size_t m_written = 0;
     bool m_full = false;
+    bool m_paused = false;
     std::mutex m_mutex;
 };
 

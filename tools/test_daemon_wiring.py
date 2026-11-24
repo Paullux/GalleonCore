@@ -59,6 +59,30 @@ class TestDaemonWiring(unittest.TestCase):
         self.assertEqual(len(calls), 1, "daemon/main.cpp must connect the key signals to the local endpoint exactly once")
         self.assertTrue(any("Q_OS_WIN" in c for c in platform_conditions_around(self.lines, calls[0])), "the local endpoint is the way in on Windows only")
 
+    def code_lines(self, needle):
+        return [i for i, line in enumerate(self.lines) if needle in line and not line.strip().startswith("//")]
+
+    def test_the_key_glow_is_started_by_its_driver_once_and_only_where_there_is_a_source_of_key_presses(self):
+        # The glow reads the key presses (docs/KEY_GLOW.md): the driver is the one place that starts the source, so it is built exactly once, and only on Linux for now.
+        made = self.code_lines("galleond::KeyGlowDriver keyGlow(")
+        self.assertEqual(len(made), 1, "daemon/main.cpp must build the key glow driver exactly once")
+        conditions = platform_conditions_around(self.lines, made[0])
+        self.assertTrue(any(c.startswith("#ifndef Q_OS_WIN") for c in conditions), f"the source of key presses exists on Linux only: {conditions}")
+        self.assertEqual(len(self.code_lines("galleond::HidrawKeyPressSource ")), 1, "one source of key presses")
+        # The source is named twice only: where it is made and where the driver is given it. Nothing else of main() touches it, so nothing else starts it.
+        self.assertEqual(len(self.code_lines("keyGlowSource")), 2, "only the driver may start the source of key presses")
+
+    def test_the_driver_looks_again_when_the_lighting_goes_on_or_off_and_the_choice_is_the_file_bosun_writes(self):
+        refresh = [i for i in self.code_lines("keyGlow.refresh()") if "activeChanged" in "".join(self.lines[max(0, i - 2) : i + 1])]
+        self.assertTrue(refresh, "the glow must be looked at again whenever the lighting goes on or off")
+        driver = self.code_lines("galleond::KeyGlowDriver keyGlow(")[0]
+        self.assertIn("keyGlowChoice(galleond::keyGlowAccessPath())", self.lines[driver], "the choice is read from key-glow.json, written by Bosun only")
+
+    def test_the_lighting_trace_is_paused_while_the_keys_glow(self):
+        paused = [i for i in self.code_lines("setPaused(watching)")]
+        self.assertEqual(len(paused), 1, "the diagnostic trace must be paused while the key glow watches the keys")
+        self.assertTrue(any("lightingTrace" in line for line in self.lines[paused[0] - 2 : paused[0] + 1]))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -72,6 +72,9 @@ add_library(galleond_core STATIC
     StrictJson.h
     KeyMapFile.h KeyMapFile.cpp
     KeySignalsAccess.h KeySignalsAccess.cpp
+    KeyGlowAccess.h KeyGlowAccess.cpp
+    KeyGlowDriver.h KeyGlowDriver.cpp
+    LightingGlowTarget.h
     KeySignalsService.h KeySignalsService.cpp
     KeySignalsLocal.h KeySignalsLocal.cpp
     SessionEnding.h SessionEnding.cpp

@@ -26,6 +26,7 @@ Window {
     property var appearance: null // the appearance of the live lighting (AppearanceStore): written to lighting-appearance.json at every change
     property var rings: null // the settings of the rings of the dials (RingStore): written to dial-rings.json at every change
     property var nightState: null // whether the lights are off until morning, and until when (NightStateStore); null in a test without it
+    property var keyGlow: null // the choice "the keys glow under your fingers" (KeyGlowStore); null in a test without it
     property var keySignals: null // the choice "other programs may light single keys" (KeySignalsStore); null in a test without it
     property var lightingRestore: null // the choice "put the live lighting back when galleond starts" (LightingRestoreStore); null in a test without it
     property var keyCalibration: null // the calibration of the key map (KeyCalibration): off until the person starts it
@@ -777,6 +778,40 @@ Window {
                     font.pixelSize: 13
                     text: qsTr("Off by default. When allowed, a program running as you can ask for one key to light up, for a time you can read in its request (1 second to 24 hours), only while the live lighting is on. It is dark during the night, and it ends if you switch this off or the program quits. Programs only send colours: they never receive which keys you press, nor anything about the keyboard.")
                 }
+                // The keys glow under the fingers: off unless chosen here, and the state is always shown. It reads the key presses (inside galleond only), so nothing
+                // is offered where galleond cannot do it yet.
+                Pill {
+                    objectName: "keyGlowToggle"
+                    visible: win.daemon.lightingSupported && win.keyGlow !== null && win.keyGlow.supported
+                    selected: win.keyGlow !== null && win.keyGlow.allow
+                    text: win.keyGlow !== null && win.keyGlow.allow ? qsTr("Keys glow under your fingers: on") : qsTr("Keys glow under your fingers: off")
+                    onClicked: win.answered(win.keyGlow.setAllow(!win.keyGlow.allow),
+                                            win.keyGlow.allow ? qsTr("The keys you press now glow while the live lighting is on.")
+                                                              : qsTr("The keys no longer glow, and the key presses are not read any more."))
+                }
+                Text {
+                    objectName: "keyGlowNote"
+                    visible: win.daemon.lightingSupported && win.keyGlow !== null && win.keyGlow.supported
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    color: "#9aa0a6"
+                    font.pixelSize: 13
+                    text: qsTr("Off by default. When on, galleond reads the key reports of this keyboard, only while the live lighting is on, and lights the key you just pressed, in the colour you choose below, for a second and a half. It uses what it reads at once and keeps nothing: no key, no order, no count, no history, no file and no log. No program can ask about it, and the lighting trace is paused while it runs. Linux only for now.")
+                }
+                Text {
+                    objectName: "keyGlowColourLabel"
+                    visible: win.daemon.lightingSupported && win.keyGlow !== null && win.keyGlow.supported && win.keyGlow.allow
+                    color: "white"
+                    font.pixelSize: 14
+                    font.bold: true
+                    text: qsTr("Colour of the keys you press")
+                }
+                Swatches {
+                    objectName: "keyGlowSwatches"
+                    visible: win.daemon.lightingSupported && win.keyGlow !== null && win.keyGlow.supported && win.keyGlow.allow
+                    color: win.keyGlow !== null ? win.keyGlow.colour : "#00c8ff"
+                    onPicked: picked => win.answered(win.keyGlow.setColour(picked), qsTr("The keys you press will glow in %1.").arg(picked))
+                }
                 Text {
                     objectName: "liveBrightnessNote"
                     visible: win.daemon.lightingSupported
@@ -785,18 +820,6 @@ Window {
                     color: "#9aa0a6"
                     font.pixelSize: 13
                     text: win.liveBrightnessText(win.daemon.keyboardBrightness)
-                }
-                Swatches {
-                    objectName: "lightingSwatches"
-                    visible: win.daemon.lightingSupported && win.daemon.lightingActive
-                    color: "#ffffff"
-                    onPicked: picked => {
-                        const c = Qt.color(picked)
-                        win.saved(win.appearance.clearRetouches())
-                        win.answered(win.appearance.setUniform(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)),
-                                     win.daemon.lightingActive ? qsTr("Keyboard colour sent to galleond: %1").arg(picked)
-                                                               : qsTr("Keyboard colour kept for the next time the live lighting is on: %1").arg(picked))
-                    }
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
                 Text {
@@ -840,6 +863,19 @@ Window {
                         selected: win.appearance !== null && win.appearance.baseType === "rainbow"
                         text: qsTr("Rainbow")
                         onClicked: win.saved(win.appearance.setRainbow(win.appearance.rainbowSpeed))
+                    }
+                }
+                // The options of each mode are under the buttons: the colours for "One colour", the speed for the rainbow, the shimmer and the place for the sky.
+                Swatches {
+                    objectName: "lightingSwatches"
+                    visible: win.appearance !== null && win.appearance.baseType === "uniform"
+                    color: win.appearance !== null ? String(win.appearance.colour) : "#ffffff"
+                    onPicked: picked => {
+                        const c = Qt.color(picked)
+                        win.saved(win.appearance.clearRetouches())
+                        win.answered(win.appearance.setUniform(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)),
+                                     win.daemon.lightingActive ? qsTr("Keyboard colour sent to galleond: %1").arg(picked)
+                                                               : qsTr("Keyboard colour kept for the next time the live lighting is on: %1").arg(picked))
                     }
                 }
                 Row {

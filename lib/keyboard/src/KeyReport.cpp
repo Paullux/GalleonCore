@@ -25,15 +25,15 @@ std::optional<std::vector<HidUsage>> keysDown(std::span<const std::uint8_t> repo
     std::vector<HidUsage> down;
     down.reserve(MaxKeysDown);
     for (unsigned bit = 0; bit < 8; ++bit) {
-        if ((report[ModifierByte] >> bit & 1U) != 0)
+        if ((static_cast<unsigned>(report[ModifierByte]) >> bit & 1U) != 0)
             down.push_back(static_cast<HidUsage>(FirstModifier + bit));
     }
     for (HidUsage usage = FirstUsageThatIsAKey; usage <= LastBitmapUsage; ++usage) {
-        if ((report[BitmapFirstByte + usage / 8U] >> (usage % 8U) & 1U) != 0)
+        if ((static_cast<unsigned>(report[BitmapFirstByte + usage / 8U]) >> (usage % 8U) & 1U) != 0)
             down.push_back(usage);
     }
     for (unsigned bit = 0; bit < 8; ++bit) {
-        if ((report[InternationalByte] >> bit & 1U) != 0)
+        if ((static_cast<unsigned>(report[InternationalByte]) >> bit & 1U) != 0)
             down.push_back(static_cast<HidUsage>(FirstInternational + bit));
     }
     std::ranges::sort(down);

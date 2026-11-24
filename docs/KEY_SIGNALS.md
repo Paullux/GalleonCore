@@ -16,7 +16,7 @@ galleond can light single keys for other programs, so that an assistant, a calen
 - It **sends** a colour for one key, for a time it chooses (1 second to 24 hours, mandatory). That is all.
 - It **never receives** anything about the keyboard: not which keys are pressed, not what is lit, not a list of its own signals. There is no event, no property and no signal on this interface (AGENTS.md, "Security and privacy by design").
 - Its signals are its own (they belong to its D-Bus connection): it cannot take away another program's, and they are taken away when it leaves the bus, when the person switches the choice off, or when the live lighting stops.
-- They are drawn over the person's lighting at the brightness in force: dark during "lights off until morning".
+- They are drawn over the person's lighting at the brightness in force: dark during "lights off until morning". They are also drawn over the glow of the keys under the fingers (`docs/KEY_GLOW.md`), so what a program asked to show stays visible; that glow is a separate choice, in another file, and a program can neither switch it on nor learn anything about it.
 - Limits: 8 programs, 16 signals per program, 64 in all, 20 requests per second together. A refused request returns a sentence saying why.
 
 ## Interface

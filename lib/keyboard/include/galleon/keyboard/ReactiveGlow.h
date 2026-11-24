@@ -30,6 +30,8 @@ inline constexpr std::size_t MaxGlowing = 64;
 inline constexpr double MinGlowFadeSeconds = 0.2;
 inline constexpr double MaxGlowFadeSeconds = 5.0;
 inline constexpr double DefaultGlowFadeSeconds = 1.5;
+// The colour of the glow until the person chooses another (cyan).
+inline constexpr Rgb DefaultGlowColour{0, 200, 255};
 
 // A fade is a finite number of seconds from MinGlowFadeSeconds to MaxGlowFadeSeconds. Pure.
 [[nodiscard]] bool isValidGlowFade(double seconds);
