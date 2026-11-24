@@ -40,4 +40,9 @@ std::optional<std::vector<HidUsage>> keysDown(std::span<const std::uint8_t> repo
     return down;
 }
 
+bool isMediaKeyReport(std::span<const std::uint8_t> report)
+{
+    return report.size() == MediaKeyReportSize && report[0] == MediaKeyReportId;
+}
+
 } // namespace galleon::keyboard

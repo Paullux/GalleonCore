@@ -28,6 +28,8 @@ namespace galleon::keyboard {
 
 inline constexpr std::uint8_t KeyReportId = 1;
 inline constexpr std::size_t KeyReportSize = 18;
+inline constexpr std::uint8_t MediaKeyReportId = 2;
+inline constexpr std::size_t MediaKeyReportSize = 3;
 // At most this many keys can be down in one report: 8 modifiers, usages 4 to 0x73 and the 8 international keys.
 inline constexpr std::size_t MaxKeysDown = 8 + (0x73 - 4 + 1) + 8;
 
@@ -35,5 +37,9 @@ inline constexpr std::size_t MaxKeysDown = 8 + (0x73 - 4 + 1) + 8;
 // and the four bits without a usage are never reported. An empty list means no key is down. std::nullopt for anything that is not exactly 18 bytes
 // with the ID 1: such a report is dropped by the caller, and what it held is not kept. Pure.
 [[nodiscard]] std::optional<std::vector<HidUsage>> keysDown(std::span<const std::uint8_t> report);
+
+// True for the report of the media keys (ID 2, 3 bytes: volume, play...). It is a report of the keyboard that is not a key of the lighting, so a reader
+// drops it without a word, where any other report that is not the one above is dropped with one warning that gives its ID and length (never a byte of it). Pure.
+[[nodiscard]] bool isMediaKeyReport(std::span<const std::uint8_t> report);
 
 } // namespace galleon::keyboard
