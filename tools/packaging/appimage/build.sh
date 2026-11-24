@@ -16,6 +16,8 @@ DESTDIR="$work/AppDir" cmake --install "$work/build"
 sh "$root/tools/packaging/install-extras.sh" "$root" "$work/AppDir"
 # galleond refuses the live lighting without the watchdog, which it looks for in its own folder.
 test -x "$work/AppDir/usr/bin/galleon-keyboard-watchdog"
+# The command-line way to light one key like another program does (docs/KEY_SIGNALS.md).
+test -x "$work/AppDir/usr/bin/galleon-key-signal"
 export APPIMAGE_EXTRACT_AND_RUN=1
 export QMAKE=/usr/bin/qmake6
 mkdir -p "$work/qml"

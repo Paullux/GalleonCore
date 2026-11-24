@@ -94,6 +94,17 @@ if(TARGET galleon-keyboard-watchdog AND NOT WIN32)
     target_compile_definitions(test_keyboardwatchdogtool PRIVATE WATCHDOG_TOOL="$<TARGET_FILE:galleon-keyboard-watchdog>")
 endif()
 
+# galleon-key-signal: its arguments, the request it sends to the endpoint, the signal it holds on the bus, and the program run against a fake galleond (not on Windows: the
+# program itself is only built and run there by the CI of the Setup).
+if(TARGET key_signal_core)
+    galleon_add_test(test_keysignaltool)
+    target_link_libraries(test_keysignaltool PRIVATE key_signal_core)
+    if(NOT WIN32)
+        add_dependencies(test_keysignaltool galleon-key-signal)
+        target_compile_definitions(test_keysignaltool PRIVATE KEY_SIGNAL_TOOL="$<TARGET_FILE:galleon-key-signal>")
+    endif()
+endif()
+
 # Compile the real adapter against a fake C API: never enumerate real hardware.
 add_executable(test_hidtransport test_hidtransport.cpp ../lib/src/HidTransport.cpp)
 target_include_directories(test_hidtransport PRIVATE hidapi-stub ../lib/include)

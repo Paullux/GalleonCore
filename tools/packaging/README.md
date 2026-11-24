@@ -214,6 +214,13 @@ GitHub normalizes release asset filenames: the locally built Debian files use
 `-1.resolute` (as observed on v0.2.2). Website links and the publication guard
 therefore refer to the published filenames, not the local dpkg filenames.
 
+## The key signal tool
+
+`galleon-key-signal` lights ONE key through the key signals interface of galleond (`docs/KEY_SIGNALS.md`). It is built with the
+desktop (`GALLEON_BUILD_KEY_SIGNAL_TOOL`, on by default there) and installed in `bin/` with the other programs: Debian, AUR and
+AppImage get it from `cmake --install` (the AppImage build fails if it is missing), the RPM lists it in `%files`, the Windows Setup
+installs the staged `bin/` and its test runs `--help` on the installed program.
+
 ## The live-lighting watchdog
 
 `galleon-keyboard-watchdog` is built with the desktop (`GALLEON_BUILD_KEYBOARD_WATCHDOG`, on by default there) and installed

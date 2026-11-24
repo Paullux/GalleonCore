@@ -112,6 +112,37 @@ class LiveLightingWatchdogIsShipped(unittest.TestCase):
 
 
 
+class KeySignalToolIsShipped(unittest.TestCase):
+    """galleon-key-signal lights one key through galleond's key signals interface (docs/KEY_SIGNALS.md): every package carries it."""
+
+    def read(self, path):
+        return (ROOT / path).read_text(encoding='utf-8-sig')
+
+    def test_cmake_builds_it_with_the_desktop_and_installs_it_with_the_other_programs(self):
+        top = self.read('CMakeLists.txt')
+        self.assertIn('option(GALLEON_BUILD_KEY_SIGNAL_TOOL', top)
+        self.assertIn('${GALLEON_BUILD_DESKTOP})', top.split('option(GALLEON_BUILD_KEY_SIGNAL_TOOL', 1)[1].split('\n', 1)[0])
+        self.assertIn('add_subdirectory(tools/key-signal)', top)
+        self.assertIn('install(TARGETS galleon-key-signal RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})', self.read('tools/key-signal/CMakeLists.txt'))
+
+    def test_the_rpm_lists_it(self):
+        self.assertIn('%{_bindir}/galleon-key-signal', self.read('tools/packaging/copr/galleoncore.spec'))
+
+    def test_the_appimage_build_fails_if_it_is_missing(self):
+        self.assertIn('test -x "$work/AppDir/usr/bin/galleon-key-signal"', self.read('tools/packaging/appimage/build.sh'))
+
+    def test_the_windows_setup_test_runs_it_after_install_and_after_upgrade_and_that_uninstall_removes_it(self):
+        setup = self.read('tools/packaging/windows/test-setup.ps1')
+        self.assertEqual(setup.count('    Assert-KeySignalTool\n'), 2)  # after the install, after the upgrade
+        self.assertIn('bin/galleon-key-signal.exe', setup.split('$markers = ', 1)[1].split('\n', 1)[0])
+
+    def test_it_reads_no_key_press_and_opens_no_device(self):
+        # AGENTS.md, security and privacy by design: the tool only sends a request; it must not link the device libraries or read input.
+        cmake = self.read('tools/key-signal/CMakeLists.txt')
+        for forbidden in ('galleon_keys', 'hidapi', 'HIDAPI', 'galleon_keyboard', 'galleon ', 'libinput', 'evdev'):
+            self.assertNotIn(forbidden, cmake)
+
+
 class InstalledProgramsFindTheirLibrary(unittest.TestCase):
     """A program installed in a prefix of the user's (~/.local, /opt/...) must find libgalleon by itself; the packages,
     which install under /usr, must not get a RUNPATH."""
