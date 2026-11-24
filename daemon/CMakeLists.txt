@@ -71,7 +71,6 @@ add_library(galleond_core STATIC
     LightingSkyDay.h LightingSkyDay.cpp
     StrictJson.h
     KeyMapFile.h KeyMapFile.cpp
-    AllowFile.h AllowFile.cpp
     KeySignalsAccess.h KeySignalsAccess.cpp
     KeyGlowAccess.h KeyGlowAccess.cpp
     KeyGlowDriver.h KeyGlowDriver.cpp

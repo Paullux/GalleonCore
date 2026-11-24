@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <KeyGlowAccess.h>
+
 #include <QObject>
 #include <QString>
 
@@ -20,12 +22,14 @@ class KeyGlowStore : public QObject
     Q_OBJECT
     Q_PROPERTY(bool allow READ allow NOTIFY changed)
     Q_PROPERTY(bool supported READ supported CONSTANT)
+    Q_PROPERTY(QString colour READ colour NOTIFY changed) // "#rrggbb": the colour of the glow, cyan until the person chooses another
 
 public:
     explicit KeyGlowStore(QString path = {}, bool supported = defaultSupported(), QObject *parent = nullptr);
 
-    [[nodiscard]] bool allow() const { return m_allow; }
+    [[nodiscard]] bool allow() const { return m_choice.allow; }
     [[nodiscard]] bool supported() const { return m_supported; }
+    [[nodiscard]] QString colour() const;
     // True where galleond has a source of key presses: Linux.
     [[nodiscard]] static constexpr bool defaultSupported()
     {
@@ -38,13 +42,17 @@ public:
 
     // "" when done, else why not (the choice in memory is kept even if the file could not be written).
     Q_INVOKABLE [[nodiscard]] QString setAllow(bool allow);
+    // The colour of the glow, written as #rrggbb; "" when done, else why not (a text that is not a colour changes nothing). Written with the rest of the choice.
+    Q_INVOKABLE [[nodiscard]] QString setColour(const QString &colour);
 
 Q_SIGNALS:
     void changed();
 
 private:
+    [[nodiscard]] QString save();
+
     QString m_path;
-    bool m_allow = false;
+    galleond::KeyGlowChoice m_choice;
     bool m_supported = true;
 };
 

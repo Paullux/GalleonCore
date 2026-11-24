@@ -76,7 +76,7 @@ private Q_SLOTS:
     {
         const QTemporaryDir dir;
         const QString path = dir.filePath("key-glow.json");
-        QVERIFY(galleond::writeKeyGlowAccess(path, true)); // a file that says yes, left by something else, is not taken for a choice here
+        QVERIFY(galleond::writeKeyGlowChoice(path, {true, galleon::keyboard::DefaultGlowColour})); // a file that says yes, left by something else, is not taken for a choice here
         KeyGlowStore store(path, false);
         QVERIFY(!store.supported());
         QVERIFY(!store.allow());
@@ -94,6 +94,90 @@ private Q_SLOTS:
 #else
         QVERIFY(KeyGlowStore::defaultSupported());
 #endif
+    }
+
+    void theGlowIsCyanUntilAnotherColourIsChosen()
+    {
+        const QTemporaryDir dir;
+        const KeyGlowStore store(dir.filePath("key-glow.json"));
+        QCOMPARE(store.colour(), QStringLiteral("#00c8ff"));
+    }
+
+    void aColourIsWrittenWithTheRestOfTheChoiceAndReadBackByANewStoreAndByGalleond()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("key-glow.json");
+        {
+            KeyGlowStore store(path);
+            const QSignalSpy changed(&store, &KeyGlowStore::changed);
+            QVERIFY(store.setAllow(true).isEmpty());
+            QVERIFY(store.setColour("#FF9800").isEmpty()); // in capitals: written as galleond reads it
+            QCOMPARE(changed.count(), 2);
+            QCOMPARE(store.colour(), QStringLiteral("#ff9800"));
+        }
+        const auto choice = galleond::keyGlowChoice(path); // what galleond reads
+        QVERIFY(choice.allow);
+        QCOMPARE(galleond::keyGlowColourText(choice.colour), QStringLiteral("#ff9800"));
+        const KeyGlowStore again(path);
+        QVERIFY(again.allow());
+        QCOMPARE(again.colour(), QStringLiteral("#ff9800"));
+    }
+
+    void switchingTheGlowOffKeepsTheColourAndChoosingAColourDoesNotSwitchItOn()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("key-glow.json");
+        KeyGlowStore store(path);
+        QVERIFY(store.setColour("#e53935").isEmpty());
+        QVERIFY(!store.allow()); // choosing a colour is not choosing the glow: nothing reads the keys
+        QVERIFY(!galleond::keyGlowAllowed(path));
+        QVERIFY(store.setAllow(true).isEmpty());
+        QVERIFY(store.setAllow(false).isEmpty());
+        QCOMPARE(store.colour(), QStringLiteral("#e53935"));
+        QCOMPARE(galleond::keyGlowChoice(path).colour, (galleon::keyboard::Rgb{0xe5, 0x39, 0x35}));
+    }
+
+    void aTextThatIsNotAColourChangesNothingAndSaysWhy_data()
+    {
+        QTest::addColumn<QString>("text");
+        QTest::newRow("no hash") << "ff9800";
+        QTest::newRow("short") << "#f90";
+        QTest::newRow("a name") << "orange";
+        QTest::newRow("not hexadecimal") << "#gg9800";
+        QTest::newRow("a script") << (QString("#ff9800") + QChar(0x22) + QString(", ") + QChar(0x22) + "allow" + QChar(0x22) + ": true");
+        QTest::newRow("empty") << "";
+    }
+    void aTextThatIsNotAColourChangesNothingAndSaysWhy()
+    {
+        QFETCH(const QString, text);
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("key-glow.json");
+        KeyGlowStore store(path);
+        const QSignalSpy changed(&store, &KeyGlowStore::changed);
+        QVERIFY(!store.setColour(text).isEmpty());
+        QCOMPARE(store.colour(), QStringLiteral("#00c8ff"));
+        QCOMPARE(changed.count(), 0);
+        QVERIFY(!QFile::exists(path));
+    }
+
+    void choosingTheSameColourWritesNothing()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("key-glow.json");
+        KeyGlowStore store(path);
+        const QSignalSpy changed(&store, &KeyGlowStore::changed);
+        QVERIFY(store.setColour("#00c8ff").isEmpty());
+        QCOMPARE(changed.count(), 0);
+        QVERIFY(!QFile::exists(path));
+    }
+
+    void whereTheSystemCannotDoItNoColourIsChosenEither()
+    {
+        const QTemporaryDir dir;
+        KeyGlowStore store(dir.filePath("key-glow.json"), false);
+        QVERIFY(!store.setColour("#ff9800").isEmpty());
+        QCOMPARE(store.colour(), QStringLiteral("#00c8ff"));
+        QVERIFY(!QFile::exists(dir.filePath("key-glow.json")));
     }
 
     void withoutAPathNothingIsWritten()

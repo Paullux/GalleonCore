@@ -561,6 +561,42 @@ private Q_SLOTS:
         QCOMPARE(ledColour(rig.frame(), glowLed()), pictureColour()); // a new lighting starts with no glow
     }
 
+    void theGlowShowsTheColourThatWasChosenAndAnotherColourShowsAtTheNextKey()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        rig.controller->setKeyGlow(true);
+        rig.controller->setKeyGlowColour({255, 152, 0});
+        rig.hold();
+        rig.advance(300);
+        rig.controller->touchKeyGlow(glowLed());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == std::vector<std::uint8_t>{255, 152, 0}), 3000);
+        rig.advance(3000);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == pictureColour()), 3000);
+        rig.controller->setKeyGlowColour({229, 57, 53}); // while the lighting is on
+        rig.advance(300);
+        rig.controller->touchKeyGlow(glowLed());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == std::vector<std::uint8_t>{229, 57, 53}), 3000);
+    }
+
+    void theColourIsKeptWhileTheLightingIsOffAndGivenToTheNextLighting()
+    {
+        Rig rig;
+        QVERIFY(rig.controller->setAppearance(colourAppearance()));
+        QCOMPARE(rig.controller->keyGlowColour(), galleon::keyboard::DefaultGlowColour); // cyan until another is chosen
+        rig.controller->setKeyGlow(true);
+        rig.controller->setKeyGlowColour({255, 152, 0}); // the lighting is off
+        rig.hold();
+        rig.advance(300);
+        rig.controller->touchKeyGlow(glowLed());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == std::vector<std::uint8_t>{255, 152, 0}), 3000);
+        QVERIFY(rig.controller->Enable(false).isEmpty());
+        rig.hold(); // a new lighting, a new worker: it is given the colour again
+        rig.advance(300);
+        rig.controller->touchKeyGlow(glowLed());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == std::vector<std::uint8_t>{255, 152, 0}), 3000);
+    }
+
     void theGlowIsDarkInTheNightAsEverythingElse()
     {
         Rig rig;
@@ -614,6 +650,7 @@ private Q_SLOTS:
     // From the key report to the picture: the real source reads a node (a socket pair stands for it), the real driver decides, the real controller draws.
     void aKeyReportOfTheKeyboardMakesTheKeyGlowOnlyWhileThePersonAllowedItAndTheLightingIsOn()
     {
+        std::vector<bool> traceSaid; // before the driver, which may call the hook as it is destroyed
         std::array<int, 2> fds{};
         QVERIFY(socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_NONBLOCK, 0, fds.data()) == 0);
         const int keyboardEnd = fds.at(0);
@@ -624,8 +661,8 @@ private Q_SLOTS:
         galleond::HidrawKeyPressSource source([sourceEnd] { return sourceEnd; });
         galleond::LightingGlowTarget target(*rig.controller);
         std::atomic<bool> allowed{false};
-        galleond::KeyGlowDriver driver(source, target, [&allowed] { return allowed.load(); });
-        std::vector<bool> traceSaid;
+        std::atomic<std::uint8_t> chosenRed{255};
+        galleond::KeyGlowDriver driver(source, target, [&allowed, &chosenRed] { return galleond::KeyGlowChoice{allowed.load(), galleon::keyboard::Rgb{chosenRed.load(), 152, 0}}; });
         driver.setWatchingHook([&traceSaid](bool watching) { traceSaid.push_back(watching); });
         QObject::connect(rig.controller.get(), &galleond::LightingController::activeChanged, &driver, [&driver](bool) { driver.refresh(); });
         const auto sendF2 = [keyboardEnd] {
@@ -645,7 +682,14 @@ private Q_SLOTS:
         QCOMPARE(traceSaid, (std::vector<bool>{true})); // the lighting trace is paused first
         QVERIFY(rig.controller->keyGlow());
         QVERIFY(sendF2());
-        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == glowCyan()), 3000);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == std::vector<std::uint8_t>{255, 152, 0}), 3000); // the colour the person chose, from the file
+        rig.advance(3000);
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == pictureColour()), 3000);
+        chosenRed = 10; // another colour in the file shows at the next look, without anything being switched off and on
+        driver.refresh();
+        rig.advance(300);
+        QVERIFY(sendF2());
+        QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == std::vector<std::uint8_t>{10, 152, 0}), 3000);
         rig.advance(3000);
         QTRY_VERIFY_WITH_TIMEOUT((ledColour(rig.frame(), glowLed()) == pictureColour()), 3000);
         allowed = false; // unticked
@@ -667,7 +711,7 @@ private Q_SLOTS:
         Rig rig;
         galleond::HidrawKeyPressSource source([sourceEnd] { return sourceEnd; });
         galleond::LightingGlowTarget target(*rig.controller);
-        galleond::KeyGlowDriver driver(source, target, [] { return true; });
+        galleond::KeyGlowDriver driver(source, target, [] { return galleond::KeyGlowChoice{true, galleon::keyboard::DefaultGlowColour}; });
         QObject::connect(rig.controller.get(), &galleond::LightingController::activeChanged, &driver, [&driver](bool) { driver.refresh(); });
         rig.hold();
         driver.refresh();

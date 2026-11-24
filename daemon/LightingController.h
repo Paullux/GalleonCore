@@ -11,6 +11,7 @@
 #include <galleon/keyboard/Appearance.h>
 #include <galleon/keyboard/KeyMap.h>
 #include <galleon/keyboard/KeySignals.h>
+#include <galleon/keyboard/ReactiveGlow.h>
 #include <galleon/keyboard/LiveScene.h>
 
 #include <QList>
@@ -166,6 +167,9 @@ public:
     // the bus, and no program can ask which key was pressed or whether the glow is on (a test guards the names). Only while the live lighting is on.
     void setKeyGlow(bool on);
     [[nodiscard]] bool keyGlow() const { return m_glowOn; }
+    // The colour of the glow, the person's choice (cyan until then). Kept while the lighting is off and handed to each worker when it starts.
+    void setKeyGlowColour(galleon::keyboard::Rgb colour);
+    [[nodiscard]] galleon::keyboard::Rgb keyGlowColour() const { return m_glowColour; }
     // A key went down on this LED (0 to 145). Ignored unless the glow is on and the lighting holds the keyboard. Nothing is kept here: the worker keeps the LED
     // and its time, bounded, for the length of the fade.
     void touchKeyGlow(std::uint16_t led);
@@ -236,6 +240,7 @@ private:
     std::optional<galleon::keyboard::LiveScene> m_tool; // what a tool shows over it, if one does
     std::vector<galleon::keyboard::LedPosition> m_positions;
     galleon::keyboard::SignalBoard m_signals; // only here; the worker gets copies
+    galleon::keyboard::Rgb m_glowColour = galleon::keyboard::DefaultGlowColour;
     bool m_glowOn = false; // the glow is on (chosen in Bosun and running): handed to each worker when it starts
     galleon::keyboard::KeyMap m_keyMap;
 };

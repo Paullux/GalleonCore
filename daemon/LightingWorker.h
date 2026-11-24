@@ -31,8 +31,7 @@ using galleon::keyboard::LiveClock;
 using galleon::keyboard::LiveLink;
 
 namespace lighting {
-// The first version of the glow has nothing to set: this colour (cyan) and this fade, for every key.
-constexpr galleon::keyboard::Rgb GlowColour{0, 200, 255};
+// The fade of the glow is fixed for now; its colour is the person's choice (cyan until then).
 constexpr double GlowFadeSeconds = galleon::keyboard::DefaultGlowFadeSeconds;
 constexpr int TickMs = 50;                            // how often the link is given the time: well under its 1 s and 3 s steps
 constexpr std::chrono::milliseconds LinkTimeout{500}; // one request and its answer
@@ -121,6 +120,7 @@ public Q_SLOTS:
         if (!on)
             m_loggedLit = -1; // the log says the number of lit LEDs again, now that it can no longer reveal a press
     }
+    void setGlowColour(galleon::keyboard::Rgb colour) { m_glowColour = colour; }
     void touchGlow(std::uint16_t led)
     {
         if (m_glowOn)
@@ -200,7 +200,7 @@ private:
         galleon::keyboard::LiveFrame under = *m_base;
         if (m_glowOn) {
             m_glow.expire(at, lighting::GlowFadeSeconds);
-            under = galleon::keyboard::withGlow(under, m_glow.shares(at, lighting::GlowFadeSeconds), lighting::GlowColour, m_level);
+            under = galleon::keyboard::withGlow(under, m_glow.shares(at, lighting::GlowFadeSeconds), m_glowColour, m_level);
         }
         const auto frame = galleon::keyboard::withSignals(under, m_signals.overlay(at), m_level);
         if (!m_baseChanged && m_lastSent && *m_lastSent == frame)
@@ -276,6 +276,7 @@ private:
     galleon::keyboard::SignalBoard m_signals;
     galleon::keyboard::GlowBoard m_glow; // only here, only while m_glowOn: the LED and the time of each recent touch, bounded
     bool m_glowOn = false;
+    galleon::keyboard::Rgb m_glowColour = galleon::keyboard::DefaultGlowColour;
     std::optional<galleon::keyboard::LiveFrame> m_base;     // the picture under the signals
     std::optional<galleon::keyboard::LiveFrame> m_lastSent; // what the keyboard was last given
     bool m_baseChanged = false;                              // the picture under the signals has not been sent yet

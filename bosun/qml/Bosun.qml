@@ -796,7 +796,21 @@ Window {
                     wrapMode: Text.Wrap
                     color: "#9aa0a6"
                     font.pixelSize: 13
-                    text: qsTr("Off by default. When on, galleond reads the key reports of this keyboard, only while the live lighting is on, and lights the key you just pressed in cyan for a second and a half. It uses what it reads at once and keeps nothing: no key, no order, no count, no history, no file and no log. No program can ask about it, and the lighting trace is paused while it runs. Linux only for now.")
+                    text: qsTr("Off by default. When on, galleond reads the key reports of this keyboard, only while the live lighting is on, and lights the key you just pressed, in the colour you choose below, for a second and a half. It uses what it reads at once and keeps nothing: no key, no order, no count, no history, no file and no log. No program can ask about it, and the lighting trace is paused while it runs. Linux only for now.")
+                }
+                Text {
+                    objectName: "keyGlowColourLabel"
+                    visible: win.daemon.lightingSupported && win.keyGlow !== null && win.keyGlow.supported && win.keyGlow.allow
+                    color: "white"
+                    font.pixelSize: 14
+                    font.bold: true
+                    text: qsTr("Colour of the keys you press")
+                }
+                Swatches {
+                    objectName: "keyGlowSwatches"
+                    visible: win.daemon.lightingSupported && win.keyGlow !== null && win.keyGlow.supported && win.keyGlow.allow
+                    color: win.keyGlow !== null ? win.keyGlow.colour : "#00c8ff"
+                    onPicked: picked => win.answered(win.keyGlow.setColour(picked), qsTr("The keys you press will glow in %1.").arg(picked))
                 }
                 Text {
                     objectName: "liveBrightnessNote"
@@ -806,18 +820,6 @@ Window {
                     color: "#9aa0a6"
                     font.pixelSize: 13
                     text: win.liveBrightnessText(win.daemon.keyboardBrightness)
-                }
-                Swatches {
-                    objectName: "lightingSwatches"
-                    visible: win.daemon.lightingSupported && win.daemon.lightingActive
-                    color: "#ffffff"
-                    onPicked: picked => {
-                        const c = Qt.color(picked)
-                        win.saved(win.appearance.clearRetouches())
-                        win.answered(win.appearance.setUniform(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)),
-                                     win.daemon.lightingActive ? qsTr("Keyboard colour sent to galleond: %1").arg(picked)
-                                                               : qsTr("Keyboard colour kept for the next time the live lighting is on: %1").arg(picked))
-                    }
                 }
                 Rectangle { width: parent.width; height: 1; color: "#33ffffff" }
                 Text {
@@ -861,6 +863,19 @@ Window {
                         selected: win.appearance !== null && win.appearance.baseType === "rainbow"
                         text: qsTr("Rainbow")
                         onClicked: win.saved(win.appearance.setRainbow(win.appearance.rainbowSpeed))
+                    }
+                }
+                // The options of each mode are under the buttons: the colours for "One colour", the speed for the rainbow, the shimmer and the place for the sky.
+                Swatches {
+                    objectName: "lightingSwatches"
+                    visible: win.appearance !== null && win.appearance.baseType === "uniform"
+                    color: win.appearance !== null ? String(win.appearance.colour) : "#ffffff"
+                    onPicked: picked => {
+                        const c = Qt.color(picked)
+                        win.saved(win.appearance.clearRetouches())
+                        win.answered(win.appearance.setUniform(Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)),
+                                     win.daemon.lightingActive ? qsTr("Keyboard colour sent to galleond: %1").arg(picked)
+                                                               : qsTr("Keyboard colour kept for the next time the live lighting is on: %1").arg(picked))
                     }
                 }
                 Row {

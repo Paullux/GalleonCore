@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "KeyGlowAccess.h"
 #include "KeyPressSource.h"
 
 #include <galleon/keyboard/KeyIdentity.h>
@@ -25,6 +26,7 @@ public:
     virtual ~KeyGlowTarget() = default;
     [[nodiscard]] virtual bool lightingOn() const = 0;
     virtual void setGlow(bool on) = 0;
+    virtual void setColour(galleon::keyboard::Rgb colour) = 0;
     virtual void touch(std::uint16_t led) = 0;
     [[nodiscard]] virtual std::optional<std::uint16_t> ledForUsage(galleon::keyboard::HidUsage usage) const = 0;
 };
@@ -32,7 +34,7 @@ public:
 // Decides WHEN the keys are watched, for the reactive glow, and carries what the source says to the lighting. It is the one place that starts the source of key
 // presses (KeyPressSource.h), under the rules of AGENTS.md ("Security and privacy by design"):
 //   - the source is watched ONLY while (1) the person chose the effect (the file written by Bosun, read again every second, so that unticking the box stops it
-//     within the second) AND (2) the live lighting is on. Either one going away stops it, and the glow is switched off with it. Nothing starts it otherwise.
+//     within the second, and a new colour shows within the second) AND (2) the live lighting is on. Either one going away stops it, and the glow is switched off with it. Nothing starts it otherwise.
 //   - what the source says (the usage of a key that went down) goes to the lighting at once, as the LED of that key, and is not kept here: no key, no order, no
 //     count, no history, no log. A key whose light was not measured has no LED and makes no glow.
 //   - while the source is watched, `watching(true)` is said (main.cpp pauses the diagnostic trace of the lighting then, since a frame that lights a key at a given
@@ -43,17 +45,18 @@ class KeyGlowDriver : public QObject
     Q_OBJECT
 
 public:
-    using Allowed = std::function<bool()>;
+    using Choice = std::function<KeyGlowChoice()>; // what the person chose (the file), and off with the default colour for anything but a good file
     using WatchingHook = std::function<void(bool)>;
 
     static constexpr int PollMs = 1000;           // how often the choice is read again
     static constexpr int RetryAfterFailureMs = 5000; // before a source that could not read is tried again
     static constexpr int TraceResumeMs = 2000;    // the diagnostic trace resumes this long after the watch ended (a frame may still be in flight)
 
-    // `source` and `target` must outlive the driver. `allowed` reads the choice of the person (the file), and returns false for anything but a clear yes.
-    KeyGlowDriver(KeyPressSource &source, KeyGlowTarget &target, Allowed allowed, QObject *parent = nullptr);
+    // `source` and `target` must outlive the driver. `choice` reads the choice of the person (the file).
+    KeyGlowDriver(KeyPressSource &source, KeyGlowTarget &target, Choice choice, QObject *parent = nullptr);
     ~KeyGlowDriver() override;
 
+    // The hook may be called while the driver is destroyed (the trace must resume), so whatever it uses has to outlive the driver.
     void setWatchingHook(WatchingHook hook) { m_hook = std::move(hook); }
     // For tests.
     void setTimes(int pollMs, int retryAfterFailureMs, int traceResumeMs)
@@ -81,7 +84,7 @@ private:
 
     KeyPressSource &m_source;
     KeyGlowTarget &m_target;
-    Allowed m_allowed;
+    Choice m_choice;
     WatchingHook m_hook;
     QTimer m_poll;
     QTimer m_resume; // single shot: the trace resumes after the watch ended

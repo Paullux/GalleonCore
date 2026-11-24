@@ -1067,7 +1067,7 @@ int main(int argc, char *argv[])
     // nowhere; nothing of it is on the bus; and the diagnostic trace of the lighting is paused while it runs (a frame that lights a key would reveal the press).
     galleond::HidrawKeyPressSource keyGlowSource;
     galleond::LightingGlowTarget keyGlowTarget(lighting);
-    galleond::KeyGlowDriver keyGlow(keyGlowSource, keyGlowTarget, [] { return galleond::keyGlowAllowed(galleond::keyGlowAccessPath()); });
+    galleond::KeyGlowDriver keyGlow(keyGlowSource, keyGlowTarget, [] { return galleond::keyGlowChoice(galleond::keyGlowAccessPath()); });
     QObject::connect(&lighting, &galleond::LightingController::activeChanged, &keyGlow, [&keyGlow](bool) { keyGlow.refresh(); });
     if (lightingTrace)
         keyGlow.setWatchingHook([lightingTrace](bool watching) { lightingTrace->setPaused(watching); });

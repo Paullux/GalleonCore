@@ -11,9 +11,12 @@ Everything below is a promise the code keeps and a test checks.
 
 ## Turning it on
 
-**Off by default.** In Bosun (Keyboard tab, live lighting) the line "Keys glow under your fingers" shows the state, always, and one click changes it. Bosun
-writes `~/.config/galleoncore/key-glow.json` (`{"version":1,"allow":true}`); galleond only reads it, once a second, so unticking the box stops everything
-within the second. No program on the bus can change it, and nothing here switches the live lighting on: the glow only runs while the live lighting is on.
+**Off by default.** In Bosun (Keyboard tab, live lighting) the line "Keys glow under your fingers" shows the state, always, and one click changes it. Once it
+is on, "Colour of the keys you press" offers the same colours as the keyboard (a few swatches, or `#rrggbb`), cyan until you choose another. Bosun writes
+`~/.config/galleoncore/key-glow.json` (`{"version":1,"allow":true,"colour":"#00c8ff"}`); galleond only reads it, once a second, so unticking the box stops
+everything within the second and a new colour shows within the second. The file is read as untrusted like any other: exactly these three keys, a true or false,
+a colour of the form `#rrggbb`, a few hundred bytes at most; anything else means off and cyan, and nothing is taken from a part of a damaged file. Switching the
+glow off keeps the colour for next time, and choosing a colour never switches the glow on. No program on the bus can change it, and nothing here switches the live lighting on: the glow only runs while the live lighting is on.
 To try it without the window, write that file by hand. A missing, oversized or damaged file means off.
 
 Linux only for now. On Windows Bosun shows nothing about it, because galleond has no source of key presses there yet (Raw Input is planned); the choice is
@@ -35,11 +38,11 @@ never offered where it would do nothing.
 - **The lighting trace is paused while it runs.** `GALLEON_LIGHTING_LOG=1` writes a line for each report sent to the keyboard, and a frame that lights a key at
   a given moment would reveal that it was pressed. While the glow is watching, the trace writes nothing (it says so in one line before, and again after, a
   couple of seconds past the end, once the last glowing frame is gone). The line of the log that says how many LEDs are lit is cut too, for the same reason.
-- At night ("lights off until morning") the glow is black like everything else, and it never lights a key that the lighting does not.
+- The glow is drawn at the brightness in force: at night ("lights off until morning") it is black like everything else, and it never lights a key that the lighting does not.
 
 ## What it does not do
 
-Colour and fade are fixed (cyan, 1.5 s) in this first version. It is not on Windows yet. It does not follow the neighbouring keys. It reads nothing from the
+The fade is fixed (1.5 s) in this first version; the colour is yours. It is not on Windows yet. It does not follow the neighbouring keys. It reads nothing from the
 other keyboards of the computer (only the node of this one).
 
 ## For whoever reviews a change here

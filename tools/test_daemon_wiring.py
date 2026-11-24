@@ -76,7 +76,7 @@ class TestDaemonWiring(unittest.TestCase):
         refresh = [i for i in self.code_lines("keyGlow.refresh()") if "activeChanged" in "".join(self.lines[max(0, i - 2) : i + 1])]
         self.assertTrue(refresh, "the glow must be looked at again whenever the lighting goes on or off")
         driver = self.code_lines("galleond::KeyGlowDriver keyGlow(")[0]
-        self.assertIn("keyGlowAllowed(galleond::keyGlowAccessPath())", self.lines[driver], "the choice is read from key-glow.json, written by Bosun only")
+        self.assertIn("keyGlowChoice(galleond::keyGlowAccessPath())", self.lines[driver], "the choice is read from key-glow.json, written by Bosun only")
 
     def test_the_lighting_trace_is_paused_while_the_keys_glow(self):
         paused = [i for i in self.code_lines("setPaused(watching)")]

@@ -7,8 +7,8 @@
 
 namespace galleond {
 
-KeyGlowDriver::KeyGlowDriver(KeyPressSource &source, KeyGlowTarget &target, Allowed allowed, QObject *parent)
-    : QObject(parent), m_source(source), m_target(target), m_allowed(std::move(allowed))
+KeyGlowDriver::KeyGlowDriver(KeyPressSource &source, KeyGlowTarget &target, Choice choice, QObject *parent)
+    : QObject(parent), m_source(source), m_target(target), m_choice(std::move(choice))
 {
     m_clock.start();
     m_poll.setInterval(m_pollMs);
@@ -45,7 +45,9 @@ void KeyGlowDriver::say(bool watching)
 
 void KeyGlowDriver::refresh()
 {
-    const bool want = shouldWatch(m_allowed ? m_allowed() : false, m_target.lightingOn());
+    const KeyGlowChoice choice = m_choice ? m_choice() : KeyGlowChoice{};
+    m_target.setColour(choice.colour); // a new colour shows within the second, watching or not
+    const bool want = shouldWatch(choice.allow, m_target.lightingOn());
     if (want) {
         if (!m_source.watching() && m_clock.elapsed() >= m_retryNotBefore)
             startWatching();

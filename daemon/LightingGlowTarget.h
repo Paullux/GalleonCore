@@ -17,6 +17,7 @@ public:
 
     [[nodiscard]] bool lightingOn() const override { return m_lighting.active(); }
     void setGlow(bool on) override { m_lighting.setKeyGlow(on); }
+    void setColour(galleon::keyboard::Rgb colour) override { m_lighting.setKeyGlowColour(colour); }
     void touch(std::uint16_t led) override { m_lighting.touchKeyGlow(led); }
     [[nodiscard]] std::optional<std::uint16_t> ledForUsage(galleon::keyboard::HidUsage usage) const override { return m_lighting.ledForUsage(usage); }
 

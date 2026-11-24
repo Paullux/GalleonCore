@@ -58,6 +58,11 @@ public:
         glow = value;
         glowCalls.push_back(value);
     }
+    void setColour(galleon::keyboard::Rgb value) override
+    {
+        colour = value;
+        colourCalls.push_back(value);
+    }
     void touch(std::uint16_t led) override { touches.push_back(led); }
     [[nodiscard]] std::optional<std::uint16_t> ledForUsage(galleon::keyboard::HidUsage usage) const override
     {
@@ -68,6 +73,8 @@ public:
 
     bool on = false;
     bool glow = false;
+    galleon::keyboard::Rgb colour = galleon::keyboard::DefaultGlowColour;
+    std::vector<galleon::keyboard::Rgb> colourCalls;
     std::vector<bool> glowCalls;
     std::vector<std::uint16_t> touches;
 };
@@ -98,7 +105,7 @@ private Q_SLOTS:
         FakeSource source;
         FakeTarget target;
         target.on = lightingOn;
-        KeyGlowDriver driver(source, target, [chosen] { return chosen; });
+        KeyGlowDriver driver(source, target, [chosen] { return KeyGlowChoice{chosen, galleon::keyboard::DefaultGlowColour}; });
         driver.refresh();
         QCOMPARE(source.watching(), watch);
         QCOMPARE(target.glow, watch);
@@ -110,7 +117,7 @@ private Q_SLOTS:
         FakeSource source;
         FakeTarget target;
         target.on = true;
-        const KeyGlowDriver driver(source, target, [] { return true; });
+        const KeyGlowDriver driver(source, target, [] { return KeyGlowChoice{true, galleon::keyboard::DefaultGlowColour}; });
         QCOMPARE(source.starts, 0); // constructing the driver does not start the source: only a look at the choice does
         QVERIFY(!source.watching());
     }
@@ -121,7 +128,7 @@ private Q_SLOTS:
         FakeTarget target;
         target.on = true;
         std::atomic<bool> chosen{true};
-        KeyGlowDriver driver(source, target, [&chosen] { return chosen.load(); });
+        KeyGlowDriver driver(source, target, [&chosen] { return KeyGlowChoice{chosen.load(), galleon::keyboard::DefaultGlowColour}; });
         driver.setTimes(40, 5000, 2000);
         QTRY_VERIFY_WITH_TIMEOUT(source.watching(), 2000);
         chosen = false;
@@ -135,7 +142,7 @@ private Q_SLOTS:
         FakeSource source;
         FakeTarget target;
         target.on = true;
-        KeyGlowDriver driver(source, target, [] { return true; });
+        KeyGlowDriver driver(source, target, [] { return KeyGlowChoice{true, galleon::keyboard::DefaultGlowColour}; });
         driver.refresh();
         QVERIFY(source.watching());
         target.on = false;
@@ -149,12 +156,49 @@ private Q_SLOTS:
         QCOMPARE(source.starts, 2);
     }
 
+    void theColourOfTheChoiceIsGivenToTheLightingAndAChangeShowsAtTheNextLook()
+    {
+        FakeSource source;
+        FakeTarget target;
+        target.on = true;
+        std::atomic<std::uint8_t> red{255};
+        KeyGlowDriver driver(source, target, [&red] { return KeyGlowChoice{true, galleon::keyboard::Rgb{red.load(), 152, 0}}; });
+        driver.refresh();
+        QCOMPARE(target.colour, (galleon::keyboard::Rgb{255, 152, 0}));
+        red = 10;
+        driver.refresh();
+        QCOMPARE(target.colour, (galleon::keyboard::Rgb{10, 152, 0})); // while it is watching: the new colour shows within the second
+        QVERIFY(source.watching());
+    }
+
+    void theColourIsGivenEvenWhileTheGlowIsOffSoItIsReadyWhenItIsSwitchedOn()
+    {
+        FakeSource source;
+        FakeTarget target;
+        target.on = false;
+        KeyGlowDriver driver(source, target, [] { return KeyGlowChoice{false, galleon::keyboard::Rgb{1, 2, 3}}; });
+        driver.refresh();
+        QCOMPARE(target.colour, (galleon::keyboard::Rgb{1, 2, 3}));
+        QVERIFY(!source.watching());
+    }
+
+    void aDamagedFileGivesTheDefaultColourAndNoWatch()
+    {
+        FakeSource source;
+        FakeTarget target;
+        target.on = true;
+        KeyGlowDriver driver(source, target, [] { return KeyGlowChoice{}; }); // what keyGlowChoice() gives for a file that is not good
+        driver.refresh();
+        QVERIFY(!source.watching());
+        QCOMPARE(target.colour, galleon::keyboard::DefaultGlowColour);
+    }
+
     void aKeyThatWentDownReachesTheLightingAsItsLedAndNothingIsKeptHere()
     {
         FakeSource source;
         FakeTarget target;
         target.on = true;
-        KeyGlowDriver driver(source, target, [] { return true; });
+        KeyGlowDriver driver(source, target, [] { return KeyGlowChoice{true, galleon::keyboard::DefaultGlowColour}; });
         driver.refresh();
         source.say(0x3B);
         source.say(0x3B);
@@ -167,7 +211,7 @@ private Q_SLOTS:
         FakeSource source;
         FakeTarget target;
         target.on = false;
-        KeyGlowDriver driver(source, target, [] { return true; });
+        KeyGlowDriver driver(source, target, [] { return KeyGlowChoice{true, galleon::keyboard::DefaultGlowColour}; });
         driver.refresh();
         source.say(0x3B); // the source is not watching: nothing is relied on from it, but if it said something anyway the glow is off in the lighting
         QVERIFY(!target.glow);
@@ -179,7 +223,7 @@ private Q_SLOTS:
         source.canRead = false;
         FakeTarget target;
         target.on = true;
-        KeyGlowDriver driver(source, target, [] { return true; });
+        KeyGlowDriver driver(source, target, [] { return KeyGlowChoice{true, galleon::keyboard::DefaultGlowColour}; });
         driver.setTimes(20, 400, 100);
         QTRY_COMPARE_WITH_TIMEOUT(source.starts, 1, 1000);
         QTest::qWait(250);
@@ -196,7 +240,7 @@ private Q_SLOTS:
         FakeSource source;
         FakeTarget target;
         target.on = true;
-        KeyGlowDriver driver(source, target, [] { return true; });
+        KeyGlowDriver driver(source, target, [] { return KeyGlowChoice{true, galleon::keyboard::DefaultGlowColour}; });
         driver.setTimes(20, 200, 100);
         QTRY_VERIFY_WITH_TIMEOUT(source.watching(), 1000);
         source.goAway();
@@ -207,12 +251,13 @@ private Q_SLOTS:
 
     void theTraceIsToldBeforeTheFirstKeyCanBeReadAndOnlyAfterTheLastGlowingFrameIsGone()
     {
+        std::vector<std::pair<bool, bool>> told; // what was said, and whether the source was already watching. Declared BEFORE the driver: the hook writes to it, and
+                                                  // the driver may still call the hook as it is destroyed
         FakeSource source;
         FakeTarget target;
         target.on = true;
         std::atomic<bool> chosen{true};
-        KeyGlowDriver driver(source, target, [&chosen] { return chosen.load(); });
-        std::vector<std::pair<bool, bool>> told; // what was said, and whether the source was already watching
+        KeyGlowDriver driver(source, target, [&chosen] { return KeyGlowChoice{chosen.load(), galleon::keyboard::DefaultGlowColour}; });
         driver.setWatchingHook([&](bool watching) { told.emplace_back(watching, source.watching()); });
         driver.setTimes(20, 5000, 200);
         QTRY_VERIFY_WITH_TIMEOUT(source.watching(), 1000);
@@ -228,11 +273,11 @@ private Q_SLOTS:
 
     void startingAgainBeforeTheTraceResumedKeepsItPaused()
     {
+        std::vector<bool> told; // before the driver, which calls the hook again as it is destroyed (the trace must resume)
         FakeSource source;
         FakeTarget target;
         target.on = true;
-        KeyGlowDriver driver(source, target, [] { return true; });
-        std::vector<bool> told;
+        KeyGlowDriver driver(source, target, [] { return KeyGlowChoice{true, galleon::keyboard::DefaultGlowColour}; });
         driver.setWatchingHook([&](bool watching) { told.push_back(watching); });
         driver.setTimes(10000, 5000, 300);
         driver.refresh();
@@ -251,7 +296,7 @@ private Q_SLOTS:
         target.on = true;
         std::vector<bool> told;
         {
-            KeyGlowDriver driver(source, target, [] { return true; });
+            KeyGlowDriver driver(source, target, [] { return KeyGlowChoice{true, galleon::keyboard::DefaultGlowColour}; });
             driver.setWatchingHook([&](bool watching) { told.push_back(watching); });
             driver.refresh();
             QVERIFY(source.watching());

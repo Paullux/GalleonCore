@@ -301,6 +301,15 @@ void LightingController::setKeyGlow(bool on)
         QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), on] { worker->setGlow(on); }, Qt::QueuedConnection);
 }
 
+void LightingController::setKeyGlowColour(galleon::keyboard::Rgb colour)
+{
+    if (colour == m_glowColour)
+        return;
+    m_glowColour = colour;
+    if (m_worker)
+        QMetaObject::invokeMethod(m_worker.get(), [worker = m_worker.get(), colour] { worker->setGlowColour(colour); }, Qt::QueuedConnection);
+}
+
 void LightingController::touchKeyGlow(std::uint16_t led)
 {
     if (!m_glowOn || !m_worker)
@@ -325,6 +334,7 @@ void LightingController::startWorker()
     m_worker = std::make_unique<LightingWorker>(m_opener, m_clock, shownAppearance(), m_night ? std::nullopt : m_tool, m_positions, m_dayHours, m_skyDay);
     m_worker->setSignals(m_signals); // before it moves: nobody else touches it yet
     m_worker->setGlow(m_glowOn);
+    m_worker->setGlowColour(m_glowColour);
     m_worker->moveToThread(&m_thread);
     connect(m_worker.get(), &LightingWorker::reported, this, &LightingController::onWorkerState);
     m_thread.start();
