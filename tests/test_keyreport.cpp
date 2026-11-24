@@ -42,9 +42,8 @@ class TestKeyReport : public QObject
 private Q_SLOTS:
     void aReportWithNothingDownGivesNoKey()
     {
-        const auto usages = keysDown(quiet());
-        QVERIFY(usages.has_value());
-        QVERIFY(usages->empty());
+        QVERIFY(keysDown(quiet()).has_value());
+        QVERIFY(down(quiet()).empty());
     }
 
     void theLetterAIsBitFourOfTheFirstByteOfTheBitmap()
