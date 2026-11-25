@@ -15,7 +15,7 @@ import unittest
 MAIN = pathlib.Path(__file__).resolve().parent.parent / "daemon" / "main.cpp"
 
 # Calls that every platform must make.
-EVERYWHERE = ("setUpLightingRestore(", "nightMode.resume(", "galleond::NightController nightMode(", "lighting.setNight(", "galleond::KeySignalsService keySignals(", "lighting.setSessionEndingCheck(")
+EVERYWHERE = ("setUpLightingRestore(", "nightMode.resume(", "galleond::NightController nightMode(", "lighting.setNight(", "galleond::KeySignalsService keySignals(", "lighting.setSessionEndingCheck(", "galleond::KeyGlowDriver keyGlow(")
 
 
 def platform_conditions_around(lines, index):
@@ -62,15 +62,19 @@ class TestDaemonWiring(unittest.TestCase):
     def code_lines(self, needle):
         return [i for i, line in enumerate(self.lines) if needle in line and not line.strip().startswith("//")]
 
-    def test_the_key_glow_is_started_by_its_driver_once_and_only_where_there_is_a_source_of_key_presses(self):
-        # The glow reads the key presses (docs/KEY_GLOW.md): the driver is the one place that starts the source, so it is built exactly once, and only on Linux for now.
+    def test_the_key_glow_is_started_by_its_driver_once_with_the_source_of_each_system(self):
+        # The glow reads the key presses (docs/KEY_GLOW.md): the driver is the one place that starts the source, so it is built exactly once, on every system; only the source
+        # differs: the hidraw node on Linux, Raw Input on Windows.
         made = self.code_lines("galleond::KeyGlowDriver keyGlow(")
         self.assertEqual(len(made), 1, "daemon/main.cpp must build the key glow driver exactly once")
-        conditions = platform_conditions_around(self.lines, made[0])
-        self.assertTrue(any(c.startswith("#ifndef Q_OS_WIN") for c in conditions), f"the source of key presses exists on Linux only: {conditions}")
-        self.assertEqual(len(self.code_lines("galleond::HidrawKeyPressSource ")), 1, "one source of key presses")
-        # The source is named twice only: where it is made and where the driver is given it. Nothing else of main() touches it, so nothing else starts it.
-        self.assertEqual(len(self.code_lines("keyGlowSource")), 2, "only the driver may start the source of key presses")
+        self.assertEqual([c for c in platform_conditions_around(self.lines, made[0]) if "Q_OS_" in c], [], "the driver exists on every system: it is not under a platform condition")
+        windows = self.code_lines("galleond::WindowsRawKeyPressSource keyGlowSource")
+        linux = self.code_lines("galleond::HidrawKeyPressSource keyGlowSource")
+        self.assertEqual((len(windows), len(linux)), (1, 1), "one source of key presses for each system")
+        self.assertTrue(any(c.startswith("#ifdef Q_OS_WIN") and "#else" not in c for c in platform_conditions_around(self.lines, windows[0])), "Raw Input is the source of Windows")
+        self.assertTrue(any(c.startswith("#ifdef Q_OS_WIN") and "#else" in c for c in platform_conditions_around(self.lines, linux[0])), "the hidraw node is the source of every other system")
+        # The source is named where it is made (once for each system) and where the driver is given it. Nothing else of main() touches it, so nothing else starts it.
+        self.assertEqual(len(self.code_lines("keyGlowSource")), 3, "only the driver may start the source of key presses")
 
     def test_the_driver_looks_again_when_the_lighting_goes_on_or_off_and_the_choice_is_the_file_bosun_writes(self):
         refresh = [i for i in self.code_lines("keyGlow.refresh()") if "activeChanged" in "".join(self.lines[max(0, i - 2) : i + 1])]

@@ -15,8 +15,8 @@ namespace bosun {
 // missing or invalid file means off) and written back at each change, atomically; galleond reads the file and never writes it, and no program can change it.
 // An empty path (a preview run) keeps the choice in memory and writes nothing.
 //
-// `supported` is false where galleond has no source of key presses yet (Windows, for now): the window then shows nothing about it, so that it never offers
-// a choice that does nothing.
+// `supported` is false where galleond has no source of key presses (a system for which none was written): the window then shows nothing about it, so that it never
+// offers a choice that does nothing. Linux has one (the hidraw node of the keyboard) and so has Windows (Raw Input).
 class KeyGlowStore : public QObject
 {
     Q_OBJECT
@@ -30,15 +30,8 @@ public:
     [[nodiscard]] bool allow() const { return m_choice.allow; }
     [[nodiscard]] bool supported() const { return m_supported; }
     [[nodiscard]] QString colour() const;
-    // True where galleond has a source of key presses: Linux.
-    [[nodiscard]] static constexpr bool defaultSupported()
-    {
-#ifdef Q_OS_WIN
-        return false;
-#else
-        return true;
-#endif
-    }
+    // True where galleond has a source of key presses: Linux and Windows, which are the systems that Bosun runs on.
+    [[nodiscard]] static constexpr bool defaultSupported() { return true; }
 
     // "" when done, else why not (the choice in memory is kept even if the file could not be written).
     Q_INVOKABLE [[nodiscard]] QString setAllow(bool allow);

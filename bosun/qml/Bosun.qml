@@ -796,7 +796,7 @@ Window {
                     wrapMode: Text.Wrap
                     color: "#9aa0a6"
                     font.pixelSize: 13
-                    text: qsTr("Off by default. When on, galleond reads the key reports of this keyboard, only while the live lighting is on, and lights the key you just pressed, in the colour you choose below, for a second and a half. It uses what it reads at once and keeps nothing: no key, no order, no count, no history, no file and no log. No program can ask about it, and the lighting trace is paused while it runs. Linux only for now.")
+                    text: qsTr("Off by default. When on, galleond reads the key reports of this keyboard, only while the live lighting is on, and lights the key you just pressed, in the colour you choose below, for a second and a half. It uses what it reads at once and keeps nothing: no key, no order, no count, no history, no file and no log. No program can ask about it, and the lighting trace is paused while it runs.")
                 }
                 Text {
                     objectName: "keyGlowColourLabel"

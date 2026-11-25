@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 Paul Woisard
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
-# The keys glow under your fingers (Linux)
+# The keys glow under your fingers (Linux and Windows)
 
 When this is on, the key you just pressed lights up in cyan and fades out in a second and a half, over whatever the keyboard shows. It is the first
 feature of GalleonCore that has to read the key presses of the keyboard, so it is built under the rules of AGENTS.md ("Security and privacy by design").
@@ -21,8 +21,9 @@ To try it without the window, write that file by hand. A missing, oversized or d
 
 Seen working by the owner on the physical keyboard (Linux, 24 November 2026): the glow follows the keys and the settings window is clearer. The latency was not measured.
 
-Linux only for now. On Windows Bosun shows nothing about it, because galleond has no source of key presses there yet (Raw Input is planned); the choice is
-never offered where it would do nothing.
+On Linux and on Windows. Only the source of key presses differs; the choice, the colour, the glow, the pause of the trace and every promise below are the same.
+**Seen working by the owner on the physical keyboard on Windows 11 on 25 November 2026**: it works "exactly like on Linux" (the choice, the colour, stopping it, and text typed in another program is unchanged); the CI checks what needs no keyboard. The latency was not measured, and the rows of the recipe about another keyboard and the night (9.6 and 9.7) were not done. When the glow was ticked, no alert of Windows or of a security product was shown (row 9.8, one machine); the only warning is SmartScreen at the opening of the Setup, which is not signed yet.
+The choice is never offered on a system where galleond has no source of key presses.
 
 ## What galleond reads, and what happens to it
 
@@ -30,6 +31,13 @@ never offered where it would do nothing.
   from the system**: the system keeps receiving every key. `tools/udev/70-galleon.rules` already lets your session open it, so there is no new permission and no
   member of the `input` group is needed. The layout of the reports is the one the keyboard's own descriptor declares (`docs/protocol/README.md`, "Keyboard
   input reports"); the keyboard was measured sending the report of ID 1 only.
+- **On Windows** the source is Raw Input (`WindowsRawKeyPressSource`), **not a low-level keyboard hook** (`WH_KEYBOARD_LL`, the way keyloggers listen). Windows is
+  asked, for a window of galleond that is never shown, for the events of the keyboards, with `RIDEV_INPUTSINK` (so that they come while another program has the
+  focus) and **without** `RIDEV_NOLEGACY`: the keys still reach the program that has the focus, and nothing is blocked, changed or injected. **Each message is first
+  read by its header only**, which says which device sent it: the keys of any other keyboard of the computer (the laptop's, a friend's) are never read at all. Only
+  a message of the Galleon keyboard (a device whose name has `VID_1B1C&PID_2B0C`, not the Stream Deck module) is read further: its scan code and flags, turned at
+  once into a usage with the table of `KeyIdentity.h`, and the structure is cleared. Between `stop()` and `start()` nothing is registered with Windows. A security
+  product may take a program that listens to the keyboard through Raw Input for a spy, which it is, for the Galleon keyboard, **only while you chose this effect**.
 - It reads **only while the glow is on and the live lighting is on.** Between the two, nothing is opened or read.
 - Each report is turned at once into "this LED went down" (the keys whose light was measured), and the bytes are cleared. What is kept is the LED and the
   time of the last touch of at most 64 keys, in memory, for the length of the fade (`ReactiveGlow.h`): **no key, no order, no count, no history, no file and
@@ -44,8 +52,8 @@ never offered where it would do nothing.
 
 ## What it does not do
 
-The fade is fixed (1.5 s) in this first version; the colour is yours. It is not on Windows yet. It does not follow the neighbouring keys. It reads nothing from the
-other keyboards of the computer (only the node of this one).
+The fade is fixed (1.5 s) in this first version; the colour is yours. It does not follow the neighbouring keys. It reads nothing from the
+other keyboards of the computer (on Linux only the node of this one is opened; on Windows the other keyboards' messages are dropped after their header).
 
 ## For whoever reviews a change here
 
