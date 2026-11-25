@@ -19,6 +19,8 @@ a colour of the form `#rrggbb`, a few hundred bytes at most; anything else means
 glow off keeps the colour for next time, and choosing a colour never switches the glow on. No program on the bus can change it, and nothing here switches the live lighting on: the glow only runs while the live lighting is on.
 To try it without the window, write that file by hand. A missing, oversized or damaged file means off.
 
+Seen working by the owner on the physical keyboard (Linux, 24 November 2026): the glow follows the keys and the settings window is clearer. The latency was not measured.
+
 Linux only for now. On Windows Bosun shows nothing about it, because galleond has no source of key presses there yet (Raw Input is planned); the choice is
 never offered where it would do nothing.
 
