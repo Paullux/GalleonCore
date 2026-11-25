@@ -74,6 +74,7 @@ add_library(galleond_core STATIC
     KeySignalsAccess.h KeySignalsAccess.cpp
     KeyGlowAccess.h KeyGlowAccess.cpp
     KeyGlowDriver.h KeyGlowDriver.cpp
+    RawKeyboard.h RawKeyboard.cpp
     LightingGlowTarget.h
     KeySignalsService.h KeySignalsService.cpp
     KeySignalsLocal.h KeySignalsLocal.cpp
@@ -84,7 +85,7 @@ add_library(galleond_core STATIC
 target_include_directories(galleond_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(galleond_core PUBLIC galleon galleon_keyboard galleon_media galleon_keys galleon_platform Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::Network Qt6::WebSockets PRIVATE galleon_warnings)
 if(WIN32)
-    target_sources(galleond_core PRIVATE WindowsDesktopEntries.cpp WindowsPowerEvents.h WindowsPowerEvents.cpp)
+    target_sources(galleond_core PRIVATE WindowsDesktopEntries.cpp WindowsPowerEvents.h WindowsPowerEvents.cpp WindowsRawKeyPressSource.h WindowsRawKeyPressSource.cpp)
     target_link_libraries(galleond_core PUBLIC galleon_smtc PRIVATE shell32 ole32 uuid advapi32 user32 version)
     target_compile_definitions(galleond_core PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 else()

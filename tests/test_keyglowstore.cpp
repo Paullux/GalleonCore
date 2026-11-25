@@ -87,13 +87,11 @@ private Q_SLOTS:
         QVERIFY(galleond::keyGlowAllowed(path)); // and the file is left as it was
     }
 
-    void theChoiceIsOfferedOnLinuxAndNotOnWindowsByDefault()
+    void theChoiceIsOfferedOnEverySystemThatBosunRunsOn()
     {
-#ifdef Q_OS_WIN
-        QVERIFY(!KeyGlowStore::defaultSupported());
-#else
-        QVERIFY(KeyGlowStore::defaultSupported());
-#endif
+        QVERIFY(KeyGlowStore::defaultSupported()); // Linux has a source of key presses (the hidraw node), and so has Windows (Raw Input)
+        const QTemporaryDir dir;
+        QVERIFY(KeyGlowStore(dir.filePath("key-glow.json")).supported());
     }
 
     void theGlowIsCyanUntilAnotherColourIsChosen()

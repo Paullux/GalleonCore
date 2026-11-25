@@ -42,6 +42,7 @@
 #include "TransportTrace.h"
 #ifdef Q_OS_WIN
 #include "WindowsPowerEvents.h"
+#include "WindowsRawKeyPressSource.h"
 #else
 #include "HidrawKeyPressSource.h"
 #include "KeySignalsBus.h"
@@ -1061,17 +1062,20 @@ int main(int argc, char *argv[])
             lightingTrace->line(QStringLiteral("state: %1%2").arg(state, detail.isEmpty() ? QString() : QStringLiteral(" (%1)").arg(detail)));
         });
     }
-#ifndef Q_OS_WIN
-    // The keys glow under the fingers (docs/KEY_GLOW.md), Linux only for now: the one place of galleond that reads the key presses of the keyboard. OFF unless the person chose
-    // it in Bosun (key-glow.json, read again every second); it only watches while the live lighting is on; what it reads goes to the lighting as a LED at once and is kept
-    // nowhere; nothing of it is on the bus; and the diagnostic trace of the lighting is paused while it runs (a frame that lights a key would reveal the press).
+    // The keys glow under the fingers (docs/KEY_GLOW.md): the one place of galleond that reads the key presses of the keyboard. OFF unless the person chose it in Bosun
+    // (key-glow.json, read again every second); it only watches while the live lighting is on; what it reads goes to the lighting as a LED at once and is kept nowhere;
+    // nothing of it is on the bus or the local endpoint; and the diagnostic trace of the lighting is paused while it runs (a frame that lights a key would reveal the press).
+    // Only the source of key presses depends on the system: the hidraw node of the keyboard on Linux, Raw Input on Windows.
+#ifdef Q_OS_WIN
+    galleond::WindowsRawKeyPressSource keyGlowSource;
+#else
     galleond::HidrawKeyPressSource keyGlowSource;
+#endif
     galleond::LightingGlowTarget keyGlowTarget(lighting);
     galleond::KeyGlowDriver keyGlow(keyGlowSource, keyGlowTarget, [] { return galleond::keyGlowChoice(galleond::keyGlowAccessPath()); });
     QObject::connect(&lighting, &galleond::LightingController::activeChanged, &keyGlow, [&keyGlow](bool) { keyGlow.refresh(); });
     if (lightingTrace)
         keyGlow.setWatchingHook([lightingTrace](bool watching) { lightingTrace->setPaused(watching); });
-#endif
     QObject::connect(&lighting, &galleond::LightingController::activeChanged, &keyboard, [&keyboard](bool active) {
         keyboard.setPaused(active, QCoreApplication::translate("main", "The lighting holds the keyboard: switch it off to change the brightness."));
     });

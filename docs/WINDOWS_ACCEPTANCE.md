@@ -42,7 +42,8 @@ Rows by section. Updated when results are recorded. `R` = required for 1.0; the 
 | 6. Veille tab, and the tabs driving the module | 7 | 6 | 0 | 0 | 0 | 1 |
 | 7. Coexistence | 3 | 0 | 0 | 0 | 0 | 3 |
 | 8. Other programs lighting keys | 9 | 8 | 0 | 0 | 0 | 1 |
-| **Total** | **56** | **15** | **0** | **0** | **0** | **41** |
+| 9. The keys glow under your fingers | 8 | 0 | 0 | 0 | 0 | 8 |
+| **Total** | **64** | **15** | **0** | **0** | **0** | **49** |
 
 **Release gate.** All `R` rows are `Pass`, or each one that is not has a recorded decision of the maintainer to accept it
 for 1.0 (with the reason), and every `Fail` has an open issue or a fix. Nothing in this table is a promise about when.
@@ -195,6 +196,23 @@ Needs the live lighting on (row 4.1), except where the row says otherwise.
 | 8.7 | After lighting a key, send `-ClearAll` with the same client name. | The signals of that client go back to the lighting. | A | Pass | 23 Nov 2026: the keys went back to blue. (Not seen: that another client name cannot clear them.) Owner, 25 Nov 2026, Windows 11, Setup of CI run 428 (main at 6e72d05): W, A, S, D lit with `galleon-key-signal.exe --effect pulse --seconds 120` (same client name, the default of the tool) pulsed, then `--clear-all` turned them off. |
 | 8.8 | Bosun > Keyboard > live lighting > "Try a signal": tick the box above, click a key on the drawing (for example F3), choose a colour, "Pulse", "1 min", then "Light the key". | The key lights and pulses for a minute. "Clear this key" and "Clear all" take it away. Without the box ticked nothing lights and **nothing says why** (the endpoint of Windows has no reply). | A | Not run | |
 | 8.9 | In PowerShell, from the installed folder: `galleon-key-signal.exe --key F3 --color #ff7800 --effect pulse --seconds 120` (box ticked, live lighting on). Then `galleon-key-signal.exe --clear --key F3`. Then `galleon-key-signal.exe --key F3` (not whole). | The first prints "Sent." and F3 pulses orange for 2 minutes; the second takes it away; the third prints why and exits with status 1 (`$LASTEXITCODE`). | R | Pass | Owner, 25 Nov 2026, Windows 11, Setup of CI run 428 (main at 6e72d05): (1) `--key F3 --color "#ff7800" --effect pulse --seconds 120` printed "Sent." and F3 pulsed orange; (2) `--clear --key F3` printed "Sent." and F3 went off; (3) `--key F3` alone printed `galleon-key-signal: a colour is needed: --color #rrggbb, or all of --red, --green and --blue` and `$LASTEXITCODE` was 1. Also seen: W, A, S, D lit together and `--clear-all`. Earlier note, 24 Nov 2026 (Setup of CI run 416): the tool lit and pulsed keys on Windows 11. |
+
+## 9. The keys glow under your fingers (new, 25 November 2026)
+
+Off by default. On Windows the key presses are read through Raw Input, only while the box is ticked **and** the live lighting is on ([`docs/KEY_GLOW.md`](KEY_GLOW.md)). **Never
+seen on a real keyboard on Windows yet**: the CI only checks what needs no keyboard (what is registered with Windows, and that a message it should not get is dropped). Needs the live
+lighting on (row 4.1). Nothing here asks for a key you typed to be written down: record only what you SAW (a key glowing or not), never what was typed.
+
+| ID | Check | Expected | Req. | Result | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 9.1 | Bosun > Keyboard > live lighting: look for "Keys glow under your fingers". | The line is there and says it is off (the default). "Colour of the keys you press" is not shown while it is off. | R | Not run | |
+| 9.2 | With the live lighting on, tick it, then type on the Galleon keyboard. | The colour choice appears (cyan by default). Each key you press glows cyan and fades out in about a second and a half, over the lighting of the keyboard. | R | Not run | |
+| 9.3 | Choose another colour (a swatch, or `#rrggbb`) and type. | The new colour shows within about a second, without switching anything off. | R | Not run | |
+| 9.4 | Untick the box while typing. Then tick it again, and switch the live lighting off. | In both cases the keys stop glowing within about a second. The colour you chose is kept when you tick it again. | R | Not run | |
+| 9.5 | While the glow is on, type in another program (Notepad). | The text is typed as usual: nothing is lost, delayed or changed by the glow. | R | Not run | |
+| 9.6 | While the glow is on, type on **another keyboard** (the one of a laptop, or a second USB keyboard). | **Nothing glows**: only the keys of the Galleon keyboard do. | A | Not run | Only if you have another keyboard. |
+| 9.7 | During a night ("lights off until morning") with the live lighting on, type. | Nothing glows: the keys stay black, as the rest of the keyboard. | A | Not run | |
+| 9.8 | Note what Windows (SmartScreen, Defender) or a security product says when the glow is switched on. | Nothing, ideally. **Record exactly what was said**: a program that listens to the keyboard through Raw Input may be taken for a spy. | A | Not run | |
 
 ## After the tests
 
