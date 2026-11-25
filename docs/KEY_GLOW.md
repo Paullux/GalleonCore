@@ -22,8 +22,8 @@ To try it without the window, write that file by hand. A missing, oversized or d
 Seen working by the owner on the physical keyboard (Linux, 24 November 2026): the glow follows the keys and the settings window is clearer. The latency was not measured.
 
 On Linux and on Windows. Only the source of key presses differs; the choice, the colour, the glow, the pause of the trace and every promise below are the same.
-**On Windows the glow has not been seen on the real keyboard yet** (written 25 November 2026, tested by the CI only for what can be tested without a keyboard):
-it is not validated there until the owner has tried it. The choice is never offered on a system where galleond has no source of key presses.
+**Seen working by the owner on the physical keyboard on Windows 11 on 25 November 2026**: it works "exactly like on Linux" (the choice, the colour, stopping it, and text typed in another program is unchanged); the CI checks what needs no keyboard. The latency was not measured, and the rows of the recipe about another keyboard, the night and what Windows or a security product says (9.6 to 9.8) were not done.
+The choice is never offered on a system where galleond has no source of key presses.
 
 ## What galleond reads, and what happens to it
 

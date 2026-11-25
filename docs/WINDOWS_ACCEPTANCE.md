@@ -42,8 +42,8 @@ Rows by section. Updated when results are recorded. `R` = required for 1.0; the 
 | 6. Veille tab, and the tabs driving the module | 7 | 6 | 0 | 0 | 0 | 1 |
 | 7. Coexistence | 3 | 0 | 0 | 0 | 0 | 3 |
 | 8. Other programs lighting keys | 9 | 8 | 0 | 0 | 0 | 1 |
-| 9. The keys glow under your fingers | 8 | 0 | 0 | 0 | 0 | 8 |
-| **Total** | **64** | **15** | **0** | **0** | **0** | **49** |
+| 9. The keys glow under your fingers | 8 | 5 | 0 | 0 | 0 | 3 |
+| **Total** | **64** | **20** | **0** | **0** | **0** | **44** |
 
 **Release gate.** All `R` rows are `Pass`, or each one that is not has a recorded decision of the maintainer to accept it
 for 1.0 (with the reason), and every `Fail` has an open issue or a fix. Nothing in this table is a promise about when.
@@ -199,17 +199,16 @@ Needs the live lighting on (row 4.1), except where the row says otherwise.
 
 ## 9. The keys glow under your fingers (new, 25 November 2026)
 
-Off by default. On Windows the key presses are read through Raw Input, only while the box is ticked **and** the live lighting is on ([`docs/KEY_GLOW.md`](KEY_GLOW.md)). **Never
-seen on a real keyboard on Windows yet**: the CI only checks what needs no keyboard (what is registered with Windows, and that a message it should not get is dropped). Needs the live
+Off by default. On Windows the key presses are read through Raw Input, only while the box is ticked **and** the live lighting is on ([`docs/KEY_GLOW.md`](KEY_GLOW.md)). **Seen on the real keyboard on 25 November 2026** (rows 9.1 to 9.5); the CI checks what needs no keyboard (what is registered with Windows, and that a message it should not get is dropped). Needs the live
 lighting on (row 4.1). Nothing here asks for a key you typed to be written down: record only what you SAW (a key glowing or not), never what was typed.
 
 | ID | Check | Expected | Req. | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| 9.1 | Bosun > Keyboard > live lighting: look for "Keys glow under your fingers". | The line is there and says it is off (the default). "Colour of the keys you press" is not shown while it is off. | R | Not run | |
-| 9.2 | With the live lighting on, tick it, then type on the Galleon keyboard. | The colour choice appears (cyan by default). Each key you press glows cyan and fades out in about a second and a half, over the lighting of the keyboard. | R | Not run | |
-| 9.3 | Choose another colour (a swatch, or `#rrggbb`) and type. | The new colour shows within about a second, without switching anything off. | R | Not run | |
-| 9.4 | Untick the box while typing. Then tick it again, and switch the live lighting off. | In both cases the keys stop glowing within about a second. The colour you chose is kept when you tick it again. | R | Not run | |
-| 9.5 | While the glow is on, type in another program (Notepad). | The text is typed as usual: nothing is lost, delayed or changed by the glow. | R | Not run | |
+| 9.1 | Bosun > Keyboard > live lighting: look for "Keys glow under your fingers". | The line is there and says it is off (the default). "Colour of the keys you press" is not shown while it is off. | R | Pass | Owner, 25 Nov 2026, Windows 11, Setup of CI run 433 (branch head 6a105a0): the line was on "non" (off) before ticking. The hidden "Colour of the keys you press" was asked together with it and the answer was "yes, it was on non"; the title was not described apart. |
+| 9.2 | With the live lighting on, tick it, then type on the Galleon keyboard. | The colour choice appears (cyan by default). Each key you press glows cyan and fades out in about a second and a half, over the lighting of the keyboard. | R | Pass | Owner, 25 Nov 2026, Windows 11, Setup of CI run 433 (branch head 6a105a0): after ticking "Keys glow under your fingers", the glow "works exactly like on Linux". The latency was not measured; the colour and the length of the fade were not described apart. |
+| 9.3 | Choose another colour (a swatch, or `#rrggbb`) and type. | The new colour shows within about a second, without switching anything off. | R | Pass | Owner, 25 Nov 2026, Windows 11, Setup of CI run 433 (branch head 6a105a0): "OK": the new colour shows. The delay (about a second) was not timed. |
+| 9.4 | Untick the box while typing. Then tick it again, and switch the live lighting off. | In both cases the keys stop glowing within about a second. The colour you chose is kept when you tick it again. | R | Pass | Owner, 25 Nov 2026, Windows 11, Setup of CI run 433 (branch head 6a105a0): "OK": unticking stops the glow, the colour is kept when ticked again, and the live lighting off stops it too. The delays were not timed. |
+| 9.5 | While the glow is on, type in another program (Notepad). | The text is typed as usual: nothing is lost, delayed or changed by the glow. | R | Pass | Owner, 25 Nov 2026, Windows 11, Setup of CI run 433 (branch head 6a105a0): "OK": the text typed in another program (Notepad) is typed as usual while the glow is on. |
 | 9.6 | While the glow is on, type on **another keyboard** (the one of a laptop, or a second USB keyboard). | **Nothing glows**: only the keys of the Galleon keyboard do. | A | Not run | Only if you have another keyboard. |
 | 9.7 | During a night ("lights off until morning") with the live lighting on, type. | Nothing glows: the keys stay black, as the rest of the keyboard. | A | Not run | |
 | 9.8 | Note what Windows (SmartScreen, Defender) or a security product says when the glow is switched on. | Nothing, ideally. **Record exactly what was said**: a program that listens to the keyboard through Raw Input may be taken for a spy. | A | Not run | |
