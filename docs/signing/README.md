@@ -1,8 +1,10 @@
 # Code signing: drafts for the SignPath Foundation application
 
-**Status: drafts, nothing published, no application sent from this folder.** The owner decided (14 November 2026) to ask the
-[SignPath Foundation](https://signpath.org/) for a free code signing certificate. This folder keeps what the application
-will need, so that it is ready when the request is made. Nothing here is linked from the website or from the README yet.
+**Status: application declined on 26 November 2026; the drafts are kept for a later application.** The owner decided (14 November 2026) to ask the
+[SignPath Foundation](https://signpath.org/) for a free code signing certificate and sent the request on 25 November. SignPath declined on 26 November: the
+project does not yet show enough public signals (community adoption, external references, sustained activity); it may reapply later. The Windows Setup is
+therefore **not signed**, and nothing in this folder is published or linked from the website or from the README. This folder keeps what a new application
+would need.
 
 ## What is here
 
