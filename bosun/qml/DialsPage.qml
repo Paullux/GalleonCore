@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// The two rings of light around the dials of the module: lit or out, and a level. QML only draws and forwards: the settings are held and written by
+// The two rings of light around the dials of the module: lit or out, a level, and a colour for each ring. QML only draws and forwards: the settings are held and written by
 // RingStore, and galleond applies them (this application never opens the module).
 pragma ComponentBehavior: Bound
 
@@ -65,6 +65,49 @@ Item {
                 function onChanged() { if (dialsPage.rings !== null) levelSlider.value = dialsPage.rings.level }
             }
             onCommitted: level => dialsPage.answered(dialsPage.rings.setLevel(level))
+        }
+        Text {
+            width: parent.width
+            wrapMode: Text.Wrap
+            color: "#9aa0a6"
+            font.pixelSize: 14
+            text: qsTr("Colour of each ring. By default the left one follows the theme and the right one is white. The level and the Out setting apply to the colour you choose; the magenta of the wallpaper choice and the green rain keep their own colours.")
+        }
+        Text {
+            color: "white"
+            font.pixelSize: 14
+            font.bold: true
+            text: qsTr("Left ring")
+        }
+        Pill {
+            objectName: "leftRingDefault"
+            text: qsTr("Follow the theme")
+            selected: dialsPage.rings !== null && dialsPage.rings.leftColour === "default"
+            onClicked: dialsPage.answered(dialsPage.rings.setLeftColour("default"))
+        }
+        Swatches {
+            objectName: "leftRingSwatches"
+            showField: false
+            color: dialsPage.rings !== null && dialsPage.rings.leftColour !== "default" ? dialsPage.rings.leftColour : ""
+            onPicked: picked => dialsPage.answered(dialsPage.rings.setLeftColour(picked))
+        }
+        Text {
+            color: "white"
+            font.pixelSize: 14
+            font.bold: true
+            text: qsTr("Right ring")
+        }
+        Pill {
+            objectName: "rightRingDefault"
+            text: qsTr("White (default)")
+            selected: dialsPage.rings !== null && dialsPage.rings.rightColour === "default"
+            onClicked: dialsPage.answered(dialsPage.rings.setRightColour("default"))
+        }
+        Swatches {
+            objectName: "rightRingSwatches"
+            showField: false
+            color: dialsPage.rings !== null && dialsPage.rings.rightColour !== "default" ? dialsPage.rings.rightColour : ""
+            onPicked: picked => dialsPage.answered(dialsPage.rings.setRightColour(picked))
         }
         Text {
             width: parent.width

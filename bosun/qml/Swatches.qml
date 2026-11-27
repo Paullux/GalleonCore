@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// A colour among a few, or written as #rrggbb.
+// A colour among a few, or written as #rrggbb (the field can be left out: only the swatches are then offered).
 pragma ComponentBehavior: Bound
 
 import QtQuick
 
 Column {
     id: swatches
-    property string color: "#ffd600"
+    property string color: "#ffd600" // "" when none is chosen: no swatch is marked
+    property bool showField: true
     signal picked(string color)
     spacing: 8
 
@@ -39,6 +40,7 @@ Column {
         }
     }
     Row {
+        visible: swatches.showField
         spacing: 10
         Field {
             width: 110

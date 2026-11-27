@@ -66,6 +66,101 @@ private Q_SLOTS:
         QCOMPARE(parseRingSettings(R"({"version":1,"lit":false,"level":1000})").value_or(RingSettings{.lit = true, .level = 9}), (RingSettings{.lit = false, .level = 1000}));
     }
 
+    void theColoursOfTheRingsAreWrittenAndReadBackTheSameWhetherChosenOrByDefault()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("dial-rings.json");
+        const RingSettings both{.lit = true, .level = 600, .left = 0x1e88e5U, .right = 0xffd600U};
+        QVERIFY(writeRingSettings(path, both));
+        QCOMPARE(readRingSettings(path).value_or(RingSettings{.lit = false, .level = 0}), both);
+        const RingSettings onlyLeft{.lit = true, .level = 600, .left = 0x43a047U, .right = std::nullopt};
+        QVERIFY(writeRingSettings(path, onlyLeft));
+        QCOMPARE(readRingSettings(path).value_or(RingSettings{.lit = false, .level = 0}), onlyLeft);
+        // The colour written has all of its six digits, in lower case: black and a dark blue are not shortened.
+        QVERIFY(encodeRingSettings({.lit = true, .level = 1000, .left = 0x000000U, .right = 0x0000ffU}).contains("\"left\": \"#000000\""));
+        QVERIFY(encodeRingSettings({.lit = true, .level = 1000, .left = 0x000000U, .right = 0x0000ffU}).contains("\"right\": \"#0000ff\""));
+        QVERIFY(encodeRingSettings({}).contains("\"left\": \"default\""));
+    }
+
+    void aFileOfBeforeTheColoursIsStillReadAndMeansTheDefaultForBothRings()
+    {
+        const auto old = parseRingSettings(R"({"version":1,"lit":false,"level":400})");
+        QVERIFY(old.has_value());
+        // A marker that no real colour has: if a colour were read, it would differ from the "default" (nothing) that is expected.
+        const RingSettings read = old.value_or(RingSettings{.lit = true, .level = 0, .left = 1U, .right = 1U});
+        QCOMPARE(read, (RingSettings{.lit = false, .level = 400}));
+        QVERIFY(!read.left.has_value());
+        QVERIFY(!read.right.has_value());
+        // Version 1 has the three keys and no more: the colours do not slip into it.
+        QVERIFY(!parseRingSettings(R"({"version":1,"lit":true,"level":1000,"left":"default","right":"default"})").has_value());
+    }
+
+    void aFileWithColoursThatIsNotExactlyRightIsRefusedWithAReason()
+    {
+        const QList<QByteArray> bad = {
+            R"({"version":2,"lit":true,"level":1000})",                                              // version 2 without the colours
+            R"({"version":2,"lit":true,"level":1000,"left":"default"})",                              // one colour missing
+            R"({"version":2,"lit":true,"level":1000,"left":"default","right":"default","x":1})",      // a key too many
+            R"({"version":3,"lit":true,"level":1000,"left":"default","right":"default"})",            // a version that does not exist
+            R"({"version":2,"lit":true,"level":1000,"left":"red","right":"default"})",                // a name is not a colour
+            R"({"version":2,"lit":true,"level":1000,"left":"#fff","right":"default"})",               // the short form
+            R"({"version":2,"lit":true,"level":1000,"left":"#ggg000","right":"default"})",            // not hexadecimal
+            R"({"version":2,"lit":true,"level":1000,"left":"#1e88e5 ","right":"default"})",           // a space after
+            R"({"version":2,"lit":true,"level":1000,"left":"1e88e5","right":"default"})",             // no #
+            R"({"version":2,"lit":true,"level":1000,"left":"#1e88e5ff","right":"default"})",          // too long
+            R"({"version":2,"lit":true,"level":1000,"left":"Default","right":"default"})",            // the word is exactly "default"
+            R"({"version":2,"lit":true,"level":1000,"left":null,"right":"default"})",                 // not a string
+            R"({"version":2,"lit":true,"level":1000,"left":123456,"right":"default"})",               // a number is not a colour
+            R"({"version":2,"lit":true,"level":1000,"left":"default","right":["#ffffff"]})",          // a list is not a colour
+        };
+        for (const QByteArray &bytes : bad) {
+            QString why;
+            QVERIFY2(!parseRingSettings(bytes, &why).has_value(), bytes.constData());
+            QVERIFY2(!why.isEmpty(), bytes.constData());
+        }
+    }
+
+    void aColourIsEitherTheWordDefaultOrSixDigitsAfterAHashAndNothingElse()
+    {
+        std::optional<std::uint32_t> choice = 0x123456U;
+        QVERIFY(parseRingColour(QStringLiteral("#1E88e5"), &choice)); // either case is read ...
+        QCOMPARE(choice.value_or(0), 0x1e88e5U);
+        QCOMPARE(ringColourText(choice), QStringLiteral("#1e88e5")); // ... and written in lower case
+        QVERIFY(parseRingColour(QStringLiteral("default"), &choice));
+        QVERIFY(!choice.has_value());
+        choice = 0x654321U;
+        for (const QString &text : {QString(), QStringLiteral("#"), QStringLiteral("#12345"), QStringLiteral("#1234567"), QStringLiteral(" #123456"),
+                                    QStringLiteral("#12345g"), QStringLiteral("red"), QStringLiteral("DEFAULT"), QStringLiteral("default ")}) {
+            QVERIFY2(!parseRingColour(text, &choice), qPrintable(text));
+            QCOMPARE(choice.value_or(0), 0x654321U); // refused: what was there stays
+        }
+        QVERIFY(parseRingColour(QStringLiteral("#000000"), nullptr)); // the answer alone is enough
+        QVERIFY(!parseRingColour(QStringLiteral("x"), nullptr));
+    }
+
+    void aRingStartsFromTheColourThatWasChosenElseFromTheThemeOnTheLeftAndWhiteOnTheRight()
+    {
+        QCOMPARE(leftRingBase(0xe53935U, {}), 0xe53935U);
+        QCOMPARE(rightRingBase({}), 0xffffffU);
+        const RingSettings chosen{.lit = true, .level = 1000, .left = 0x1e88e5U, .right = 0xffd600U};
+        QCOMPARE(leftRingBase(0xe53935U, chosen), 0x1e88e5U);
+        QCOMPARE(rightRingBase(chosen), 0xffd600U);
+        QCOMPARE(leftRingBase(0, chosen), 0x1e88e5U); // with no theme, a colour that was chosen still shows
+        QCOMPARE(leftRingBase(0, {}), 0U);            // and with none chosen the left ring stays dark without a theme, as always
+    }
+
+    void aColourThatWasChosenIsPutOutAndDimmedLikeAnyOther()
+    {
+        const RingSettings out{.lit = false, .level = 1000, .left = 0x1e88e5U, .right = 0xffd600U};
+        QCOMPARE(ambientRingColour(leftRingBase(0xe53935U, out), out), 0U);
+        QCOMPARE(ambientRingColour(rightRingBase(out), out), 0U);
+        const RingSettings zero{.lit = true, .level = 0, .left = 0x1e88e5U, .right = 0xffd600U};
+        QCOMPARE(ambientRingColour(leftRingBase(0xe53935U, zero), zero), 0U);
+        const RingSettings half{.lit = true, .level = 500, .left = 0x1e88e5U, .right = 0xffd600U};
+        QCOMPARE(ambientRingColour(leftRingBase(0xe53935U, half), half), 0x0f4473U);
+        QCOMPARE(ambientRingColour(rightRingBase(half), half), 0x806b00U);
+    }
+
     void aRingThatIsPutOutShowsNoColourWhateverTheLevel()
     {
         QCOMPARE(ambientRingColour(0xe53935, {.lit = false, .level = 1000}), std::uint32_t{0});

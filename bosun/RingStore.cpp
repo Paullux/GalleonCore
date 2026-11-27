@@ -42,4 +42,20 @@ QString RingStore::setLevel(int level)
     return commit(next);
 }
 
+QString RingStore::setLeftColour(const QString &colour)
+{
+    galleond::RingSettings next = m_settings;
+    if (!galleond::parseRingColour(colour, &next.left))
+        return tr("A ring colour is \"default\" or written as #rrggbb.");
+    return commit(next);
+}
+
+QString RingStore::setRightColour(const QString &colour)
+{
+    galleond::RingSettings next = m_settings;
+    if (!galleond::parseRingColour(colour, &next.right))
+        return tr("A ring colour is \"default\" or written as #rrggbb.");
+    return commit(next);
+}
+
 } // namespace bosun

@@ -9,6 +9,7 @@
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 #include <QStandardPaths>
 
 #include <algorithm>
@@ -16,7 +17,9 @@
 namespace galleond {
 namespace {
 
-constexpr int Version = 1;
+constexpr int Version = 2;
+constexpr int VersionWithoutColours = 1;
+constexpr std::uint32_t White = 0xffffff;
 
 void explain(QString *why, const QString &reason)
 {
@@ -31,12 +34,39 @@ bool inRange(const RingSettings &settings)
 
 } // namespace
 
+QString ringColourText(const std::optional<std::uint32_t> &choice)
+{
+    if (!choice)
+        return QStringLiteral("default");
+    return QStringLiteral("#%1").arg(*choice & 0xffffffU, 6, 16, QLatin1Char('0'));
+}
+
+bool parseRingColour(const QString &text, std::optional<std::uint32_t> *choice)
+{
+    static const QRegularExpression pattern(QStringLiteral("^#[0-9a-fA-F]{6}$"));
+    std::optional<std::uint32_t> parsed;
+    if (text != QStringLiteral("default")) {
+        if (!pattern.match(text).hasMatch())
+            return false;
+        bool ok = false;
+        const std::uint32_t value = text.mid(1).toUInt(&ok, 16);
+        if (!ok)
+            return false;
+        parsed = value;
+    }
+    if (choice != nullptr)
+        *choice = parsed;
+    return true;
+}
+
 QByteArray encodeRingSettings(const RingSettings &settings)
 {
     QJsonObject object;
     object.insert(QStringLiteral("version"), Version);
     object.insert(QStringLiteral("lit"), settings.lit);
     object.insert(QStringLiteral("level"), settings.level);
+    object.insert(QStringLiteral("left"), ringColourText(settings.left));
+    object.insert(QStringLiteral("right"), ringColourText(settings.right));
     return QJsonDocument(object).toJson(QJsonDocument::Indented);
 }
 
@@ -53,12 +83,18 @@ std::optional<RingSettings> parseRingSettings(const QByteArray &bytes, QString *
         return std::nullopt;
     }
     const QJsonObject object = document.object();
-    if (!hasExactlyKeys(object, {QStringLiteral("version"), QStringLiteral("lit"), QStringLiteral("level")})) {
-        explain(why, QStringLiteral("unexpected or missing keys"));
+    // The version first: it says which keys the file has. Version 1 is the file of before the colours (three keys); version 2 adds `left` and `right`.
+    const auto version = wholeNumber(object.value(QStringLiteral("version")), VersionWithoutColours, Version);
+    if (!version) {
+        explain(why, QStringLiteral("an unknown version"));
         return std::nullopt;
     }
-    if (wholeNumber(object.value(QStringLiteral("version")), Version, Version) != Version) {
-        explain(why, QStringLiteral("an unknown version"));
+    const bool withColours = *version == Version;
+    QStringList keys = {QStringLiteral("version"), QStringLiteral("lit"), QStringLiteral("level")};
+    if (withColours)
+        keys << QStringLiteral("left") << QStringLiteral("right");
+    if (!hasExactlyKeys(object, keys)) {
+        explain(why, QStringLiteral("unexpected or missing keys"));
         return std::nullopt;
     }
     if (!object.value(QStringLiteral("lit")).isBool()) {
@@ -70,7 +106,17 @@ std::optional<RingSettings> parseRingSettings(const QByteArray &bytes, QString *
         explain(why, QStringLiteral("the level is not a whole number from 0 to 1000"));
         return std::nullopt;
     }
-    return RingSettings{object.value(QStringLiteral("lit")).toBool(), *level};
+    RingSettings settings{.lit = object.value(QStringLiteral("lit")).toBool(), .level = *level};
+    if (withColours) {
+        const QJsonValue left = object.value(QStringLiteral("left"));
+        const QJsonValue right = object.value(QStringLiteral("right"));
+        if (!left.isString() || !right.isString() || !parseRingColour(left.toString(), &settings.left)
+            || !parseRingColour(right.toString(), &settings.right)) {
+            explain(why, QStringLiteral("a ring colour is not \"default\" or #rrggbb"));
+            return std::nullopt;
+        }
+    }
+    return settings;
 }
 
 QString ringSettingsPath()
@@ -93,6 +139,16 @@ std::optional<RingSettings> readRingSettings(const QString &path, QString *why)
     return parseRingSettings(file.read(MaxRingSettingsBytes + 1), why);
 }
 
+std::uint32_t leftRingBase(std::uint32_t themeRgb, const RingSettings &settings)
+{
+    return settings.left.value_or(themeRgb);
+}
+
+std::uint32_t rightRingBase(const RingSettings &settings)
+{
+    return settings.right.value_or(White);
+}
+
 std::uint32_t ambientRingColour(std::uint32_t rgb, const RingSettings &settings)
 {
     if (!settings.lit)
@@ -109,7 +165,7 @@ std::uint32_t floorRingColour(std::uint32_t rgb, const RingSettings &settings)
 {
     // The level of the settings, raised to the minimum; put out, the minimum. Then the same scaling as for the ambient colours.
     const int level = settings.lit ? std::max(settings.level, RingShownMinLevel) : RingShownMinLevel;
-    return ambientRingColour(rgb, RingSettings{true, level});
+    return ambientRingColour(rgb, RingSettings{.lit = true, .level = level});
 }
 
 std::uint32_t answerRingColour(std::uint32_t rgb, const RingSettings &settings)

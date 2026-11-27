@@ -2796,6 +2796,39 @@ QtObject {
         QVERIFY(QMetaObject::invokeMethod(lit, "clicked"));
         QCOMPARE(galleond::readRingSettings(ringsFile).value_or(galleond::RingSettings{}), (galleond::RingSettings{.lit = true, .level = 400}));
         QCOMPARE(level->property("value").toInt(), 400); // the file's level is shown again
+
+        // The colour of each ring: "follow the theme" (left) and "white" (right) are in force as they always were, and no swatch is marked.
+        auto *leftDefault = root->findChild<QQuickItem *>("leftRingDefault");
+        auto *rightDefault = root->findChild<QQuickItem *>("rightRingDefault");
+        auto *leftSwatches = root->findChild<QQuickItem *>("leftRingSwatches");
+        auto *rightSwatches = root->findChild<QQuickItem *>("rightRingSwatches");
+        QVERIFY(leftDefault);
+        QVERIFY(rightDefault);
+        QVERIFY(leftSwatches);
+        QVERIFY(rightSwatches);
+        QVERIFY(leftDefault->property("selected").toBool());
+        QVERIFY(rightDefault->property("selected").toBool());
+        QCOMPARE(leftSwatches->property("color").toString(), QString());
+        QVERIFY(!leftSwatches->property("showField").toBool()); // swatches only: no free #rrggbb field for the rings
+
+        // A swatch picked for the left ring: written for galleond, the left one is no longer "follow the theme", and the right one is untouched.
+        QVERIFY(QMetaObject::invokeMethod(leftSwatches, "picked", Q_ARG(QString, QStringLiteral("#1e88e5"))));
+        QCOMPARE(galleond::readRingSettings(ringsFile).value_or(galleond::RingSettings{}),
+                 (galleond::RingSettings{.lit = true, .level = 400, .left = 0x1e88e5U, .right = std::nullopt}));
+        QVERIFY(!leftDefault->property("selected").toBool());
+        QCOMPARE(leftSwatches->property("color").toString(), QStringLiteral("#1e88e5"));
+        QVERIFY(rightDefault->property("selected").toBool());
+
+        // The same for the right ring, then each goes back to its default by its own button.
+        QVERIFY(QMetaObject::invokeMethod(rightSwatches, "picked", Q_ARG(QString, QStringLiteral("#ffd600"))));
+        QVERIFY(!rightDefault->property("selected").toBool());
+        QCOMPARE(galleond::readRingSettings(ringsFile).value_or(galleond::RingSettings{}),
+                 (galleond::RingSettings{.lit = true, .level = 400, .left = 0x1e88e5U, .right = 0xffd600U}));
+        QVERIFY(QMetaObject::invokeMethod(leftDefault, "clicked"));
+        QVERIFY(QMetaObject::invokeMethod(rightDefault, "clicked"));
+        QVERIFY(leftDefault->property("selected").toBool());
+        QVERIFY(rightDefault->property("selected").toBool());
+        QCOMPARE(galleond::readRingSettings(ringsFile).value_or(galleond::RingSettings{}), (galleond::RingSettings{.lit = true, .level = 400}));
     }
 
     void theLightStripIsSevenEqualSectionsEachLitByItsOwnLedAndColouredLikeAKey()

@@ -836,16 +836,16 @@ void PagesController::applyRings()
 {
     if (!m_deck->isOpen() || m_suspended)
         return;
-    // The left ring shows the theme (dark without one); the right ring stays
-    // white, for the music player control. Both are ambient colours: the settings of the rings put them out or dim them.
+    // The left ring shows the theme (dark without one) and the right ring is white, for the music player control, unless the person chose a colour for
+    // a ring (RingSettings.h). Both are ambient colours: the settings of the rings put them out or dim them, the chosen colour included.
     const Theme *theme = currentTheme();
-    const std::uint32_t left = ambientRingColour(theme ? theme->rgb : 0, m_rings);
+    const std::uint32_t left = ambientRingColour(leftRingBase(theme ? theme->rgb : 0, m_rings), m_rings);
     if (!m_deck->setDialRing(0, static_cast<std::uint8_t>(left >> 16), static_cast<std::uint8_t>(left >> 8),
                             static_cast<std::uint8_t>(left)))
         qWarning() << "galleond: could not update the left dial ring";
-    // The right ring: white for the player control, magenta while it chooses the wallpaper. The magenta answers an action of the
-    // person: it follows the level of the rings, raised to the minimum when it is low; with the rings put out, or at 0, nothing relights them.
-    const std::uint32_t right = wallpaperMode() ? answerRingColour(WallpaperModeRgb, m_rings) : ambientRingColour(0xffffff, m_rings);
+    // The right ring: its ambient colour, magenta while it chooses the wallpaper. The magenta answers an action of the person, whatever colour the
+    // ring has: it follows the level of the rings, raised to the minimum when it is low; with the rings put out, or at 0, nothing relights them.
+    const std::uint32_t right = wallpaperMode() ? answerRingColour(WallpaperModeRgb, m_rings) : ambientRingColour(rightRingBase(m_rings), m_rings);
     if (!m_deck->setDialRing(1, static_cast<std::uint8_t>(right >> 16), static_cast<std::uint8_t>(right >> 8),
                             static_cast<std::uint8_t>(right)))
         qWarning() << "galleond: could not update the right dial ring";
