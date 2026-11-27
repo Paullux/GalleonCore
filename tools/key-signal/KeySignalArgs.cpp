@@ -36,24 +36,65 @@ ParseResult failure(const QString &error)
     return {std::nullopt, error};
 }
 
+// The name without the plain spaces at its ends, and nothing else taken off: a tab or a line break around a name is not a space, and the name is then refused.
+QString withoutSpacesAround(const QString &text)
+{
+    qsizetype first = 0;
+    qsizetype last = text.size();
+    while (first < last && text.at(first) == QLatin1Char(' '))
+        ++first;
+    while (last > first && text.at(last - 1) == QLatin1Char(' '))
+        --last;
+    return text.mid(first, last - first);
+}
+
+// "F3", or several names separated by commas ("F3, F4,Left Control"): the spaces around a name are not part of it. Each name is 1 to 32 plain characters, an empty
+// name ("F3,,F4", a comma at the end) is refused, a name given twice (whatever its case) is refused, and there are at most MaxKeysPerCall of them. `error` says why not.
+std::optional<QStringList> keyNames(const QString &text, QString *error)
+{
+    QStringList names;
+    const QStringList parts = text.split(QLatin1Char(','));
+    if (parts.size() > MaxKeysPerCall) {
+        *error = QStringLiteral("--key names at most %1 keys").arg(MaxKeysPerCall);
+        return std::nullopt;
+    }
+    for (const QString &part : parts) {
+        const QString name = withoutSpacesAround(part);
+        if (!plainText(name, 32)) {
+            *error = parts.size() > 1 ? QStringLiteral("--key is the name of a key, or several separated by commas: each is 1 to 32 plain characters, none empty")
+                                      : QStringLiteral("--key is the name of a key: 1 to 32 plain characters");
+            return std::nullopt;
+        }
+        const bool again = std::ranges::any_of(names, [&name](const QString &known) { return known.compare(name, Qt::CaseInsensitive) == 0; });
+        if (again) {
+            *error = QStringLiteral("--key names %1 twice").arg(name);
+            return std::nullopt;
+        }
+        names.append(name);
+    }
+    return names;
+}
+
 } // namespace
 
 QString usage(bool windows)
 {
     QString text = QStringLiteral(
-        "galleon-key-signal: lights ONE key of the Galleon 100 SD the way another program does (see docs/KEY_SIGNALS.md).\n"
+        "galleon-key-signal: lights one key, or several, of the Galleon 100 SD the way another program does (see docs/KEY_SIGNALS.md).\n"
         "It needs the box \"Other programs may light keys\" ticked in Bosun and the live lighting on.\n\n"
         "  galleon-key-signal --key F3 --color #ff7800 --effect pulse --seconds 600\n"
-        "  galleon-key-signal --key F3 --red 255 --green 120 --blue 0 --seconds 60\n\n"
+        "  galleon-key-signal --key F3 --red 255 --green 120 --blue 0 --seconds 60\n"
+        "  galleon-key-signal --key F3,F4,F5 --color #ff7800 --seconds 60\n\n"
         "Options:\n"
-        "  --key NAME        the key, by its place on a QWERTY keyboard (F3, Left Control, W for the key engraved Z on an AZERTY one)\n"
+        "  --key NAME        the key, by its place on a QWERTY keyboard (F3, Left Control, W for the key engraved Z on an AZERTY one);\n"
+        "                    several keys together, separated by commas (F3,F4,F5), up to 16, all with the same colour, effect and time\n"
         "  --color #rrggbb   its colour; or --red, --green and --blue, each 0 to 255 (all three)\n"
         "  --effect steady|pulse   steady (default) or breathing (a cycle of about 1.6 s)\n"
         "  --seconds N       how long, 1 to 86400 (required)\n"
         "  --help            this text\n");
     if (windows) {
         text += QStringLiteral(
-            "  --clear           takes away the signal of --key (same --client)\n"
+            "  --clear           takes away the signal of each key of --key (same --client)\n"
             "  --clear-all       takes away every signal of --client\n"
             "  --client NAME     the name the signals belong to (default galleon-key-signal), 1 to 64 plain characters\n\n"
             "On Windows the request is sent and the tool ends: the endpoint gives no reply about the lighting, so a refusal (the box not ticked,\n"
@@ -135,9 +176,11 @@ ParseResult parseArguments(const QStringList &args, bool windows)
     const auto key = values.find(QStringLiteral("--key"));
     if (key == values.end())
         return failure(QStringLiteral("--key is needed (try --help)"));
-    if (!plainText(key->second, 32))
-        return failure(QStringLiteral("--key is the name of a key: 1 to 32 plain characters"));
-    result.key = key->second;
+    QString keyError;
+    const auto keys = keyNames(key->second, &keyError);
+    if (!keys)
+        return failure(keyError);
+    result.keys = *keys;
     if (clear) {
         for (const auto &[option, ignored] : values) {
             if (option != QStringLiteral("--client") && option != QStringLiteral("--key"))

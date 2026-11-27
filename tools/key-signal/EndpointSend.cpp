@@ -7,29 +7,33 @@
 
 namespace keysignal {
 
-galleond::LocalCommand commandOf(const Arguments &arguments)
+QList<galleond::LocalCommand> commandsOf(const Arguments &arguments)
 {
-    galleond::LocalCommand command{galleond::LocalAction::KeySignal, {}, {}};
-    command.client = arguments.client;
+    galleond::LocalCommand base{galleond::LocalAction::KeySignal, {}, {}};
+    base.client = arguments.client;
     switch (arguments.verb) {
     case Verb::ClearAll:
-        command.action = galleond::LocalAction::KeySignalClearAll;
-        break;
+        base.action = galleond::LocalAction::KeySignalClearAll;
+        return {base};
     case Verb::Clear:
-        command.action = galleond::LocalAction::KeySignalClear;
-        command.key = arguments.key;
+        base.action = galleond::LocalAction::KeySignalClear;
         break;
     case Verb::Light:
     case Verb::Help:
-        command.key = arguments.key;
-        command.red = arguments.red;
-        command.green = arguments.green;
-        command.blue = arguments.blue;
-        command.effect = arguments.pulse ? QStringLiteral("pulse") : QStringLiteral("steady");
-        command.seconds = arguments.seconds;
+        base.red = arguments.red;
+        base.green = arguments.green;
+        base.blue = arguments.blue;
+        base.effect = arguments.pulse ? QStringLiteral("pulse") : QStringLiteral("steady");
+        base.seconds = arguments.seconds;
         break;
     }
-    return command;
+    QList<galleond::LocalCommand> commands;
+    for (const QString &key : arguments.keys) {
+        galleond::LocalCommand command = base;
+        command.key = key;
+        commands.append(command);
+    }
+    return commands;
 }
 
 QString sendToEndpoint(const QString &endpoint, const galleond::LocalCommand &command, int timeoutMs)
@@ -45,6 +49,20 @@ QString sendToEndpoint(const QString &endpoint, const galleond::LocalCommand &co
         return QStringLiteral("galleond did not answer");
     if (socket.readLine(64).trimmed() != QByteArrayLiteral("{\"ok\":true}"))
         return QStringLiteral("galleond did not accept the request");
+    return {};
+}
+
+QString sendAllToEndpoint(const QString &endpoint, const QList<galleond::LocalCommand> &commands, int timeoutMs)
+{
+    for (qsizetype sent = 0; sent < commands.size(); ++sent) {
+        const galleond::LocalCommand &command = commands.at(sent);
+        QString reason = sendToEndpoint(endpoint, command, timeoutMs);
+        if (reason.isEmpty())
+            continue;
+        if (commands.size() == 1)
+            return reason;
+        return QStringLiteral("%1 (for %2; %3 of %4 requests had been taken before it)").arg(reason, command.key.isEmpty() ? QStringLiteral("the request") : command.key).arg(sent).arg(commands.size());
+    }
     return {};
 }
 
