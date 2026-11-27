@@ -6,7 +6,7 @@ name: Website
 on:
   push:
     branches: [main]
-    paths: ["site/**", ".github/workflows/pages.yml", "tools/website/download_stats.py", "tools/test_download_stats*", "tools/website/release_ready.py", "tools/test_release_ready.py", "tools/website/wait_for_artifact.py", "tools/test_wait_for_artifact.py", "CMakeLists.txt"]
+    paths: ["site/**", ".github/workflows/pages.yml", "tools/website/download_stats.py", "tools/test_download_stats*", "tools/website/release_ready.py", "tools/test_release_ready.py", "CMakeLists.txt"]
   workflow_dispatch:
   schedule:
     - cron: "23 3 * * *"
@@ -27,7 +27,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_first.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - name: Check counter changes
@@ -71,13 +71,31 @@ jobs:
         if: steps.release.outputs.ready == 'true'
         with:
           path: site
-      # deploy-pages asked for the artifact one second after its upload and found none ("Found 0 artifact(s)"): runs 79, 82 and 83, each fixed by a re-run.
-      # This waits (two minutes at most) until the API lists it, and never fails by itself; the log says at which look it was listed.
-      - name: Wait for the Pages artifact to be listed
+      # actions/deploy-pages sometimes finds no artifact right after its upload ("Found 0 artifact(s)": runs 79, 82, 83 and 84 of this workflow), and the cause is not known:
+      # in run 84 the API listed the artifact 0.3 s before deploy-pages found none. A re-run of the failed job cannot fix it (it uploads a second artifact of the same name:
+      # "Found 2 artifact(s)", run 84 attempt 2). So the deployment is tried again in the same run, which adds no second artifact.
+      # The two steps that list the artifacts only print: what exists, and when, at the moment of each try; they never fail the job.
+      - name: Let the artifact settle, and list the artifacts of this run
         if: steps.release.outputs.ready == 'true'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 tools/website/wait_for_artifact.py "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
-      - id: deployment
+        run: |
+          sleep 10
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '.artifacts[] | "artifact \(.id) \(.name) created \(.created_at) expired \(.expired)"'
+      - id: deployment_first
         uses: actions/deploy-pages@v4
         if: steps.release.outputs.ready == 'true'
+        continue-on-error: true
+      - name: After a failed first try, wait and list the artifacts again
+        if: steps.release.outputs.ready == 'true' && steps.deployment_first.outcome == 'failure'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "The first try of deploy-pages failed; trying again in 20 s."
+          sleep 20
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '.artifacts[] | "artifact \(.id) \(.name) created \(.created_at) expired \(.expired)"'
+      - id: deployment
+        uses: actions/deploy-pages@v4
+        if: steps.release.outputs.ready == 'true' && steps.deployment_first.outcome == 'failure'
