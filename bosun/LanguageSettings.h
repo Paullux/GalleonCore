@@ -15,6 +15,9 @@ class CatalogTranslator final : public QTranslator
 {
 public:
     bool select(const QString &language);
+    // A catalog may hold only some of the source texts (a community language): translate() then returns an empty
+    // string for the others, and Qt shows the source text, which is English.
+    bool load(const QJsonObject &messages);
     [[nodiscard]] QString translate(const char *context, const char *source,
                                     const char *disambiguation = nullptr, int n = -1) const override;
     [[nodiscard]] bool isEmpty() const override { return m_messages.isEmpty(); }

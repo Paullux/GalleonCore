@@ -35,7 +35,25 @@ identifiers or user-entered content.
 
 For new UI text, update all four catalogs. `tools/test_translations.py` checks
 static Bosun text coverage, duplicate keys, completeness and substitution
-arguments. `test_languages` covers regional language matching, fallback,
+arguments.
+
+### Official and community languages
+
+English, French, German and Spanish are the **official** languages: their
+catalogs are complete, and the tests refuse a missing text. Any other
+`bosun/translations/<code>.json` is a **community** language and may be
+incomplete: it holds only the source texts that were translated, and Bosun
+shows the English source text for the others (the translator answers with an
+empty string, which makes Qt keep the source). A partial catalog is still
+checked: no source text that English does not have, no empty value, and the
+same `%1`/`%n` arguments as the source. A new text added to English therefore
+never breaks a community language; it just stays in English there until
+someone translates it.
+
+Adding a community language is still a change by a maintainer: the catalog, its
+`.license` file, the language list (`supported()` and the language menu), the
+`FILES` list of `bosun/CMakeLists.txt` and the tests. Contributors only need to
+provide the JSON file (see the issue "volunteer for another language"). `test_languages` covers regional language matching, fallback,
 persistence, rejected preferences and immediate QML/tray translation. Bosun's
 window test also checks that a language change keeps an unfinished key edit and
 personal theme names intact. The German and Spanish wording was prepared with

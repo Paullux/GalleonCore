@@ -119,6 +119,16 @@ private Q_SLOTS:
             }
         }
     }
+    void partialCatalogFallsBackToEnglishForMissingTexts()
+    {
+        bosun::CatalogTranslator translator;
+        QVERIFY(translator.load(QJsonObject{{QStringLiteral("Open"), QStringLiteral("Ouvrir")}}));
+        QCOMPARE(translator.translate("ctx", "Open"), QStringLiteral("Ouvrir"));
+        // An empty answer is what makes Qt show the source text, which is the English text.
+        QVERIFY(translator.translate("ctx", "Close").isEmpty());
+        QVERIFY(!translator.load({}));
+        QVERIFY(translator.translate("ctx", "Open").isEmpty());
+    }
 };
 QTEST_GUILESS_MAIN(TestLanguages)
 #include "test_languages.moc"
