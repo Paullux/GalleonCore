@@ -856,6 +856,91 @@ private Q_SLOTS:
         QCOMPARE(lastRing(false), (std::array<int, 3>{255, 255, 255}));
     }
 
+    void theColourThatThePersonChoseForARingReplacesTheThemeOrWhiteButKeepsTheLevelTheOutSettingAndTheWallpaperMagenta()
+    {
+        const auto parsed = parsePagesConfig(QJsonDocument(QJsonObject{
+            {"version", 1},
+            {"home", "main"},
+            {"screen", QJsonObject{{"wallpaper_validate_seconds", 60}, {"wallpaper_step_delay_ms", 0}}},
+            {"pages", QJsonObject{{"main", page({keyJson(0, "A", mediaAction("previous"))})}}},
+            {"themes", QJsonArray{QJsonObject{{"name", "Red"}, {"page", "main"}, {"color", "#e53935"}}}},
+            {"dials", QJsonObject{{"1", QJsonObject{{"press", QJsonObject{{"type", "wallpaper-mode"}}}}}}}}).toJson());
+        QVERIFY2(parsed.config.has_value(), qPrintable(parsed.errors.join('\n')));
+        Fixture f;
+        f.controller->setConfig(required(parsed.config));
+        const auto lastRing = [&](bool left) {
+            for (auto &report : std::ranges::reverse_view(f.transport->featureReports)) {
+                if (report.size() > 5 && report[1] == 0x24 && (report[2] >= 4) == left)
+                    return std::array<int, 3>{report[3], report[4], report[5]};
+            }
+            return std::array<int, 3>{-1, -1, -1};
+        };
+
+        // A colour for each ring: the left one no longer follows the theme, the right one is no longer white.
+        f.controller->setRingSettings({.lit = true, .level = 1000, .left = 0x1e88e5U, .right = 0xffd600U});
+        QCOMPARE(lastRing(true), (std::array<int, 3>{0x1e, 0x88, 0xe5}));
+        QCOMPARE(lastRing(false), (std::array<int, 3>{0xff, 0xd6, 0x00}));
+
+        // Only one of them chosen: the other keeps its own (the theme, white).
+        f.controller->setRingSettings({.lit = true, .level = 1000, .left = 0x1e88e5U, .right = std::nullopt});
+        QCOMPARE(lastRing(true), (std::array<int, 3>{0x1e, 0x88, 0xe5}));
+        QCOMPARE(lastRing(false), (std::array<int, 3>{255, 255, 255}));
+        f.controller->setRingSettings({.lit = true, .level = 1000, .left = std::nullopt, .right = 0xffd600U});
+        QCOMPARE(lastRing(true), (std::array<int, 3>{0xe5, 0x39, 0x35}));
+        QCOMPARE(lastRing(false), (std::array<int, 3>{0xff, 0xd6, 0x00}));
+
+        // The level applies to the colour that was chosen, as to the others (half, to the nearest).
+        f.controller->setRingSettings({.lit = true, .level = 500, .left = 0x1e88e5U, .right = 0xffd600U});
+        QCOMPARE(lastRing(true), (std::array<int, 3>{15, 68, 115}));
+        QCOMPARE(lastRing(false), (std::array<int, 3>{128, 107, 0}));
+
+        // Put out: dark, whatever the colour that was chosen.
+        f.controller->setRingSettings({.lit = false, .level = 1000, .left = 0x1e88e5U, .right = 0xffd600U});
+        QCOMPARE(lastRing(true), (std::array<int, 3>{0, 0, 0}));
+        QCOMPARE(lastRing(false), (std::array<int, 3>{0, 0, 0}));
+
+        // The magenta of the wallpaper choice is the answer to an action: the colour chosen for the right ring does not replace it, and with the rings put
+        // out nothing relights them.
+        f.pressDial(1, true);
+        f.pressDial(1, false);
+        QVERIFY(f.controller->wallpaperMode());
+        f.controller->wallpaperLabelShown();
+        QCOMPARE(lastRing(false), (std::array<int, 3>{0, 0, 0}));
+        f.controller->setRingSettings({.lit = true, .level = 1000, .left = 0x1e88e5U, .right = 0xffd600U});
+        QVERIFY(f.controller->wallpaperMode());
+        QCOMPARE(lastRing(false), (std::array<int, 3>{255, 0, 255}));
+        QCOMPARE(lastRing(true), (std::array<int, 3>{0x1e, 0x88, 0xe5}));
+
+        // After the choice, the right ring has its colour again.
+        f.pressDial(1, true);
+        f.pressDial(1, false);
+        QVERIFY(!f.controller->wallpaperMode());
+        QCOMPARE(lastRing(false), (std::array<int, 3>{0xff, 0xd6, 0x00}));
+    }
+
+    void theColoursOfTheRingsFileAreAppliedWhenItIsReadAndAFileOfBeforeTheColoursStillMeansTheDefaults()
+    {
+        const QTemporaryDir dir;
+        const QString path = dir.filePath("dial-rings.json");
+        Fixture f;
+        QVERIFY(writeRingSettings(path, {.lit = true, .level = 800, .left = 0x43a047U, .right = std::nullopt}));
+        RingSettingsApplier applier(*f.controller, path);
+        QCOMPARE(f.controller->ringSettings(), (RingSettings{.lit = true, .level = 800, .left = 0x43a047U, .right = std::nullopt}));
+
+        // The file as it was written before the colours: the two defaults, whatever the colours that were applied until then.
+        QVERIFY(writeFile(path, R"({"version":1,"lit":true,"level":800})"));
+        applier.onFileMaybeChanged();
+        QCOMPARE(f.controller->ringSettings(), (RingSettings{.lit = true, .level = 800}));
+
+        // A colour that is not one makes the file damaged: ignored, what is applied stays.
+        QVERIFY(writeRingSettings(path, {.lit = true, .level = 800, .left = 0x43a047U, .right = 0x1e88e5U}));
+        applier.onFileMaybeChanged();
+        const RingSettings applied = f.controller->ringSettings();
+        QVERIFY(writeFile(path, R"({"version":2,"lit":true,"level":800,"left":"green","right":"default"})"));
+        applier.onFileMaybeChanged();
+        QCOMPARE(f.controller->ringSettings(), applied);
+    }
+
     void theRingSettingsFileIsReadAtTheStartAndAgainWhenItChangesAndADamagedFileIsIgnored()
     {
         const QTemporaryDir dir;
