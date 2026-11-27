@@ -40,15 +40,15 @@ To try a signal by hand there is the command-line tool below, and Bosun has a **
 Installed with the other programs (`bin/`), on Linux and Windows. It lights one key, or several given together, through the interface above, as another program would. It reads no key press and no state of the keyboard.
 
 ```
-galleon-key-signal --key F3 --color #ff7800 --effect pulse --seconds 600
+galleon-key-signal --key F3 --color "#ff7800" --effect pulse --seconds 600
 galleon-key-signal --key F3 --red 255 --green 120 --blue 0 --seconds 60
-galleon-key-signal --key F3,F4,F5 --color #ff7800 --seconds 60
+galleon-key-signal --key F3,F4,F5 --color "#ff7800" --seconds 60
 ```
 
 | Option | Meaning |
 | --- | --- |
 | `--key NAME` | The key by its place on a QWERTY keyboard (`F3`, `Left Control`; `W` is the key engraved Z on an AZERTY keyboard). A key whose light was not measured is refused. **Several keys** are given together, separated by commas (`F3,F4,F5`; the plain spaces around a name are ignored), all with the same colour, effect and time. At most 16 (what galleond keeps for one program), none empty, none twice. |
-| `--color #rrggbb` | Its colour. Or `--red`, `--green` and `--blue`, each 0 to 255, all three. Not both forms. |
+| `--color "#rrggbb"` | Its colour, **in double quotes**: a bare `#` starts a comment in bash and in PowerShell, and the command is cut there (`--color needs a value`). Double quotes work in bash, PowerShell and `cmd.exe`. Or `--red`, `--green` and `--blue`, each 0 to 255, all three. Not both forms. |
 | `--effect steady\|pulse` | Steady (default) or breathing (about 1.6 s a cycle). |
 | `--seconds N` | How long, 1 to 86400. **Required**: a signal always has an end. |
 | `--help` | The usage. |

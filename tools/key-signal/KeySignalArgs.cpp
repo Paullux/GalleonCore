@@ -82,13 +82,13 @@ QString usage(bool windows)
     QString text = QStringLiteral(
         "galleon-key-signal: lights one key, or several, of the Galleon 100 SD the way another program does (see docs/KEY_SIGNALS.md).\n"
         "It needs the box \"Other programs may light keys\" ticked in Bosun and the live lighting on.\n\n"
-        "  galleon-key-signal --key F3 --color #ff7800 --effect pulse --seconds 600\n"
+        "  galleon-key-signal --key F3 --color \"#ff7800\" --effect pulse --seconds 600\n"
         "  galleon-key-signal --key F3 --red 255 --green 120 --blue 0 --seconds 60\n"
-        "  galleon-key-signal --key F3,F4,F5 --color #ff7800 --seconds 60\n\n"
+        "  galleon-key-signal --key F3,F4,F5 --color \"#ff7800\" --seconds 60\n\n"
         "Options:\n"
         "  --key NAME        the key, by its place on a QWERTY keyboard (F3, Left Control, W for the key engraved Z on an AZERTY one);\n"
         "                    several keys together, separated by commas (F3,F4,F5), up to 16, all with the same colour, effect and time\n"
-        "  --color #rrggbb   its colour; or --red, --green and --blue, each 0 to 255 (all three)\n"
+        "  --color #rrggbb   its colour, in double quotes (a bare # starts a comment in bash and PowerShell); or --red, --green and --blue, each 0 to 255 (all three)\n"
         "  --effect steady|pulse   steady (default) or breathing (a cycle of about 1.6 s)\n"
         "  --seconds N       how long, 1 to 86400 (required)\n"
         "  --help            this text\n");

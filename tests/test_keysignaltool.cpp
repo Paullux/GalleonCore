@@ -175,6 +175,23 @@ private Q_SLOTS:
         QVERIFY(usage(true).contains(QStringLiteral("F3,F4,F5")));
     }
 
+    void everyExampleOfTheHelpPutsTheColourInDoubleQuotesAndTheHelpSaysWhy()
+    {
+        // A bare # starts a comment in bash and PowerShell: the example would be cut at it ("--color needs a value").
+        for (const bool windows : {false, true}) {
+            const QString text = usage(windows);
+            int examples = 0;
+            for (const QString &line : text.split(QLatin1Char('\n'))) {
+                if (!line.contains(QStringLiteral("galleon-key-signal ")) || !line.contains(QStringLiteral("--color ")))
+                    continue;
+                ++examples;
+                QVERIFY2(line.contains(QStringLiteral("--color \"#")), qPrintable(line));
+            }
+            QVERIFY(examples >= 2); // the single key and the list
+            QVERIFY(text.contains(QStringLiteral("in double quotes")));
+        }
+    }
+
     void theEffectIsSteadyByDefault()
     {
         const auto parsed = parseArguments({"--key", "F3", "--color", "#ffffff", "--seconds", "5"}, false);
