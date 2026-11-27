@@ -342,6 +342,50 @@ p code, li code { background: var(--code-bg); padding: 1px 6px; border-radius: 4
 .site-foot { padding-block: 0 48px; color: var(--muted); font-size: 0.9375rem; }
 .site-foot::before { content: ""; display: block; border-top: 1px solid var(--line); margin-bottom: 32px; }
 .site-foot p { margin: 0 0 8px; max-width: 52em; }
+
+/* Keyboard lighting (the demo drawing) */
+.lx-stage { background: var(--body); color: #E3E5E7; border-radius: 16px; padding: 20px 20px 16px; margin-bottom: 20px; box-shadow: 0 1px 0 rgba(255,255,255,.04) inset; }
+.lx-modes { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; padding: 0; list-style: none; }
+.lx-mode-btn { font: 600 0.95rem/1 var(--display); color: #E3E5E7; background: #3A424C; border: 1px solid #55606D; border-radius: 999px; padding: 10px 16px; cursor: pointer; }
+.lx-mode-btn:hover { background: #444E5A; }
+.lx-mode-btn[aria-pressed="true"] { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); }
+.lx-keyboard-wrap { background: #1C2026; border-radius: 12px; padding: 14px 14px 12px; }
+.lx-strip { height: 8px; border-radius: 4px; margin: 0 6px 10px; background: #000; transition: background-color .2s; }
+svg.lx-kb { width: 100%; height: auto; display: block; }
+.lx-keycap { cursor: pointer; }
+.lx-keycap rect { stroke: rgba(255,255,255,.14); stroke-width: 1; }
+.lx-keycap text { font: 600 11px var(--display); fill: rgba(255,255,255,.72); pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+.lx-controls { display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: center; margin-top: 14px; }
+.lx-control { display: flex; align-items: center; gap: 10px; font-size: .95rem; }
+.lx-control label { color: #C7CED6; }
+.lx-control[hidden] { display: none; }
+.lx-swatch { width: 28px; height: 28px; border-radius: 6px; border: 2px solid rgba(255,255,255,.25); cursor: pointer; padding: 0; }
+.lx-swatch[aria-pressed="true"] { border-color: #fff; box-shadow: 0 0 0 2px var(--amber); }
+.lx-stage input[type=range] { accent-color: var(--amber); width: 190px; }
+.lx-clock { font: 600 1rem var(--display); min-width: 4.2em; }
+.lx-small-btn { font: 600 .85rem var(--display); color: #E3E5E7; background: #3A424C; border: 1px solid #55606D; border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+.lx-hint { color: #AEB8C2; font-size: .9rem; margin: 12px 2px 0; }
+.lx-fine { color: #AEB8C2; font-size: .88rem; margin: 10px 2px 0; }
+
+.lx-cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 8px; }
+.lx-card { background: var(--code-bg); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+.lx-card p { margin: 0; font-size: 1rem; }
+.lx-card code { font: 0.85rem/1.4 ui-monospace, "SFMono-Regular", Consolas, monospace; background: transparent; word-break: break-all; }
+.lx-card pre { margin: 10px 0 0; padding: 10px 12px; background: var(--page); border-radius: 8px; white-space: pre-wrap; overflow-wrap: anywhere; font: .8rem/1.5 ui-monospace, Consolas, monospace; }
+.lx-tag { display: inline-block; font: 600 .72rem/1 var(--display); padding: 4px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); margin-left: 8px; vertical-align: middle; }
+.lx-rings { display: flex; gap: 10px; margin-top: 10px; }
+.lx-ring { width: 38px; height: 38px; border-radius: 50%; border: 6px solid; box-shadow: 0 0 0 2px rgba(0,0,0,.25) inset; }
+
+.lx-titlerow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 8px; }
+.lx-titlerow h2 { margin: 0; }
+.lx-uc { display: inline-block; font: 600 0.8125rem/1 var(--display); letter-spacing: .04em; text-transform: uppercase; color: var(--amber-ink); background: var(--amber); border-radius: 999px; padding: 7px 12px; }
+.lx-swatchrow { display: flex; gap: 6px; flex-wrap: wrap; }
+p.note[data-under-construction] { margin-bottom: 10px; }
+.lx-more { margin-top: 8px; }
+.lx-muted { color: var(--muted); }
+.lx-keyboard-wrap:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
+.lx-stage button:focus-visible, .lx-stage input:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .lx-strip { transition: none; } }
 </style>
 </head>
 <body>
@@ -578,12 +622,70 @@ sudo dnf install galleoncore</code></pre>
       <div id="rgb">
         <h3><span lang="en">RGB lighting</span><span lang="fr">Éclairage RVB</span><span lang="de">RGB-Beleuchtung</span><span lang="es">Iluminación RGB</span></h3>
         <p>
-          <span lang="en">The dial rings are driven by galleond itself, with GalleonCore's own code. Per-key keyboard lighting is experimental. The OpenRGB plugin is kept in the repository for documentation only.</span>
-          <span lang="fr">Les anneaux des molettes sont pilotés par galleond lui-même, avec le code propre de GalleonCore. L'éclairage par touche du clavier est expérimental. Le plugin OpenRGB reste dans le dépôt à titre documentaire seulement.</span><span lang="de">Die Ringe der Drehregler steuert galleond selbst, mit dem eigenen Code von GalleonCore. Die Beleuchtung pro Taste der Tastatur ist experimentell. Das OpenRGB-Plugin bleibt nur zu Dokumentationszwecken im Repository.</span><span lang="es">Los anillos de los diales los controla galleond mismo, con el código propio de GalleonCore. La iluminación por tecla del teclado es experimental. El complemento de OpenRGB queda en el repositorio solo como documentación.</span>
+          <span lang="en">The dial rings are driven by galleond itself, with GalleonCore's own code. Per-key keyboard lighting is experimental. The OpenRGB plugin is kept in the repository for documentation only. <a href="#lighting">See the keyboard lighting.</a></span>
+          <span lang="fr">Les anneaux des molettes sont pilotés par galleond lui-même, avec le code propre de GalleonCore. L'éclairage par touche du clavier est expérimental. Le plugin OpenRGB reste dans le dépôt à titre documentaire seulement. <a href="#lighting">Voir l’éclairage du clavier.</a></span><span lang="de">Die Ringe der Drehregler steuert galleond selbst, mit dem eigenen Code von GalleonCore. Die Beleuchtung pro Taste der Tastatur ist experimentell. Das OpenRGB-Plugin bleibt nur zu Dokumentationszwecken im Repository. <a href="#lighting">Zur Tastaturbeleuchtung.</a></span><span lang="es">Los anillos de los diales los controla galleond mismo, con el código propio de GalleonCore. La iluminación por tecla del teclado es experimental. El complemento de OpenRGB queda en el repositorio solo como documentación. <a href="#lighting">Ver la iluminación del teclado.</a></span>
         </p>
       </div>
     </div>
   </section>
+
+  <section class="wrap" id="lighting" aria-labelledby="lighting-title">
+      <!-- UNDER-CONSTRUCTION: this mark (every data-under-construction element) is removed when v1.0.0 is published: ROADMAP.md, and tools/test_site_under_construction.py enforces it. -->
+      <div class="lx-titlerow"><h2 id="lighting-title"><span lang="en">The keyboard’s light, as you want it</span><span lang="fr">La lumière du clavier, comme tu la veux</span><span lang="de">Das Licht der Tastatur, wie du es willst</span><span lang="es">La luz del teclado, como la quieres</span></h2><span class="lx-uc" data-under-construction><span lang="en">Under construction</span><span lang="fr">En construction</span><span lang="de">Im Aufbau</span><span lang="es">En construcción</span></span></div>
+      <p class="lead"><span lang="en">One colour, a moving rainbow, a sky that follows the hour of the day, and a soft glow under the keys you press. Pick a mode below and try it on this drawing.</span><span lang="fr">Une couleur, un arc-en-ciel qui bouge, un ciel qui suit l’heure de la journée, et une lueur douce sous les touches que tu presses. Choisis un mode ci-dessous et essaie-le sur ce dessin.</span><span lang="de">Eine Farbe, ein bewegter Regenbogen, ein Himmel, der der Tageszeit folgt, und ein sanftes Leuchten unter den Tasten, die du drückst. Wähle unten einen Modus und probiere ihn an dieser Zeichnung aus.</span><span lang="es">Un color, un arcoíris en movimiento, un cielo que sigue la hora del día y un brillo suave bajo las teclas que pulsas. Elige un modo abajo y pruébalo en este dibujo.</span></p>
+      <p class="note" data-under-construction><span lang="en">Under construction: the lighting is still being built, so what you see here can change before version 1.0.0.</span><span lang="fr">En construction : l’éclairage est encore en cours de réalisation, donc ce que tu vois ici peut changer avant la version 1.0.0.</span><span lang="de">Im Aufbau: Die Beleuchtung wird noch entwickelt, daher kann sich das hier Gezeigte vor Version 1.0.0 ändern.</span><span lang="es">En construcción: la iluminación aún se está desarrollando, así que lo que ves aquí puede cambiar antes de la versión 1.0.0.</span></p>
+      <p class="note"><span lang="en">Off by default, and experimental: you switch the live lighting on in Bosun. galleond holds the keys while it runs, and nothing is ever written to the keyboard’s own memory.</span><span lang="fr">Désactivé par défaut et expérimental : tu allumes l’éclairage en direct dans Bosun. galleond tient les touches tant qu’il tourne, et rien n’est jamais écrit dans la mémoire propre du clavier.</span><span lang="de">Standardmäßig aus und experimentell: Du schaltest die Live-Beleuchtung in Bosun ein. galleond hält die Tasten, solange es läuft, und nie wird etwas in den eigenen Speicher der Tastatur geschrieben.</span><span lang="es">Desactivado por defecto y experimental: activas la iluminación en directo en Bosun. galleond sujeta las teclas mientras funciona, y nunca se escribe nada en la memoria propia del teclado.</span></p>
+  
+      <div class="lx-stage">
+        <ul class="lx-modes" id="lx-modes" aria-label="Lighting mode" data-localized="aria-label" data-en="Lighting mode" data-fr="Mode d’éclairage" data-de="Beleuchtungsmodus" data-es="Modo de iluminación">
+          <li><button class="lx-mode-btn" type="button" data-mode="colour" aria-pressed="true"><span lang="en">One colour</span><span lang="fr">Une couleur</span><span lang="de">Eine Farbe</span><span lang="es">Un color</span></button></li>
+          <li><button class="lx-mode-btn" type="button" data-mode="rainbow" aria-pressed="false"><span lang="en">Rainbow</span><span lang="fr">Arc-en-ciel</span><span lang="de">Regenbogen</span><span lang="es">Arcoíris</span></button></li>
+          <li><button class="lx-mode-btn" type="button" data-mode="sky" aria-pressed="false"><span lang="en">Sky by the hour</span><span lang="fr">Ciel selon l’heure</span><span lang="de">Himmel nach Tageszeit</span><span lang="es">Cielo según la hora</span></button></li>
+          <li><button class="lx-mode-btn" type="button" data-mode="glow" aria-pressed="false"><span lang="en">Glow under your fingers</span><span lang="fr">Lueur sous tes doigts</span><span lang="de">Leuchten unter den Fingern</span><span lang="es">Brillo bajo tus dedos</span></button></li>
+        </ul>
+  
+        <div class="lx-keyboard-wrap" id="lx-kbwrap" tabindex="0" role="group" aria-label="Keyboard drawing: click it, then type" data-localized="aria-label" data-en="Keyboard drawing: click it, then type" data-fr="Dessin du clavier : clique dessus, puis tape" data-de="Tastaturzeichnung: anklicken, dann tippen" data-es="Dibujo del teclado: haz clic y escribe">
+          <div class="lx-strip" id="lx-strip" aria-hidden="true"></div>
+          <svg class="lx-kb" id="lx-kb" viewBox="0 0 900 292" aria-hidden="true"></svg>
+        </div>
+  
+        <div class="lx-controls">
+          <div class="lx-control" id="lx-ctl-colour"><label><span lang="en">Colour</span><span lang="fr">Couleur</span><span lang="de">Farbe</span><span lang="es">Color</span></label><span class="lx-swatchrow" id="lx-swatches"></span></div>
+          <div class="lx-control" id="lx-ctl-sky" hidden>
+            <label for="lx-hour"><span lang="en">Time of day</span><span lang="fr">Heure</span><span lang="de">Uhrzeit</span><span lang="es">Hora</span></label>
+            <input id="lx-hour" type="range" min="0" max="24" step="0.05" value="12"><span class="lx-clock" id="lx-clock">12:00</span>
+            <button class="lx-small-btn" id="lx-play" type="button"><span lang="en">Play a day</span><span lang="fr">Jouer une journée</span><span lang="de">Einen Tag abspielen</span><span lang="es">Reproducir un día</span></button>
+          </div>
+          <div class="lx-control" id="lx-ctl-glow" hidden><label><span lang="en">Glow colour</span><span lang="fr">Couleur de la lueur</span><span lang="de">Farbe des Leuchtens</span><span lang="es">Color del brillo</span></label><span class="lx-swatchrow" id="lx-glow-swatches"></span></div>
+          <div class="lx-control"><label for="lx-level"><span lang="en">Level</span><span lang="fr">Niveau</span><span lang="de">Stärke</span><span lang="es">Nivel</span></label><input id="lx-level" type="range" min="10" max="100" step="1" value="100"><span class="lx-clock" id="lx-level-out">100 %</span></div>
+        </div>
+        <p class="lx-hint" id="lx-hint-glow" hidden><span lang="en">Click the drawing, then press keys on your keyboard (or click the keys): each key glows and fades in about a second and a half.</span><span lang="fr">Clique sur le dessin, puis presse des touches de ton clavier (ou clique sur les touches) : chaque touche s’illumine puis s’éteint en environ une seconde et demie.</span><span lang="de">Klicke auf die Zeichnung und drücke dann Tasten auf deiner Tastatur (oder klicke die Tasten an): Jede Taste leuchtet auf und verblasst in etwa anderthalb Sekunden.</span><span lang="es">Haz clic en el dibujo y luego pulsa teclas de tu teclado (o haz clic en las teclas): cada tecla se ilumina y se apaga en aproximadamente un segundo y medio.</span></p>
+        <p class="lx-hint" id="lx-hint-sky" hidden><span lang="en">The sky uses six rows from the top (the F row is always the cool top of the sky), and can follow the real sunrise and sunset of a place if you allow it (off by default, computed offline). Here: a day with sunrise at 6:15 and sunset at 18:00.</span><span lang="fr">Le ciel utilise six rangées en partant du haut (la rangée des F est toujours le haut frais du ciel), et peut suivre le vrai lever et coucher du soleil d’un lieu si tu l’autorises (désactivé par défaut, calculé hors ligne). Ici : un jour avec lever à 6 h 15 et coucher à 18 h.</span><span lang="de">Der Himmel nutzt sechs Reihen von oben (die F-Reihe ist immer das kühle Oben des Himmels) und kann dem echten Sonnenauf- und -untergang eines Ortes folgen, wenn du es erlaubst (standardmäßig aus, offline berechnet). Hier: ein Tag mit Sonnenaufgang um 6:15 und Sonnenuntergang um 18:00.</span><span lang="es">El cielo usa seis filas desde arriba (la fila de las F es siempre la parte fría del cielo) y puede seguir el amanecer y el atardecer reales de un lugar si lo permites (desactivado por defecto, calculado sin conexión). Aquí: un día con amanecer a las 6:15 y atardecer a las 18:00.</span></p>
+        <p class="lx-fine"><span lang="en">A schematic drawing, not the real layout. Colours as a screen shows them: real LEDs look brighter and more saturated.</span><span lang="fr">Un dessin schématique, pas la vraie disposition. Couleurs telles qu’un écran les montre : les vraies LED sont plus vives et plus saturées.</span><span lang="de">Eine schematische Zeichnung, nicht das echte Layout. Farben, wie ein Bildschirm sie zeigt: Echte LEDs wirken heller und gesättigter.</span><span lang="es">Un dibujo esquemático, no la disposición real. Colores como los muestra una pantalla: los LED reales son más brillantes y saturados.</span></p>
+      </div>
+  
+      <div class="lx-cards">
+        <div class="lx-card">
+          <h3><span lang="en">Other programs can light a key</span><span lang="fr">D’autres programmes peuvent allumer une touche</span><span lang="de">Andere Programme können eine Taste beleuchten</span><span lang="es">Otros programas pueden iluminar una tecla</span><span class="lx-tag"><span lang="en">opt-in</span><span lang="fr">sur autorisation</span><span lang="de">nur mit Erlaubnis</span><span lang="es">con permiso</span></span></h3>
+          <p><span lang="en">“F3 pulses amber for ten minutes”: a calendar, a build, an assistant. Programs only send colours, and never learn which keys you press.</span><span lang="fr">« F3 pulse en ambre pendant dix minutes » : un agenda, une compilation, un assistant. Les programmes n’envoient que des couleurs, et n’apprennent jamais quelles touches tu presses.</span><span lang="de">„F3 pulsiert zehn Minuten lang bernsteinfarben“: ein Kalender, ein Build, ein Assistent. Programme senden nur Farben und erfahren nie, welche Tasten du drückst.</span><span lang="es">«F3 late en ámbar durante diez minutos»: una agenda, una compilación, un asistente. Los programas solo envían colores y nunca saben qué teclas pulsas.</span></p>
+          <pre>galleon-key-signal --key F3,F4,F5 --color #ff7800 --effect pulse --seconds 600</pre>
+          <p class="lx-muted lx-more"><a href="key-signals.html"><span lang="en">The pipe: how it works</span><span lang="fr">Le tuyau : comment ça marche</span><span lang="de">Die Leitung: so funktioniert es</span><span lang="es">La tubería: cómo funciona</span></a></p>
+        </div>
+        <div class="lx-card">
+          <h3><span lang="en">Lights off until morning</span><span lang="fr">Éteint jusqu’au matin</span><span lang="de">Aus bis zum Morgen</span><span lang="es">Apagado hasta la mañana</span></h3>
+          <p><span lang="en">One press blacks out the keyboard, the module and the rings until the hour you choose, and everything comes back by itself, even after a restart.</span><span lang="fr">Un appui éteint le clavier, le module et les anneaux jusqu’à l’heure que tu choisis, et tout revient tout seul, même après un redémarrage.</span><span lang="de">Ein Druck löscht Tastatur, Modul und Ringe bis zur gewählten Uhrzeit, und alles kommt von selbst zurück, auch nach einem Neustart.</span><span lang="es">Una pulsación apaga el teclado, el módulo y los anillos hasta la hora que elijas, y todo vuelve solo, incluso tras un reinicio.</span></p>
+        </div>
+        <div class="lx-card">
+          <h3><span lang="en">Level, day and night</span><span lang="fr">Niveau, jour et nuit</span><span lang="de">Stärke, Tag und Nacht</span><span lang="es">Nivel, día y noche</span></h3>
+          <p><span lang="en">A brightness slider, and a 24-hour curve that dims the keyboard through the day. The keyboard’s own brightness setting is never rewritten by the live lighting.</span><span lang="fr">Un curseur de luminosité, et une courbe de 24 heures qui atténue le clavier au fil de la journée. Le réglage de luminosité propre du clavier n’est jamais réécrit par l’éclairage en direct.</span><span lang="de">Ein Helligkeitsregler und eine 24-Stunden-Kurve, die die Tastatur im Tagesverlauf dimmt. Die eigene Helligkeitseinstellung der Tastatur wird von der Live-Beleuchtung nie überschrieben.</span><span lang="es">Un control de brillo y una curva de 24 horas que atenúa el teclado a lo largo del día. El ajuste de brillo propio del teclado nunca lo reescribe la iluminación en directo.</span></p>
+        </div>
+        <div class="lx-card">
+          <h3><span lang="en">A colour for each dial ring</span><span lang="fr">Une couleur pour chaque anneau de molette</span><span lang="de">Eine Farbe für jeden Drehregler-Ring</span><span lang="es">Un color para cada anillo de dial</span></h3>
+          <p><span lang="en">Follow the theme, white, or any of a dozen colours, for each of the two rings. The level and “Out” still apply.</span><span lang="fr">Suivre le thème, blanc, ou l’une d’une douzaine de couleurs, pour chacun des deux anneaux. Le niveau et « Éteints » s’appliquent toujours.</span><span lang="de">Dem Thema folgen, Weiß oder eine von rund einem Dutzend Farben, für jeden der beiden Ringe. Stärke und „Aus“ gelten weiterhin.</span><span lang="es">Seguir el tema, blanco o una de una docena de colores, para cada uno de los dos anillos. El nivel y «Apagados» se siguen aplicando.</span></p>
+          <div class="lx-rings" aria-hidden="true"><span class="lx-ring" style="border-color:#1e88e5"></span><span class="lx-ring" style="border-color:#ffd600"></span></div>
+        </div>
+      </div>
+    </section>
 
   <section class="wrap" id="initial-pages">
     <h2><span lang="en">The first five pages</span><span lang="fr">Les cinq pages initiales</span><span lang="de">Die ersten fünf Seiten</span><span lang="es">Las cinco primeras páginas</span></h2>
@@ -796,6 +898,137 @@ sudo udevadm control --reload &amp;&amp; sudo udevadm trigger</code></pre>
     key.addEventListener("mouseleave", showIdle);
     key.addEventListener("blur", showIdle);
   });
+})();
+</script>
+<script>
+(function () {
+  "use strict";
+  // ---- the keyboard drawing: six rows as the sky sees them (F row on top) ----
+  const rows = [
+    {y: 0,   keys: ["Esc","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12"], w: Array(13).fill(1)},
+    {y: 46,  keys: ["`","1","2","3","4","5","6","7","8","9","0","-","=","⌫"], w: [...Array(13).fill(1), 2]},
+    {y: 92,  keys: ["Tab","Q","W","E","R","T","Y","U","I","O","P","[","]","\\"], w: [1.5, ...Array(12).fill(1), 1.5]},
+    {y: 138, keys: ["Caps","A","S","D","F","G","H","J","K","L",";","'","Enter"], w: [1.75, ...Array(11).fill(1), 2.25]},
+    {y: 184, keys: ["Shift","Z","X","C","V","B","N","M",",",".","/","Shift"], w: [2.25, ...Array(10).fill(1), 2.75]},
+    {y: 230, keys: ["Ctrl","Win","Alt","Space","Alt","Fn","Menu","Ctrl"], w: [1.25,1.25,1.25,6.25,1.25,1.25,1.25,1.25]},
+  ];
+  const NS = "http://www.w3.org/2000/svg", W = 900, GAP = 5, H = 40;
+  const svg = document.getElementById("lx-kb");
+  const kbwrap = document.getElementById("lx-kbwrap");
+  const caps = []; // {el, rect, row, x, label}
+  rows.forEach((row, r) => {
+    const total = row.w.reduce((a, b) => a + b, 0);
+    const unit = (W - GAP * (row.keys.length - 1)) / total;
+    let x = 0;
+    row.keys.forEach((label, i) => {
+      const width = row.w[i] * unit;
+      const g = document.createElementNS(NS, "g"); g.setAttribute("class", "lx-keycap"); g.setAttribute("tabindex", "-1");
+      const rect = document.createElementNS(NS, "rect");
+      rect.setAttribute("x", x.toFixed(1)); rect.setAttribute("y", row.y + (r === 0 ? 0 : 6)); rect.setAttribute("width", width.toFixed(1)); rect.setAttribute("height", H); rect.setAttribute("rx", 6);
+      const t = document.createElementNS(NS, "text"); t.setAttribute("x", (x + width / 2).toFixed(1)); t.setAttribute("y", row.y + (r === 0 ? 0 : 6) + H / 2); t.textContent = label;
+      g.append(rect, t); svg.append(g);
+      const cap = {rect, row: r, cx: (x + width / 2) / W, label, glow: 0};
+      g.addEventListener("pointerdown", () => { press(cap); kbwrap.focus({preventScroll: true}); });
+      caps.push(cap); x += width + GAP;
+    });
+  });
+
+  // ---- the colours (the sky is the project's own table: lib/keyboard/src/SkyPalette.cpp) ----
+  const NIGHT = [[10,14,38],[12,16,44],[12,16,44],[14,18,50],[16,22,56],[16,22,56]];
+  const DAWN  = [[34,30,92],[70,50,130],[150,70,120],[230,110,70],[255,150,70],[255,180,90]];
+  const DAY   = [[26,70,170],[30,80,185],[36,95,200],[44,110,215],[52,125,225],[60,135,230]];
+  const DUSK  = [[30,22,90],[60,30,120],[130,40,130],[210,60,90],[255,95,45],[255,120,40]];
+  // sunrise 6:15, sunset 18:00: night until 1 h 15 before the sunrise, dawn at it, day 1 h 15 after, day until 1 h 30 before the sunset, dusk at it, night 1 h 15 after
+  const KEYS = [[5.0, NIGHT],[6.25, DAWN],[7.5, DAY],[16.5, DAY],[18.0, DUSK],[19.25, NIGHT],[29.0, NIGHT]];
+  const mix = (a, b, f) => a.map((v, i) => Math.round(v + (b[i] - v) * f));
+  function skyRows(hours) {
+    let h = hours; if (h < KEYS[0][0]) h += 24;
+    let i = 0; while (i < KEYS.length - 2 && h >= KEYS[i + 1][0]) i++;
+    const [t0, p0] = KEYS[i], [t1, p1] = KEYS[i + 1];
+    const f = Math.min(1, Math.max(0, (h - t0) / (t1 - t0)));
+    return p0.map((c, r) => mix(c, p1[r], f));
+  }
+  const css = (c, k = 1) => `rgb(${Math.round(c[0] * k)},${Math.round(c[1] * k)},${Math.round(c[2] * k)})`;
+  const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const hsl2rgb = (h, s, l) => { const a = s * Math.min(l, 1 - l), f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); }; return [f(0), f(8), f(4)].map(v => Math.round(v * 255)); };
+
+  const PALETTE = ["#ffd600","#ff9800","#e53935","#ec407a","#ab47bc","#7e57c2","#3949ab","#1e88e5","#00acc1","#26a69a","#43a047","#9ccc65","#ffffff"];
+  let mode = "colour", colour = "#ff9800", glowColour = "#00c8ff", hours = 12, level = 1, playing = false;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function makeSwatches(host, current, onPick) {
+    PALETTE.forEach(c => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "lx-swatch"; b.style.background = c; b.setAttribute("aria-label", c); b.setAttribute("aria-pressed", String(c === current));
+      b.addEventListener("click", () => { onPick(c); host.querySelectorAll(".lx-swatch").forEach(s => s.setAttribute("aria-pressed", String(s === b))); });
+      host.append(b);
+    });
+  }
+  makeSwatches(document.getElementById("lx-swatches"), colour, c => { colour = c; });
+  makeSwatches(document.getElementById("lx-glow-swatches"), glowColour, c => { glowColour = c; });
+
+  const strip = document.getElementById("lx-strip");
+  const hourIn = document.getElementById("lx-hour"), clock = document.getElementById("lx-clock");
+  const showClock = () => { const h = Math.floor(hours) % 24, m = Math.floor((hours - Math.floor(hours)) * 60); clock.textContent = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`; };
+  hourIn.addEventListener("input", () => { hours = parseFloat(hourIn.value); showClock(); });
+  document.getElementById("lx-level").addEventListener("input", e => { level = e.target.value / 100; document.getElementById("lx-level-out").textContent = e.target.value + " %"; });
+  document.getElementById("lx-play").addEventListener("click", () => { playing = !playing; });
+
+  const show = (id, on) => { document.getElementById("lx-" + id).hidden = !on; };
+  document.querySelectorAll(".lx-mode-btn").forEach(b => b.addEventListener("click", () => {
+    mode = b.dataset.mode;
+    document.querySelectorAll(".lx-mode-btn").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    show("ctl-colour", mode === "colour"); show("ctl-sky", mode === "sky"); show("ctl-glow", mode === "glow");
+    show("hint-glow", mode === "glow"); show("hint-sky", mode === "sky");
+    if (mode !== "sky") playing = false;
+  }));
+
+  // ---- the glow: a key pressed lights at once and fades in 1.5 s, as in galleond ----
+  const FADE = 1500;
+  function press(cap) { cap.glow = performance.now(); }
+  kbwrap.addEventListener("keydown", e => {
+    if (mode !== "glow" || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.key === "Tab") return;
+    const names = {" ": "Space", "Escape": "Esc", "Backspace": "⌫", "Control": "Ctrl", "CapsLock": "Caps", "Meta": "Win"};
+    const k = e.key.length === 1 ? e.key.toUpperCase() : (names[e.key] || e.key);
+    const hits = caps.filter(c => c.label.toUpperCase() === k.toUpperCase());
+    hits.forEach(press);
+    if (hits.length) e.preventDefault();
+  });
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = (now - last) / 1000; last = now;
+    if (playing) { hours = (hours + dt * 1.6) % 24; hourIn.value = hours; showClock(); }
+    const t = now / 1000, sky = mode === "sky" ? skyRows(hours) : null;
+    caps.forEach(cap => {
+      let c;
+      if (mode === "colour") c = hex(colour);
+      else if (mode === "rainbow") c = hsl2rgb(((cap.cx * 360) + (reduced ? 0 : t * 70)) % 360, 1, 0.5);
+      else if (mode === "sky") c = sky[cap.row];
+      else { // glow: the keys are dark, the pressed key lights and fades
+        const base = [26, 31, 38], g = Math.max(0, 1 - (now - cap.glow) / FADE), gc = hex(glowColour);
+        c = mix(base, gc, g * g * (3 - 2 * g));
+      }
+      cap.rect.setAttribute("fill", css(c, level));
+    });
+    // the strip above the keys: the top row, 60 % of the colour (as the project does for the sky)
+    let sc = mode === "sky" ? sky[0].map(v => v * 0.6) : (mode === "glow" ? [20, 24, 30] : (mode === "colour" ? hex(colour) : hsl2rgb(((t * 70) % 360), 1, 0.5)));
+    strip.style.background = css(sc, level);
+    if (running) requestAnimationFrame(frame);
+  }
+  let running = false;
+  function setRunning(on) {
+    if (on === running) return;
+    running = on;
+    if (on) { last = performance.now(); requestAnimationFrame(frame); }
+  }
+  let onScreen = false;
+  const update = () => setRunning(onScreen && document.visibilityState === "visible");
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(entries => { onScreen = entries.some(en => en.isIntersecting); update(); }).observe(document.getElementById("lighting"));
+  } else { onScreen = true; }
+  document.addEventListener("visibilitychange", update);
+  showClock();
+  update();
 })();
 </script>
 </body>
