@@ -16,7 +16,9 @@ enum class Verb : unsigned char { Light, Clear, ClearAll, Help };
 struct Arguments
 {
     Verb verb = Verb::Light;
-    QString key;     // the name of the physical key as KeyIdentity.h names it ("F3"): its place on a QWERTY keyboard
+    // The names of the physical keys as KeyIdentity.h names them ("F3": its place on a QWERTY keyboard): one key, or several given together ("F3,F4,F5"), each
+    // once, from 1 to MaxKeysPerCall. They share the colour, the effect and the time; clear works on each of them.
+    QStringList keys;
     int red = 0;
     int green = 0;
     int blue = 0;
@@ -27,6 +29,9 @@ struct Arguments
 };
 
 inline constexpr int LongestSeconds = 24 * 60 * 60;
+// How many keys one call can name: what galleond keeps for one program (MaxSignalsPerClient of KeySignals.h), so that a call is taken whole or refused whole and never half lit.
+// A call is also that many requests, and galleond takes 20 a second (MaxSignalRequestsPerSecond of KeySignalsService.h).
+inline constexpr int MaxKeysPerCall = 16;
 
 struct ParseResult
 {

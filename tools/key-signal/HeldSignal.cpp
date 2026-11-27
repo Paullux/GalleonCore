@@ -28,31 +28,43 @@ QString HeldSignal::light(const Arguments &arguments)
 {
     if (!m_bus.isConnected())
         return QStringLiteral("there is no session bus");
-    QDBusMessage message = QDBusMessage::createMethodCall(m_service, signalsPath(), signalsInterface(), QStringLiteral("Set"));
-    message << arguments.key << arguments.red << arguments.green << arguments.blue << (arguments.pulse ? QStringLiteral("pulse") : QStringLiteral("steady"))
-            << static_cast<double>(arguments.seconds);
-    // BlockWithGui keeps the event loop running while it waits: a service of this same process (the tests') can answer.
-    const QDBusMessage reply = m_bus.call(message, QDBus::BlockWithGui, CallTimeoutMs);
-    if (reply.type() == QDBusMessage::ErrorMessage)
-        return QStringLiteral("galleond did not answer (is it running, and up to date?): %1").arg(reply.errorMessage());
-    if (reply.type() != QDBusMessage::ReplyMessage || reply.arguments().size() != 1)
-        return QStringLiteral("galleond gave an answer that is not understood");
-    QString refusal = reply.arguments().constFirst().toString();
-    if (!refusal.isEmpty())
-        return refusal;
-    m_key = arguments.key;
-    m_lit = true;
+    if (!m_keys.isEmpty())
+        return QStringLiteral("this object already holds signals"); // one call at a time: what is held would be lost track of
+    for (const QString &key : arguments.keys) {
+        QDBusMessage message = QDBusMessage::createMethodCall(m_service, signalsPath(), signalsInterface(), QStringLiteral("Set"));
+        message << key << arguments.red << arguments.green << arguments.blue << (arguments.pulse ? QStringLiteral("pulse") : QStringLiteral("steady"))
+                << static_cast<double>(arguments.seconds);
+        // BlockWithGui keeps the event loop running while it waits: a service of this same process (the tests') can answer.
+        const QDBusMessage reply = m_bus.call(message, QDBus::BlockWithGui, CallTimeoutMs);
+        QString refusal;
+        if (reply.type() == QDBusMessage::ErrorMessage)
+            refusal = QStringLiteral("galleond did not answer (is it running, and up to date?): %1").arg(reply.errorMessage());
+        else if (reply.type() != QDBusMessage::ReplyMessage || reply.arguments().size() != 1)
+            refusal = QStringLiteral("galleond gave an answer that is not understood");
+        else
+            refusal = reply.arguments().constFirst().toString();
+        if (!refusal.isEmpty()) {
+            release(); // a call is taken whole or not at all: the keys already lit by it go again
+            return refusal;
+        }
+        m_keys.append(key);
+    }
     return {};
 }
 
 void HeldSignal::release()
 {
-    if (!m_lit)
+    if (m_keys.isEmpty())
         return;
-    m_lit = false;
-    QDBusMessage message = QDBusMessage::createMethodCall(m_service, signalsPath(), signalsInterface(), QStringLiteral("Clear"));
-    message << m_key;
-    static_cast<void>(m_bus.call(message, QDBus::BlockWithGui, CallTimeoutMs)); // best effort: closing the connection takes it away as well
+    QDBusMessage message;
+    if (m_keys.size() == 1) {
+        message = QDBusMessage::createMethodCall(m_service, signalsPath(), signalsInterface(), QStringLiteral("Clear"));
+        message << m_keys.constFirst();
+    } else {
+        message = QDBusMessage::createMethodCall(m_service, signalsPath(), signalsInterface(), QStringLiteral("ClearAll"));
+    }
+    m_keys.clear();
+    static_cast<void>(m_bus.call(message, QDBus::BlockWithGui, CallTimeoutMs)); // best effort: closing the connection takes them away as well
 }
 
 } // namespace keysignal

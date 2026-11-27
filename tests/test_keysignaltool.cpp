@@ -32,6 +32,12 @@ Arguments argsOf(const ParseResult &result)
 {
     return result.arguments.value_or(Arguments{});
 }
+// The first request of a call (the only one for a single key); a plain value for the same reason.
+galleond::LocalCommand commandOf(const Arguments &arguments)
+{
+    const auto commands = commandsOf(arguments);
+    return commands.isEmpty() ? galleond::LocalCommand{} : commands.constFirst();
+}
 } // namespace
 
 #ifndef Q_OS_WIN
@@ -52,19 +58,25 @@ public:
     };
     QList<Call> sets;
     QStringList clears;
-    QString answer; // what Set says: "" when accepted, else why not
+    int clearAlls = 0;
+    QString answer;    // what Set says: "" when accepted, else why not
+    QString refuseKey; // when it is not empty, only this key is refused (with `answer`), the others are accepted
 public Q_SLOTS:
     QString Set(const QString &key, int red, int green, int blue, const QString &effect, double seconds)
     {
         sets.append({key, red, green, blue, effect, seconds});
-        return answer;
+        return refuseKey.isEmpty() || key == refuseKey ? answer : QString();
     }
     bool Clear(const QString &key)
     {
         clears.append(key);
         return true;
     }
-    bool ClearAll() { return true; }
+    bool ClearAll()
+    {
+        ++clearAlls;
+        return true;
+    }
 };
 #endif
 
@@ -83,13 +95,84 @@ private Q_SLOTS:
         QVERIFY2(channels.arguments.has_value(), qPrintable(channels.error));
         for (const Arguments &a : {argsOf(hex), argsOf(channels)}) {
             QCOMPARE(a.verb, Verb::Light);
-            QCOMPARE(a.key, QStringLiteral("F3"));
+            QCOMPARE(a.keys, QStringList{QStringLiteral("F3")});
             QCOMPARE(a.red, 255);
             QCOMPARE(a.green, 120);
             QCOMPARE(a.blue, 0);
             QVERIFY(a.pulse);
             QCOMPARE(a.seconds, 600);
         }
+    }
+
+    void severalKeysGivenTogetherShareTheColourTheEffectAndTheTime()
+    {
+        const auto parsed = parseArguments({"--key", "F3,F4,F5", "--color", "#ff7800", "--effect", "pulse", "--seconds", "90"}, false);
+        QVERIFY2(parsed.arguments.has_value(), qPrintable(parsed.error));
+        QCOMPARE(argsOf(parsed).keys, (QStringList{"F3", "F4", "F5"})); // in the order named
+        QCOMPARE(argsOf(parsed).green, 120);
+        QVERIFY(argsOf(parsed).pulse);
+        QCOMPARE(argsOf(parsed).seconds, 90);
+    }
+
+    void thespacesAroundANameAreNotPartOfItButAKeyNameKeepsItsOwn()
+    {
+        const auto parsed = parseArguments({"--key", "F3, Left Control ,F5", "--color", "#ffffff", "--seconds", "5"}, false);
+        QVERIFY2(parsed.arguments.has_value(), qPrintable(parsed.error));
+        QCOMPARE(argsOf(parsed).keys, (QStringList{"F3", "Left Control", "F5"}));
+    }
+
+    void aListOfKeysThatIsNotWholeIsRefusedWithAReason_data()
+    {
+        QTest::addColumn<QString>("list");
+        QTest::newRow("an empty name between two commas") << QStringLiteral("F3,,F4");
+        QTest::newRow("a comma at the end") << QStringLiteral("F3,");
+        QTest::newRow("a comma at the start") << QStringLiteral(",F3");
+        QTest::newRow("only a comma") << QStringLiteral(",");
+        QTest::newRow("a space where a name should be") << QStringLiteral("F3, ,F4");
+        QTest::newRow("the same key twice") << QStringLiteral("F3,F4,F3");
+        QTest::newRow("the same key twice in another case") << QStringLiteral("F3,f3");
+        QTest::newRow("a name of more than 32 characters") << (QStringLiteral("F3,") + QString(33, QLatin1Char('x')));
+        QTest::newRow("a control character in a name") << QStringLiteral("F3,F4\x01");
+        QTest::newRow("a line break after a name in a list") << QStringLiteral("F3,F4\n");
+        QTest::newRow("a tab before a name in a list") << QStringLiteral("F3,\tF4");
+        QTest::newRow("more keys than galleond keeps for one program") << QStringList{"F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "Esc", "A", "B", "C", "D"}.join(QLatin1Char(','));
+    }
+
+    void aListOfKeysThatIsNotWholeIsRefusedWithAReason()
+    {
+        QFETCH(const QString, list);
+        const auto parsed = parseArguments({"--key", list, "--color", "#ffffff", "--seconds", "5"}, false);
+        QVERIFY2(!parsed.arguments.has_value(), qPrintable(list));
+        QVERIFY(!parsed.error.isEmpty());
+    }
+
+    void theMostKeysACallCanNameIsWhatGalleondKeepsForOneProgram()
+    {
+        QStringList names;
+        for (int i = 0; i < MaxKeysPerCall; ++i)
+            names << QStringLiteral("Key%1").arg(i);
+        QVERIFY(parseArguments({"--key", names.join(QLatin1Char(',')), "--color", "#ffffff", "--seconds", "5"}, false).arguments.has_value());
+        names << QStringLiteral("OneMore");
+        QVERIFY(!parseArguments({"--key", names.join(QLatin1Char(',')), "--color", "#ffffff", "--seconds", "5"}, false).arguments.has_value());
+        QCOMPARE(MaxKeysPerCall, 16); // MaxSignalsPerClient of KeySignals.h, which this tool does not link: the number is written in both places
+    }
+
+    void clearOnWindowsTakesAwayEachKeyOfTheList()
+    {
+        const auto clear = parseArguments({"--clear", "--key", "F3,F4"}, true);
+        QVERIFY2(clear.arguments.has_value(), qPrintable(clear.error));
+        QCOMPARE(argsOf(clear).keys, (QStringList{"F3", "F4"}));
+        const auto commands = commandsOf(argsOf(clear));
+        QCOMPARE(commands.size(), 2);
+        QCOMPARE(commands.at(0).action, galleond::LocalAction::KeySignalClear);
+        QCOMPARE(commands.at(0).key, QStringLiteral("F3"));
+        QCOMPARE(commands.at(1).key, QStringLiteral("F4"));
+    }
+
+    void helpMentionsTheListOfKeys()
+    {
+        QVERIFY(usage(false).contains(QStringLiteral("F3,F4,F5")));
+        QVERIFY(usage(true).contains(QStringLiteral("F3,F4,F5")));
     }
 
     void theEffectIsSteadyByDefault()
@@ -162,7 +245,7 @@ private Q_SLOTS:
         const auto clear = parseArguments({"--clear", "--key", "F3", "--client", "assistant"}, true);
         QVERIFY2(clear.arguments.has_value(), qPrintable(clear.error));
         QCOMPARE(argsOf(clear).verb, Verb::Clear);
-        QCOMPARE(argsOf(clear).key, QStringLiteral("F3"));
+        QCOMPARE(argsOf(clear).keys, QStringList{QStringLiteral("F3")});
         QCOMPARE(argsOf(clear).client, QStringLiteral("assistant"));
         const auto clearAll = parseArguments({"--clear-all", "--client", "assistant"}, true);
         QVERIFY2(clearAll.arguments.has_value(), qPrintable(clearAll.error));
@@ -199,6 +282,81 @@ private Q_SLOTS:
         const auto clearAll = parseArguments({"--clear-all"}, true);
         QCOMPARE(commandOf(argsOf(clearAll)).action, galleond::LocalAction::KeySignalClearAll);
         QCOMPARE(commandOf(argsOf(clearAll)).client, QStringLiteral("galleon-key-signal"));
+    }
+
+    void aCallWithSeveralKeysIsOneRequestForEachInTheOrderNamedAndClearAllIsOne()
+    {
+        const auto light = parseArguments({"--key", "F3,F4,F5", "--color", "#ff7800", "--effect", "pulse", "--seconds", "600", "--client", "assistant"}, true);
+        QVERIFY(light.arguments.has_value());
+        const auto commands = commandsOf(argsOf(light));
+        QCOMPARE(commands.size(), 3);
+        const QStringList wanted{"F3", "F4", "F5"};
+        for (qsizetype i = 0; i < commands.size(); ++i) {
+            QCOMPARE(commands.at(i).action, galleond::LocalAction::KeySignal);
+            QCOMPARE(commands.at(i).key, wanted.at(i));
+            QCOMPARE(commands.at(i).client, QStringLiteral("assistant"));
+            QCOMPARE(commands.at(i).green, 120);
+            QCOMPARE(commands.at(i).effect, QStringLiteral("pulse"));
+            QCOMPARE(commands.at(i).seconds, 600);
+        }
+        const auto clearAll = parseArguments({"--clear-all"}, true);
+        QCOMPARE(commandsOf(argsOf(clearAll)).size(), 1); // one request, whatever the keys
+        QVERIFY(commandsOf(argsOf(clearAll)).constFirst().key.isEmpty());
+    }
+
+    void severalRequestsReachTheServerOneAfterTheOtherInTheOrderNamed()
+    {
+        const QString name = QStringLiteral("galleon-keysignal-many-") + QUuid::createUuid().toString(QUuid::Id128);
+        galleond::LocalControl server;
+        QVERIFY(server.listen(name));
+        const QSignalSpy requested(&server, &galleond::LocalControl::keySignalRequested);
+        const auto light = parseArguments({"--key", "F3,F4,F5", "--color", "#0000ff", "--seconds", "30"}, true);
+        QString answer = QStringLiteral("not run");
+        const Arguments sent = argsOf(light);
+        std::unique_ptr<QThread> client(QThread::create([&answer, &name, &sent] { answer = sendAllToEndpoint(name, commandsOf(sent), 3000); }));
+        client->start();
+        QTRY_VERIFY_WITH_TIMEOUT(client->isFinished(), 10000);
+        QVERIFY2(answer.isEmpty(), qPrintable(answer));
+        QCOMPARE(requested.size(), 3);
+        QCOMPARE(requested.at(0).at(1).toString(), QStringLiteral("F3"));
+        QCOMPARE(requested.at(1).at(1).toString(), QStringLiteral("F4"));
+        QCOMPARE(requested.at(2).at(1).toString(), QStringLiteral("F5"));
+    }
+
+    void whenARequestFailsTheOnesAfterItAreNotSentAndTheAnswerNamesTheKeyAndHowManyWereTaken()
+    {
+        const QString name = QStringLiteral("galleon-keysignal-half-") + QUuid::createUuid().toString(QUuid::Id128);
+        QLocalServer server;
+        QVERIFY(server.listen(name));
+        int connections = 0;
+        QObject::connect(&server, &QLocalServer::newConnection, &server, [&server, &connections] {
+            QLocalSocket *socket = server.nextPendingConnection();
+            const bool takes = connections++ == 0; // the first request is taken, the second is not
+            QObject::connect(socket, &QLocalSocket::readyRead, socket, [socket, takes] {
+                socket->readAll();
+                socket->write(takes ? "{\"ok\":true}\n" : "{\"ok\":false}\n");
+                socket->disconnectFromServer();
+            });
+            QObject::connect(socket, &QLocalSocket::disconnected, socket, &QObject::deleteLater);
+        });
+        const auto light = parseArguments({"--key", "F3,F4,F5", "--color", "#0000ff", "--seconds", "30"}, true);
+        QString answer;
+        const Arguments sent = argsOf(light);
+        std::unique_ptr<QThread> client(QThread::create([&answer, &name, &sent] { answer = sendAllToEndpoint(name, commandsOf(sent), 3000); }));
+        client->start();
+        QTRY_VERIFY_WITH_TIMEOUT(client->isFinished(), 10000);
+        QVERIFY(answer.contains(QStringLiteral("F4"))); // the key whose request failed
+        QVERIFY(answer.contains(QStringLiteral("1 of 3"))); // one had been taken before it
+        QCOMPARE(connections, 2); // F5 was not tried
+    }
+
+    void withoutGalleondEverySendFailsAtTheFirstRequest()
+    {
+        const QString name = QStringLiteral("galleon-keysignal-none-") + QUuid::createUuid().toString(QUuid::Id128);
+        const auto light = parseArguments({"--key", "F3,F4", "--color", "#0000ff", "--seconds", "30"}, true);
+        const QString answer = sendAllToEndpoint(name, commandsOf(argsOf(light)), 300);
+        QVERIFY(answer.contains(QStringLiteral("F3")));
+        QVERIFY(answer.contains(QStringLiteral("0 of 2")));
     }
 
     void aRequestReachesTheServerAndIsAnsweredOk()
@@ -284,6 +442,88 @@ private Q_SLOTS:
         QCOMPARE(fake.clears.size(), 1);
     }
 
+    void severalKeysAreAskedInTheOrderNamedHeldTogetherAndTakenAwayByOneClearAll()
+    {
+        const QString connectionName = QStringLiteral("fake-galleond-for-the-many-signals");
+        QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, connectionName);
+        FakeKeySignals fake;
+        QVERIFY(bus.registerObject("/org/galleoncore/KeySignals", &fake, QDBusConnection::ExportAllSlots));
+        const QString service = QStringLiteral("org.galleoncore.KeySignalsToolMany");
+        QVERIFY(bus.registerService(service));
+        const auto cleanUp = qScopeGuard([&] {
+            bus.unregisterObject("/org/galleoncore/KeySignals");
+            bus.unregisterService(service);
+            QDBusConnection::disconnectFromBus(connectionName);
+        });
+        HeldSignal held(QDBusConnection::sessionBus(), service);
+        const auto light = parseArguments({"--key", "F3,F4,F5", "--color", "#ff7800", "--effect", "pulse", "--seconds", "600"}, false);
+        QVERIFY(light.arguments.has_value());
+        QVERIFY(held.light(argsOf(light)).isEmpty());
+        QVERIFY(held.isLit());
+        QCOMPARE(fake.sets.size(), 3);
+        for (qsizetype i = 0; i < 3; ++i) { // the same colour, effect and time for each
+            QCOMPARE(fake.sets.at(i).key, (QStringList{"F3", "F4", "F5"}).at(i));
+            QCOMPARE(fake.sets.at(i).green, 120);
+            QCOMPARE(fake.sets.at(i).effect, QStringLiteral("pulse"));
+            QCOMPARE(fake.sets.at(i).seconds, 600.0);
+        }
+        QCOMPARE(fake.clears.size() + fake.clearAlls, 0); // nothing is taken away while they are held
+        held.release();
+        QVERIFY(!held.isLit());
+        QCOMPARE(fake.clearAlls, 1); // one request, not one for each key (galleond takes 20 a second)
+        QCOMPARE(fake.clears.size(), 0);
+        held.release();
+        QCOMPARE(fake.clearAlls, 1); // a second release does nothing
+    }
+
+    void whenOneKeyIsRefusedTheOnesAlreadyLitByTheCallAreTakenAwayAndNothingIsHeld()
+    {
+        const QString connectionName = QStringLiteral("fake-galleond-for-the-half-refused-call");
+        QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, connectionName);
+        FakeKeySignals fake;
+        fake.answer = QStringLiteral("This program already lights as many keys as it may.");
+        fake.refuseKey = QStringLiteral("F4");
+        QVERIFY(bus.registerObject("/org/galleoncore/KeySignals", &fake, QDBusConnection::ExportAllSlots));
+        const QString service = QStringLiteral("org.galleoncore.KeySignalsToolHalf");
+        QVERIFY(bus.registerService(service));
+        const auto cleanUp = qScopeGuard([&] {
+            bus.unregisterObject("/org/galleoncore/KeySignals");
+            bus.unregisterService(service);
+            QDBusConnection::disconnectFromBus(connectionName);
+        });
+        HeldSignal held(QDBusConnection::sessionBus(), service);
+        const auto light = parseArguments({"--key", "F3,F4,F5", "--color", "#ff7800", "--seconds", "60"}, false);
+        QCOMPARE(held.light(argsOf(light)), fake.answer); // galleond's own words
+        QVERIFY(!held.isLit());
+        QCOMPARE(fake.sets.size(), 2); // F5 was not asked
+        QCOMPARE(fake.clears, QStringList{QStringLiteral("F3")}); // the one that had been lit goes again
+        QCOMPARE(fake.clearAlls, 0);
+        held.release();
+        QCOMPARE(fake.clears.size(), 1); // nothing is held: nothing more to take away
+    }
+
+    void aSecondCallOnAnObjectThatHoldsSignalsIsRefusedAndAsksNothing()
+    {
+        const QString connectionName = QStringLiteral("fake-galleond-for-the-second-call");
+        QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, connectionName);
+        FakeKeySignals fake;
+        QVERIFY(bus.registerObject("/org/galleoncore/KeySignals", &fake, QDBusConnection::ExportAllSlots));
+        const QString service = QStringLiteral("org.galleoncore.KeySignalsToolSecond");
+        QVERIFY(bus.registerService(service));
+        const auto cleanUp = qScopeGuard([&] {
+            bus.unregisterObject("/org/galleoncore/KeySignals");
+            bus.unregisterService(service);
+            QDBusConnection::disconnectFromBus(connectionName);
+        });
+        HeldSignal held(QDBusConnection::sessionBus(), service);
+        const auto light = parseArguments({"--key", "F3,F4", "--color", "#ff7800", "--seconds", "60"}, false);
+        QVERIFY(held.light(argsOf(light)).isEmpty());
+        QCOMPARE(fake.sets.size(), 2);
+        QVERIFY(!held.light(argsOf(light)).isEmpty()); // what is held would be lost track of
+        QCOMPARE(fake.sets.size(), 2);
+        QVERIFY(held.isLit());
+    }
+
     void aRefusalOfGalleondIsReturnedInItsOwnWordsAndNothingIsHeld()
     {
         const QString connectionName = QStringLiteral("fake-galleond-for-the-refused-signal");
@@ -348,6 +588,36 @@ private Q_SLOTS:
         // It says how to take the key away, and that includes `kill`, which is what stops it when it runs in the background (Ctrl-C does not).
         QVERIFY2(QString::fromUtf8(program.readAllStandardOutput()).contains(QStringLiteral("Lit F3 for 300 s. Ctrl-C or kill takes it away.")),
                  "the message that says how to stop it is missing");
+    }
+
+    void theProgramLightsSeveralKeysHoldsThemAndTakesThemAllAwayWhenStopped()
+    {
+        const QString connectionName = QStringLiteral("fake-galleond-for-the-program-with-keys");
+        QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, connectionName);
+        FakeKeySignals fake;
+        QVERIFY(bus.registerObject("/org/galleoncore/KeySignals", &fake, QDBusConnection::ExportAllSlots));
+        QVERIFY(bus.registerService(QStringLiteral("org.galleoncore.Deck")));
+        const auto cleanUp = qScopeGuard([&] {
+            bus.unregisterObject("/org/galleoncore/KeySignals");
+            bus.unregisterService(QStringLiteral("org.galleoncore.Deck"));
+            QDBusConnection::disconnectFromBus(connectionName);
+        });
+        QProcess program;
+        program.start(QStringLiteral(KEY_SIGNAL_TOOL), {"--key", "F3,F4,F5", "--color", "#e53935", "--seconds", "300"});
+        QVERIFY(program.waitForStarted(5000));
+        QTRY_COMPARE_WITH_TIMEOUT(fake.sets.size(), 3, 10000);
+        QCOMPARE(fake.sets.at(0).key, QStringLiteral("F3"));
+        QCOMPARE(fake.sets.at(1).key, QStringLiteral("F4"));
+        QCOMPARE(fake.sets.at(2).key, QStringLiteral("F5"));
+        QTest::qWait(300);
+        QCOMPARE(program.state(), QProcess::Running);
+        program.terminate();
+        QTRY_VERIFY_WITH_TIMEOUT(program.state() == QProcess::NotRunning, 10000);
+        QCOMPARE(program.exitCode(), 0);
+        QTRY_COMPARE_WITH_TIMEOUT(fake.clearAlls, 1, 5000);
+        QCOMPARE(fake.clears.size(), 0);
+        QVERIFY2(QString::fromUtf8(program.readAllStandardOutput()).contains(QStringLiteral("Lit F3, F4, F5 for 300 s. Ctrl-C or kill takes them away.")),
+                 "the message that says how to stop them is missing");
     }
 
     void theProgramEndsByItselfWhenTheTimeIsOverAndTakesTheSignalAway()

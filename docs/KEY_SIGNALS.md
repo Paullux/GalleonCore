@@ -37,25 +37,26 @@ To try a signal by hand there is the command-line tool below, and Bosun has a **
 
 ## The command-line tool: `galleon-key-signal`
 
-Installed with the other programs (`bin/`), on Linux and Windows. It lights ONE key through the interface above, as another program would. It reads no key press and no state of the keyboard.
+Installed with the other programs (`bin/`), on Linux and Windows. It lights one key, or several given together, through the interface above, as another program would. It reads no key press and no state of the keyboard.
 
 ```
 galleon-key-signal --key F3 --color #ff7800 --effect pulse --seconds 600
 galleon-key-signal --key F3 --red 255 --green 120 --blue 0 --seconds 60
+galleon-key-signal --key F3,F4,F5 --color #ff7800 --seconds 60
 ```
 
 | Option | Meaning |
 | --- | --- |
-| `--key NAME` | The key by its place on a QWERTY keyboard (`F3`, `Left Control`; `W` is the key engraved Z on an AZERTY keyboard). A key whose light was not measured is refused. |
+| `--key NAME` | The key by its place on a QWERTY keyboard (`F3`, `Left Control`; `W` is the key engraved Z on an AZERTY keyboard). A key whose light was not measured is refused. **Several keys** are given together, separated by commas (`F3,F4,F5`; the plain spaces around a name are ignored), all with the same colour, effect and time. At most 16 (what galleond keeps for one program), none empty, none twice. |
 | `--color #rrggbb` | Its colour. Or `--red`, `--green` and `--blue`, each 0 to 255, all three. Not both forms. |
 | `--effect steady\|pulse` | Steady (default) or breathing (about 1.6 s a cycle). |
 | `--seconds N` | How long, 1 to 86400. **Required**: a signal always has an end. |
 | `--help` | The usage. |
 | `--clear`, `--clear-all`, `--client NAME` | **Windows only** (below). |
 
-**On Linux** the tool stays running while the key is lit: the signal belongs to the D-Bus connection of the tool. It takes the signal away when its time is over or when it is stopped (Ctrl-C, `kill`). So there is no `--clear`: stop the tool. Exit status: 0 when it ended as asked, 1 for a wrong command line, 2 when galleond refused (the sentence is printed: the box "Other programs may light keys" is not ticked, the live lighting is off, a limit) or could not be reached.
+**On Linux** the tool stays running while the keys are lit: the signals belong to the D-Bus connection of the tool. It takes them away when their time is over or when it is stopped (Ctrl-C, `kill`), with one request whatever the number of keys. So there is no `--clear`: stop the tool. A call is taken whole or not at all: if galleond refuses one of the keys, the ones that the call had already lit are taken away again, and the tool exits with status 2. Exit status: 0 when it ended as asked, 1 for a wrong command line, 2 when galleond refused (the sentence is printed: the box "Other programs may light keys" is not ticked, the live lighting is off, a limit) or could not be reached.
 
-**On Windows** the tool sends the request to the local endpoint and ends at once; the signal lasts until its end or a clear. `--clear --key F3` takes away the signal of that key, `--clear-all` every signal, both for the same `--client` (default `galleon-key-signal`: the name the signals belong to, 1 to 64 plain characters). The endpoint gives no reply about the lighting: the tool says "sent" when the request was taken, and a refusal shows nothing.
+**On Windows** the tool sends the request to the local endpoint and ends at once; the signal lasts until its end or a clear. `--clear --key F3` takes away the signal of that key (`--clear --key F3,F4` of each), `--clear-all` every signal, both for the same `--client` (default `galleon-key-signal`: the name the signals belong to, 1 to 64 plain characters). The endpoint gives no reply about the lighting: the tool says "sent" when the requests were taken, and a refusal shows nothing. Several keys are several requests, one connection each, sent in the order named; if one fails (galleond cannot be reached, the request is not accepted) the following ones are not sent, and the message names the key and how many requests had been taken before it: those stay in force, as the endpoint cannot take a call back, and every signal ends by itself.
 
 ## Windows (local endpoint)
 
@@ -67,7 +68,7 @@ Windows has no D-Bus: galleond's per-user local endpoint (a named pipe, `\\.\pip
 {"action":"key-signal-clear-all","client":"assistant"}
 ```
 
-`tools/windows/key-signal.ps1` sends them (not tested on a Windows machine yet: `docs/WINDOWS_ACCEPTANCE.md`, section 8). Differences from Linux, by the nature of this endpoint:
+The Setup installs `galleon-key-signal.exe`, which sends them (above). `tools/windows/key-signal.ps1` stays in the repository as a plain example of the same requests from PowerShell (one key per call; it is not installed). Differences from Linux, by the nature of this endpoint:
 
 - **No reply about the result.** The endpoint answers `{"ok":true}` for a request that is well formed, whether or not a key was lit (not allowed, lighting off, unknown key, too many requests). Nothing comes back about the keyboard.
 - **No way to tell programs apart.** A signal belongs to the `client` name in the request (1 to 64 plain characters), so another program of the same person that knows the name can clear it. Every signal still ends by itself, the person's choice in Bosun comes first, and it stops when the live lighting stops.

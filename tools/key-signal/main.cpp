@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// galleon-key-signal: lights ONE key the way another program does. On Linux it keeps its D-Bus connection for as long as the key stays lit (the signal belongs to it);
+// galleon-key-signal: lights one key, or several given together, the way another program does. On Linux it keeps its D-Bus connection for as long as the key stays lit (the signal belongs to it);
 // on Windows it sends the request to the local endpoint and ends. It reads no key press and no state of the keyboard. docs/KEY_SIGNALS.md.
 #include "KeySignalArgs.h"
 
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 #ifdef Q_OS_WIN
-    const QString reason = keysignal::sendToEndpoint(galleond::localControlName(), keysignal::commandOf(arguments));
+    const QString reason = keysignal::sendAllToEndpoint(galleond::localControlName(), keysignal::commandsOf(arguments));
     if (!reason.isEmpty()) {
         err << "galleon-key-signal: " << reason << "\n";
         return 2;
@@ -62,7 +62,8 @@ int main(int argc, char *argv[])
         err << "galleon-key-signal: " << reason << "\n";
         return 2;
     }
-    out << "Lit " << arguments.key << " for " << arguments.seconds << " s. Ctrl-C or kill takes it away.\n" << Qt::flush;
+    out << "Lit " << arguments.keys.join(QStringLiteral(", ")) << " for " << arguments.seconds << " s. Ctrl-C or kill takes " << (arguments.keys.size() == 1 ? "it" : "them")
+        << " away.\n" << Qt::flush;
     static_cast<void>(std::signal(SIGINT, onStopSignal)); // the previous handlers are not needed
     static_cast<void>(std::signal(SIGTERM, onStopSignal));
     QTimer end;
