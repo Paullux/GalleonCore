@@ -28,7 +28,12 @@ bool CatalogTranslator::select(const QString &language)
     if (!file.open(QIODevice::ReadOnly)) return false;
     const auto document = QJsonDocument::fromJson(file.readAll());
     if (!document.isObject()) return false;
-    m_messages = document.object();
+    return load(document.object());
+}
+
+bool CatalogTranslator::load(const QJsonObject &messages)
+{
+    m_messages = messages;
     return !m_messages.isEmpty();
 }
 
