@@ -353,8 +353,9 @@ p code, li code { background: var(--code-bg); padding: 1px 6px; border-radius: 4
 .lx-strip { height: 8px; border-radius: 4px; margin: 0 6px 10px; background: #000; transition: background-color .2s; }
 svg.lx-kb { width: 100%; height: auto; display: block; }
 .lx-keycap { cursor: pointer; }
-.lx-keycap rect { stroke: rgba(255,255,255,.14); stroke-width: 1; }
-.lx-keycap text { font: 600 11px var(--display); fill: rgba(255,255,255,.72); pointer-events: none; text-anchor: middle; dominant-baseline: central; }
+/* The body of a key stays dark: the light passes through its legend and along its edge, as on the keyboard (the script sets the colours). */
+.lx-keycap rect { fill: #1B1F25; stroke: rgba(255,255,255,.14); stroke-width: 1; }
+.lx-keycap text { font: 600 11px var(--display); fill: rgba(255,255,255,.55); pointer-events: none; text-anchor: middle; dominant-baseline: central; }
 .lx-controls { display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: center; margin-top: 14px; }
 .lx-control { display: flex; align-items: center; gap: 10px; font-size: .95rem; }
 .lx-control label { color: #C7CED6; }
@@ -927,7 +928,7 @@ sudo udevadm control --reload &amp;&amp; sudo udevadm trigger</code></pre>
       rect.setAttribute("x", x.toFixed(1)); rect.setAttribute("y", row.y + (r === 0 ? 0 : 6)); rect.setAttribute("width", width.toFixed(1)); rect.setAttribute("height", H); rect.setAttribute("rx", 6);
       const t = document.createElementNS(NS, "text"); t.setAttribute("x", (x + width / 2).toFixed(1)); t.setAttribute("y", row.y + (r === 0 ? 0 : 6) + H / 2); t.textContent = label;
       g.append(rect, t); svg.append(g);
-      const cap = {rect, row: r, cx: (x + width / 2) / W, label, glow: 0};
+      const cap = {rect, text: t, row: r, cx: (x + width / 2) / W, label, glow: 0};
       g.addEventListener("pointerdown", () => { press(cap); kbwrap.focus({preventScroll: true}); });
       caps.push(cap); x += width + GAP;
     });
@@ -984,6 +985,7 @@ sudo udevadm control --reload &amp;&amp; sudo udevadm trigger</code></pre>
 
   // ---- the glow: a key pressed lights at once and fades in 1.5 s, as in galleond ----
   const FADE = 1500;
+  const BODY = [27, 31, 37], UNLIT_EDGE = [58, 63, 71], UNLIT_LEGEND = [140, 148, 158]; // a key with no light: its edge and legend are those of the plastic
   function press(cap) { cap.glow = performance.now(); }
   kbwrap.addEventListener("keydown", e => {
     if (mode !== "glow" || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.key === "Tab") return;
@@ -1000,15 +1002,20 @@ sudo udevadm control --reload &amp;&amp; sudo udevadm trigger</code></pre>
     if (playing) { hours = (hours + dt * 1.6) % 24; hourIn.value = hours; showClock(); }
     const t = now / 1000, sky = mode === "sky" ? skyRows(hours) : null;
     caps.forEach(cap => {
-      let c;
+      // The light of a key is its legend and its edge; its body stays dark, with at most a faint tint of the colour.
+      let c, lit = 1;
       if (mode === "colour") c = hex(colour);
       else if (mode === "rainbow") c = hsl2rgb(((cap.cx * 360) + (reduced ? 0 : t * 70)) % 360, 1, 0.5);
       else if (mode === "sky") c = sky[cap.row];
-      else { // glow: the keys are dark, the pressed key lights and fades
-        const base = [26, 31, 38], g = Math.max(0, 1 - (now - cap.glow) / FADE), gc = hex(glowColour);
-        c = mix(base, gc, g * g * (3 - 2 * g));
+      else { // glow: every key is unlit, the pressed key lights and fades
+        const g = Math.max(0, 1 - (now - cap.glow) / FADE);
+        c = hex(glowColour); lit = g * g * (3 - 2 * g);
       }
-      cap.rect.setAttribute("fill", css(c, level));
+      const shown = c.map(v => v * level);
+      const edge = mix(UNLIT_EDGE, shown, lit), legend = mix(UNLIT_LEGEND, shown, lit), body = mix(BODY, shown, 0.12 * lit);
+      cap.rect.style.stroke = css(edge); cap.rect.style.strokeWidth = (1 + 1.2 * lit).toFixed(2);
+      cap.rect.style.fill = css(body);
+      cap.text.style.fill = css(legend);
     });
     // the strip above the keys: the top row, 60 % of the colour (as the project does for the sky)
     let sc = mode === "sky" ? sky[0].map(v => v * 0.6) : (mode === "glow" ? [20, 24, 30] : (mode === "colour" ? hex(colour) : hsl2rgb(((t * 70) % 360), 1, 0.5)));
