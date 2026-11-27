@@ -6,7 +6,7 @@ name: Website
 on:
   push:
     branches: [main]
-    paths: ["site/**", ".github/workflows/pages.yml", "tools/website/download_stats.py", "tools/test_download_stats*", "tools/website/release_ready.py", "tools/test_release_ready.py", "CMakeLists.txt"]
+    paths: ["site/**", ".github/workflows/pages.yml", "tools/website/download_stats.py", "tools/test_download_stats*", "tools/website/release_ready.py", "tools/test_release_ready.py", "tools/website/wait_for_artifact.py", "tools/test_wait_for_artifact.py", "CMakeLists.txt"]
   workflow_dispatch:
   schedule:
     - cron: "23 3 * * *"
@@ -71,6 +71,13 @@ jobs:
         if: steps.release.outputs.ready == 'true'
         with:
           path: site
+      # deploy-pages asked for the artifact one second after its upload and found none ("Found 0 artifact(s)"): runs 79, 82 and 83, each fixed by a re-run.
+      # This waits (two minutes at most) until the API lists it, and never fails by itself; the log says at which look it was listed.
+      - name: Wait for the Pages artifact to be listed
+        if: steps.release.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/website/wait_for_artifact.py "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
       - id: deployment
         uses: actions/deploy-pages@v4
         if: steps.release.outputs.ready == 'true'
