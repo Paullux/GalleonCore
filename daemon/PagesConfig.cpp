@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "PagesConfig.h"
+#include "Profiles.h"
 
 #include "DesktopEntries.h"
 #include "KeyInjector.h"
@@ -249,8 +250,42 @@ struct Parser
             }
             return;
         }
+        if (type == QLatin1String("profile")) {
+            // Go to a profile by its name, or step through the list of profiles (`step`, like the volume): exactly one of the two.
+            rejectUnknown(object, {QStringLiteral("type"), QStringLiteral("profile"), QStringLiteral("step")}, path);
+            if (turnAction)
+                error(path, QStringLiteral("a dial turn needs a media volume or seek action"));
+            const bool named = object.contains(QStringLiteral("profile"));
+            const bool stepped = object.contains(QStringLiteral("step"));
+            if (named == stepped) {
+                error(path, QStringLiteral("a profile action needs a profile name or a step, not both and not neither"));
+                return;
+            }
+            if (named) {
+                QString name;
+                if (text(object.value(QStringLiteral("profile")), path + QStringLiteral(".profile"), MaxProfileNameLength, name)) {
+                    if (!isValidProfileName(name)) {
+                        error(path + QStringLiteral(".profile"), QStringLiteral("must be \"default\" or 1 to %1 characters among a to z, 0 to 9 and -").arg(MaxProfileNameLength));
+                    } else {
+                        out.type = ActionType::Profile;
+                        out.profile = name;
+                    }
+                }
+            } else {
+                int step = 0;
+                if (integer(object.value(QStringLiteral("step")), -MaxProfiles, MaxProfiles, path + QStringLiteral(".step"), step)) {
+                    if (step == 0) {
+                        error(path + QStringLiteral(".step"), QStringLiteral("must not be 0"));
+                    } else {
+                        out.type = ActionType::Profile;
+                        out.step = step;
+                    }
+                }
+            }
+            return;
+        }
         if (type != QLatin1String("media")) {
-            error(path + QStringLiteral(".type"), QStringLiteral("must be one of none, media, page, back, app, theme, wallpaper-mode, key, steam"));
+            error(path + QStringLiteral(".type"), QStringLiteral("must be one of none, media, page, back, app, theme, wallpaper-mode, key, steam, profile"));
             return;
         }
 

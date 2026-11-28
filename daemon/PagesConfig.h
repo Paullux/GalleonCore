@@ -33,6 +33,7 @@ enum class ActionType : std::uint8_t {
     WallpaperMode, // switch the dial to choosing the screen's wallpaper, and back
     Key,   // press a keyboard key (the numeric keypad...), held as long as the key is
     Steam, // start a Steam game by its application number
+    Profile, // go to another profile of the module (see Profiles.h): by its name, or `step` places further in the list
 };
 
 enum class MediaCommand : std::uint8_t {
@@ -54,11 +55,12 @@ struct Action
 {
     ActionType type = ActionType::None;
     MediaCommand command = MediaCommand::PlayPause;
-    int step = 0;    // Volume: -100..100, never 0
+    int step = 0;    // Volume: -100..100, never 0. Profile (when `profile` is empty): -MaxProfiles..MaxProfiles, never 0, the profile that many places on
     int seconds = 0; // Seek: -3600..3600, never 0
     QString page;    // Page: the name of a page of the file
     int appid = 0;   // Steam: the game's application number (1..2000000000)
     QString keyName; // Key: a name of the fixed list (see KeyInjector.h)
+    QString profile; // Profile: the name of the profile to go to (empty when `step` is used)
     QString desktop; // App: a desktop file ID ("firefox.desktop") or the path of a .desktop file
 
     friend bool operator==(const Action &, const Action &) = default;

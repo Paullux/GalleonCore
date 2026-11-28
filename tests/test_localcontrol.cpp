@@ -47,6 +47,52 @@ private slots:
         QTRY_COMPARE(requested.size(), 1);
         QCOMPARE(requested.constFirst().constFirst().toString(), QStringLiteral("mine"));
     }
+    void profileCommandsCarryOnlyAValidNameOrAWholeStep()
+    {
+        LocalCommand profile;
+        profile.action = LocalAction::Profile;
+        profile.profile = QStringLiteral("gaming-2");
+        const auto parsed = parseLocalCommand(encodeLocalCommand(profile));
+        QVERIFY(parsed.has_value());
+        QCOMPARE(parsed.value_or(LocalCommand{}).action, LocalAction::Profile);
+        QCOMPARE(parsed.value_or(LocalCommand{}).profile, QStringLiteral("gaming-2"));
+        QVERIFY(parseLocalCommand(R"({"action":"profile","name":"default"})").has_value());
+        // A name that could be another file, or is not a name at all: refused before anything is done with it.
+        for (const QByteArray &frame : {QByteArray(R"({"action":"profile"})"), QByteArray(R"({"action":"profile","name":1})"),
+                 QByteArray(R"({"action":"profile","name":"../pages"})"), QByteArray(R"({"action":"profile","name":"Upper"})"),
+                 QByteArray(R"({"action":"profile","name":""})"), QByteArray(R"({"action":"profile","name":"a/b"})"),
+                 QByteArray(R"({"action":"profile","name":"a.b"})"), QByteArray(R"({"action":"profile","name":"-x"})"),
+                 QByteArray(R"({"action":"profile","name":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"})"),
+                 QByteArray(R"({"action":"profile","name":"a","extra":"b"})")})
+            QVERIFY2(!parseLocalCommand(frame).has_value(), frame.constData());
+
+        LocalCommand step;
+        step.action = LocalAction::ProfileStep;
+        step.steps = -3;
+        const auto stepped = parseLocalCommand(encodeLocalCommand(step));
+        QVERIFY(stepped.has_value());
+        QCOMPARE(stepped.value_or(LocalCommand{}).action, LocalAction::ProfileStep);
+        QCOMPARE(stepped.value_or(LocalCommand{}).steps, -3);
+        QVERIFY(parseLocalCommand(R"({"action":"profile-step","steps":16})").has_value());
+        QVERIFY(parseLocalCommand(R"({"action":"profile-step","steps":-16})").has_value());
+        for (const QByteArray &frame : {QByteArray(R"({"action":"profile-step"})"), QByteArray(R"({"action":"profile-step","steps":0})"),
+                 QByteArray(R"({"action":"profile-step","steps":17})"), QByteArray(R"({"action":"profile-step","steps":-17})"),
+                 QByteArray(R"({"action":"profile-step","steps":1.5})"), QByteArray(R"({"action":"profile-step","steps":"1"})"),
+                 QByteArray(R"({"action":"profile-step","steps":1,"x":2})")})
+            QVERIFY2(!parseLocalCommand(frame).has_value(), frame.constData());
+
+        const QString name = QStringLiteral("galleon-profile-") + QUuid::createUuid().toString(QUuid::Id128);
+        LocalControl server;
+        QVERIFY(server.listen(name));
+        const QSignalSpy named(&server, &LocalControl::profileRequested);
+        const QSignalSpy steps(&server, &LocalControl::profileStepRequested);
+        sendLocalCommand(name, profile, &server);
+        QTRY_COMPARE(named.size(), 1);
+        QCOMPARE(named.constFirst().constFirst().toString(), QStringLiteral("gaming-2"));
+        sendLocalCommand(name, step, &server);
+        QTRY_COMPARE(steps.size(), 1);
+        QCOMPARE(steps.constFirst().constFirst().toInt(), -3);
+    }
     void keyboardBrightnessCommandCarriesOnlyAWholeNumberFromZeroToAThousand()
     {
         const auto command = parseLocalCommand(encodeLocalCommand({LocalAction::KeyboardBrightness, {}, {}, 600}));

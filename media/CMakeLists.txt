@@ -27,7 +27,8 @@ if(WIN32)
     target_link_libraries(galleon_keys PRIVATE user32)
 endif()
 
-add_library(galleon_platform STATIC ${PROJECT_SOURCE_DIR}/daemon/LocalControl.h ${PROJECT_SOURCE_DIR}/daemon/LocalControl.cpp)
+add_library(galleon_platform STATIC ${PROJECT_SOURCE_DIR}/daemon/LocalControl.h ${PROJECT_SOURCE_DIR}/daemon/LocalControl.cpp
+    ${PROJECT_SOURCE_DIR}/daemon/ProfileNames.h ${PROJECT_SOURCE_DIR}/daemon/ProfileNames.cpp)
 target_include_directories(galleon_platform PUBLIC ${PROJECT_SOURCE_DIR}/daemon)
 target_link_libraries(galleon_platform PUBLIC Qt6::Core Qt6::Network PRIVATE galleon_warnings)
 set_target_properties(galleon_platform PROPERTIES POSITION_INDEPENDENT_CODE ON)

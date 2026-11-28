@@ -204,6 +204,32 @@ private Q_SLOTS:
         QCOMPARE(f.transport->openAttempts, attempts + 1);
     }
 
+    void theProfilesAreOnlyWhatTheirHandlersSay()
+    {
+        Fixture f;
+        // No handlers (a controller without pages): nothing can be done, and the only profile is the base one.
+        QVERIFY(!f.controller->SetProfile(QStringLiteral("gaming")));
+        QVERIFY(!f.controller->StepProfile(1));
+        QCOMPARE(f.controller->Profiles(), QStringList{"default"});
+        QCOMPARE(f.controller->ActiveProfile(), QStringLiteral("default"));
+
+        QString asked;
+        int stepped = 0;
+        QString active = QStringLiteral("gaming");
+        f.controller->setProfileHandlers({[&asked](const QString &name) { asked = name; return name == QLatin1String("gaming"); },
+                                          [&stepped](int steps) { stepped = steps; return steps > 0; },
+                                          [] { return QStringList{"default", "gaming"}; },
+                                          [&active] { return active; }});
+        QVERIFY(f.controller->SetProfile(QStringLiteral("gaming")));
+        QCOMPARE(asked, QStringLiteral("gaming"));
+        QVERIFY(!f.controller->SetProfile(QStringLiteral("other"))); // the answer of the handler is the answer
+        QVERIFY(f.controller->StepProfile(2));
+        QCOMPARE(stepped, 2);
+        QVERIFY(!f.controller->StepProfile(-1));
+        QCOMPARE(f.controller->Profiles(), (QStringList{"default", "gaming"}));
+        QCOMPARE(f.controller->ActiveProfile(), QStringLiteral("gaming"));
+    }
+
     void aPersonalWallpaperImportedAfterStartupCanBeApplied()
     {
         const Fixture f;

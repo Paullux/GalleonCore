@@ -99,6 +99,15 @@ public:
         m_startNight = std::move(start);
         m_endNight = std::move(end);
     }
+    // The profiles of the module (Profiles.h), for D-Bus and the local endpoint: set one by its name, step through the list, the list and the active one.
+    struct ProfileHandlers
+    {
+        std::function<bool(const QString &)> set;
+        std::function<bool(int)> step;
+        std::function<QStringList()> list;
+        std::function<QString()> active;
+    };
+    void setProfileHandlers(ProfileHandlers handlers) { m_profiles = std::move(handlers); }
     void setScreensaverTestHandler(std::function<bool(const QString &)> handler) { m_testScreensaver = std::move(handler); }
     void setThemePreviewHandlers(std::function<bool(const QString &)> begin, std::function<void()> end)
     {
@@ -119,6 +128,12 @@ public Q_SLOTS:
     // Shows the theme whose page is named so on the module (and, if the pages file has just
     // been changed, as soon as it is read). False when there is none.
     bool ShowTheme(const QString &page);
+    // Goes to the profile of this name (a valid one that has a file: see PagesController::setProfile); `StepProfile` goes that many places on in
+    // the list, round (negative: back). False when it cannot be done. `Profiles` is the list, "default" first; `ActiveProfile` the one shown.
+    bool SetProfile(const QString &name);
+    bool StepProfile(int steps);
+    [[nodiscard]] QStringList Profiles() const;
+    [[nodiscard]] QString ActiveProfile() const;
     // Bosun has this theme's tab open: shows it on the module, remembering what the module showed. False while a game
     // runs. `EndThemePreview`: the tab is closed or another kind of tab is open, the module shows what it showed.
     bool PreviewTheme(const QString &page);
@@ -150,6 +165,7 @@ Q_SIGNALS:
 private:
     std::function<bool()> m_showGaming;
     std::function<bool(const QString &)> m_showTheme;
+    ProfileHandlers m_profiles;
     std::function<bool(const QString &)> m_previewTheme;
     std::function<bool(const QString &)> m_testScreensaver;
     std::function<bool(int, int)> m_startNight;

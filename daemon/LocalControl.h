@@ -13,7 +13,7 @@
 
 namespace galleond {
 
-enum class LocalAction : unsigned char { Ping, Wallpaper, Stop, Gaming, Theme, KeyboardBrightness, KeyboardBrightnessRead, LightingEnable, LightingColor, LightingLed, LightingLeds, KeySignal, KeySignalClear, KeySignalClearAll, NightStart, NightEnd, ScreensaverTest };
+enum class LocalAction : unsigned char { Ping, Wallpaper, Stop, Gaming, Theme, KeyboardBrightness, KeyboardBrightnessRead, LightingEnable, LightingColor, LightingLed, LightingLeds, KeySignal, KeySignalClear, KeySignalClearAll, NightStart, NightEnd, ScreensaverTest, Profile, ProfileStep};
 struct LocalCommand
 {
     LocalAction action = LocalAction::Ping;
@@ -39,6 +39,10 @@ struct LocalCommand
     int minute = 0;
     // ScreensaverTest (the "Test" button of a screensaver video): the video as the pages file lists it. The daemon plays only a video of its own list, never a file it is given.
     QString video{}; // NOLINT(readability-redundant-member-init)
+    // Profile: the name of the profile to go to (the shape is checked here, the file by the controller). ProfileStep: how many places on in the list of profiles
+    // (-16 to 16, not 0), going round. The profile is the person's choice: nothing here reads the active window or a key press.
+    QString profile{}; // NOLINT(readability-redundant-member-init)
+    int steps = 0;
 };
 
 // One bounded JSON object per connection; the server accepts only this user.
@@ -58,6 +62,8 @@ Q_SIGNALS:
     void stopRequested();
     void gamingRequested();
     void themeRequested(const QString &page);
+    void profileRequested(const QString &name);
+    void profileStepRequested(int steps);
     void keyboardBrightnessRequested(int value);
     void keyboardBrightnessReadRequested();
     void lightingEnableRequested(bool on);

@@ -68,7 +68,21 @@ public:
     // disk is read again. A file with errors is refused as a whole, its errors
     // are logged, and the configuration in use stays. A missing file is not an
     // error: the default pages are used until it appears.
-    void loadFile(const QString &path);
+    // False when the file could not be read or was refused (what is in use stays); true otherwise, a missing file included.
+    bool loadFile(const QString &path);
+
+    // ---- profiles (Profiles.h): each one is a complete pages file, one is active ----
+    // Turns the profiles on: they are the files of `configFolder` (pages.json is "default", the others are in its `profiles` folder), and the
+    // one that was active at the last run is loaded. Without this, the controller keeps to the one file given to loadFile().
+    void useProfiles(const QString &configFolder);
+    [[nodiscard]] QString activeProfile() const { return m_activeProfile; }
+    [[nodiscard]] QStringList profiles() const;
+    // Goes to the profile `name`: its file is read and applied (even if its content is the same as the one in use), the keys go back to its
+    // home page, and the choice is remembered. False, and nothing changes, when the profiles are off, the name is not valid, its file does
+    // not exist or it has errors.
+    bool setProfile(const QString &name);
+    // The profile `steps` places on in the list of profiles, going round (negative: back).
+    bool stepProfile(int steps);
 
     // How an application is started; the tests replace it. The default asks the
     // desktop's launcher (gio launch) to start the .desktop file.
@@ -137,6 +151,8 @@ public:
     [[nodiscard]] RingSettings ringSettings() const { return m_rings; }
 
 Q_SIGNALS:
+    // The active profile changed (its name).
+    void profileChanged(const QString &name);
     // The validation countdown of the wallpaper choice: seconds left (N .. 1), then 0 when it
     // is over or the mode is left. The screen shows it.
     void wallpaperCountdown(int secondsLeft);
@@ -166,7 +182,7 @@ private:
     // The application behind a reference of the pages file (looked up once).
     [[nodiscard]] DesktopApp appFor(const QString &desktop);
     void drawKey(int key, bool force);
-    void reload();
+    bool reload();
     void watch(const QString &path);
 
     RecordingController *m_recording = nullptr;
@@ -264,6 +280,8 @@ private:
     QElapsedTimer m_lastLaunch;
 
     QString m_file;
+    QString m_profileFolder;                 // empty: the profiles are off
+    QString m_activeProfile = QStringLiteral("default");
     QFileSystemWatcher m_watcher;
     QTimer m_reloadTimer;
     QString m_pendingThemePage;

@@ -138,6 +138,7 @@ function(galleond_add_test name)
     )
 endfunction()
 
+galleond_add_test(test_profiles)
 galleond_add_test(test_initialpages)
 # The idle notification of Wayland, against a small compositor of our own (libwayland-server): only when galleond is built with it.
 if(GALLEON_WAYLAND_IDLE)

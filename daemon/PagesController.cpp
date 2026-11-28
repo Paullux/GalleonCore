@@ -6,6 +6,7 @@
 #include "PagesController.h"
 
 #include "PageOrder.h"
+#include "Profiles.h"
 
 #include <algorithm>
 #include <iterator>
@@ -373,10 +374,65 @@ void PagesController::setConfig(const PagesConfig &config)
         Q_EMIT screensaverConfigChanged();
 }
 
-void PagesController::loadFile(const QString &path)
+bool PagesController::loadFile(const QString &path)
 {
     m_file = path;
-    reload();
+    return reload();
+}
+
+void PagesController::useProfiles(const QString &configFolder)
+{
+    m_profileFolder = configFolder;
+    m_activeProfile = activeProfileAtStart(configFolder);
+    loadFile(profilePath(configFolder, m_activeProfile));
+}
+
+QStringList PagesController::profiles() const
+{
+    return m_profileFolder.isEmpty() ? QStringList{defaultProfileName()} : listProfiles(m_profileFolder);
+}
+
+bool PagesController::setProfile(const QString &name)
+{
+    if (m_profileFolder.isEmpty())
+        return false;
+    const QString path = profilePath(m_profileFolder, name); // empty for a name that is not valid: no path is built from it
+    if (path.isEmpty() || (name != defaultProfileName() && !QFileInfo::exists(path)))
+        return false;
+    if (name == m_activeProfile)
+        return true;
+    // The files of the old profile are no longer watched; the new one is, by loadFile. A new profile is applied whatever its content is.
+    const QString before = m_file;
+    const std::optional<PagesConfig> shown = m_sourceConfig;
+    const bool appsBefore = m_appsAllowed;
+    const QStringList watched = m_watcher.files();
+    if (!watched.isEmpty())
+        m_watcher.removePaths(watched);
+    m_sourceConfig.reset();
+    if (!loadFile(path)) {
+        // A file with errors: what was in use stays, and so does its profile.
+        m_sourceConfig = shown;
+        m_appsAllowed = appsBefore;
+        m_file = before;
+        watch(before);
+        return false;
+    }
+    if (!QFileInfo::exists(path)) {
+        // The base file does not exist (yet): the profile "default" is then the built-in pages, as at the first start.
+        if (const auto fallback = parsePagesConfig(initialPagesJson()); fallback.config)
+            setConfig(*fallback.config);
+    }
+    m_activeProfile = name;
+    if (!writeActiveProfile(m_profileFolder, name))
+        qWarning() << "galleond: the active profile could not be remembered";
+    qInfo() << "galleond: profile" << name;
+    Q_EMIT profileChanged(name);
+    return true;
+}
+
+bool PagesController::stepProfile(int steps)
+{
+    return setProfile(steppedProfile(profiles(), m_activeProfile, steps));
 }
 
 void PagesController::watch(const QString &path)
@@ -391,21 +447,21 @@ void PagesController::watch(const QString &path)
         m_watcher.addPath(info.absolutePath());
 }
 
-void PagesController::reload()
+bool PagesController::reload()
 {
     if (m_file.isEmpty())
-        return;
+        return true;
     watch(m_file);
 
     QFile file(m_file);
     if (!file.exists()) {
         qInfo() << "galleond: no pages file at" << m_file << "- the built-in pages are used";
-        return;
+        return true;
     }
     // Read one byte more than the limit: parsePagesConfig refuses a longer file.
     if (!file.open(QIODevice::ReadOnly)) {
         qWarning() << "galleond: cannot read the pages file" << m_file << file.errorString();
-        return;
+        return false;
     }
     // Applications are started from this file, so it must be the user's own and
     // not writable by anyone else (as for a shell startup file).
@@ -419,10 +475,10 @@ void PagesController::reload()
         qWarning() << "galleond: the pages file" << m_file << "has errors and is not used:";
         for (const QString &line : result.errors)
             qWarning().noquote() << "   " << line;
-        return;
+        return false;
     }
     if (m_sourceConfig && *result.config == *m_sourceConfig)
-        return;
+        return true;
     qInfo() << "galleond: pages loaded from" << m_file;
     setConfig(*result.config);
     if (!m_pendingThemePage.isEmpty()) {
@@ -432,6 +488,7 @@ void PagesController::reload()
         else
             m_pendingThemePage.clear();
     }
+    return true;
 }
 
 const Page *PagesController::effectivePage() const
@@ -615,6 +672,18 @@ void PagesController::perform(const Action &action, int times)
             redraw();
         }
         return;
+    case ActionType::Profile: {
+        // After this key press is handled: the profile replaces the configuration that the handler of the press is still reading.
+        const QString name = action.profile;
+        const int steps = action.step;
+        QTimer::singleShot(0, this, [this, name, steps] {
+            if (name.isEmpty())
+                stepProfile(steps);
+            else
+                setProfile(name);
+        });
+        return;
+    }
     case ActionType::App:
         launchApp(action.desktop);
         return;

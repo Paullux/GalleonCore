@@ -36,6 +36,7 @@
 #include "LightingRestore.h"
 #include "NightController.h"
 #include "NightMode.h"
+#include "Profiles.h"
 #include "LightingState.h"
 #include "LightingStatePublisher.h"
 #include "ProcessWatchdog.h"
@@ -914,7 +915,11 @@ int main(int argc, char *argv[])
                             + QStringLiteral("/galleoncore/usage.json"));
         galleond::connectPagesToScreen(*pages, controller);
         ringSettings = std::make_unique<galleond::RingSettingsApplier>(*pages, galleond::ringSettingsPath());
-        pages->loadFile(pagesFile);
+        // Without --pages, the profiles are the files of the configuration folder (pages.json is "default"); with it, the one file that was asked for.
+        if (parser.value(pagesOption).isEmpty())
+            pages->useProfiles(QFileInfo(pagesFile).absolutePath());
+        else
+            pages->loadFile(pagesFile);
         // A module plugged in again shows its old icons: send everything.
         QObject::connect(&controller, &galleond::ScreenController::deckAvailableChanged, pages.get(),
                          [&pages] {
@@ -1001,6 +1006,19 @@ int main(int argc, char *argv[])
         if (screensaver) screensaver->notifyActivity();
         return pages && pages->showThemePage(page);
     });
+
+    // The profile is the person's choice (D-Bus, the local endpoint of Windows, a key of the pages file, Bosun): nothing reads the active window.
+    controller.setProfileHandlers({
+        [&pages, &screensaver](const QString &name) {
+            if (screensaver) screensaver->notifyActivity();
+            return pages && pages->setProfile(name);
+        },
+        [&pages, &screensaver](int steps) {
+            if (screensaver) screensaver->notifyActivity();
+            return pages && pages->stepProfile(steps);
+        },
+        [&pages] { return pages ? pages->profiles() : QStringList{galleond::defaultProfileName()}; },
+        [&pages] { return pages ? pages->activeProfile() : galleond::defaultProfileName(); }});
 
     controller.setNightHandlers([&nightMode](int hour, int minute) { return nightMode.start(hour, minute); }, [&nightMode] { nightMode.end(); });
     controller.setScreensaverTestHandler([&screensaver](const QString &video) { return screensaver && screensaver->test(video); });
@@ -1134,6 +1152,8 @@ int main(int argc, char *argv[])
     QObject::connect(&localControl, &galleond::LocalControl::screensaverTestRequested, &controller, [&controller](const QString &video) { static_cast<void>(controller.TestScreensaver(video)); });
     QObject::connect(&localControl, &galleond::LocalControl::gamingRequested, &controller, [&controller] { controller.ShowGaming(); });
     QObject::connect(&localControl, &galleond::LocalControl::themeRequested, &controller, [&controller](const QString &page) { controller.ShowTheme(page); });
+    QObject::connect(&localControl, &galleond::LocalControl::profileRequested, &controller, [&controller](const QString &name) { static_cast<void>(controller.SetProfile(name)); });
+    QObject::connect(&localControl, &galleond::LocalControl::profileStepRequested, &controller, [&controller](int steps) { static_cast<void>(controller.StepProfile(steps)); });
     QObject::connect(&localControl, &galleond::LocalControl::wallpaperRequested,
                      &controller, &galleond::ScreenController::SetWallpaper);
     QObject::connect(&localControl, &galleond::LocalControl::stopRequested,
