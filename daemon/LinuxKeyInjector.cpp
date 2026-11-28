@@ -40,7 +40,23 @@ constexpr std::array<KeyMapping, AllowedKeyCount> Mapping{{
     {KeyCode::F13, KEY_F13}, {KeyCode::F14, KEY_F14}, {KeyCode::F15, KEY_F15}, {KeyCode::F16, KEY_F16},
     {KeyCode::F17, KEY_F17}, {KeyCode::F18, KEY_F18}, {KeyCode::F19, KEY_F19}, {KeyCode::F20, KEY_F20},
     {KeyCode::F21, KEY_F21}, {KeyCode::F22, KEY_F22}, {KeyCode::F23, KEY_F23}, {KeyCode::F24, KEY_F24},
+    {KeyCode::F1, KEY_F1}, {KeyCode::F2, KEY_F2}, {KeyCode::F3, KEY_F3}, {KeyCode::F4, KEY_F4},
+    {KeyCode::F5, KEY_F5}, {KeyCode::F6, KEY_F6}, {KeyCode::F7, KEY_F7}, {KeyCode::F8, KEY_F8},
+    {KeyCode::F9, KEY_F9}, {KeyCode::F10, KEY_F10}, {KeyCode::F11, KEY_F11}, {KeyCode::F12, KEY_F12},
+    {KeyCode::Up, KEY_UP}, {KeyCode::Down, KEY_DOWN}, {KeyCode::Left, KEY_LEFT}, {KeyCode::Right, KEY_RIGHT},
 }};
+
+// Every key of the whitelist has its entry, in the order of the list: a key added to KeyCode without a native code here fails to build, and
+// the virtual keyboard is only ever given the codes of this table.
+constexpr bool mappingCoversTheWholeList()
+{
+    for (std::size_t i = 0; i < Mapping.size(); ++i) {
+        if (static_cast<std::size_t>(Mapping.at(i).key) != i + 1)
+            return false;
+    }
+    return true;
+}
+static_assert(mappingCoversTheWholeList());
 
 } // namespace
 
