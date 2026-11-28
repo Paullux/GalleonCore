@@ -33,6 +33,7 @@ class Classify(unittest.TestCase):
         self.assertEqual(self.kind("daemon/PagesController.cpp"), "targeted")
         self.assertEqual(self.kind("bosun/qml/Bosun.qml", "tests/test_bosun.cpp"), "targeted")
         self.assertEqual(self.kind("widgets/NowPlaying.qml"), "targeted")
+        self.assertEqual(self.kind("plasmoid/org.galleoncore.clock/contents/ui/main.qml"), "targeted")  # test_plasmoid reads it
 
     def test_documents_do_not_widen_a_targeted_run(self) -> None:
         self.assertEqual(self.kind("daemon/PageOrder.cpp", "ROADMAP.md"), "targeted")
@@ -262,6 +263,12 @@ class Trees(unittest.TestCase):
         (root / "tests" / "test_screen.cpp").write_text("GALLEON_SOURCE_WIDGETS")
         (root / "tests" / "test_plain.cpp").write_text("int main();")
         (root / "widgets" / "Clock.qml").write_text("one")
+        (root / "plasmoid" / "p" / "contents").mkdir(parents=True)
+        (root / "plasmoid" / "p" / "contents" / "main.qml").write_text("one")
+        (root / "tests" / "qml_stubs").mkdir()
+        (root / "tests" / "qml_stubs" / "Stub.qml").write_text("one")
+        (root / "tests" / "test_plasmoid.cpp").write_text("GALLEON_SOURCE_PLASMOID")
+        (build / "gcc" / "tests" / "test_plasmoid").write_bytes(b"plasmoid program")
         (build / "gcc" / "tests" / "test_screen").write_bytes(b"screen program")
         (build / "gcc" / "tests" / "test_plain").write_bytes(b"plain program")
         (build / "gcc" / "libgalleon.so").write_bytes(b"library")
@@ -293,6 +300,16 @@ class Trees(unittest.TestCase):
         (self.root / "widgets" / "Clock.qml").write_text("two")
         self.assertNotEqual(screen, checks.program_key("gcc", "test_screen"))  # reads the widgets
         self.assertEqual(plain, checks.program_key("gcc", "test_plain"))        # does not
+
+    def test_the_key_of_the_plasmoid_test_follows_the_plasmoid_and_its_stand_in_for_plasma(self) -> None:
+        checks = self.make()
+        before, plain = checks.program_key("gcc", "test_plasmoid"), checks.program_key("gcc", "test_plain")
+        (self.root / "plasmoid" / "p" / "contents" / "main.qml").write_text("two")
+        changed = checks.program_key("gcc", "test_plasmoid")
+        self.assertNotEqual(before, changed)
+        (self.root / "tests" / "qml_stubs" / "Stub.qml").write_text("two")
+        self.assertNotEqual(changed, checks.program_key("gcc", "test_plasmoid"))
+        self.assertEqual(plain, checks.program_key("gcc", "test_plain"))
 
     def test_a_test_without_a_program_does_not_share_the_key_of_one_that_has_it(self) -> None:
         checks = self.make()

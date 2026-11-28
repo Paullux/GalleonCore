@@ -290,6 +290,14 @@ target_link_libraries(test_tileprovider PRIVATE bosun_core)
 galleon_add_test(test_languages)
 target_link_libraries(test_languages PRIVATE bosun_core)
 
+# The KDE plasmoid with a stand-in for Plasma's PlasmoidItem (tests/qml_stubs): Plasma itself is not needed.
+galleon_add_test(test_plasmoid)
+target_link_libraries(test_plasmoid PRIVATE Qt6::Quick)
+target_compile_definitions(test_plasmoid PRIVATE
+    GALLEON_SOURCE_PLASMOID="${CMAKE_SOURCE_DIR}/plasmoid"
+    GALLEON_SOURCE_WIDGETS="${CMAKE_SOURCE_DIR}/widgets"
+    GALLEON_TEST_QML_STUBS="${CMAKE_CURRENT_SOURCE_DIR}/qml_stubs")
+
 galleon_add_test(test_bosun)
 target_link_libraries(test_bosun PRIVATE bosun_core)
 galleon_add_test(test_videoadvice)

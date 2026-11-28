@@ -71,9 +71,9 @@ FULL_PATTERNS = (
     ("public/*", "assets read by several parts"),
 )
 CODE_PATTERNS = ("daemon/*", "bosun/*", "tests/*")
-QML_PATTERNS = ("widgets/*.qml",)
+QML_PATTERNS = ("widgets/*.qml", "plasmoid/*")
 DOC_PATTERNS = ("*.md", "docs/*", "site/*", "LICENSES/*", ".gitignore", "tools/systemd/*", "tools/udev/*",
-                "tools/windows/*", "tools/linux/*", "plasmoid/*", "openrgb-plugin/*")
+                "tools/windows/*", "tools/linux/*", "openrgb-plugin/*")
 
 
 @dataclasses.dataclass
@@ -313,6 +313,9 @@ class Checks:
         parts += [path.read_bytes() for path in sorted(directory.rglob("*.so*")) if path.is_file()]
         if name in tests_using("GALLEON_SOURCE_WIDGETS", self.root / "tests"):
             parts += [path.read_bytes() for path in sorted((self.root / "widgets").rglob("*")) if path.is_file()]
+        if name in tests_using("GALLEON_SOURCE_PLASMOID", self.root / "tests"):
+            for folder in (self.root / "plasmoid", self.root / "tests" / "qml_stubs"):
+                parts += [path.read_bytes() for path in sorted(folder.rglob("*")) if path.is_file()]
         return inputs_key(parts)
 
     def passes_file(self, tree: str) -> Path:
