@@ -301,7 +301,7 @@ A dial press with `{ "type": "wallpaper-mode" }` switches that dial from the pla
 
 ### Keypad theme, automatic themes and tinted keys
 
-A `{ "type": "key", "key": "kp7" }` action presses a keyboard key through a virtual keypad (`/dev/uinput`), held as long as the key is held. Only a fixed list of names is accepted (`kp0` to `kp9`, `kpdot`, `kpenter`, `kpplus`, `kpminus`, `kpasterisk`, `kpslash`, `numlock`, `backspace`, `f13` to `f24`), and the virtual device is given no other key. Num Lock must be on for the keypad digits to type digits. The virtual device needs write access to `/dev/uinput` (`tools/udev/71-galleon-uinput.rules`).
+A `{ "type": "key", "key": "kp7" }` action presses a keyboard key through a virtual keypad (`/dev/uinput`), held as long as the key is held. Only a fixed list of names is accepted (`kp0` to `kp9`, `kpdot`, `kpenter`, `kpplus`, `kpminus`, `kpasterisk`, `kpslash`, `numlock`, `backspace`, `f1` to `f24`, `up`, `down`, `left`, `right`), and the virtual device is given no other key: no letter, digit of the main row, Enter, Space, Tab, Escape, Delete or modifier is in the list, so a pages file or a theme cannot make galleond type text. Num Lock must be on for the keypad digits to type digits. The virtual device needs write access to `/dev/uinput` (`tools/udev/71-galleon-uinput.rules`).
 
 A theme can have a wallpaper of its own, `"wallpaper": "style/picture.jpg"` (a name of the wallpaper list): the screen shows it while the theme is shown, without changing your saved choice; a theme without one shows your own wallpaper. In Bosun, "Wallpaper of this tab" sets it.
 

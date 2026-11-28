@@ -20,17 +20,22 @@ enum class KeyCode : std::uint8_t {
     // F13 is XF86Tools (System Settings on KDE), F20 the microphone mute and F21 to F23 the touchpad keys:
     // a shortcut is best given F14 to F18 (XF86Launch5 to 9).
     F13, F14, F15, F16, F17, F18, F19, F20, F21, F22, F23, F24,
+    // F1 to F12 and the four arrows: keys that type no character (decision of the owner, 28 November 2026). Appended after the others:
+    // the internal numbers of the older keys do not change.
+    F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
+    Up, Down, Left, Right,
 };
-inline constexpr int AllowedKeyCount = 30;
+inline constexpr int AllowedKeyCount = 46;
 [[nodiscard]] bool isAllowedKeyCode(int code);
 
 // The keys a pages file may press, by name. A fixed list: the numeric keypad,
-// Num Lock, Backspace and F13 to F24. A name outside it is refused when the file is read,
+// Num Lock, Backspace, F1 to F24 and the four arrows. No letter, no digit of the main row, no Enter,
+// Space, Tab, Escape, Delete or modifier: nothing in the list types a character or confirms a dialog by itself. A name outside it is refused when the file is read,
 // and the virtual keyboard is only ever given these codes, so the pages file
 // cannot make galleond type anything else.
 //
 // Names: kp0..kp9, kpdot, kpenter, kpplus, kpminus, kpasterisk, kpslash,
-// numlock, backspace, f13..f24.
+// numlock, backspace, f1..f24, up, down, left, right.
 [[nodiscard]] std::optional<int> keyCodeForName(const QString &name);
 [[nodiscard]] QString allowedKeyNames();
 

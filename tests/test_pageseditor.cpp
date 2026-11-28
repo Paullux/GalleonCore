@@ -483,7 +483,7 @@ private Q_SLOTS:
         bad.page = "no-such-page";
         QVERIFY(!PagesEditor::setKey(env.pages(), "music", 0, bad).ok);
         bad = spec("key");
-        bad.keyName = "f12";
+        bad.keyName = "enter"; // not in the list (f12 is, since 28 November 2026)
         QVERIFY(!PagesEditor::setKey(env.pages(), "music", 0, bad).ok);
         KeySpec longLabel = spec("back");
         longLabel.label = QString(MaxLabelLength + 1, 'x');

@@ -45,6 +45,23 @@ bool sendWindowsKey(KeyCode key, bool down)
     case KeyCode::F22: virtualKey = VK_F22; break;
     case KeyCode::F23: virtualKey = VK_F23; break;
     case KeyCode::F24: virtualKey = VK_F24; break;
+    case KeyCode::F1: virtualKey = VK_F1; break;
+    case KeyCode::F2: virtualKey = VK_F2; break;
+    case KeyCode::F3: virtualKey = VK_F3; break;
+    case KeyCode::F4: virtualKey = VK_F4; break;
+    case KeyCode::F5: virtualKey = VK_F5; break;
+    case KeyCode::F6: virtualKey = VK_F6; break;
+    case KeyCode::F7: virtualKey = VK_F7; break;
+    case KeyCode::F8: virtualKey = VK_F8; break;
+    case KeyCode::F9: virtualKey = VK_F9; break;
+    case KeyCode::F10: virtualKey = VK_F10; break;
+    case KeyCode::F11: virtualKey = VK_F11; break;
+    case KeyCode::F12: virtualKey = VK_F12; break;
+    // The arrows have extended scan codes (0xE0xx): the existing test below sets the extended flag for them.
+    case KeyCode::Up: virtualKey = VK_UP; break;
+    case KeyCode::Down: virtualKey = VK_DOWN; break;
+    case KeyCode::Left: virtualKey = VK_LEFT; break;
+    case KeyCode::Right: virtualKey = VK_RIGHT; break;
     }
     const UINT scan = MapVirtualKeyW(virtualKey, MAPVK_VK_TO_VSC_EX);
     if (virtualKey == 0 || scan == 0)
