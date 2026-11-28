@@ -541,7 +541,7 @@ private Q_SLOTS:
         Page sub;
         KeyConfig back; back.key = 0; back.action.type = ActionType::Back;
         sub.keys[0] = back;
-        Page other;
+        const Page other;
         config.pages.insert(QStringLiteral("main"), main);
         config.pages.insert(QStringLiteral("sub"), sub);
         config.pages.insert(QStringLiteral("other"), other);
