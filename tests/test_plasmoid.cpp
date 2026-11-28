@@ -71,6 +71,42 @@ private Q_SLOTS:
         QCOMPARE(p.view->property("implicitWidth").toInt() * 384, p.view->property("implicitHeight").toInt() * 720); // the ratio of the screen
     }
 
+    void theWidgetKeepsTheRatioOfTheScreenWhateverTheShapeOfTheArea_data()
+    {
+        QTest::addColumn<double>("width");
+        QTest::addColumn<double>("height");
+        QTest::addColumn<double>("expectedWidth");
+        QTest::addColumn<double>("expectedHeight");
+        QTest::newRow("square") << 400.0 << 400.0 << 400.0 << 400.0 * 384 / 720;
+        QTest::newRow("wide and low") << 1000.0 << 192.0 << 360.0 << 192.0;
+        QTest::newRow("tall and narrow") << 144.0 << 900.0 << 144.0 << 144.0 * 384 / 720;
+        QTest::newRow("the screen itself") << 720.0 << 384.0 << 720.0 << 384.0;
+    }
+
+    void theWidgetKeepsTheRatioOfTheScreenWhateverTheShapeOfTheArea()
+    {
+        QFETCH(const double, width);
+        QFETCH(const double, height);
+        QFETCH(const double, expectedWidth);
+        QFETCH(const double, expectedHeight);
+        const Plasmoid p({QStringLiteral(GALLEON_SOURCE_WIDGETS)});
+        auto *area = qobject_cast<QQuickItem *>(p.view.get());
+        area->setWidth(width);
+        area->setHeight(height);
+        auto *screen = area->findChild<QQuickItem *>(QStringLiteral("screen"));
+        QVERIFY(screen);
+        QTRY_COMPARE_WITH_TIMEOUT(screen->width(), expectedWidth, 1000);
+        QCOMPARE(screen->height(), expectedHeight);
+        // The widget is drawn for 720 x 384 pixels and scaled as a whole, not stretched.
+        QCOMPARE(p.loader->width(), 720.0);
+        QCOMPARE(p.loader->height(), 384.0);
+        QCOMPARE(p.loader->scale(), expectedWidth / 720.0);
+        // It sits in the middle of the area.
+        // (Qt's anchors round to the pixel: within one pixel is in the middle.)
+        QVERIFY(qAbs(screen->x() - (width - expectedWidth) / 2) <= 1.0);
+        QVERIFY(qAbs(screen->y() - (height - expectedHeight) / 2) <= 1.0);
+    }
+
     void aFolderWithoutTheWidgetIsPassedOverForTheNextOne()
     {
         // The first folder is missing and the widget is in the next one: it is loaded, and the message is not shown.
@@ -100,8 +136,9 @@ private Q_SLOTS:
         QVERIFY(notFound);
         QCOMPARE(notFound->isVisible(), !found);
         if (!found) {
+            const QStringList lines = notFound->property("text").toString().split(QLatin1Char('\n'));
             for (const QString &folder : std::as_const(folders))
-                QVERIFY2(notFound->property("text").toString().contains(folder), qPrintable(folder));
+                QVERIFY2(lines.contains(folder), qPrintable(folder)); // each folder on its own line: a path is never cut
         }
     }
 

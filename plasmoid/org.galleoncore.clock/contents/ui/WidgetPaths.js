@@ -21,3 +21,15 @@ function candidates(extra) {
 function widgetUrl(folder, name) {
     return "file://" + folder + "/" + name;
 }
+
+// The screen of the module is 720 x 384 (15:8). The widget is drawn for those pixels, so it is shown at that size and scaled, never
+// stretched: `fit` gives the largest 15:8 rectangle that fits in an area of `width` x `height`, and the scale to give the widget.
+const ScreenWidth = 720;
+const ScreenHeight = 384;
+
+function fit(width, height) {
+    if (width <= 0 || height <= 0)
+        return {width: 0, height: 0, scale: 0};
+    const scale = Math.min(width / ScreenWidth, height / ScreenHeight);
+    return {width: ScreenWidth * scale, height: ScreenHeight * scale, scale: scale};
+}

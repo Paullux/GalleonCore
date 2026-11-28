@@ -32,14 +32,31 @@ PlasmoidItem {
     preferredRepresentation: fullRepresentation
 
     fullRepresentation: Item {
+        id: area
         implicitWidth: 360
         implicitHeight: 192 // the ratio of the screen of the module, 720 x 384
 
-        Loader {
-            objectName: "widget"
-            anchors.fill: parent
-            sourceComponent: root.widgetComponent
-            onLoaded: item.live = true
+        // The largest 15:8 rectangle of the area, centred: the widget is never stretched.
+        readonly property var shape: Paths.fit(width, height)
+
+        Item {
+            id: screen
+            objectName: "screen"
+            anchors.centerIn: parent
+            width: area.shape.width
+            height: area.shape.height
+            clip: true
+
+            // The widget keeps the pixels it is drawn for (720 x 384) and is scaled as a whole.
+            Loader {
+                objectName: "widget"
+                width: Paths.ScreenWidth
+                height: Paths.ScreenHeight
+                transformOrigin: Item.TopLeft
+                scale: area.shape.scale
+                sourceComponent: root.widgetComponent
+                onLoaded: item.live = true
+            }
         }
 
         Text {
@@ -50,7 +67,8 @@ PlasmoidItem {
             horizontalAlignment: Text.AlignHCenter
             width: parent.width - 20
             wrapMode: Text.WordWrap
-            text: "GalleonCore is not installed: its widgets were not found in " + root.folders.join(", ") + "."
+            // One folder to a line: a path is never cut in the middle.
+            text: "GalleonCore is not installed: its widgets were not found in:\n" + root.folders.join("\n")
         }
     }
 }
