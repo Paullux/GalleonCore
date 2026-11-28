@@ -54,9 +54,13 @@ private Q_SLOTS:
         QVERIFY(createProfile(dir.path(), "desk", "work", {}).ok);
         QCOMPARE(get(dir.path() + "/profiles/desk.json"), QByteArray("work"));
         QCOMPARE(listProfiles(dir.path()), (QStringList{"default", "desk", "gaming", "work"}));
-        // The copy is the person's own: not writable by the group or the others (the pages file must be, to be trusted).
+        // The copy is the person's own. On Linux that is not writable by the group or the others (the pages file must be, to be trusted). On Windows
+        // Qt gives the permissions of the owner for everyone (the access is decided by the ACL, which is the business of WindowsFileTrust), so only
+        // the owner's right is looked at there.
         const QFileDevice::Permissions mode = QFile::permissions(dir.path() + "/profiles/gaming.json");
+#ifndef Q_OS_WIN
         QVERIFY(!(mode & (QFileDevice::WriteGroup | QFileDevice::WriteOther)));
+#endif
         QVERIFY(mode & QFileDevice::WriteOwner);
         QCOMPARE(get(dir.path() + "/pages.json"), QByteArray("base")); // the original is not touched
     }
