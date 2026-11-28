@@ -21,12 +21,15 @@ the RGB keyboard.
 | Faithful keyboard preview in Bosun (same rendering as the real keyboard) | **Not started** (the animated preview exists and is not faithful) | yes |
 | Live lighting, brightness and 24 h curve, lights off until morning, rings colours, key signals, keys glow under your fingers | Done in code and tests; device and Windows results are the rows of section 3 | already tried on the keyboard |
 
-**Rule for the synchronised screensaver (27 November 2026):** it never starts when everything is black: neither during
-"lights off until morning" (already true for the module's own screensaver, which the night keeps from starting), nor
-when the brightness is set to 0 % (slider or 24 h curve; **today nothing keeps the module's screensaver from starting
-at 0 %, and this is part of the work of that item**). When it is black, the stop applies to the module, the rings and
-the keyboard together. For the keyboard it goes through the live lighting (black frames held by `galleond`), never
-through the keyboard's own brightness property, which the keyboard keeps after an unplug.
+**Rule for the synchronised screensaver (27 November 2026, corrected 28 November):** it never starts when everything is
+black. Today that is "lights off until morning", which already keeps the module's screensaver (and the green rain) from
+starting (`daemon/main.cpp`), and which blacks the keyboard too when the live lighting is on. There is **no other "black"
+for the module**: `galleond` changes the module's brightness only for the night (`NightController`), so a module
+screensaver at "0 %" does not exist; the keyboard brightness (slider, 24 h curve) and the rings level only dim the
+keyboard and the rings. When the synchronised screensaver exists, its keyboard part must also stay off when the
+keyboard is black (brightness 0, level 0 or the night). When it is black, the stop applies to the module, the rings and
+the keyboard together; for the keyboard through the live lighting (black frames held by `galleond`), never through the
+keyboard's own brightness property, which the keyboard keeps after an unplug.
 
 Each new item comes with its own pull request, tests, and the privacy review of `AGENTS.md` (an effect that reacts to
 key presses is reviewed again: a frame that lights a given key reveals that it was pressed).
