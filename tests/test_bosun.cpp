@@ -233,6 +233,37 @@ public Q_SLOTS:
     }
 };
 
+// The window of Bosun on a backend, as the tests of the window make it.
+struct ProfileWindow
+{
+    bosun::LanguageSettings languages{{}};
+    QQmlApplicationEngine engine;
+    const bosun::DaemonStatus daemon{"/nonexistent/systemctl"};
+    const bosun::WallpaperLibrary library;
+    QObject *window = nullptr;
+    QObject *menu = nullptr;
+
+    ProfileWindow(bosun::BosunBackend &backend, const QString &folder)
+        : library({.roots = {}, .userRoot = folder + "/own", .settingsFile = folder + "/galleond.conf"})
+    {
+        languages.setPreference("en");
+        engine.addImageProvider(QStringLiteral("tiles"), new bosun::TileProvider(&backend));
+        engine.addImageProvider(QStringLiteral("wallpapers"), new bosun::WallpaperThumbnails(&library));
+        engine.addImageProvider(QStringLiteral("wallpaperpreview"), new bosun::WallpaperPreview(&library));
+        engine.addImageProvider(QStringLiteral("themeicon"), new galleond::ThemeIconProvider);
+        engine.setInitialProperties({{QStringLiteral("backend"), QVariant::fromValue(&backend)}, {QStringLiteral("daemon"), QVariant::fromValue(&daemon)},
+                                     {QStringLiteral("library"), QVariant::fromValue(&library)}, {QStringLiteral("languages"), QVariant::fromValue(&languages)}});
+        engine.load(QUrl(QStringLiteral("qrc:/bosun/qml/Bosun.qml")));
+        if (!engine.rootObjects().isEmpty()) {
+            window = engine.rootObjects().constFirst();
+            menu = window->findChild<QObject *>("profileMenu");
+        }
+    }
+    void call(const char *name, const QString &argument) { QVERIFY(QMetaObject::invokeMethod(menu, name, Q_ARG(QVariant, argument))); }
+};
+
+QString window_message(const ProfileWindow &w) { return w.window->property("message").toString(); }
+
 class TestBosun : public QObject
 {
     Q_OBJECT
@@ -3493,6 +3524,101 @@ QtObject {
         QVERIFY(!QFile::exists(dir.filePath("brightness-curve.json")));
         QCOMPARE(brightness->mode(), QStringLiteral("slider"));
         QCOMPARE(level->mode(), QStringLiteral("curve"));
+    }
+
+    // ---- the profile menu at the top of the window ----
+
+    void theProfileMenuIsOnlyThereWhenProfilesAre()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        bosun::BosunBackend backend(file); // a preview: no profiles
+        const ProfileWindow w(backend, dir.path());
+        QVERIFY(w.window);
+        QVERIFY(w.menu);
+        QCOMPARE(w.menu->property("visible").toBool(), false);
+        backend.useProfiles();
+        QTRY_COMPARE(w.menu->property("visible").toBool(), true);
+    }
+
+    void theProfileMenuCreatesSwitchesRenamesAndDeletes()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        bosun::BosunBackend backend(file);
+        backend.useProfiles();
+        ProfileWindow w(backend, dir.path());
+        QVERIFY(w.menu);
+        QCOMPARE(w.menu->property("active").toString(), QStringLiteral("default"));
+
+        // A new profile is a copy of the one in use, and is shown at once.
+        w.call("ask", "create");
+        QCOMPARE(w.menu->property("dialog").toString(), QStringLiteral("create"));
+        w.call("confirm", " gaming ");
+        QCOMPARE(w.menu->property("dialog").toString(), QString()); // answered: the question is closed
+        QCOMPARE(backend.profiles(), (QStringList{"default", "gaming"}));
+        QCOMPARE(backend.activeProfile(), QStringLiteral("gaming"));
+        QVERIFY(window_message(w).contains("gaming"));
+        QCOMPARE(fileBytes(dir.filePath("profiles/gaming.json")), fileBytes(file)); // a copy of the base profile
+
+        // A name that is taken or not valid is refused, with the reason, and the question stays.
+        w.call("ask", "create");
+        w.call("confirm", "gaming");
+        QCOMPARE(w.menu->property("dialog").toString(), QStringLiteral("create"));
+        QVERIFY(w.menu->property("reason").toString().contains("already exists"));
+        w.call("confirm", "Not Valid");
+        QVERIFY(!w.menu->property("reason").toString().isEmpty());
+        QCOMPARE(backend.profiles(), (QStringList{"default", "gaming"}));
+        QVERIFY(QMetaObject::invokeMethod(w.menu, "cancel"));
+        QCOMPARE(w.menu->property("dialog").toString(), QString());
+
+        // Choosing a profile of the list.
+        w.call("choose", "default");
+        QCOMPARE(backend.activeProfile(), QStringLiteral("default"));
+        w.call("choose", "gaming");
+        QCOMPARE(backend.activeProfile(), QStringLiteral("gaming"));
+
+        // The profile in use is renamed: the window goes back to the base profile for the time of it, then shows the new name.
+        w.call("ask", "rename");
+        w.call("confirm", "play");
+        QCOMPARE(backend.profiles(), (QStringList{"default", "play"}));
+        QCOMPARE(backend.activeProfile(), QStringLiteral("play"));
+        QVERIFY(QFileInfo::exists(dir.filePath("profiles/play.json")));
+        QVERIFY(!QFileInfo::exists(dir.filePath("profiles/gaming.json")));
+
+        // And deleted: moved to the deleted ones, and the base profile is shown.
+        w.call("ask", "delete");
+        w.call("confirm", "");
+        QCOMPARE(backend.profiles(), QStringList{"default"});
+        QCOMPARE(backend.activeProfile(), QStringLiteral("default"));
+        QCOMPARE(QDir(dir.filePath("profiles/.deleted")).entryList({"play-*.json"}, QDir::Files).size(), 1);
+        QVERIFY(window_message(w).contains("play"));
+    }
+
+    void theBaseProfileCannotBeRenamedOrDeletedFromTheMenu()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        bosun::BosunBackend backend(file);
+        backend.useProfiles();
+        ProfileWindow w(backend, dir.path());
+        QVERIFY(w.menu);
+        const QByteArray before = fileBytes(file);
+        for (const char *kind : {"rename", "delete"}) {
+            w.call("ask", kind);
+            w.call("confirm", "other");
+            // Nothing happens, and nothing is said either: the rows are not offered for the base profile, so no refusal of the backend should be reached.
+            QVERIFY(w.menu->property("reason").toString().isEmpty());
+            QCOMPARE(backend.activeProfile(), QStringLiteral("default"));
+            QCOMPARE(backend.profiles(), QStringList{"default"});
+            QCOMPARE(fileBytes(file), before);
+            QVERIFY(QMetaObject::invokeMethod(w.menu, "cancel"));
+        }
+        // The rows are shown as not available too.
+        QVERIFY(w.menu->property("onDefault").toBool());
     }
 
     void theWindowHasATabPerThemeAndTheFixedOnes()

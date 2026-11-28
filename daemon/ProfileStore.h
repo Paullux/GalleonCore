@@ -14,10 +14,23 @@
 
 namespace galleond {
 
+// Why a change of the profile files was refused, for the window to say it in the language of the person (the English text of `error` is for the logs).
+enum class ProfileError : unsigned char {
+    None,
+    BadName,       // the new name is not "a to z, 0 to 9 and -", or is "default"
+    BaseProfile,   // "default" cannot be renamed or deleted
+    NameTaken,     // a profile of this name already exists
+    TooMany,       // there are already MaxProfiles
+    Missing,       // the profile does not exist (or, to copy, cannot be read)
+    TooLarge,      // the profile to copy is larger than a pages file may be
+    WriteFailed,   // the new file could not be written, or the rename or the move failed
+};
+
 struct ProfileResult
 {
     bool ok = false;
-    QString error; // why not, in English, for the person (empty when ok)
+    ProfileError code = ProfileError::None;
+    QString error; // why not, in English, for the logs (empty when ok)
 };
 
 // The name of the file a deleted profile is moved to: "<name>-<stamp>.json", with "-<attempt>" before ".json" for the second try on and later.

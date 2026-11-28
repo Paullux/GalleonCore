@@ -9,9 +9,9 @@ A profile is a **complete pages file** (screen, screensaver, themes, pages, dial
 file can do, a profile can do. One profile is active at a time; `galleond` shows it on the module. The person chooses: nothing reads the active
 window, the applications that run or any key that is typed.
 
-*State (28 November 2026):* the daemon side and the logic of Bosun's backend are done and tested. **Bosun's window has no profile selector yet** (the next
-step: a selector at the top of the window and in the notification-area menu, and an editor for the "profile" key). Until then, Bosun edits the profile
-that is active (`profile-active.json`, followed when `galleond` changes it), which is `default` unless a key of the module or a D-Bus call chose another one.
+*State (28 November 2026):* the daemon side, the logic of Bosun's backend and Bosun's window are done and tested: a **profile menu at the top of the
+window** (next to the language) and **one entry per profile in the menu of the notification area**. **Not done yet:** the editor of the "profile" key
+(a key that goes to a profile, to the next or to the previous one is written in the pages file by hand for now).
 
 ## Where the files are
 
@@ -58,6 +58,16 @@ left is not.
   switches to another one first, so that `galleond` never has its file taken away), and `default` can be copied but neither renamed nor deleted. A deleted
   profile is **moved** to `profiles/.deleted/<name>-<time>.json`, never erased, and never replaces a file that is already there.
 - A copy is written whole or not at all, and is the person's own (not writable by others, as a pages file must be to be trusted).
+
+## In Bosun's window
+
+- **The menu** ("Profile: gaming ▾", left of the language menu, only when profiles are on): the list of the profiles with a tick on the one in use, then
+  *New profile (a copy of this one)…*, *Rename this profile…* and *Delete this profile…* (the last two are not offered for `default`). The three open a small
+  question with a name to type (or a confirmation to delete) and the reason of a refusal in the language of the person.
+- Choosing a profile makes every tab edit it and asks `galleond` to show it. **Renaming or deleting the profile in use first goes back to `default`** (and asks
+  `galleond` to show it), so that `galleond` never has its file taken away; a refused change puts the window back on the profile it was on.
+- **The menu of the notification area** has one entry per profile ("Profile: gaming"), the one in use ticked, when there are at least two profiles.
+- The tab bar keeps room for the menu; without profiles (a preview, or `--pages <file>`) the window is as it was.
 
 ## Privacy and safety
 

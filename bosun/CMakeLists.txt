@@ -42,7 +42,7 @@ set_target_properties(bosun_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 qt_add_resources(bosun_core "bosun_ui"
     PREFIX "/bosun"
-    FILES qml/TabWidths.js qml/FpsSetupDialog.qml qml/UpdatePanel.qml qml/GamingPage.qml qml/GameModePage.qml qml/WidgetsPage.qml qml/Bosun.qml qml/Pill.qml qml/BrightnessSlider.qml qml/BrightnessCurveEditor.qml qml/ScrollRail.qml qml/KeyboardMap.qml qml/KeyboardMapData.js qml/RadioOption.qml qml/Stepper.qml qml/Field.qml qml/Swatches.qml qml/KeySignalPanel.qml qml/KeyEditor.qml qml/TabEditor.qml qml/NewTab.qml qml/ScreensaversPage.qml qml/DialsPage.qml qml/CropEditor.qml qml/WallpapersPage.qml
+    FILES qml/TabWidths.js qml/FpsSetupDialog.qml qml/UpdatePanel.qml qml/GamingPage.qml qml/GameModePage.qml qml/WidgetsPage.qml qml/Bosun.qml qml/Pill.qml qml/ProfileMenu.qml qml/BrightnessSlider.qml qml/BrightnessCurveEditor.qml qml/ScrollRail.qml qml/KeyboardMap.qml qml/KeyboardMapData.js qml/RadioOption.qml qml/Stepper.qml qml/Field.qml qml/Swatches.qml qml/KeySignalPanel.qml qml/KeyEditor.qml qml/TabEditor.qml qml/NewTab.qml qml/ScreensaversPage.qml qml/DialsPage.qml qml/CropEditor.qml qml/WallpapersPage.qml
           icons/galleon-bosun.svg
 )
 

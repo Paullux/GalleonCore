@@ -22,7 +22,7 @@ Tray::Tray(const QIcon &icon, QObject *parent)
     // A left click shows or hides the window; the menu comes with the right click.
     connect(&m_icon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
         if (reason == QSystemTrayIcon::Trigger)
-            Q_EMIT chosen(TrayEntry::Action::ToggleWindow);
+            Q_EMIT chosen(TrayEntry::Action::ToggleWindow, {});
     });
 }
 
@@ -65,13 +65,18 @@ void Tray::notifyUpdate(const QString &version, bool simulation)
 #endif
 }
 
-void Tray::update(bool windowShown, bool daemonRunning)
+void Tray::update(bool windowShown, bool daemonRunning, const QStringList &profiles, const QString &activeProfile)
 {
     m_menu.clear();
-    for (const TrayEntry &entry : trayEntries(windowShown, daemonRunning)) {
+    for (const TrayEntry &entry : trayEntries(windowShown, daemonRunning, profiles, activeProfile)) {
         QAction *item = m_menu.addAction(entry.label);
+        if (entry.action == TrayEntry::Action::SetProfile) {
+            item->setCheckable(true);
+            item->setChecked(entry.checked);
+        }
         const TrayEntry::Action action = entry.action;
-        connect(item, &QAction::triggered, this, [this, action] { Q_EMIT chosen(action); });
+        const QString profile = entry.profile;
+        connect(item, &QAction::triggered, this, [this, action, profile] { Q_EMIT chosen(action, profile); });
     }
 }
 
