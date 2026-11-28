@@ -3,6 +3,8 @@
 
 #include "DaemonStatus.h"
 
+#include <ProfileNames.h>
+
 #include "KeySignalRequest.h"
 #include "LedValues.h"
 
@@ -214,6 +216,22 @@ QString DaemonStatus::showTheme(const QString &page)
         const QDBusPendingReply<bool> reply = *watcher;
         // False is normal when the daemon has not read the new pages file yet: it keeps the request and does it then.
         if (reply.isError()) Q_EMIT commandError(tr("Cannot show the theme on the pad: restart the updated daemon (%1)").arg(reply.error().message()));
+        watcher->deleteLater();
+    });
+    return {};
+}
+
+QString DaemonStatus::setProfile(const QString &name)
+{
+    if (!galleond::isValidProfileName(name)) return tr("This is not the name of a profile");
+    if (!running()) return {}; // the module shows the remembered profile when the daemon starts
+    auto message = QDBusMessage::createMethodCall(QString::fromLatin1(BusName), QStringLiteral("/org/galleoncore/Deck"), QString::fromLatin1(BusName), QStringLiteral("SetProfile"));
+    message << name;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 1500), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
+        const QDBusPendingReply<bool> reply = *watcher;
+        if (reply.isError()) Q_EMIT commandError(tr("Cannot change the profile on the pad: restart the updated daemon (%1)").arg(reply.error().message()));
+        else if (!reply.value()) Q_EMIT commandError(tr("The pad could not show this profile: its file has errors, or it does not exist"));
         watcher->deleteLater();
     });
     return {};

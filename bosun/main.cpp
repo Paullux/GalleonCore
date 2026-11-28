@@ -121,6 +121,9 @@ int main(int argc, char *argv[])
     bosun::LanguageSettings languages(preview ? QString() : QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
                                                        + QStringLiteral("/galleoncore/bosun.conf"));
     bosun::BosunBackend backend(pagesFile);
+    // The profiles (daemon/Profiles.h): not in a preview run, and not when one pages file was asked for.
+    if (!preview)
+        backend.useProfiles();
     if (parser.isSet(oldFirmwareOption))
         qobject_cast<galleond::HomeWidgets *>(backend.homeWidgets())->simulateOldFirmware();
     QObject::connect(&languages, &bosun::LanguageSettings::changed, &backend, [&backend] {

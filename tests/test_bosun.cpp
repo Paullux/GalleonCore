@@ -41,6 +41,7 @@
 #include <QSignalSpy>
 #include <QScopeGuard>
 #include <QTemporaryDir>
+#include <Profiles.h>
 #include <QTest>
 
 namespace {
@@ -1377,6 +1378,148 @@ QtObject {
         QVERIFY(!backend.setKey("music", 3, {{"type", "media"}, {"command", "nonsense"}}).isEmpty());
         QVERIFY(!backend.setKey("music", 3, {{"type", "page"}, {"page", "no-such-page"}}).isEmpty());
         QVERIFY(backend.keys("music").at(3).toMap().value("empty").toBool()); // refused: nothing written
+    }
+
+    // ---- profiles: the editor works on the active one (daemon/Profiles.h) ----
+
+    static QByteArray fileBytes(const QString &path)
+    {
+        QFile file(path);
+        return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray("<missing>");
+    }
+
+    void profilesAreOffUnlessTheyAreTurnedOn()
+    {
+        const QTemporaryDir dir;
+        const QString file = dir.filePath("pages.json");
+        QVERIFY(writeFile(file, twoThemes()));
+        bosun::BosunBackend backend(file); // a preview, or one pages file asked for on the command line
+        QVERIFY(!backend.profilesAvailable());
+        QCOMPARE(backend.file(), file);
+        QCOMPARE(backend.profiles(), QStringList{"default"});
+        QVERIFY(!backend.setProfile("default").value("ok").toBool());
+        QVERIFY(!backend.createProfile("gaming", "default").value("ok").toBool());
+        QVERIFY(!backend.renameProfile("a", "b").value("ok").toBool());
+        QVERIFY(!backend.deleteProfile("a").value("ok").toBool());
+        QVERIFY(!QFileInfo::exists(dir.filePath("profiles")));
+        QVERIFY(!QFileInfo::exists(dir.filePath("profile-active.json"))); // nothing written
+    }
+
+    void theEditorWorksOnTheActiveProfileAndOnlyOnIt()
+    {
+        const QTemporaryDir dir;
+        const QString base = dir.filePath("pages.json");
+        QVERIFY(writeFile(base, twoThemes()));
+        bosun::BosunBackend backend(base);
+        backend.useProfiles();
+        QVERIFY(backend.profilesAvailable());
+        QCOMPARE(backend.activeProfile(), QStringLiteral("default"));
+        QCOMPARE(backend.file(), base);
+        QVERIFY(backend.createProfile("gaming", "default").value("ok").toBool());
+        QCOMPARE(backend.profiles(), (QStringList{"default", "gaming"}));
+        QCOMPARE(backend.activeProfile(), QStringLiteral("default")); // a new profile is not made active by being made
+        const QByteArray baseBefore = fileBytes(base);
+
+        QVERIFY(backend.setProfile("gaming").value("ok").toBool());
+        QCOMPARE(backend.activeProfile(), QStringLiteral("gaming"));
+        QCOMPARE(backend.file(), dir.filePath("profiles/gaming.json"));
+        QVERIFY(backend.setKey("music", 3, {{"type", "media"}, {"command", "volume"}, {"step", -10}, {"label", "Quieter"}}).isEmpty());
+        QCOMPARE(backend.keys("music").at(3).toMap().value("label").toString(), QStringLiteral("Quieter"));
+        QCOMPARE(fileBytes(base), baseBefore); // the base profile was not touched
+        QVERIFY(fileBytes(dir.filePath("profiles/gaming.json")).contains("Quieter"));
+
+        QVERIFY(backend.setProfile("default").value("ok").toBool());
+        QCOMPARE(backend.file(), base);
+        QVERIFY(backend.keys("music").at(3).toMap().value("label").toString() != QStringLiteral("Quieter")); // each profile has its own keys
+    }
+
+    void aProfileThatDoesNotExistCannotBeChosen()
+    {
+        const QTemporaryDir dir;
+        const QString base = dir.filePath("pages.json");
+        QVERIFY(writeFile(base, twoThemes()));
+        bosun::BosunBackend backend(base);
+        backend.useProfiles();
+        for (const QString &bad : {QStringLiteral("nope"), QStringLiteral("../pages"), QStringLiteral("Gaming"), QStringLiteral(""), QStringLiteral("a/b")}) {
+            const QVariantMap answer = backend.setProfile(bad);
+            QVERIFY2(!answer.value("ok").toBool(), qPrintable(bad));
+            QVERIFY(!answer.value("error").toString().isEmpty());
+        }
+        QCOMPARE(backend.activeProfile(), QStringLiteral("default"));
+        QCOMPARE(backend.file(), base);
+        QVERIFY(!QFileInfo::exists(dir.filePath("profile-active.json"))); // a refused choice is not remembered
+    }
+
+    void theChosenProfileIsRememberedAndAnotherWindowStartsOnIt()
+    {
+        const QTemporaryDir dir;
+        const QString base = dir.filePath("pages.json");
+        QVERIFY(writeFile(base, twoThemes()));
+        {
+            bosun::BosunBackend backend(base);
+            backend.useProfiles();
+            QVERIFY(backend.createProfile("gaming", "default").value("ok").toBool());
+            QVERIFY(backend.setProfile("gaming").value("ok").toBool());
+        }
+        bosun::BosunBackend again(base);
+        again.useProfiles();
+        QCOMPARE(again.activeProfile(), QStringLiteral("gaming"));
+        QCOMPARE(again.file(), dir.filePath("profiles/gaming.json"));
+    }
+
+    void theWindowFollowsTheProfileThatGalleondShows()
+    {
+        const QTemporaryDir dir;
+        const QString base = dir.filePath("pages.json");
+        QVERIFY(writeFile(base, twoThemes()));
+        bosun::BosunBackend backend(base);
+        backend.useProfiles();
+        QVERIFY(backend.createProfile("gaming", "default").value("ok").toBool());
+        const QSignalSpy changed(&backend, &bosun::BosunBackend::profilesChanged);
+        // A key of the module changed the profile: galleond remembers it in profile-active.json, and the window edits that one from then on.
+        QVERIFY(galleond::writeActiveProfile(dir.path(), "gaming"));
+        QTRY_COMPARE_WITH_TIMEOUT(backend.activeProfile(), QStringLiteral("gaming"), 3000);
+        QCOMPARE(backend.file(), dir.filePath("profiles/gaming.json"));
+        QVERIFY(!changed.isEmpty());
+    }
+
+    void theActiveProfileIsNeitherRenamedNorDeletedAndADeletedOneIsKept()
+    {
+        const QTemporaryDir dir;
+        const QString base = dir.filePath("pages.json");
+        QVERIFY(writeFile(base, twoThemes()));
+        bosun::BosunBackend backend(base);
+        backend.useProfiles();
+        QVERIFY(backend.createProfile("gaming", "default").value("ok").toBool());
+        QVERIFY(backend.createProfile("work", "default").value("ok").toBool());
+        QVERIFY(backend.setProfile("gaming").value("ok").toBool());
+        QVERIFY(!backend.renameProfile("gaming", "play").value("ok").toBool()); // the file of the profile in use is not taken away
+        QVERIFY(!backend.deleteProfile("gaming").value("ok").toBool());
+        QVERIFY(QFileInfo::exists(dir.filePath("profiles/gaming.json")));
+        QVERIFY(!backend.renameProfile("default", "base").value("ok").toBool());
+        QVERIFY(!backend.deleteProfile("default").value("ok").toBool());
+
+        QVERIFY(backend.renameProfile("work", "desk").value("ok").toBool());
+        QCOMPARE(backend.profiles(), (QStringList{"default", "desk", "gaming"}));
+        QVERIFY(backend.deleteProfile("desk").value("ok").toBool());
+        QCOMPARE(backend.profiles(), (QStringList{"default", "gaming"})); // no longer listed...
+        const QStringList kept = QDir(dir.filePath("profiles/.deleted")).entryList({"desk-*.json"}, QDir::Files);
+        QCOMPARE(kept.size(), 1); // ...and not erased
+    }
+
+    void theFoldersOfTheVideosAndIconsStayTheConfigurationFolderWhateverProfileIsActive()
+    {
+        const QTemporaryDir dir;
+        const QString base = dir.filePath("pages.json");
+        QVERIFY(writeFile(base, twoThemes()));
+        QVERIFY(writeFile(dir.filePath("clip.mp4"), "not really a video, but a file"));
+        bosun::BosunBackend backend(base, {.ffprobe = "/nonexistent", .ffmpeg = "/nonexistent", .thumbnailFolder = dir.filePath("thumbs")});
+        backend.useProfiles();
+        QVERIFY(backend.createProfile("gaming", "default").value("ok").toBool());
+        QVERIFY(backend.setProfile("gaming").value("ok").toBool());
+        // A video named by a relative path is looked for next to pages.json, as for every profile, not in profiles/.
+        backend.inspect("clip.mp4");
+        QCOMPARE(backend.candidate().value("path").toString(), dir.filePath("clip.mp4")); // found, and found there
     }
 
     void aTabIsAddedRenamedMovedAndRemovedThroughTheBackend()

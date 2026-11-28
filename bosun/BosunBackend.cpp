@@ -5,10 +5,13 @@
 
 #include "BosunBackend.h"
 
+#include <QDateTime>
 #include <QSaveFile>
 
 #include <WallpaperCatalog.h>
 
+#include <ProfileStore.h>
+#include <Profiles.h>
 #include <ThemeInstaller.h>
 
 #include <ThemeExporter.h>
@@ -153,8 +156,9 @@ BosunBackend::BosunBackend(QString pagesFile, QObject *parent)
 BosunBackend::BosunBackend(QString pagesFile, const Tools &tools, QObject *parent)
     : QObject(parent)
     , m_file(std::move(pagesFile))
+    , m_folder(QFileInfo(m_file).absolutePath())
     , m_wallpaperRoot(tools.wallpaperRoot)
-    , m_tiles(QFileInfo(m_file).absolutePath())
+    , m_tiles(m_folder)
     , m_probe(tools.ffprobe)
     , m_thumbnails(tools.thumbnailFolder.isEmpty()
                        ? QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + QStringLiteral("/galleoncore/thumbnails")
@@ -195,18 +199,109 @@ BosunBackend::BosunBackend(QString pagesFile, const Tools &tools, QObject *paren
     reload();
 }
 
+namespace {
+QVariantMap profileAnswer(const galleond::ProfileResult &result)
+{
+    return {{QStringLiteral("ok"), result.ok}, {QStringLiteral("error"), result.error}};
+}
+QVariantMap profileRefusal(const QString &why)
+{
+    return {{QStringLiteral("ok"), false}, {QStringLiteral("error"), why}};
+}
+} // namespace
+
+void BosunBackend::useProfiles()
+{
+    m_profilesOn = true;
+    m_activeProfile = galleond::activeProfileAtStart(m_folder);
+    m_file = galleond::profilePath(m_folder, m_activeProfile);
+    Q_EMIT profilesChanged();
+    reload();
+}
+
+QStringList BosunBackend::profiles() const
+{
+    return m_profilesOn ? galleond::listProfiles(m_folder) : QStringList{galleond::defaultProfileName()};
+}
+
+void BosunBackend::followActiveProfile()
+{
+    if (!m_profilesOn)
+        return;
+    const QString now = galleond::activeProfileAtStart(m_folder);
+    if (now == m_activeProfile)
+        return;
+    m_activeProfile = now;
+    m_file = galleond::profilePath(m_folder, now);
+    Q_EMIT profilesChanged();
+}
+
+QVariantMap BosunBackend::setProfile(const QString &name)
+{
+    if (!m_profilesOn)
+        return profileRefusal(tr("Profiles are not available here."));
+    const QString path = galleond::profilePath(m_folder, name);
+    if (path.isEmpty() || (name != galleond::defaultProfileName() && !QFileInfo::exists(path)))
+        return profileRefusal(tr("This profile does not exist."));
+    if (name == m_activeProfile)
+        return {{QStringLiteral("ok"), true}, {QStringLiteral("error"), QString()}};
+    if (!galleond::writeActiveProfile(m_folder, name))
+        return profileRefusal(tr("The choice of the profile could not be saved."));
+    m_activeProfile = name;
+    m_file = path;
+    Q_EMIT profilesChanged();
+    reload();
+    return {{QStringLiteral("ok"), true}, {QStringLiteral("error"), QString()}};
+}
+
+QVariantMap BosunBackend::createProfile(const QString &name, const QString &from)
+{
+    if (!m_profilesOn)
+        return profileRefusal(tr("Profiles are not available here."));
+    const QVariantMap answer = profileAnswer(galleond::createProfile(m_folder, name, from, galleond::initialPagesJson()));
+    if (answer.value(QStringLiteral("ok")).toBool())
+        Q_EMIT profilesChanged();
+    return answer;
+}
+
+QVariantMap BosunBackend::renameProfile(const QString &from, const QString &to)
+{
+    if (!m_profilesOn)
+        return profileRefusal(tr("Profiles are not available here."));
+    if (from == m_activeProfile)
+        return profileRefusal(tr("Switch to another profile before renaming this one."));
+    const QVariantMap answer = profileAnswer(galleond::renameProfile(m_folder, from, to));
+    if (answer.value(QStringLiteral("ok")).toBool())
+        Q_EMIT profilesChanged();
+    return answer;
+}
+
+QVariantMap BosunBackend::deleteProfile(const QString &name)
+{
+    if (!m_profilesOn)
+        return profileRefusal(tr("Profiles are not available here."));
+    if (name == m_activeProfile)
+        return profileRefusal(tr("Switch to another profile before deleting this one."));
+    const QVariantMap answer = profileAnswer(galleond::deleteProfile(m_folder, name, QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyyMMdd-HHmmss"))));
+    if (answer.value(QStringLiteral("ok")).toBool())
+        Q_EMIT profilesChanged();
+    return answer;
+}
+
 void BosunBackend::watchFile()
 {
     // A file replaced by an editor drops out of the watch: watch again each time.
-    const QString folder = QFileInfo(m_file).absolutePath();
-    if (!m_watcher.directories().contains(folder))
-        m_watcher.addPath(folder);
+    for (const QString &folder : {m_folder, QFileInfo(m_file).absolutePath()}) { // the profiles are in a folder of their own
+        if (QFileInfo::exists(folder) && !m_watcher.directories().contains(folder))
+            m_watcher.addPath(folder);
+    }
     if (QFileInfo::exists(m_file) && !m_watcher.files().contains(m_file))
         m_watcher.addPath(m_file);
 }
 
 void BosunBackend::reload()
 {
+    followActiveProfile();
     watchFile();
     ++m_revision;
     m_installed.clear(); // an application may have been installed (or removed) since the pages file was last read
@@ -261,7 +356,7 @@ void BosunBackend::buildScreensaver()
     // The video list is resolved once per reading of the file (askAboutVideos); the rest is words.
     if (m_videoFiles.size() != config.videos.size()) {
         m_videoFiles.clear();
-        const QString base = QFileInfo(m_file).absolutePath();
+        const QString base = m_folder;
         for (const QString &configured : config.videos)
             m_videoFiles.append(galleond::ScreensaverController::resolveVideoPath(configured, base));
     }
@@ -367,7 +462,7 @@ void BosunBackend::inspect(const QString &pathOrUrl)
     const QUrl url(chosen);
     const QString path = url.isLocalFile() ? url.toLocalFile() : chosen;
     m_candidateChosen = chosen;
-    m_candidatePath = galleond::ScreensaverController::resolveVideoPath(path, QFileInfo(m_file).absolutePath());
+    m_candidatePath = galleond::ScreensaverController::resolveVideoPath(path, m_folder);
     m_candidateProblem = m_candidatePath.isEmpty() ? tr("This is not a video file that galleond can read.") : QString();
     if (!m_candidatePath.isEmpty()) {
         m_pictureTried.removeAll(m_candidatePath);

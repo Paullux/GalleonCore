@@ -840,5 +840,13 @@
   "This is not available on this system yet.": "Esto aún no está disponible en este sistema.",
   "Colour of the keys you press": "Color de las teclas pulsadas",
   "The keys you press will glow in %1.": "Las teclas que pulse se iluminarán en %1.",
-  "A colour is written as # and six digits or letters from a to f.": "Un color se escribe # y seis dígitos o letras de la a a la f."
+  "A colour is written as # and six digits or letters from a to f.": "Un color se escribe # y seis dígitos o letras de la a a la f.",
+  "Profiles are not available here.": "Los perfiles no están disponibles aquí.",
+  "This profile does not exist.": "Este perfil no existe.",
+  "The choice of the profile could not be saved.": "No se pudo guardar la elección del perfil.",
+  "Switch to another profile before renaming this one.": "Cambie a otro perfil antes de renombrar este.",
+  "Switch to another profile before deleting this one.": "Cambie a otro perfil antes de eliminar este.",
+  "This is not the name of a profile": "Este no es el nombre de un perfil",
+  "Cannot change the profile on the pad: restart the updated daemon (%1)": "No se puede cambiar el perfil en el módulo: reinicie el demonio actualizado (%1)",
+  "The pad could not show this profile: its file has errors, or it does not exist": "El módulo no pudo mostrar este perfil: su archivo tiene errores o no existe"
 }

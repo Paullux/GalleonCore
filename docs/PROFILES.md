@@ -9,8 +9,9 @@ A profile is a **complete pages file** (screen, screensaver, themes, pages, dial
 file can do, a profile can do. One profile is active at a time; `galleond` shows it on the module. The person chooses: nothing reads the active
 window, the applications that run or any key that is typed.
 
-*State (28 November 2026):* the daemon side is done and tested (this page). **Bosun does not know about profiles yet**: its editor still reads and writes
-`pages.json`, which is the profile `default`. The profile selector of Bosun is the next step.
+*State (28 November 2026):* the daemon side and the logic of Bosun's backend are done and tested. **Bosun's window has no profile selector yet** (the next
+step: a selector at the top of the window and in the notification-area menu, and an editor for the "profile" key). Until then, Bosun edits the profile
+that is active (`profile-active.json`, followed when `galleond` changes it), which is `default` unless a key of the module or a D-Bus call chose another one.
 
 ## Where the files are
 
@@ -45,6 +46,18 @@ A change is refused, and nothing changes, when the name is not valid, the profil
 for `pages.json`). When it is done, the file is read and applied **even if its content is the same as the one in use**, the keys go back to its
 home page, and the choice is remembered. A profile that is edited while it is in use is followed, as `pages.json` always was; a profile that was
 left is not.
+
+## What Bosun's backend does (`BosunBackend`)
+
+- With the profiles on (not in a preview run, and not when `--pages <file>` was given), the editor, the themes, the screensaver and the installation or
+  export of a theme work on the file of the **active profile**; the configuration folder stays the fixed place of `pages.json`, `profiles/`, the curves,
+  the icons and the videos. The window follows `profile-active.json`: a key of the module that changes the profile changes what the window edits.
+- `setProfile(name)` remembers the choice and edits that profile from then on; the window then asks `galleond` to show it (`DaemonStatus::setProfile`, D-Bus
+  on Linux, a local command on Windows). With no `galleond`, the remembered choice is read at its next start.
+- `createProfile(name, from)` makes a copy (the new profile is not made active), `renameProfile` and `deleteProfile` refuse the **active** profile (the window
+  switches to another one first, so that `galleond` never has its file taken away), and `default` can be copied but neither renamed nor deleted. A deleted
+  profile is **moved** to `profiles/.deleted/<name>-<time>.json`, never erased, and never replaces a file that is already there.
+- A copy is written whole or not at all, and is the person's own (not writable by others, as a pages file must be to be trusted).
 
 ## Privacy and safety
 

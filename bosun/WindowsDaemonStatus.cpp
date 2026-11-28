@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Paul Woisard
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "DaemonStatus.h"
+
+#include <ProfileNames.h>
 #include "KeySignalRequest.h"
 #include "LedValues.h"
 #include "LightingStateWatcher.h"
@@ -88,6 +90,15 @@ QString DaemonStatus::showGaming() {
 QString DaemonStatus::showTheme(const QString &page) {
     if (!running()) return {};
     galleond::sendLocalCommand(m_endpoint, {galleond::LocalAction::Theme, {}, page}, this);
+    return {};
+}
+QString DaemonStatus::setProfile(const QString &name) {
+    if (!galleond::isValidProfileName(name)) return tr("This is not the name of a profile");
+    if (!running()) return {};
+    galleond::LocalCommand command;
+    command.action = galleond::LocalAction::Profile;
+    command.profile = name;
+    galleond::sendLocalCommand(m_endpoint, command, this);
     return {};
 }
 // The veille tab: there is no reply on this endpoint. A night that galleond took shows in night-mode.json (NightStateStore); a screensaver test that was
