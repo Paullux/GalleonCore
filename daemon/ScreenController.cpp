@@ -23,6 +23,10 @@ namespace galleond {
 
 bool ScreenController::ShowGaming() { return m_showGaming && m_showGaming(); }
 bool ScreenController::ShowTheme(const QString &page) { return m_showTheme && m_showTheme(page); }
+bool ScreenController::SetProfile(const QString &name) { return m_profiles.set && m_profiles.set(name); }
+bool ScreenController::StepProfile(int steps) { return m_profiles.step && m_profiles.step(steps); }
+QStringList ScreenController::Profiles() const { return m_profiles.list ? m_profiles.list() : QStringList{QStringLiteral("default")}; }
+QString ScreenController::ActiveProfile() const { return m_profiles.active ? m_profiles.active() : QStringLiteral("default"); }
 bool ScreenController::TestScreensaver(const QString &video) { return m_testScreensaver && m_testScreensaver(video); }
 bool ScreenController::StartNight(int hour, int minute) { return m_startNight && m_startNight(hour, minute); }
 void ScreenController::EndNight() { if (m_endNight) m_endNight(); }

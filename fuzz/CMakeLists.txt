@@ -66,6 +66,7 @@ add_executable(fuzz_pages_config
     fuzz_pages_config.cpp
     ${PROJECT_SOURCE_DIR}/daemon/PagesConfig.cpp
     ${PROJECT_SOURCE_DIR}/daemon/KeyInjector.cpp
+    ${PROJECT_SOURCE_DIR}/daemon/ProfileNames.cpp
     ${PROJECT_SOURCE_DIR}/daemon/DesktopEntries.cpp
     ${PROJECT_SOURCE_DIR}/daemon/WellKnownApps.cpp
 )
@@ -82,6 +83,7 @@ add_executable(fuzz_theme_package
     ${PROJECT_SOURCE_DIR}/daemon/ThemePackage.cpp
     ${PROJECT_SOURCE_DIR}/daemon/PagesConfig.cpp
     ${PROJECT_SOURCE_DIR}/daemon/KeyInjector.cpp
+    ${PROJECT_SOURCE_DIR}/daemon/ProfileNames.cpp
     ${PROJECT_SOURCE_DIR}/daemon/DesktopEntries.cpp
     ${PROJECT_SOURCE_DIR}/daemon/WellKnownApps.cpp
 )

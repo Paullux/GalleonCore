@@ -111,6 +111,8 @@ Described describe(const galleond::KeyConfig &key)
     case ActionType::Page: return {.kind = QStringLiteral("page"), .detail = action.page};
     case ActionType::Back: return {.kind = QStringLiteral("back"), .detail = {}};
     case ActionType::Steam: return {.kind = QStringLiteral("steam"), .detail = QString::number(action.appid)};
+    case ActionType::Profile:
+        return {.kind = QStringLiteral("profile"), .detail = action.profile.isEmpty() ? QString::number(action.step) : action.profile};
     case ActionType::Key: return {.kind = QStringLiteral("key"), .detail = action.keyName};
     case ActionType::Theme: return {.kind = QStringLiteral("theme"), .detail = {}};
     case ActionType::WallpaperMode: return {.kind = QStringLiteral("wallpaper-mode"), .detail = {}};

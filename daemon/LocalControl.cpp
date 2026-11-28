@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "LocalControl.h"
+#include "ProfileNames.h"
 
 #include <QRegularExpression>
 
@@ -10,6 +11,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+
+#include <cmath>
 #include <QLocalSocket>
 #include <QTimer>
 #include <QStandardPaths>
@@ -168,6 +171,28 @@ std::optional<LocalCommand> parseLocalCommand(const QByteArray &frame)
             return std::nullopt;
         return LocalCommand{LocalAction::Theme, {}, page.toString()};
     }
+    if (object.size() == 2 && action == QStringLiteral("profile")) {
+        const QJsonValue name = object.value(QStringLiteral("name"));
+        if (!name.isString() || !isValidProfileName(name.toString()))
+            return std::nullopt;
+        LocalCommand command;
+        command.action = LocalAction::Profile;
+        command.profile = name.toString();
+        return command;
+    }
+    if (object.size() == 2 && action == QStringLiteral("profile-step")) {
+        // A whole number from -16 to 16, not 0 (a JSON 1.5 or "1" is refused).
+        const QJsonValue steps = object.value(QStringLiteral("steps"));
+        if (!steps.isDouble())
+            return std::nullopt;
+        const double number = steps.toDouble();
+        if (number != std::floor(number) || number < -MaxProfiles || number > MaxProfiles || number == 0)
+            return std::nullopt;
+        LocalCommand command;
+        command.action = LocalAction::ProfileStep;
+        command.steps = static_cast<int>(number);
+        return command;
+    }
     if (object.size() == 2 && action == QStringLiteral("keyboard-brightness")) {
         // A whole number from 0 to 1000 (a JSON 3.5 or "3" is refused); the keyboard component applies its own policy.
         const QJsonValue value = object.value(QStringLiteral("value"));
@@ -290,6 +315,14 @@ QByteArray encodeLocalCommand(const LocalCommand &command)
     case LocalAction::Theme:
         object.insert(QStringLiteral("action"), QStringLiteral("theme"));
         object.insert(QStringLiteral("page"), command.page);
+        break;
+    case LocalAction::Profile:
+        object.insert(QStringLiteral("action"), QStringLiteral("profile"));
+        object.insert(QStringLiteral("name"), command.profile);
+        break;
+    case LocalAction::ProfileStep:
+        object.insert(QStringLiteral("action"), QStringLiteral("profile-step"));
+        object.insert(QStringLiteral("steps"), command.steps);
         break;
     case LocalAction::KeyboardBrightness:
         object.insert(QStringLiteral("action"), QStringLiteral("keyboard-brightness"));
@@ -470,6 +503,8 @@ void LocalControl::acceptConnections()
             case LocalAction::Ping: break;
             case LocalAction::Wallpaper: Q_EMIT wallpaperRequested(command->wallpaper); break;
             case LocalAction::Theme: Q_EMIT themeRequested(command->page); break;
+            case LocalAction::Profile: Q_EMIT profileRequested(command->profile); break;
+            case LocalAction::ProfileStep: Q_EMIT profileStepRequested(command->steps); break;
             case LocalAction::KeyboardBrightness: Q_EMIT keyboardBrightnessRequested(command->brightness); break;
             case LocalAction::KeyboardBrightnessRead: Q_EMIT keyboardBrightnessReadRequested(); break;
             case LocalAction::LightingEnable: Q_EMIT lightingEnableRequested(command->on); break;

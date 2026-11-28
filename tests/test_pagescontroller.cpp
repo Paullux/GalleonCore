@@ -6,6 +6,7 @@
 #include "FakeTransport.h"
 #include "RingSettingsApplier.h"
 
+#include <InitialPages.h>
 #include <PagesController.h>
 #include <SteamLibrary.h>
 #include <galleon/StreamDeck.h>
@@ -597,6 +598,177 @@ private Q_SLOTS:
         QVERIFY(writeFile(file, pagesFile({{"main", page({keyJson(0, "More", {{"type", "media"}, {"command", "stop"}})})}})));
         f.controller->loadFile(file);
         QCOMPARE(f.controller->pageStack(), QStringList{"main"});
+    }
+
+    // ---- profiles: complete pages files, one active (Profiles.h) ----
+
+    static QJsonObject onePage(const QString &name, const QJsonArray &keys = {})
+    {
+        return {{name, page(keys)}};
+    }
+
+    static void writeProfile(const QString &configFolder, const QString &name, const QString &home, const QJsonObject &pages)
+    {
+        const QString path = name == QLatin1String("default") ? configFolder + "/pages.json" : configFolder + "/profiles/" + name + ".json";
+        QVERIFY(QDir().mkpath(QFileInfo(path).absolutePath()));
+        QVERIFY(writeFile(path, pagesFile(pages, home)));
+    }
+
+    void profilesAreTheFilesOfTheConfigFolderAndDefaultIsPagesJson()
+    {
+        const QTemporaryDir dir;
+        writeProfile(dir.path(), "default", "main", onePage("main"));
+        writeProfile(dir.path(), "gaming", "play", onePage("play"));
+        Fixture f;
+        const QSignalSpy changed(f.controller.get(), &PagesController::profileChanged);
+        f.controller->useProfiles(dir.path());
+        QCOMPARE(f.controller->activeProfile(), QStringLiteral("default"));
+        QCOMPARE(f.controller->currentPage(), QStringLiteral("main"));
+        QCOMPARE(f.controller->profiles(), (QStringList{"default", "gaming"}));
+
+        QVERIFY(f.controller->setProfile(QStringLiteral("gaming")));
+        QCOMPARE(f.controller->activeProfile(), QStringLiteral("gaming"));
+        QCOMPARE(f.controller->currentPage(), QStringLiteral("play"));
+        QCOMPARE(changed.size(), 1);
+        QCOMPARE(changed.constFirst().constFirst().toString(), QStringLiteral("gaming"));
+        QVERIFY(f.controller->setProfile(QStringLiteral("gaming"))); // already the one: nothing to do, nothing announced
+        QCOMPARE(changed.size(), 1);
+
+        QVERIFY(f.controller->setProfile(QStringLiteral("default")));
+        QCOMPARE(f.controller->currentPage(), QStringLiteral("main"));
+        QCOMPARE(changed.size(), 2);
+    }
+
+    void aNewControllerStartsOnTheProfileThatWasActive()
+    {
+        const QTemporaryDir dir;
+        writeProfile(dir.path(), "default", "main", onePage("main"));
+        writeProfile(dir.path(), "gaming", "play", onePage("play"));
+        {
+            Fixture f;
+            f.controller->useProfiles(dir.path());
+            QVERIFY(f.controller->setProfile(QStringLiteral("gaming")));
+        }
+        Fixture again;
+        again.controller->useProfiles(dir.path());
+        QCOMPARE(again.controller->activeProfile(), QStringLiteral("gaming")); // remembered across a restart
+        QCOMPARE(again.controller->currentPage(), QStringLiteral("play"));
+    }
+
+    void aProfileThatCannotBeUsedChangesNothing()
+    {
+        const QTemporaryDir dir;
+        writeProfile(dir.path(), "default", "main", onePage("main"));
+        writeProfile(dir.path(), "gaming", "play", onePage("play"));
+        QVERIFY(writeFile(dir.path() + "/profiles/broken.json", QByteArray("{ not a pages file")));
+        QVERIFY(writeFile(dir.path() + "/profiles/dangling.json", pagesFile({{"main", page({keyJson(0, "Go", {{"type", "page"}, {"page", "nowhere"}})})}})));
+        Fixture f;
+        f.controller->useProfiles(dir.path());
+        QVERIFY(f.controller->setProfile(QStringLiteral("gaming")));
+        const QByteArray remembered = [&] { QFile file(dir.path() + "/profile-active.json"); return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray(); }();
+        QVERIFY(!remembered.isEmpty());
+
+        // A name that is not valid, a profile with no file, a file with errors, a file that points at a page that does not exist.
+        for (const QString &bad : {QStringLiteral("../pages"), QStringLiteral("Gaming"), QStringLiteral("a/b"), QStringLiteral(""), QStringLiteral("nope"),
+                                   QStringLiteral("broken"), QStringLiteral("dangling"), QStringLiteral(".deleted")})
+            QVERIFY2(!f.controller->setProfile(bad), qPrintable(bad));
+        QCOMPARE(f.controller->activeProfile(), QStringLiteral("gaming"));
+        QCOMPARE(f.controller->currentPage(), QStringLiteral("play"));
+        QFile file(dir.path() + "/profile-active.json");
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), remembered); // what is remembered is not touched either
+        QVERIFY(f.controller->setProfile(QStringLiteral("default"))); // and the controller still works
+        QCOMPARE(f.controller->currentPage(), QStringLiteral("main"));
+    }
+
+    void aKeyCanGoToAProfileOrStepThroughTheProfiles()
+    {
+        const QTemporaryDir dir;
+        const QJsonObject main = onePage("main", {keyJson(0, "Game", {{"type", "profile"}, {"profile", "gaming"}}),
+                                                  keyJson(1, "Next", {{"type", "profile"}, {"step", 1}}),
+                                                  keyJson(2, "Last", {{"type", "profile"}, {"step", -1}})});
+        writeProfile(dir.path(), "default", "main", main);
+        writeProfile(dir.path(), "gaming", "play", onePage("play", {keyJson(0, "Home", {{"type", "profile"}, {"profile", "default"}})}));
+        writeProfile(dir.path(), "work", "desk", onePage("desk", {keyJson(2, "Last", {{"type", "profile"}, {"step", -1}})}));
+        Fixture f;
+        f.controller->useProfiles(dir.path());
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QTRY_COMPARE_WITH_TIMEOUT(f.controller->activeProfile(), QStringLiteral("gaming"), 2000); // done once the press has been handled
+        QCOMPARE(f.controller->currentPage(), QStringLiteral("play"));
+        f.pressKey(0, true); // the key "Home" of the gaming profile
+        f.pressKey(0, false);
+        QTRY_COMPARE_WITH_TIMEOUT(f.controller->activeProfile(), QStringLiteral("default"), 2000);
+        f.pressKey(1, true); // next: default -> gaming
+        f.pressKey(1, false);
+        QTRY_COMPARE_WITH_TIMEOUT(f.controller->activeProfile(), QStringLiteral("gaming"), 2000);
+        QVERIFY(f.controller->stepProfile(1)); // gaming -> work
+        QCOMPARE(f.controller->activeProfile(), QStringLiteral("work"));
+        f.pressKey(2, true); // last: work -> gaming
+        f.pressKey(2, false);
+        QTRY_COMPARE_WITH_TIMEOUT(f.controller->activeProfile(), QStringLiteral("gaming"), 2000);
+        QVERIFY(f.controller->stepProfile(2)); // round: gaming -> work -> default
+        QCOMPARE(f.controller->activeProfile(), QStringLiteral("default"));
+    }
+
+    void aProfileWithTheSameContentIsStillApplied()
+    {
+        const QTemporaryDir dir;
+        const QJsonObject pages{{"main", page({keyJson(0, "More", {{"type", "page"}, {"page", "sub"}})})},
+                                {"sub", page({keyJson(0, "Back", {{"type", "back"}})})}};
+        writeProfile(dir.path(), "default", "main", pages);
+        writeProfile(dir.path(), "copy", "main", pages);
+        Fixture f;
+        f.controller->useProfiles(dir.path());
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.controller->pageStack(), (QStringList{"main", "sub"}));
+        QVERIFY(f.controller->setProfile(QStringLiteral("copy")));
+        QCOMPARE(f.controller->activeProfile(), QStringLiteral("copy"));
+        QCOMPARE(f.controller->pageStack(), QStringList{"main"}); // a new profile starts on its home page, even if it reads the same
+    }
+
+    void theBaseProfileWithoutAFileIsTheBuiltInPages()
+    {
+        const QTemporaryDir dir;
+        writeProfile(dir.path(), "gaming", "play", onePage("play"));
+        const QString builtInHome = parsePagesConfig(initialPagesJson()).config.value_or(PagesConfig{}).home;
+        QVERIFY(!builtInHome.isEmpty());
+        Fixture f;
+        f.controller->useProfiles(dir.path()); // no pages.json: default is the built-in pages, as at the first start
+        QCOMPARE(f.controller->currentPage(), builtInHome);
+        QVERIFY(f.controller->setProfile(QStringLiteral("gaming")));
+        QCOMPARE(f.controller->currentPage(), QStringLiteral("play"));
+        QVERIFY(f.controller->setProfile(QStringLiteral("default")));
+        QCOMPARE(f.controller->currentPage(), builtInHome); // not left on the pages of the profile that was just left
+    }
+
+    void withoutProfilesTheControllerKeepsToItsOneFile()
+    {
+        const QTemporaryDir dir;
+        writeProfile(dir.path(), "default", "main", onePage("main"));
+        writeProfile(dir.path(), "gaming", "play", onePage("play"));
+        Fixture f;
+        f.controller->loadFile(dir.path() + "/pages.json"); // as with --pages: no profiles
+        QVERIFY(!f.controller->setProfile(QStringLiteral("gaming")));
+        QVERIFY(!f.controller->stepProfile(1));
+        QCOMPARE(f.controller->currentPage(), QStringLiteral("main"));
+        QCOMPARE(f.controller->profiles(), QStringList{"default"});
+    }
+
+    void theScreenFollowsTheProfileInUseAndNotTheOneThatWasLeft()
+    {
+        const QTemporaryDir dir;
+        writeProfile(dir.path(), "default", "main", onePage("main"));
+        writeProfile(dir.path(), "gaming", "play", onePage("play"));
+        Fixture f;
+        f.controller->useProfiles(dir.path());
+        QVERIFY(f.controller->setProfile(QStringLiteral("gaming")));
+        writeProfile(dir.path(), "default", "other", onePage("other")); // the old profile is edited (Bosun does it)
+        QTest::qWait(400);
+        QCOMPARE(f.controller->currentPage(), QStringLiteral("play")); // the screen follows the profile in use, not the one that was left
+        writeProfile(dir.path(), "gaming", "play2", onePage("play2")); // the profile in use is edited: followed
+        QTRY_COMPARE_WITH_TIMEOUT(f.controller->currentPage(), QStringLiteral("play2"), 3000);
     }
 
     void aFileWithErrorsKeepsTheCurrentPages()

@@ -374,6 +374,9 @@ private:
         case ActionType::Theme:
             error(path, QStringLiteral("a theme cannot switch themes"));
             return;
+        case ActionType::Profile:
+            error(path, QStringLiteral("a theme cannot switch profiles"));
+            return;
         case ActionType::App:
             if (!isPackageDesktopId(action.desktop))
                 error(path, QStringLiteral("an application is named by its desktop file name, never by a path"));

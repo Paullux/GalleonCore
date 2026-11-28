@@ -3,6 +3,7 @@
 
 #include "Required.h"
 #include <PagesConfig.h>
+#include <ProfileNames.h>
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -548,6 +549,60 @@ private Q_SLOTS:
         QVERIFY(!withKey({{"type", "steam"}, {"appid", 730.5}}).config.has_value());
         QVERIFY(!withKey({{"type", "steam"}}).config.has_value());
         QVERIFY(!withKey({{"type", "steam"}, {"appid", 730}, {"command", "x"}}).config.has_value());
+    }
+
+    void aProfileActionNamesAProfileOrStepsThroughThem()
+    {
+        const auto withKey = [](const QJsonObject &action) {
+            return parseEdited([&](QJsonObject &object) {
+                QJsonObject pages = object.value("pages").toObject();
+                QJsonObject main = pages.value("main").toObject();
+                QJsonArray keys = main.value("keys").toArray();
+                keys.append(QJsonObject{{"key", 4}, {"label", "P"}, {"action", action}});
+                main.insert("keys", keys);
+                pages.insert("main", main);
+                object.insert("pages", pages);
+            });
+        };
+        const auto named = withKey({{"type", "profile"}, {"profile", "gaming"}});
+        QVERIFY2(named.config.has_value(), qPrintable(named.errors.join('\n')));
+        const PagesConfig namedConfig = required(named.config);
+        const KeyConfig key = required(namedConfig.pages.value("main").keys[4]);
+        QCOMPARE(key.action.type, ActionType::Profile);
+        QCOMPARE(key.action.profile, QStringLiteral("gaming"));
+        const auto stepped = withKey({{"type", "profile"}, {"step", -1}});
+        QVERIFY2(stepped.config.has_value(), qPrintable(stepped.errors.join('\n')));
+        const PagesConfig steppedConfig = required(stepped.config);
+        const KeyConfig next = required(steppedConfig.pages.value("main").keys[4]);
+        QCOMPARE(next.action.step, -1);
+        QVERIFY(next.action.profile.isEmpty());
+        QVERIFY(withKey({{"type", "profile"}, {"profile", "default"}}).config.has_value());
+        QVERIFY(withKey({{"type", "profile"}, {"step", MaxProfiles}}).config.has_value());
+        QVERIFY(withKey({{"type", "profile"}, {"step", -MaxProfiles}}).config.has_value());
+        // What is refused: a name that is not valid (it could name another file), a step that is 0, too big or not whole, both or neither, extras.
+        for (const QString &bad : {QStringLiteral("Gaming"), QStringLiteral("../pages"), QStringLiteral("a/b"), QStringLiteral(""), QStringLiteral("a.b"), QStringLiteral(".deleted"),
+                                   QString(MaxProfileNameLength + 1, QLatin1Char('a'))})
+            QVERIFY2(!withKey({{"type", "profile"}, {"profile", bad}}).config.has_value(), qPrintable(bad));
+        QVERIFY(!withKey({{"type", "profile"}, {"profile", 7}}).config.has_value());
+        QVERIFY(!withKey({{"type", "profile"}, {"step", 0}}).config.has_value());
+        QVERIFY(!withKey({{"type", "profile"}, {"step", MaxProfiles + 1}}).config.has_value());
+        QVERIFY(!withKey({{"type", "profile"}, {"step", 1.5}}).config.has_value());
+        QVERIFY(!withKey({{"type", "profile"}, {"step", "1"}}).config.has_value());
+        QVERIFY(!withKey({{"type", "profile"}}).config.has_value());
+        QVERIFY(!withKey({{"type", "profile"}, {"profile", "gaming"}, {"step", 1}}).config.has_value());
+        QVERIFY(!withKey({{"type", "profile"}, {"profile", "gaming"}, {"command", "x"}}).config.has_value());
+    }
+
+    void aProfileActionIsNotADialTurn()
+    {
+        const auto result = parseEdited([](QJsonObject &object) {
+            QJsonObject dials = object.value("dials").toObject();
+            QJsonObject dial = dials.value("0").toObject();
+            dial.insert("turn", QJsonObject{{"type", "profile"}, {"step", 1}});
+            dials.insert("0", dial);
+            object.insert("dials", dials);
+        });
+        QVERIFY(!result.config.has_value()); // a turn is a volume or a seek, as for every other action
     }
 
     void theExtraMediaCommandsAreAcceptedOnKeysButNotAsADialTurn()

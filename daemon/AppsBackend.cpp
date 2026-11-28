@@ -121,6 +121,9 @@ void AppsBackend::reload()
             case ActionType::Steam:
                 kind = QStringLiteral("steam");
                 break;
+            case ActionType::Profile:
+                kind = QStringLiteral("profile");
+                break;
             case ActionType::Key:
                 kind = QStringLiteral("key");
                 break;

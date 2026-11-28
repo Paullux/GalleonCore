@@ -201,6 +201,8 @@ private Q_SLOTS:
         QTest::newRow("app by an unknown bare word") << R"({"type":"app","desktop":"not-a-known-app"})" << "desktop file name";
         QTest::newRow("another page") << R"({"type":"page","page":"main"})" << "main";
         QTest::newRow("switch theme") << R"({"type":"theme"})" << "switch themes";
+        QTest::newRow("switch profile") << R"({"type":"profile","profile":"gaming"})" << "switch profiles";
+        QTest::newRow("step through the profiles") << R"({"type":"profile","step":1})" << "switch profiles";
         QTest::newRow("unknown type") << R"({"type":"shell","command":"id"})" << "type";
         QTest::newRow("a command field") << R"({"type":"media","command":"next","exec":"id"})" << "exec";
     }
