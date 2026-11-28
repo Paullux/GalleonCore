@@ -214,6 +214,19 @@ def run(command: list[str], cwd: Path | None = None, quiet: bool = False) -> sub
     return subprocess.run(command, cwd=cwd, text=True, capture_output=quiet, check=False)
 
 
+def run_in_parallel(commands: list[list[str]]) -> list[int]:
+    """Runs the commands all at once, waits for all of them and returns their exit codes in the order of `commands`. One that
+    fails does not stop or hide the others; one that cannot be started counts as failed (127). Their output is not shown."""
+    def one(command: list[str]) -> int:
+        try:
+            return subprocess.run(command, text=True, capture_output=True, check=False).returncode
+        except OSError:
+            return 127
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(commands))) as pool:
+        return list(pool.map(one, commands))
+
+
 def git(args: list[str], root: Path) -> str:
     env = {**os.environ, "GIT_OPTIONAL_LOCKS": "0"}
     result = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, env=env, check=False)
@@ -405,11 +418,14 @@ class Checks:
         self.replay_ci_steps()
 
     def fuzz(self) -> None:
-        # The same targets as the CI's fuzzing steps, each for the same time.
-        for name in FUZZ_TARGETS:
-            target = self.build / "asan" / "fuzz" / name
-            ok = run([str(target), f"-max_total_time={LONG_FUZZ_SECONDS}"], quiet=True).returncode == 0
-            self.step(f"fuzz {name}", ok, f"({LONG_FUZZ_SECONDS} s)")
+        # The same targets as the CI's fuzzing steps, each for the same time. The CI runs them one after the other; here they
+        # all start together (they share nothing: each one reads and writes only its own process), so the step lasts as long
+        # as one target, not as the four. Each target still has its own result, in the order of FUZZ_TARGETS.
+        commands = [[str(self.build / "asan" / "fuzz" / name), f"-max_total_time={LONG_FUZZ_SECONDS}"] for name in FUZZ_TARGETS]
+        for command in commands:
+            print("+", " ".join(shlex.quote(part) for part in command), flush=True)
+        for name, code in zip(FUZZ_TARGETS, run_in_parallel(commands)):
+            self.step(f"fuzz {name}", code == 0, f"({LONG_FUZZ_SECONDS} s, in parallel)")
 
 
 ASAN_FLAGS = ["-DCMAKE_CXX_COMPILER=clang++", "-DGALLEON_SANITIZE=ON", "-DGALLEON_FUZZ=ON"]
