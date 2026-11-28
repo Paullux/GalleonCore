@@ -89,7 +89,7 @@ private Q_SLOTS:
         QFETCH(const double, height);
         QFETCH(const double, expectedWidth);
         QFETCH(const double, expectedHeight);
-        Plasmoid p({QStringLiteral(GALLEON_SOURCE_WIDGETS)});
+        const Plasmoid p({QStringLiteral(GALLEON_SOURCE_WIDGETS)});
         auto *area = qobject_cast<QQuickItem *>(p.view.get());
         area->setWidth(width);
         area->setHeight(height);
