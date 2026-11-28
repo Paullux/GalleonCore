@@ -41,7 +41,11 @@ class BosunBackend : public QObject
     // The brightness curve of the day, saved next to the pages file (BrightnessCurveModel.h).
     Q_PROPERTY(QObject* brightnessCurve READ brightnessCurve CONSTANT)
     Q_PROPERTY(QObject* levelCurve READ levelCurve CONSTANT) // the same model for the level of the colours of the live lighting
-    Q_PROPERTY(QString file READ file CONSTANT)
+    Q_PROPERTY(QString file READ file NOTIFY profilesChanged) // the pages file being edited: the one of the active profile
+    // The profiles (daemon/Profiles.h): complete pages files, one active. The editor, the themes and the screensaver of every tab work on the active one.
+    Q_PROPERTY(bool profilesAvailable READ profilesAvailable NOTIFY profilesChanged)
+    Q_PROPERTY(QString activeProfile READ activeProfile NOTIFY profilesChanged)
+    Q_PROPERTY(QStringList profiles READ profiles NOTIFY profilesChanged)
     // Empty when all is well; else why the pages cannot be shown.
     Q_PROPERTY(QString problem READ problem NOTIFY changed)
     // [{name, page, color}], in the order of the file; color is "#rrggbb".
@@ -83,6 +87,21 @@ public:
     BosunBackend(QString pagesFile, const Tools &tools, QObject *parent = nullptr);
 
     [[nodiscard]] QString file() const { return m_file; }
+    // Turns the profiles on (not in a preview, and not when a pages file was asked for on the command line): the active profile is the one that
+    // galleond remembers in profile-active.json, and it follows that file. Without this, the one file given at construction is edited.
+    void useProfiles();
+    [[nodiscard]] bool profilesAvailable() const { return m_profilesOn; }
+    [[nodiscard]] QString activeProfile() const { return m_activeProfile; }
+    [[nodiscard]] QStringList profiles() const;
+    // What the person does with profiles. Each answers {ok, error}. None of them talks to galleond: the window asks it to show the profile (DaemonStatus::setProfile)
+    // when this has said ok; when galleond is not running, it reads the remembered profile at its next start.
+    // `setProfile`: edits that profile from now on, and remembers it (profile-active.json). `createProfile`: a copy of the profile `from`, which is not made active.
+    // `renameProfile` and `deleteProfile` refuse the active profile (the window switches to another one first, so that galleond never has its file taken away);
+    // a deleted profile is moved to profiles/.deleted, never erased.
+    Q_INVOKABLE [[nodiscard]] QVariantMap setProfile(const QString &name);
+    Q_INVOKABLE [[nodiscard]] QVariantMap createProfile(const QString &name, const QString &from);
+    Q_INVOKABLE [[nodiscard]] QVariantMap renameProfile(const QString &from, const QString &to);
+    Q_INVOKABLE [[nodiscard]] QVariantMap deleteProfile(const QString &name);
     [[nodiscard]] QString problem() const { return m_problem; }
     [[nodiscard]] QVariantList themes() const { return m_themes; }
     [[nodiscard]] QStringList pageNames() const;
@@ -190,6 +209,7 @@ public:
 
 Q_SIGNALS:
     void changed();
+    void profilesChanged();
     void themeInstalled(int themeIndex, const QString &page);
 
 private:
@@ -209,7 +229,11 @@ private:
     void nextThumbnail();
     [[nodiscard]] const galleond::Page *pageNamed(const QString &page) const;
 
-    QString m_file;
+    QString m_file;            // the pages file being edited: the active profile's (the base file when the profiles are off)
+    QString m_folder;          // the configuration folder, fixed: pages.json, profiles/, the curves, the icons and the videos are next to it
+    bool m_profilesOn = false;
+    QString m_activeProfile = QStringLiteral("default");
+    void followActiveProfile(); // the remembered profile changed (galleond, a key of the module): edit that one
     BrightnessCurveModel m_brightnessCurve{QFileInfo(m_file).absolutePath() + QStringLiteral("/brightness-curve.json")};
     BrightnessCurveModel m_levelCurve{QFileInfo(m_file).absolutePath() + QStringLiteral("/lighting-level-curve.json")};
     QString m_wallpaperRoot;

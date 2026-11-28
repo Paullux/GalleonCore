@@ -840,5 +840,13 @@
   "This is not available on this system yet.": "This is not available on this system yet.",
   "Colour of the keys you press": "Colour of the keys you press",
   "The keys you press will glow in %1.": "The keys you press will glow in %1.",
-  "A colour is written as # and six digits or letters from a to f.": "A colour is written as # and six digits or letters from a to f."
+  "A colour is written as # and six digits or letters from a to f.": "A colour is written as # and six digits or letters from a to f.",
+  "Profiles are not available here.": "Profiles are not available here.",
+  "This profile does not exist.": "This profile does not exist.",
+  "The choice of the profile could not be saved.": "The choice of the profile could not be saved.",
+  "Switch to another profile before renaming this one.": "Switch to another profile before renaming this one.",
+  "Switch to another profile before deleting this one.": "Switch to another profile before deleting this one.",
+  "This is not the name of a profile": "This is not the name of a profile",
+  "Cannot change the profile on the pad: restart the updated daemon (%1)": "Cannot change the profile on the pad: restart the updated daemon (%1)",
+  "The pad could not show this profile: its file has errors, or it does not exist": "The pad could not show this profile: its file has errors, or it does not exist"
 }

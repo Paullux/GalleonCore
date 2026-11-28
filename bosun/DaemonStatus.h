@@ -71,6 +71,10 @@ public:
     Q_INVOKABLE [[nodiscard]] QString showGaming();
     // Shows the theme with this page name on the module; "" when the request was sent, else why not.
     Q_INVOKABLE [[nodiscard]] QString showTheme(const QString &page);
+    // Asks galleond to show this profile (daemon/Profiles.h) on the module. "" when the request was sent, else why not. A name that is not valid is
+    // refused here, before anything is sent. Whether galleond took it comes back as commandError on Linux; on Windows the endpoint has no reply, and the
+    // profile shown is in profile-active.json. Without galleond the choice is the file that BosunBackend::setProfile wrote: galleond reads it at its start.
+    Q_INVOKABLE [[nodiscard]] QString setProfile(const QString &name);
     // The theme tab that is open: the module shows that theme, and goes back to what it showed when `endThemePreview`
     // is sent (the tab is left or the window hidden). galleond decides: nothing happens while a game runs, nor when the
     // module was changed in between. `endThemePreviewNow` waits (at most a third of a second) for galleond to take the

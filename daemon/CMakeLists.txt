@@ -61,7 +61,7 @@ add_library(galleond_core STATIC
     RingSettings.h RingSettings.cpp
     LightingRestore.h LightingRestore.cpp
     NightMode.h NightMode.cpp
-    ProfileNames.h ProfileNames.cpp Profiles.h Profiles.cpp
+    ProfileNames.h ProfileNames.cpp Profiles.h Profiles.cpp ProfileStore.h ProfileStore.cpp
     NightController.h NightController.cpp
     MatrixRing.h MatrixRing.cpp
     RingSettingsApplier.h RingSettingsApplier.cpp

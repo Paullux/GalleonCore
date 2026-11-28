@@ -48,6 +48,18 @@ public Q_SLOTS:
     bool ShowGaming() { ++calls; return true; }
 };
 
+// What galleond's org.galleoncore.Deck object does for the profiles: it takes the name asked for, and answers whether it was possible.
+class ProfileEndpoint : public QObject
+{
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.galleoncore.Deck")
+public:
+    QStringList asked;
+    bool possible = true;
+public Q_SLOTS:
+    bool SetProfile(const QString &name) { asked.append(name); return possible; }
+};
+
 // What galleond's org.galleoncore.Lighting object does, as far as Bosun can tell: it answers and it tells its state.
 class LightingEndpoint : public QObject
 {
@@ -138,6 +150,43 @@ private Q_SLOTS:
         QVERIFY(bus.unregisterService(DaemonStatus::BusName));
         QDBusConnection::disconnectFromBus(other);
     }
+    void aProfileIsAskedForByItsNameAndOnlyWhenTheNameIsValid()
+    {
+        const QString other = QStringLiteral("fake-galleond-profiles");
+        QDBusConnection bus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, other);
+        ProfileEndpoint endpoint;
+        QVERIFY(bus.registerService(DaemonStatus::BusName));
+        QVERIFY(bus.registerObject("/org/galleoncore/Deck", &endpoint, QDBusConnection::ExportAllSlots));
+        {
+            DaemonStatus status("/nonexistent/systemctl");
+            QTRY_VERIFY_WITH_TIMEOUT(status.running(), 3000);
+            const QSignalSpy errors(&status, &DaemonStatus::commandError);
+            QVERIFY(status.setProfile("gaming").isEmpty());
+            QTRY_COMPARE(endpoint.asked, QStringList{"gaming"});
+            // A name that is not valid never leaves Bosun: it is refused here, with a reason.
+            for (const QString &bad : {QStringLiteral("../pages"), QStringLiteral("Gaming"), QStringLiteral(""), QStringLiteral("a/b")})
+                QVERIFY2(!status.setProfile(bad).isEmpty(), qPrintable(bad));
+            QTest::qWait(100);
+            QCOMPARE(endpoint.asked, QStringList{"gaming"});
+            QCOMPARE(errors.size(), 0);
+            // galleond says no (its file has errors): that is said, not hidden.
+            endpoint.possible = false;
+            QVERIFY(status.setProfile("broken").isEmpty());
+            QTRY_COMPARE_WITH_TIMEOUT(errors.size(), 1, 3000);
+        }
+        bus.unregisterObject("/org/galleoncore/Deck");
+        QVERIFY(bus.unregisterService(DaemonStatus::BusName));
+        QDBusConnection::disconnectFromBus(other);
+    }
+
+    void aProfileIsNotAskedForWhenNoDaemonIsThere()
+    {
+        DaemonStatus status("/nonexistent/systemctl");
+        QVERIFY(!status.running());
+        QVERIFY(status.setProfile("gaming").isEmpty()); // nothing to ask: the choice is the file BosunBackend wrote, read at the next start
+        QVERIFY(!status.setProfile("../pages").isEmpty());
+    }
+
     void lightingIsOffAndSaysSoBeforeAnyDaemonIsThere()
     {
         DaemonStatus status("/nonexistent/systemctl");
