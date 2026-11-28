@@ -28,11 +28,12 @@ public:
     void setIcon(const QIcon &icon);
     void show();
     void notifyUpdate(const QString &version, bool simulation);
-    // The menu is rebuilt for the state of the window and of galleond.
-    void update(bool windowShown, bool daemonRunning);
+    // The menu is rebuilt for the state of the window and of galleond, and for the profiles (an entry each when there are several).
+    void update(bool windowShown, bool daemonRunning, const QStringList &profiles = {}, const QString &activeProfile = {});
 
 Q_SIGNALS:
-    void chosen(bosun::TrayEntry::Action action);
+    // `profile` is the name of the profile for SetProfile, and empty for the other entries.
+    void chosen(bosun::TrayEntry::Action action, const QString &profile);
     void updateNotificationClicked();
 
 private:

@@ -220,7 +220,8 @@ Window {
         onTabWidthsChanged: revealTimer.start()
         onContentWidthChanged: revealTimer.start()
         x: 20; y: 16
-        width: win.width - 224; height: 44
+        // Room is kept at the right for the language menu, and for the profile menu when there are profiles (it is left of the language one).
+        width: win.width - 224 - (win.backend.profilesAvailable ? 184 : 0); height: 44
         contentWidth: bar.width; contentHeight: height
         flickableDirection: Flickable.HorizontalFlick
         boundsBehavior: Flickable.StopAtBounds
@@ -1580,6 +1581,18 @@ Window {
             }
         }
         z: 100
+    }
+
+    // The profile, at the top next to the language: every tab edits the active one, and the module shows it.
+    ProfileMenu {
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.rightMargin: 12 + 176 + 8 // left of the language menu
+        anchors.topMargin: 12
+        backend: win.backend
+        daemon: win.daemon
+        z: 100
+        onSaid: text => win.message = text
     }
 
     UpdatePanel {

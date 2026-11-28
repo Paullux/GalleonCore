@@ -268,12 +268,18 @@ int main(int argc, char *argv[])
     if (window && !parser.isSet(shotOption) && bosun::Tray::isAvailable()) {
         QApplication::setQuitOnLastWindowClosed(false);
         root->setProperty("hideOnClose", true);
-        const auto refresh = [&] { tray.update(window->isVisible(), daemon.running()); };
+        const auto refresh = [&] { tray.update(window->isVisible(), daemon.running(), backend.profiles(), backend.activeProfile()); };
+        QObject::connect(&backend, &bosun::BosunBackend::profilesChanged, &tray, refresh);
         QObject::connect(&languages, &bosun::LanguageSettings::changed, &tray, refresh);
         QObject::connect(window, &QWindow::visibleChanged, &tray, refresh);
         QObject::connect(&daemon, &bosun::DaemonStatus::changed, &tray, refresh);
-        QObject::connect(&tray, &bosun::Tray::chosen, &app, [&](bosun::TrayEntry::Action action) {
+        QObject::connect(&tray, &bosun::Tray::chosen, &app, [&](bosun::TrayEntry::Action action, const QString &profile) {
             switch (action) {
+            case bosun::TrayEntry::Action::SetProfile:
+                // The window edits that profile from now on; then galleond is asked to show it (without galleond, it reads the choice at its start).
+                if (backend.setProfile(profile).value(QStringLiteral("ok")).toBool())
+                    static_cast<void>(daemon.setProfile(profile));
+                break;
             case bosun::TrayEntry::Action::ToggleWindow:
                 if (window->isVisible()) {
                     window->hide();

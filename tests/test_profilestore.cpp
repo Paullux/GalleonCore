@@ -94,6 +94,32 @@ private Q_SLOTS:
         QVERIFY(!createProfile(dir.path(), "toobig", "big", {}).ok); // larger than a pages file may be
     }
 
+    // The window says why in the language of the person: it needs the reason as a code, not only as English text.
+    void aRefusalSaysWhyByItsCode()
+    {
+        const QTemporaryDir dir;
+        QVERIFY(put(dir.path() + "/pages.json", "base"));
+        QVERIFY(put(dir.path() + "/profiles/work.json", "work"));
+        QVERIFY(put(dir.path() + "/profiles/big.json", QByteArray(MaxPagesFileBytes + 1, ' ')));
+        QCOMPARE(createProfile(dir.path(), "fresh", "default", {}).code, ProfileError::None);
+        QCOMPARE(createProfile(dir.path(), "Bad Name", "default", {}).code, ProfileError::BadName);
+        QCOMPARE(createProfile(dir.path(), "default", "work", {}).code, ProfileError::BadName);
+        QCOMPARE(createProfile(dir.path(), "work", "default", {}).code, ProfileError::NameTaken);
+        QCOMPARE(createProfile(dir.path(), "next", "nope", {}).code, ProfileError::Missing);
+        QCOMPARE(createProfile(dir.path(), "next", "big", {}).code, ProfileError::TooLarge);
+        QCOMPARE(renameProfile(dir.path(), "default", "other").code, ProfileError::BaseProfile);
+        QCOMPARE(renameProfile(dir.path(), "nope", "other").code, ProfileError::Missing);
+        QCOMPARE(renameProfile(dir.path(), "work", "fresh").code, ProfileError::NameTaken);
+        QCOMPARE(renameProfile(dir.path(), "work", "Bad").code, ProfileError::BadName);
+        QCOMPARE(renameProfile(dir.path(), "work", "desk").code, ProfileError::None);
+        QCOMPARE(deleteProfile(dir.path(), "default", "s").code, ProfileError::BaseProfile);
+        QCOMPARE(deleteProfile(dir.path(), "nope", "s").code, ProfileError::Missing);
+        QCOMPARE(deleteProfile(dir.path(), "desk", "s").code, ProfileError::None);
+        // Every refusal also has its English text for the logs, and a success has none.
+        QVERIFY(!createProfile(dir.path(), "fresh", "default", {}).error.isEmpty());
+        QVERIFY(createProfile(dir.path(), "another", "default", {}).error.isEmpty());
+    }
+
     void theNumberOfProfilesIsBounded()
     {
         const QTemporaryDir dir;

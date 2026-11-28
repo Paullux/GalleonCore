@@ -5,6 +5,7 @@
 
 #include "BosunBackend.h"
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QSaveFile>
 
@@ -200,9 +201,26 @@ BosunBackend::BosunBackend(QString pagesFile, const Tools &tools, QObject *paren
 }
 
 namespace {
+// The reason of a refusal in the language of the person. (`words` is looked at by the check that every text of the window is in the catalogues.)
+QString profileErrorText(galleond::ProfileError code)
+{
+    const auto words = [](const char *text) { return QCoreApplication::translate("BosunBackend", text); };
+    switch (code) {
+    case galleond::ProfileError::None: return {};
+    case galleond::ProfileError::BadName: return words("A profile name is 1 to 32 letters (a to z), digits or dashes, and not \"default\".");
+    case galleond::ProfileError::BaseProfile: return words("The base profile \"default\" cannot be renamed or deleted.");
+    case galleond::ProfileError::NameTaken: return words("A profile with this name already exists.");
+    case galleond::ProfileError::TooMany: return words("There are already 16 profiles.");
+    case galleond::ProfileError::Missing: return words("This profile does not exist.");
+    case galleond::ProfileError::TooLarge: return words("This profile is too large to be copied.");
+    case galleond::ProfileError::WriteFailed: return words("The profile could not be saved.");
+    }
+    return {};
+}
+
 QVariantMap profileAnswer(const galleond::ProfileResult &result)
 {
-    return {{QStringLiteral("ok"), result.ok}, {QStringLiteral("error"), result.error}};
+    return {{QStringLiteral("ok"), result.ok}, {QStringLiteral("error"), profileErrorText(result.code)}};
 }
 QVariantMap profileRefusal(const QString &why)
 {
