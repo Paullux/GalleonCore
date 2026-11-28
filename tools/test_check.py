@@ -319,5 +319,51 @@ class FuzzTargets(unittest.TestCase):
         self.assertEqual(sorted(in_ci), sorted(check.FUZZ_TARGETS))
 
 
+class ParallelFuzzing(unittest.TestCase):
+    """The four fuzz targets start together; each one keeps its own result."""
+
+    def fake_targets(self, folder: Path, codes: dict[str, int], seconds: float = 1.0) -> check.Checks:
+        directory = folder / "build" / "asan" / "fuzz"
+        directory.mkdir(parents=True)
+        for name in check.FUZZ_TARGETS:
+            script = directory / name
+            script.write_text(f"#!/bin/sh\nsleep {seconds}\nexit {codes.get(name, 0)}\n")
+            script.chmod(0o755)
+        return check.Checks(folder, folder / "build", folder / "cache", [], True)
+
+    def test_the_four_targets_last_as_long_as_one(self) -> None:
+        import time
+        with tempfile.TemporaryDirectory() as folder:
+            checks = self.fake_targets(Path(folder), {})
+            started = time.monotonic()
+            checks.fuzz()
+            elapsed = time.monotonic() - started
+        self.assertEqual([step["status"] for step in checks.steps], ["passed"] * len(check.FUZZ_TARGETS))
+        self.assertLess(elapsed, 0.75 * len(check.FUZZ_TARGETS))  # one after the other would be 4 s: here they overlap
+
+    def test_each_target_has_its_own_result_in_the_order_of_the_ci(self) -> None:
+        failing = check.FUZZ_TARGETS[1]
+        with tempfile.TemporaryDirectory() as folder:
+            checks = self.fake_targets(Path(folder), {failing: 1}, seconds=0.1)
+            checks.fuzz()
+        self.assertEqual([step["name"] for step in checks.steps], [f"fuzz {name}" for name in check.FUZZ_TARGETS])
+        self.assertEqual({step["name"]: step["status"] for step in checks.steps},
+                         {f"fuzz {name}": ("failed" if name == failing else "passed") for name in check.FUZZ_TARGETS})
+
+    def test_a_target_that_cannot_be_started_fails_without_hiding_the_others(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            checks = self.fake_targets(Path(folder), {}, seconds=0.1)
+            (Path(folder) / "build" / "asan" / "fuzz" / check.FUZZ_TARGETS[0]).unlink()
+            checks.fuzz()
+        statuses = {step["name"]: step["status"] for step in checks.steps}
+        self.assertEqual(statuses[f"fuzz {check.FUZZ_TARGETS[0]}"], "failed")
+        self.assertEqual([statuses[f"fuzz {name}"] for name in check.FUZZ_TARGETS[1:]], ["passed"] * (len(check.FUZZ_TARGETS) - 1))
+
+    def test_run_in_parallel_keeps_the_order_of_the_commands(self) -> None:
+        commands = [[sys.executable, "-c", f"raise SystemExit({code})"] for code in (3, 0, 2)]
+        self.assertEqual(check.run_in_parallel(commands), [3, 0, 2])
+        self.assertEqual(check.run_in_parallel([]), [])
+
+
 if __name__ == "__main__":
     unittest.main()
