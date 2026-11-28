@@ -79,6 +79,9 @@ public:
     // takes it back: after choosing a wallpaper, and at start. For the tests.
     void setWallpaperHoldMs(int ms) { m_holdTimer.setInterval(ms); }
 
+    // How often a missing module is looked for again. For the tests (5 s otherwise).
+    void setDeckCheckIntervalMs(int ms) { m_deckTimer.setInterval(ms); }
+
     // When to show the track, and whether covers may be downloaded.
     void setScreenConfig(const ScreenConfig &config);
 
