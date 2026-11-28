@@ -529,6 +529,76 @@ private Q_SLOTS:
         QCOMPARE(f.controller->pageStack().size(), MaxPageDepth);
     }
 
+    // A sub-menu is a page opened from another: what leaves it, other than Back, brings the keys to a page of the new state and not to a
+    // stale stack that Back would walk through.
+    void changingThemeFromASubMenuShowsThePageOfTheTheme()
+    {
+        PagesConfig config;
+        config.home = QStringLiteral("main");
+        Page main;
+        KeyConfig more; more.key = 0; more.action.type = ActionType::Page; more.action.page = QStringLiteral("sub");
+        main.keys[0] = more;
+        Page sub;
+        KeyConfig back; back.key = 0; back.action.type = ActionType::Back;
+        sub.keys[0] = back;
+        Page other;
+        config.pages.insert(QStringLiteral("main"), main);
+        config.pages.insert(QStringLiteral("sub"), sub);
+        config.pages.insert(QStringLiteral("other"), other);
+        config.themes.push_back(Theme{.name = "Main", .page = "main", .rgb = 0xffffff, .when = ThemeTrigger::None});
+        config.themes.push_back(Theme{.name = "Other", .page = "other", .rgb = 0xffffff, .when = ThemeTrigger::None});
+        Fixture f;
+        f.controller->setConfig(config);
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.controller->pageStack(), (QStringList{"main", "sub"}));
+
+        QVERIFY(f.controller->showThemePage(QStringLiteral("other")));
+        QCOMPARE(f.controller->pageStack(), QStringList{"other"}); // the sub-menu is left, Back has nothing to walk back to
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.controller->pageStack(), QStringList{"other"});
+    }
+
+    void savingTheSamePagesAgainKeepsTheSubMenuOpen()
+    {
+        QTemporaryDir const dir;
+        const QString file = dir.filePath("pages.json");
+        const QJsonObject pages{{"main", page({keyJson(0, "More", {{"type", "page"}, {"page", "sub"}})})},
+                                {"sub", page({keyJson(0, "Back", {{"type", "back"}})})}};
+        QVERIFY(writeFile(file, pagesFile(pages)));
+        Fixture f;
+        f.controller->loadFile(file);
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.controller->pageStack(), (QStringList{"main", "sub"}));
+
+        // The file is written again with the same content (an editor saves it, Bosun applies it): nothing changed, so the person is not
+        // thrown out of the sub-menu they are in.
+        QVERIFY(writeFile(file, pagesFile(pages)));
+        f.controller->loadFile(file);
+        QCOMPARE(f.controller->pageStack(), (QStringList{"main", "sub"}));
+    }
+
+    void changingThePagesFromASubMenuGoesBackToHome()
+    {
+        QTemporaryDir const dir;
+        const QString file = dir.filePath("pages.json");
+        const QJsonObject pages{{"main", page({keyJson(0, "More", {{"type", "page"}, {"page", "sub"}})})},
+                                {"sub", page({keyJson(0, "Back", {{"type", "back"}})})}};
+        QVERIFY(writeFile(file, pagesFile(pages)));
+        Fixture f;
+        f.controller->loadFile(file);
+        f.pressKey(0, true);
+        f.pressKey(0, false);
+        QCOMPARE(f.controller->pageStack(), (QStringList{"main", "sub"}));
+
+        // A changed file: the stack is not left pointing at pages of the old one, whatever the change was (here the sub-menu is gone).
+        QVERIFY(writeFile(file, pagesFile({{"main", page({keyJson(0, "More", {{"type", "media"}, {"command", "stop"}})})}})));
+        f.controller->loadFile(file);
+        QCOMPARE(f.controller->pageStack(), QStringList{"main"});
+    }
+
     void aFileWithErrorsKeepsTheCurrentPages()
     {
         QTemporaryDir const dir;
