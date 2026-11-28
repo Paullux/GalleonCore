@@ -42,6 +42,7 @@ target_link_libraries(test_keyinjector PRIVATE galleon_keys)
 galleon_add_test(test_layout)
 galleon_add_test(test_protocol)
 galleon_add_test(test_streamdeck FakeTransport.h)
+galleon_add_test(test_endurance FakeTransport.h)
 
 # Logic of tools/keyboard-read-probe, with a fake transport: never touches real hardware.
 galleon_add_test(test_keyboardreadprobe FakeTransport.h ../tools/keyboard-read-probe/KeyboardReadProbe.cpp)
